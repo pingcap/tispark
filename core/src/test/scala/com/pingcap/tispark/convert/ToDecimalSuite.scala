@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.convert
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
@@ -18,20 +33,14 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
       StructField("c3", DecimalType(38, 3)),
       StructField("c4", DecimalType(38, 4)),
       StructField("c5", DecimalType(38, 5)),
-      StructField("c6", DecimalType(38, 6))
-    )
-  )
+      StructField("c6", DecimalType(38, 6))))
 
-  private def createTable(): Unit =
-    jdbcUpdate(
-      s"""create table $dbtable(i INT,
-         |c1 DECIMAL(38, 1),
-         |c2 DECIMAL(38, 2),
-         |c3 DECIMAL(38, 3),
-         |c4 DECIMAL(38, 4),
-         |c5 DECIMAL(38, 5),
-         |c6 DECIMAL(38, 6))""".stripMargin
-    )
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 
   test("Test Convert from java.lang.Boolean to DECIMAL") {
     if (!supportBatchWrite) {
@@ -59,9 +68,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
             StructField("c3", BooleanType),
             StructField("c4", BooleanType),
             StructField("c5", BooleanType),
-            StructField("c6", BooleanType)
-          )
-        )
+            StructField("c6", BooleanType)))
 
         val readA1: java.math.BigDecimal = java.math.BigDecimal.valueOf(10, 1)
         val readA2: java.math.BigDecimal = java.math.BigDecimal.valueOf(100, 2)
@@ -87,7 +94,9 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -119,9 +128,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
             StructField("c3", ByteType),
             StructField("c4", ByteType),
             StructField("c5", ByteType),
-            StructField("c6", ByteType)
-          )
-        )
+            StructField("c6", ByteType)))
 
         dropTable()
         createTable()
@@ -160,9 +167,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
             StructField("c3", ShortType),
             StructField("c4", ShortType),
             StructField("c5", ShortType),
-            StructField("c6", ShortType)
-          )
-        )
+            StructField("c6", ShortType)))
 
         dropTable()
         createTable()
@@ -201,9 +206,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
             StructField("c3", IntegerType),
             StructField("c4", IntegerType),
             StructField("c5", IntegerType),
-            StructField("c6", IntegerType)
-          )
-        )
+            StructField("c6", IntegerType)))
 
         dropTable()
         createTable()
@@ -242,9 +245,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
             StructField("c3", LongType),
             StructField("c4", LongType),
             StructField("c5", LongType),
-            StructField("c6", LongType)
-          )
-        )
+            StructField("c6", LongType)))
 
         dropTable()
         createTable()
@@ -282,9 +283,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
             StructField("c3", FloatType),
             StructField("c4", FloatType),
             StructField("c5", FloatType),
-            StructField("c6", FloatType)
-          )
-        )
+            StructField("c6", FloatType)))
 
         val readA1: java.math.BigDecimal = java.math.BigDecimal.valueOf(11, 1)
         val readA2: java.math.BigDecimal = java.math.BigDecimal.valueOf(-220, 2)
@@ -332,9 +331,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
             StructField("c3", DoubleType),
             StructField("c4", DoubleType),
             StructField("c5", DoubleType),
-            StructField("c6", DoubleType)
-          )
-        )
+            StructField("c6", DoubleType)))
 
         val readA1: java.math.BigDecimal = java.math.BigDecimal.valueOf(11, 1)
         val readA2: java.math.BigDecimal = java.math.BigDecimal.valueOf(-220, 2)
@@ -377,9 +374,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
             StructField("c3", StringType),
             StructField("c4", StringType),
             StructField("c5", StringType),
-            StructField("c6", StringType)
-          )
-        )
+            StructField("c6", StringType)))
 
         val readA1: java.math.BigDecimal = java.math.BigDecimal.valueOf(11, 1)
         val readA3: java.math.BigDecimal = java.math.BigDecimal.valueOf(1100, 3)
@@ -428,9 +423,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
             StructField("c3", DecimalType(38, 0)),
             StructField("c4", DecimalType(38, 0)),
             StructField("c5", DecimalType(38, 0)),
-            StructField("c6", DecimalType(38, 0))
-          )
-        )
+            StructField("c6", DecimalType(38, 0))))
 
         dropTable()
         createTable()
@@ -449,10 +442,12 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
   // scala.collection.Map
   // org.apache.spark.sql.Row
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
+  private def createTable(): Unit =
+    jdbcUpdate(s"""create table $dbtable(i INT,
+         |c1 DECIMAL(38, 1),
+         |c2 DECIMAL(38, 2),
+         |c3 DECIMAL(38, 3),
+         |c4 DECIMAL(38, 4),
+         |c5 DECIMAL(38, 5),
+         |c6 DECIMAL(38, 6))""".stripMargin)
 }

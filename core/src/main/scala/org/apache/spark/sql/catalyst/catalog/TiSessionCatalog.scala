@@ -22,10 +22,9 @@ import org.apache.spark.sql.internal.StaticSQLConf
 
 trait TiSessionCatalog extends SessionCatalog {
 
-  protected val tiContext: TiContext
-
   protected lazy val globalTempDB: String =
     tiContext.sparkSession.conf.get(StaticSQLConf.GLOBAL_TEMP_DATABASE).toLowerCase(Locale.ROOT)
+  protected val tiContext: TiContext
 
   /**
    * Returns the catalog in which the database is.

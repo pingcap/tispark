@@ -18,17 +18,11 @@ package com.pingcap.tikv.event;
 import java.io.Serializable;
 
 public class CacheInvalidateEvent implements Serializable {
-  public enum CacheType implements Serializable {
-    REGION_STORE,
-    REQ_FAILED,
-    LEADER
-  }
-
-  private long regionId;
-  private long storeId;
+  private final long regionId;
+  private final long storeId;
+  private final CacheType cacheType;
   private boolean invalidateRegion;
   private boolean invalidateStore;
-  private CacheType cacheType;
 
   public CacheInvalidateEvent(
       long regionId, long storeId, boolean updateRegion, boolean updateStore, CacheType type) {
@@ -97,5 +91,11 @@ public class CacheInvalidateEvent implements Serializable {
   @Override
   public String toString() {
     return String.format("RegionId=%d,StoreId=%d,Type=%s", regionId, storeId, cacheType.name());
+  }
+
+  public enum CacheType implements Serializable {
+    REGION_STORE,
+    REQ_FAILED,
+    LEADER
   }
 }

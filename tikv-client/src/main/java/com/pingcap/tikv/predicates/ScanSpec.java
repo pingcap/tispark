@@ -26,18 +26,48 @@ import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 public class ScanSpec {
+  private final List<Expression> pointPredicates;
+  private final Optional<Expression> rangePredicate;
+  private final Set<Expression> residualPredicates;
+
+  private ScanSpec(
+      List<Expression> pointPredicates,
+      Optional<Expression> rangePredicate,
+      Set<Expression> residualPredicates) {
+    this.pointPredicates = pointPredicates;
+    this.rangePredicate = rangePredicate;
+    this.residualPredicates = residualPredicates;
+  }
+
+  public List<Expression> getPointPredicates() {
+    return pointPredicates;
+  }
+
+  public Optional<Expression> getRangePredicate() {
+    return rangePredicate;
+  }
+
+  public Set<Expression> getResidualPredicates() {
+    return residualPredicates;
+  }
+
   public static class Builder {
     private final IdentityHashMap<TiIndexColumn, List<Expression>> pointPredicates =
         new IdentityHashMap<>();
-    private TiIndexColumn rangeColumn;
     private final TiTableInfo table;
     private final TiIndexInfo index;
     private final List<Expression> rangePredicates = new ArrayList<>();
     private final List<Expression> residualPredicates = new ArrayList<>();
-    private Set<Expression> residualCandidates = new HashSet<>();
+    private final Set<Expression> residualCandidates = new HashSet<>();
+    private TiIndexColumn rangeColumn;
 
     public Builder(TiTableInfo table, TiIndexInfo index) {
       this.table = table;
@@ -107,30 +137,5 @@ public class ScanSpec {
 
       return new ScanSpec(ImmutableList.copyOf(points), newRangePred, newResidualPredicates);
     }
-  }
-
-  private final List<Expression> pointPredicates;
-  private final Optional<Expression> rangePredicate;
-  private final Set<Expression> residualPredicates;
-
-  private ScanSpec(
-      List<Expression> pointPredicates,
-      Optional<Expression> rangePredicate,
-      Set<Expression> residualPredicates) {
-    this.pointPredicates = pointPredicates;
-    this.rangePredicate = rangePredicate;
-    this.residualPredicates = residualPredicates;
-  }
-
-  public List<Expression> getPointPredicates() {
-    return pointPredicates;
-  }
-
-  public Optional<Expression> getRangePredicate() {
-    return rangePredicate;
-  }
-
-  public Set<Expression> getResidualPredicates() {
-    return residualPredicates;
   }
 }

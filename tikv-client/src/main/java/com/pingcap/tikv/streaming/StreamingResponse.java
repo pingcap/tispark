@@ -25,8 +25,8 @@ import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Errorpb;
 
 public class StreamingResponse implements Iterable {
-  private Iterator<Coprocessor.Response> resultIterator;
-  private List<Coprocessor.Response> responseList;
+  private final Iterator<Coprocessor.Response> resultIterator;
+  private final List<Coprocessor.Response> responseList;
 
   @SuppressWarnings("unchecked")
   public StreamingResponse(Iterator resultIterator) {

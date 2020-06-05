@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.datasource
 
 import org.apache.spark.sql.Row
@@ -22,20 +37,12 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     val row3 = Row(3L)
     val row4 = Row(4L)
 
-    val schema = StructType(
-      List(
-        StructField("i", LongType)
-      )
-    )
+    val schema = StructType(List(StructField("i", LongType)))
 
     dropTable()
 
-    jdbcUpdate(
-      s"create table $dbtable(i int, primary key (i))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1)"
-    )
+    jdbcUpdate(s"create table $dbtable(i int, primary key (i))")
+    jdbcUpdate(s"insert into $dbtable values(1)")
     tidbWrite(List(row2, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4))
   }
@@ -50,20 +57,12 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     val row3 = Row(3)
     val row4 = Row(4)
 
-    val schema = StructType(
-      List(
-        StructField("i", IntegerType)
-      )
-    )
+    val schema = StructType(List(StructField("i", IntegerType)))
 
     dropTable()
 
-    jdbcUpdate(
-      s"create table $dbtable(i int, primary key (i))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1)"
-    )
+    jdbcUpdate(s"create table $dbtable(i int, primary key (i))")
+    jdbcUpdate(s"insert into $dbtable values(1)")
     tidbWrite(List(row2, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4))
   }
@@ -78,20 +77,12 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     val row3 = Row(3L)
     val row4 = Row(4L)
 
-    val schema = StructType(
-      List(
-        StructField("i", LongType)
-      )
-    )
+    val schema = StructType(List(StructField("i", LongType)))
 
     dropTable()
 
-    jdbcUpdate(
-      s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, primary key (i))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1)"
-    )
+    jdbcUpdate(s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, primary key (i))")
+    jdbcUpdate(s"insert into $dbtable values(1)")
     tidbWrite(List(row2, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4))
   }
@@ -106,20 +97,12 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     val row3 = Row("Spark")
     val row4 = Row("TiDB")
 
-    val schema = StructType(
-      List(
-        StructField("i", StringType)
-      )
-    )
+    val schema = StructType(List(StructField("i", StringType)))
 
     dropTable()
 
-    jdbcUpdate(
-      s"create table $dbtable(i varchar(128))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values('Hello')"
-    )
+    jdbcUpdate(s"create table $dbtable(i varchar(128))")
+    jdbcUpdate(s"insert into $dbtable values('Hello')")
     tidbWrite(List(row1, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4))
   }
@@ -133,24 +116,19 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     val data1 = 1L :: "TiDB" :: Nil
     val data2 = 2L :: "Spark" :: Nil
 
-    val row1 = Row.fromSeq(
-      (0 until TEST_LARGE_COLUMN_SIZE).map { i =>
-        data1(i % data1.size)
-      }
-    )
+    val row1 = Row.fromSeq((0 until TEST_LARGE_COLUMN_SIZE).map { i =>
+      data1(i % data1.size)
+    })
 
-    val row2 = Row.fromSeq(
-      (0 until TEST_LARGE_COLUMN_SIZE).map { i =>
-        data2(i % data2.size)
-      }
-    )
+    val row2 = Row.fromSeq((0 until TEST_LARGE_COLUMN_SIZE).map { i =>
+      data2(i % data2.size)
+    })
 
     val schema = StructType(
       (0 until TEST_LARGE_COLUMN_SIZE)
         .map { i =>
           StructField(s"c$i", types(i % types.size)._2)
-        }
-    )
+        })
 
     val createTableSchemaStr = (0 until TEST_LARGE_COLUMN_SIZE)
       .map { i =>
@@ -160,9 +138,7 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
 
     dropTable()
 
-    jdbcUpdate(
-      s"create table $dbtable($createTableSchemaStr)"
-    )
+    jdbcUpdate(s"create table $dbtable($createTableSchemaStr)")
 
     tidbWrite(List(row1, row2), schema)
     testTiDBSelect(Seq(row1, row2), "c0")
@@ -175,20 +151,12 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
 
     val row1 = Row(1L)
 
-    val schema = StructType(
-      List(
-        StructField("i", LongType)
-      )
-    )
+    val schema = StructType(List(StructField("i", LongType)))
 
     dropTable()
 
-    jdbcUpdate(
-      s"create table $dbtable(i int, primary key (i))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1)"
-    )
+    jdbcUpdate(s"create table $dbtable(i int, primary key (i))")
+    jdbcUpdate(s"insert into $dbtable values(1)")
     tidbWrite(List(), schema)
     testTiDBSelect(Seq(row1))
   }
@@ -204,17 +172,11 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     }
     list = list.reverse
 
-    val schema = StructType(
-      List(
-        StructField("i", LongType)
-      )
-    )
+    val schema = StructType(List(StructField("i", LongType)))
 
     dropTable()
 
-    jdbcUpdate(
-      s"create table $dbtable(i int, primary key (i))"
-    )
+    jdbcUpdate(s"create table $dbtable(i int, primary key (i))")
     tidbWrite(list, schema)
     testTiDBSelect(list)
 

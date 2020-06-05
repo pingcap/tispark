@@ -20,18 +20,6 @@ package com.pingcap.tikv.util;
 import com.pingcap.tikv.TTLManager;
 
 public interface BackOffer {
-  // Back off strategies
-  enum BackOffStrategy {
-    // NoJitter makes the backoff sequence strict exponential.
-    NoJitter,
-    // FullJitter applies random factors to strict exponential.
-    FullJitter,
-    // EqualJitter is also randomized, but prevents very short sleeps.
-    EqualJitter,
-    // DecorrJitter increases the maximum jitter based on the last random value.
-    DecorrJitter
-  }
-
   // Back off types.
   int seconds = 1000;
   int COP_BUILD_TASK_MAX_BACKOFF = 5 * seconds;
@@ -64,4 +52,16 @@ public interface BackOffer {
    */
   void doBackOffWithMaxSleep(
       BackOffFunction.BackOffFuncType funcType, long maxSleepMs, Exception err);
+
+  // Back off strategies
+  enum BackOffStrategy {
+    // NoJitter makes the backoff sequence strict exponential.
+    NoJitter,
+    // FullJitter applies random factors to strict exponential.
+    FullJitter,
+    // EqualJitter is also randomized, but prevents very short sleeps.
+    EqualJitter,
+    // DecorrJitter increases the maximum jitter based on the last random value.
+    DecorrJitter
+  }
 }

@@ -21,12 +21,13 @@ import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 import org.apache.spark.sql.types.UnitDataTypeTestSpec
 
-case class DataTypePKGenerator(dataTypes: List[ReflectedDataType],
-                               unsignedDataTypes: List[ReflectedDataType],
-                               dataTypeTestDir: String,
-                               database: String,
-                               testDesc: String)
-    extends BaseTiSparkTest
+case class DataTypePKGenerator(
+  dataTypes: List[ReflectedDataType],
+  unsignedDataTypes: List[ReflectedDataType],
+  dataTypeTestDir: String,
+  database: String,
+  testDesc: String
+) extends BaseTiSparkTest
     with GeneratePKDataTypeTestAction {
   def loadTestData(typeName: String): Unit = {
     logger.info(s"${preDescription}Test $typeName - $testDesc")

@@ -35,25 +35,24 @@ import org.tikv.kvproto.Metapb;
 public class MetaUtils {
   public static class TableBuilder {
     long autoId = 1;
+    private boolean pkHandle;
+    private String name;
+    private final List<TiColumnInfo> columns = new ArrayList<>();
+    private final List<TiIndexInfo> indices = new ArrayList<>();
+    private TiPartitionInfo partInfo;
+    private Long tid = null;
+    private long version = 0L;
+    private final long updateTimestamp = 0L;
 
-    private long newId() {
-      return autoId++;
-    }
+    public TableBuilder() {}
 
     public static TableBuilder newBuilder() {
       return new TableBuilder();
     }
 
-    private boolean pkHandle;
-    private String name;
-    private List<TiColumnInfo> columns = new ArrayList<>();
-    private List<TiIndexInfo> indices = new ArrayList<>();
-    private TiPartitionInfo partInfo;
-    private Long tid = null;
-    private long version = 0L;
-    private long updateTimestamp = 0L;
-
-    public TableBuilder() {}
+    private long newId() {
+      return autoId++;
+    }
 
     public TableBuilder name(String name) {
       this.name = name;
@@ -177,14 +176,13 @@ public class MetaUtils {
             .setEndKey(ByteString.EMPTY)
             .addPeers(Metapb.Peer.newBuilder().setId(1).setStoreId(1))
             .build();
+    private final KVMockServer kvServer;
+    private final PDMockServer pdServer;
 
     public MetaMockHelper(PDMockServer pdServer, KVMockServer kvServer) {
       this.kvServer = kvServer;
       this.pdServer = pdServer;
     }
-
-    private KVMockServer kvServer;
-    private PDMockServer pdServer;
 
     public void preparePDForRegionRead() {
       pdServer.addGetMemberResp(

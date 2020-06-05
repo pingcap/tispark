@@ -34,7 +34,13 @@ trait BaseTestGenerationSpec {
 
   def getTableNameWithDesc(desc: String, dataTypes: String*): String
 
+  def getIndexName(dataTypes: String*): String =
+    s"idx_${dataTypes.map(getColumnName).mkString("_")}"
+
   def getColumnName(dataType: String): String = s"col_$dataType"
+
+  def getIndexNameByOffset(offsets: Int*): String =
+    s"idx_${offsets.map(getColumnNameByOffset).mkString("_")}"
 
   def getColumnNameByOffset(offset: Int): String = {
     require(cols != null)
@@ -56,12 +62,6 @@ trait BaseTestGenerationSpec {
     }
     s"${getColumnName(dataType.toString)}$suffix"
   }
-
-  def getIndexName(dataTypes: String*): String =
-    s"idx_${dataTypes.map(getColumnName).mkString("_")}"
-
-  def getIndexNameByOffset(offsets: Int*): String =
-    s"idx_${offsets.map(getColumnNameByOffset).mkString("_")}"
 
   def getTypeLength(dataType: ReflectedDataType): String = {
     val baseType = getBaseType(dataType)

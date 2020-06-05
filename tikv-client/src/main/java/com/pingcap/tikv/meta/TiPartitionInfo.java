@@ -26,46 +26,11 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiPartitionInfo implements Serializable {
 
-  public PartitionType getType() {
-    return toPartType((int) type);
-  }
-
-  public enum PartitionType {
-    RangePartition,
-    HashPartition,
-    ListPartition,
-    InvalidPartition,
-  }
-
   private final long type;
   private final String expr;
   private final List<String> columns;
   private final boolean enable;
   private final List<TiPartitionDef> defs;
-
-  private PartitionType toPartType(int tp) {
-    switch (tp) {
-      case 1:
-        return PartitionType.RangePartition;
-      case 2:
-        return PartitionType.HashPartition;
-      case 3:
-        return PartitionType.ListPartition;
-    }
-    return PartitionType.InvalidPartition;
-  }
-
-  public static long partTypeToLong(PartitionType type) {
-    switch (type) {
-      case RangePartition:
-        return 1L;
-      case HashPartition:
-        return 2L;
-      case ListPartition:
-        return 3L;
-    }
-    return -1;
-  }
 
   @VisibleForTesting
   @JsonCreator
@@ -91,6 +56,34 @@ public class TiPartitionInfo implements Serializable {
     this.defs = defs;
   }
 
+  public static long partTypeToLong(PartitionType type) {
+    switch (type) {
+      case RangePartition:
+        return 1L;
+      case HashPartition:
+        return 2L;
+      case ListPartition:
+        return 3L;
+    }
+    return -1;
+  }
+
+  public PartitionType getType() {
+    return toPartType((int) type);
+  }
+
+  private PartitionType toPartType(int tp) {
+    switch (tp) {
+      case 1:
+        return PartitionType.RangePartition;
+      case 2:
+        return PartitionType.HashPartition;
+      case 3:
+        return PartitionType.ListPartition;
+    }
+    return PartitionType.InvalidPartition;
+  }
+
   public boolean isEnable() {
     return enable;
   }
@@ -105,5 +98,12 @@ public class TiPartitionInfo implements Serializable {
 
   public List<TiPartitionDef> getDefs() {
     return defs;
+  }
+
+  public enum PartitionType {
+    RangePartition,
+    HashPartition,
+    ListPartition,
+    InvalidPartition,
   }
 }

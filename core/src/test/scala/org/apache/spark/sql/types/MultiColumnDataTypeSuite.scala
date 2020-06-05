@@ -23,12 +23,6 @@ import org.apache.spark.sql.test.generator.TestDataGenerator._
 class MultiColumnDataTypeSuite
     extends MultiColumnDataTypeTest
     with RunMultiColumnDataTypeTestAction {
-  val dataTypes: List[ReflectedDataType] = numeric ::: stringType
-  val unsignedDataTypes: List[ReflectedDataType] = numeric
-  val dataTypeTestDir: String = "multi-column-dataType-test"
-  val database: String = "multi_column_data_type_test"
-  val testDesc: String = "Base test for multi-column data types"
-
   override val generator: BaseMultiColumnDataTypeGenerator = BaseMultiColumnDataTypeGenerator(
     dataTypes,
     unsignedDataTypes,
@@ -36,6 +30,11 @@ class MultiColumnDataTypeSuite
     database,
     testDesc
   )
+  val dataTypes: List[ReflectedDataType] = numeric ::: stringType
+  val unsignedDataTypes: List[ReflectedDataType] = numeric
+  val dataTypeTestDir: String = "multi-column-dataType-test"
+  val database: String = "multi_column_data_type_test"
+  val testDesc: String = "Base test for multi-column data types"
 
   override def startTest(dataTypes: List[ReflectedDataType]): Unit = {
     val typeNames = dataTypes.map(getTypeName)

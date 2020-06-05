@@ -21,16 +21,13 @@ import org.apache.spark.sql.functions._
 
 class LineItemSuite extends BaseTiSparkTest {
 
-  private var database: String = _
-
   private val table = "LINEITEM"
-
   private val where = "where L_PARTKEY < 2100000"
-
   private val batchWriteTablePrefix = "BATCH.WRITE"
   private val isPkHandlePrefix = "isPkHandle"
   private val replacePKHandlePrefix = "replacePKHandle"
   private val replaceUniquePrefix = "replaceUnique"
+  private var database: String = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()

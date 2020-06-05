@@ -27,11 +27,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ConcreteBackOffer implements BackOffer {
-  private int maxSleep;
-  private int totalSleep;
-  private Map<BackOffFunction.BackOffFuncType, BackOffFunction> backOffFunctionMap;
-  private List<Exception> errors;
   private static final Logger logger = LoggerFactory.getLogger(ConcreteBackOffer.class);
+  private final int maxSleep;
+  private final Map<BackOffFunction.BackOffFuncType, BackOffFunction> backOffFunctionMap;
+  private final List<Exception> errors;
+  private int totalSleep;
+
+  private ConcreteBackOffer(int maxSleep) {
+    Preconditions.checkArgument(maxSleep >= 0, "Max sleep time cannot be less than 0.");
+    this.maxSleep = maxSleep;
+    this.errors = new ArrayList<>();
+    this.backOffFunctionMap = new HashMap<>();
+  }
+
+  private ConcreteBackOffer(ConcreteBackOffer source) {
+    this.maxSleep = source.maxSleep;
+    this.totalSleep = source.totalSleep;
+    this.errors = source.errors;
+    this.backOffFunctionMap = source.backOffFunctionMap;
+  }
 
   public static ConcreteBackOffer newCustomBackOff(int maxSleep) {
     return new ConcreteBackOffer(maxSleep);
@@ -67,20 +81,6 @@ public class ConcreteBackOffer implements BackOffer {
 
   public static ConcreteBackOffer create(BackOffer source) {
     return new ConcreteBackOffer(((ConcreteBackOffer) source));
-  }
-
-  private ConcreteBackOffer(int maxSleep) {
-    Preconditions.checkArgument(maxSleep >= 0, "Max sleep time cannot be less than 0.");
-    this.maxSleep = maxSleep;
-    this.errors = new ArrayList<>();
-    this.backOffFunctionMap = new HashMap<>();
-  }
-
-  private ConcreteBackOffer(ConcreteBackOffer source) {
-    this.maxSleep = source.maxSleep;
-    this.totalSleep = source.totalSleep;
-    this.errors = source.errors;
-    this.backOffFunctionMap = source.backOffFunctionMap;
   }
 
   /**

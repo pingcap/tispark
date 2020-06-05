@@ -19,7 +19,18 @@ import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tispark.utils.TiUtil
 
 class PartitionTableSuite extends BaseTiSparkTest {
-  def enablePartitionForTiDB(): Boolean = tidbStmt.execute("set @@tidb_enable_table_partition = 1")
+  override def afterAll(): Unit =
+    try {
+      tidbStmt.execute("drop table if exists pt")
+      tidbStmt.execute("drop table if exists pt2")
+      tidbStmt.execute("drop table if exists p_t")
+      tidbStmt.execute("drop table if exists pt3")
+      tidbStmt.execute("drop table if exists pt4")
+      tidbStmt.execute("drop table if exists t2")
+      tidbStmt.execute("drop table if exists t3")
+    } finally {
+      super.afterAll()
+    }
 
   test("reading from hash partition") {
     enablePartitionForTiDB()
@@ -292,56 +303,48 @@ class PartitionTableSuite extends BaseTiSparkTest {
         .getName == "p1"
     )
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          spark
-          // expected part info only contains two parts which are p0 and p1.
-            .sql("select * from pt3 where purchased < date'2000-10-10'")
-        ).getPrunedParts
-        pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p1"
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains two parts which are p0 and p1.
+          .sql("select * from pt3 where purchased < date'2000-10-10'")
+      ).getPrunedParts
+      pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p1"
+    }
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          spark
-          // expected part info only contains one part which is p1.
-            .sql(
-              "select * from pt3 where purchased < date'2005-10-10' and purchased > date'2000-10-10'"
-            )
-        ).getPrunedParts
-        pDef.size() == 1 && pDef.get(0).getName == "p2"
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p1.
+          .sql(
+            "select * from pt3 where purchased < date'2005-10-10' and purchased > date'2000-10-10'"
+          )
+      ).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p2"
+    }
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          spark
-          // or with an unrelated column. All parts should be accessed.
-            .sql(
-              "select * from pt3 where id < 4 or purchased < date'1995-10-10'"
-            )
-        ).getPrunedParts
-        pDef.size() == 4
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // or with an unrelated column. All parts should be accessed.
+          .sql(
+            "select * from pt3 where id < 4 or purchased < date'1995-10-10'"
+          )
+      ).getPrunedParts
+      pDef.size() == 4
+    }
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          // for complicated expression, we do not support for now.
-          // this will be improved later.
-          spark
-            .sql(
-              "select * from pt3 where year(purchased) < 1995"
-            )
-        ).getPrunedParts
-        pDef.size() == 4
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        // for complicated expression, we do not support for now.
+        // this will be improved later.
+        spark
+          .sql(
+            "select * from pt3 where year(purchased) < 1995"
+          )
+      ).getPrunedParts
+      pDef.size() == 4
+    }
   }
 
   test("adding part pruning test when index is on partitioned column") {
@@ -388,55 +391,47 @@ class PartitionTableSuite extends BaseTiSparkTest {
         .getName == "p2"
     )
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          spark
-          // expected part info only contains two parts which are p0 and p1.
-            .sql("select * from p_t where id < 4")
-        ).getPrunedParts
-        pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p1"
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains two parts which are p0 and p1.
+          .sql("select * from p_t where id < 4")
+      ).getPrunedParts
+      pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p1"
+    }
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          spark
-          // expected part info only contains one part which is p1.
-            .sql(
-              "select * from p_t where id < 4 and id > 2"
-            )
-        ).getPrunedParts
-        pDef.size() == 1 && pDef.get(0).getName == "p1"
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p1.
+          .sql(
+            "select * from p_t where id < 4 and id > 2"
+          )
+      ).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p1"
+    }
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          spark
-          // or with an unrelated column. All parts should be accessed.
-            .sql(
-              "select * from p_t where id < 4 and id > 2 or purchased = date'1995-10-10'"
-            )
-        ).getPrunedParts
-        pDef.size() == 3
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // or with an unrelated column. All parts should be accessed.
+          .sql(
+            "select * from p_t where id < 4 and id > 2 or purchased = date'1995-10-10'"
+          )
+      ).getPrunedParts
+      pDef.size() == 3
+    }
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          spark
-          // and with an unrelated column. only p1 should be accessed.
-            .sql(
-              "select * from p_t where id < 4 and id > 2 and purchased = date'1995-10-10'"
-            )
-        ).getPrunedParts
-        pDef.size() == 1 && pDef.get(0).getName == "p1"
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // and with an unrelated column. only p1 should be accessed.
+          .sql(
+            "select * from p_t where id < 4 and id > 2 and purchased = date'1995-10-10'"
+          )
+      ).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p1"
+    }
   }
 
   test("adding part pruning test") {
@@ -456,30 +451,26 @@ class PartitionTableSuite extends BaseTiSparkTest {
                      """.stripMargin)
     refreshConnections()
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          spark
-          // or with a unrelated column, all partition should be accessed.
-            .sql(
-              "select * from p_t where id > 4 or id < 6 or purchased > date'1998-10-09'"
-            )
-        ).getPrunedParts
-        pDef.size() == 3
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // or with a unrelated column, all partition should be accessed.
+          .sql(
+            "select * from p_t where id > 4 or id < 6 or purchased > date'1998-10-09'"
+          )
+      ).getPrunedParts
+      pDef.size() == 3
+    }
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          spark
-            .sql(
-              "select * from p_t where id > 4 and id < 6 and purchased > date'1998-10-09'"
-            )
-        ).getPrunedParts
-        pDef.size() == 1
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        spark
+          .sql(
+            "select * from p_t where id > 4 and id < 6 and purchased > date'1998-10-09'"
+          )
+      ).getPrunedParts
+      pDef.size() == 1
+    }
 
     assert(
       extractDAGReq(
@@ -508,55 +499,47 @@ class PartitionTableSuite extends BaseTiSparkTest {
         .getName == "p2"
     )
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          spark
-          // expected part info only contains two parts which are p0 and p1.
-            .sql("select * from p_t where id < 4")
-        ).getPrunedParts
-        pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p1"
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains two parts which are p0 and p1.
+          .sql("select * from p_t where id < 4")
+      ).getPrunedParts
+      pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p1"
+    }
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          spark
-          // expected part info only contains one part which is p1.
-            .sql(
-              "select * from p_t where id < 4 and id > 2"
-            )
-        ).getPrunedParts
-        pDef.size() == 1 && pDef.get(0).getName == "p1"
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p1.
+          .sql(
+            "select * from p_t where id < 4 and id > 2"
+          )
+      ).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p1"
+    }
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          spark
-          // expected parts info only contain two parts which is p0 and p2.
-            .sql(
-              "select * from p_t where id < 2 or id > 4"
-            )
-        ).getPrunedParts
-        pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p2"
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected parts info only contain two parts which is p0 and p2.
+          .sql(
+            "select * from p_t where id < 2 or id > 4"
+          )
+      ).getPrunedParts
+      pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p2"
+    }
 
-    assert(
-      {
-        val pDef = extractDAGReq(
-          spark
-          // expected part info only contain one part which is p1.
-            .sql(
-              "select * from p_t where id > 2 and id < 4"
-            )
-        ).getPrunedParts
-        pDef.size() == 1 && pDef.get(0).getName == "p1"
-      }
-    )
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contain one part which is p1.
+          .sql(
+            "select * from p_t where id > 2 and id < 4"
+          )
+      ).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p1"
+    }
   }
 
   test("partition read(w/o pruning)") {
@@ -589,16 +572,5 @@ class PartitionTableSuite extends BaseTiSparkTest {
     judge("select id from p_t group by id", checkLimit = false)
   }
 
-  override def afterAll(): Unit =
-    try {
-      tidbStmt.execute("drop table if exists pt")
-      tidbStmt.execute("drop table if exists pt2")
-      tidbStmt.execute("drop table if exists p_t")
-      tidbStmt.execute("drop table if exists pt3")
-      tidbStmt.execute("drop table if exists pt4")
-      tidbStmt.execute("drop table if exists t2")
-      tidbStmt.execute("drop table if exists t3")
-    } finally {
-      super.afterAll()
-    }
+  def enablePartitionForTiDB(): Boolean = tidbStmt.execute("set @@tidb_enable_table_partition = 1")
 }

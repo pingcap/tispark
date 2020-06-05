@@ -34,10 +34,10 @@ import java.util.function.Function;
  * to allocate all id for data to be written at once, hence it does not need run inside a txn.
  */
 public final class RowIDAllocator {
-  private long end;
   private final long dbId;
-  private long step;
   private final TiConfiguration conf;
+  private final long step;
+  private long end;
 
   private RowIDAllocator(long dbId, long step, TiConfiguration conf) {
     this.dbId = dbId;

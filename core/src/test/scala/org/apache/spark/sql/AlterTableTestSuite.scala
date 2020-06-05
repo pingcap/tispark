@@ -17,12 +17,14 @@ package org.apache.spark.sql
 
 class AlterTableTestSuite extends BaseTiSparkTest {
 
-  def alterTable(dataType: String,
-                 value: String,
-                 defaultVal: String,
-                 defaultVal2: String,
-                 nullable: Boolean = true,
-                 defaultNullOnly: Boolean = false): Unit = {
+  def alterTable(
+    dataType: String,
+    value: String,
+    defaultVal: String,
+    defaultVal2: String,
+    nullable: Boolean = true,
+    defaultNullOnly: Boolean = false
+  ): Unit = {
     tidbStmt.execute(s"drop table if exists t")
     tidbStmt.execute(s"create table t(c1 $dataType default $defaultVal)")
     tidbStmt.execute(s"insert into t values()")

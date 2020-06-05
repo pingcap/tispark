@@ -114,7 +114,7 @@
                     <testSourceDirectories> <!-- (Optional) Paths to test-source-directories. Overrides ${project.build.testSourceDirectory} -->
                         <param>${project.basedir}/src/test/scala</param>
                     </testSourceDirectories>
-                    <configLocation>${project.parent.basedir}/scalafmt.conf</configLocation>
+                    <configLocation>${project.parent.basedir}/dev/.scalafmt.conf</configLocation>
                 </configuration>
                 <executions>
                     <execution>

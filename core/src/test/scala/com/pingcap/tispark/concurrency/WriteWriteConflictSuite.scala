@@ -18,7 +18,7 @@ package com.pingcap.tispark.concurrency
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 
-class WriteWriteConflictSuite extends ConcurrentcyTest {
+class WriteWriteConflictSuite extends ConcurrencyTest {
   test("write write conflict using TableLock & jdbc") {
     if (!supportBatchWrite) {
       cancel

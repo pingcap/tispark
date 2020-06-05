@@ -21,18 +21,18 @@ import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import java.io.Serializable;
 
 public class ByItem implements Serializable {
-  private Expression expr;
-  private boolean desc;
-
-  public static ByItem create(Expression expr, boolean desc) {
-    return new ByItem(expr, desc);
-  }
+  private final Expression expr;
+  private final boolean desc;
 
   private ByItem(Expression expr, boolean desc) {
     checkNotNull(expr, "Expr cannot be null for ByItem");
 
     this.expr = expr;
     this.desc = desc;
+  }
+
+  public static ByItem create(Expression expr, boolean desc) {
+    return new ByItem(expr, desc);
   }
 
   public com.pingcap.tidb.tipb.ByItem toProto(Object context) {

@@ -17,10 +17,9 @@
 
 package org.apache.spark.sql.types
 
-import org.apache.spark.sql.{BaseTestGenerationSpec, BaseTiSparkTest}
-import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.TestDataGenerator._
+import org.apache.spark.sql.{BaseTestGenerationSpec, BaseTiSparkTest}
 
 trait MultiColumnDataTypeTest extends BaseTiSparkTest {
 
@@ -31,6 +30,22 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
 
   implicit class C[X](xs: Traversable[X]) {
     def cross[Y](ys: Traversable[Y]): Traversable[(X, Y)] = for { x <- xs; y <- ys } yield (x, y)
+  }
+
+  def simpleSelect(
+    dbName: String,
+    tableName: String,
+    col1: String,
+    col2: String,
+    dataType: ReflectedDataType
+  ): Unit = {
+    for ((op, value) <- getOperations(dataType)) {
+      val query = s"select $col1 from $tableName where $col2 $op $value"
+      test(query) {
+        setCurrentDatabase(dbName)
+        runTest(query, canTestTiFlash = true)
+      }
+    }
   }
 
   def getOperations(dataType: ReflectedDataType): List[(String, String)] =
@@ -51,20 +66,6 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
         }
       }
     }
-
-  def simpleSelect(dbName: String,
-                   tableName: String,
-                   col1: String,
-                   col2: String,
-                   dataType: ReflectedDataType): Unit = {
-    for ((op, value) <- getOperations(dataType)) {
-      val query = s"select $col1 from $tableName where $col2 $op $value"
-      test(query) {
-        setCurrentDatabase(dbName)
-        runTest(query, canTestTiFlash = true)
-      }
-    }
-  }
 
   init()
 }

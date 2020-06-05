@@ -21,7 +21,11 @@ import com.google.common.collect.ImmutableMap;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -29,95 +33,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Catalog implements AutoCloseable {
-  private Supplier<Snapshot> snapshotProvider;
-  private CatalogCache metaCache;
   private final boolean showRowId;
   private final String dbPrefix;
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
-  @Override
-  public void close() {}
-
-  private static class CatalogCache {
-
-    private CatalogCache(CatalogTransaction transaction, String dbPrefix, boolean loadTables) {
-      this.transaction = transaction;
-      this.dbPrefix = dbPrefix;
-      this.tableCache = new ConcurrentHashMap<>();
-      this.dbCache = loadDatabases(loadTables);
-      this.currentVersion = transaction.getLatestSchemaVersion();
-    }
-
-    private final Map<String, TiDBInfo> dbCache;
-    private final ConcurrentHashMap<TiDBInfo, Map<String, TiTableInfo>> tableCache;
-    private CatalogTransaction transaction;
-    private long currentVersion;
-    private final String dbPrefix;
-
-    public CatalogTransaction getTransaction() {
-      return transaction;
-    }
-
-    public long getVersion() {
-      return currentVersion;
-    }
-
-    public TiDBInfo getDatabase(String name) {
-      Objects.requireNonNull(name, "name is null");
-      return dbCache.get(name.toLowerCase());
-    }
-
-    public List<TiDBInfo> listDatabases() {
-      return ImmutableList.copyOf(dbCache.values());
-    }
-
-    public List<TiTableInfo> listTables(TiDBInfo db) {
-      Map<String, TiTableInfo> tableMap = tableCache.get(db);
-      if (tableMap == null) {
-        tableMap = loadTables(db);
-      }
-      Collection<TiTableInfo> tables = tableMap.values();
-      return tables.stream().filter(tbl -> !tbl.isView()).collect(Collectors.toList());
-    }
-
-    public TiTableInfo getTable(TiDBInfo db, String tableName) {
-      Map<String, TiTableInfo> tableMap = tableCache.get(db);
-      if (tableMap == null) {
-        tableMap = loadTables(db);
-      }
-      TiTableInfo tbl = tableMap.get(tableName.toLowerCase());
-      // https://github.com/pingcap/tispark/issues/961
-      // TODO: support reading from view table in the future.
-      if (tbl != null && tbl.isView()) return null;
-      return tbl;
-    }
-
-    private Map<String, TiTableInfo> loadTables(TiDBInfo db) {
-      List<TiTableInfo> tables = transaction.getTables(db.getId());
-      ImmutableMap.Builder<String, TiTableInfo> builder = ImmutableMap.builder();
-      for (TiTableInfo table : tables) {
-        builder.put(table.getName().toLowerCase(), table);
-      }
-      Map<String, TiTableInfo> tableMap = builder.build();
-      tableCache.put(db, tableMap);
-      return tableMap;
-    }
-
-    private Map<String, TiDBInfo> loadDatabases(boolean loadTables) {
-      HashMap<String, TiDBInfo> newDBCache = new HashMap<>();
-
-      List<TiDBInfo> databases = transaction.getDatabases();
-      databases.forEach(
-          db -> {
-            TiDBInfo newDBInfo = db.rename(dbPrefix + db.getName());
-            newDBCache.put(newDBInfo.getName().toLowerCase(), newDBInfo);
-            if (loadTables) {
-              loadTables(newDBInfo);
-            }
-          });
-      return newDBCache;
-    }
-  }
+  private final Supplier<Snapshot> snapshotProvider;
+  private CatalogCache metaCache;
 
   public Catalog(Supplier<Snapshot> snapshotProvider, boolean showRowId, String dbPrefix) {
     this.snapshotProvider = Objects.requireNonNull(snapshotProvider, "Snapshot Provider is null");
@@ -125,6 +45,9 @@ public class Catalog implements AutoCloseable {
     this.dbPrefix = dbPrefix;
     metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()), dbPrefix, false);
   }
+
+  @Override
+  public void close() {}
 
   private synchronized void reloadCache(boolean loadTables) {
     Snapshot snapshot = snapshotProvider.get();
@@ -198,5 +121,86 @@ public class Catalog implements AutoCloseable {
       }
     }
     return null;
+  }
+
+  private static class CatalogCache {
+
+    private final Map<String, TiDBInfo> dbCache;
+    private final ConcurrentHashMap<TiDBInfo, Map<String, TiTableInfo>> tableCache;
+    private final String dbPrefix;
+    private final CatalogTransaction transaction;
+    private final long currentVersion;
+
+    private CatalogCache(CatalogTransaction transaction, String dbPrefix, boolean loadTables) {
+      this.transaction = transaction;
+      this.dbPrefix = dbPrefix;
+      this.tableCache = new ConcurrentHashMap<>();
+      this.dbCache = loadDatabases(loadTables);
+      this.currentVersion = transaction.getLatestSchemaVersion();
+    }
+
+    public CatalogTransaction getTransaction() {
+      return transaction;
+    }
+
+    public long getVersion() {
+      return currentVersion;
+    }
+
+    public TiDBInfo getDatabase(String name) {
+      Objects.requireNonNull(name, "name is null");
+      return dbCache.get(name.toLowerCase());
+    }
+
+    public List<TiDBInfo> listDatabases() {
+      return ImmutableList.copyOf(dbCache.values());
+    }
+
+    public List<TiTableInfo> listTables(TiDBInfo db) {
+      Map<String, TiTableInfo> tableMap = tableCache.get(db);
+      if (tableMap == null) {
+        tableMap = loadTables(db);
+      }
+      Collection<TiTableInfo> tables = tableMap.values();
+      return tables.stream().filter(tbl -> !tbl.isView()).collect(Collectors.toList());
+    }
+
+    public TiTableInfo getTable(TiDBInfo db, String tableName) {
+      Map<String, TiTableInfo> tableMap = tableCache.get(db);
+      if (tableMap == null) {
+        tableMap = loadTables(db);
+      }
+      TiTableInfo tbl = tableMap.get(tableName.toLowerCase());
+      // https://github.com/pingcap/tispark/issues/961
+      // TODO: support reading from view table in the future.
+      if (tbl != null && tbl.isView()) return null;
+      return tbl;
+    }
+
+    private Map<String, TiTableInfo> loadTables(TiDBInfo db) {
+      List<TiTableInfo> tables = transaction.getTables(db.getId());
+      ImmutableMap.Builder<String, TiTableInfo> builder = ImmutableMap.builder();
+      for (TiTableInfo table : tables) {
+        builder.put(table.getName().toLowerCase(), table);
+      }
+      Map<String, TiTableInfo> tableMap = builder.build();
+      tableCache.put(db, tableMap);
+      return tableMap;
+    }
+
+    private Map<String, TiDBInfo> loadDatabases(boolean loadTables) {
+      HashMap<String, TiDBInfo> newDBCache = new HashMap<>();
+
+      List<TiDBInfo> databases = transaction.getDatabases();
+      databases.forEach(
+          db -> {
+            TiDBInfo newDBInfo = db.rename(dbPrefix + db.getName());
+            newDBCache.put(newDBInfo.getName().toLowerCase(), newDBInfo);
+            if (loadTables) {
+              loadTables(newDBInfo);
+            }
+          });
+      return newDBCache;
+    }
   }
 }

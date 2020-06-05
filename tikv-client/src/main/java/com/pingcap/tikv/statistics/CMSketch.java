@@ -25,6 +25,17 @@ public class CMSketch {
   private long count;
   private long[][] table;
 
+  // Hide constructor
+  private CMSketch() {}
+
+  public static CMSketch newCMSketch(int d, int w) {
+    CMSketch sketch = new CMSketch();
+    sketch.setTable(new long[d][w]);
+    sketch.setDepth(d);
+    sketch.setWidth(w);
+    return sketch;
+  }
+
   public int getDepth() {
     return depth;
   }
@@ -55,17 +66,6 @@ public class CMSketch {
 
   public void setTable(long[][] table) {
     this.table = table;
-  }
-
-  // Hide constructor
-  private CMSketch() {}
-
-  public static CMSketch newCMSketch(int d, int w) {
-    CMSketch sketch = new CMSketch();
-    sketch.setTable(new long[d][w]);
-    sketch.setDepth(d);
-    sketch.setWidth(w);
-    return sketch;
   }
 
   public long queryBytes(byte[] bytes) {

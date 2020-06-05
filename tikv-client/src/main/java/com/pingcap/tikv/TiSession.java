@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 
 public class TiSession implements AutoCloseable {
   private static final Logger logger = LoggerFactory.getLogger(TiSession.class);
-
+  private static final Map<String, TiSession> sessionCachedMap = new HashMap<>();
   private final TiConfiguration conf;
   private final ChannelFactory channelFactory;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
@@ -43,13 +43,16 @@ public class TiSession implements AutoCloseable {
   private volatile Catalog catalog;
   private volatile ExecutorService indexScanThreadPool;
   private volatile ExecutorService tableScanThreadPool;
-
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
-
   private boolean isClosed = false;
 
-  private static final Map<String, TiSession> sessionCachedMap = new HashMap<>();
+  private TiSession(TiConfiguration conf) {
+    this.conf = conf;
+    this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
+    this.regionManager = null;
+    this.clientBuilder = null;
+  }
 
   public static TiSession getInstance(TiConfiguration conf) {
     synchronized (sessionCachedMap) {
@@ -62,13 +65,6 @@ public class TiSession implements AutoCloseable {
       sessionCachedMap.put(key, newSession);
       return newSession;
     }
-  }
-
-  private TiSession(TiConfiguration conf) {
-    this.conf = conf;
-    this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
-    this.regionManager = null;
-    this.clientBuilder = null;
   }
 
   public TxnKVClient createTxnClient() {

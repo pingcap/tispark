@@ -19,7 +19,11 @@ import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.exception.*;
+import com.pingcap.tikv.exception.GrpcException;
+import com.pingcap.tikv.exception.KeyException;
+import com.pingcap.tikv.exception.RegionException;
+import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
@@ -43,7 +47,7 @@ public class TxnKVClient implements AutoCloseable {
   private final RegionStoreClient.RegionStoreClientBuilder clientBuilder;
   private final TiConfiguration conf;
   private final RegionManager regionManager;
-  private ReadOnlyPDClient pdClient;
+  private final ReadOnlyPDClient pdClient;
 
   public TxnKVClient(
       TiConfiguration conf,

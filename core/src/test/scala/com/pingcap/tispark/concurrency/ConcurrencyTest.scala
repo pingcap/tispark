@@ -22,7 +22,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class ConcurrentcyTest extends BaseDataSourceTest("test_concurrency_write_read") {
+class ConcurrencyTest extends BaseDataSourceTest("test_concurrency_write_read") {
 
   protected val row1 = Row(1, "Hello")
   protected val row2 = Row(2, "TiDB")
@@ -42,6 +42,24 @@ class ConcurrentcyTest extends BaseDataSourceTest("test_concurrency_write_read")
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+  }
+
+  override def afterAll(): Unit = {
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
+  }
+
+  override protected def dropTable(): Unit = {
+    try {
+      jdbcUpdate(s"admin cleanup table lock $dbtable")
+    } catch {
+      case _: Throwable =>
+    }
+
+    jdbcUpdate(s"drop table if exists $dbtable")
   }
 
   protected def newJDBCReadThread(i: Int, resultRowCount: AtomicInteger): Thread = {
@@ -107,23 +125,5 @@ class ConcurrentcyTest extends BaseDataSourceTest("test_concurrency_write_read")
     val r1 = queryViaTiSpark(s"select * from $dbtableWithPrefix order by i")
     val r2 = queryTiDBViaJDBC(s"select * from $dbtable order by i")
     compSqlResult(query, r1, r2, checkLimit = false)
-  }
-
-  override protected def dropTable(): Unit = {
-    try {
-      jdbcUpdate(s"admin cleanup table lock $dbtable")
-    } catch {
-      case _: Throwable =>
-    }
-
-    jdbcUpdate(s"drop table if exists $dbtable")
-  }
-
-  override def afterAll(): Unit = {
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
   }
 }

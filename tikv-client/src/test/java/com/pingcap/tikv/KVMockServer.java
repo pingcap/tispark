@@ -29,7 +29,12 @@ import io.grpc.ServerBuilder;
 import io.grpc.Status;
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Errorpb;
@@ -42,24 +47,23 @@ import org.tikv.kvproto.TikvGrpc;
 
 public class KVMockServer extends TikvGrpc.TikvImplBase {
 
-  private int port;
-  private Server server;
-  private TiRegion region;
-  private TreeMap<Key, ByteString> dataMap = new TreeMap<>();
-  private Map<ByteString, Integer> errorMap = new HashMap<>();
-
+  public static final int STALE_EPOCH = 6;
   // for KV error
   static final int ABORT = 1;
-  private static final int RETRY = 2;
   // for raw client error
   static final int NOT_LEADER = 3;
+  private static final int RETRY = 2;
   private static final int REGION_NOT_FOUND = 4;
   private static final int KEY_NOT_IN_REGION = 5;
-  public static final int STALE_EPOCH = 6;
   private static final int SERVER_IS_BUSY = 7;
   private static final int STALE_COMMAND = 8;
   private static final int STORE_NOT_MATCH = 9;
   private static final int RAFT_ENTRY_TOO_LARGE = 10;
+  private int port;
+  private Server server;
+  private TiRegion region;
+  private final TreeMap<Key, ByteString> dataMap = new TreeMap<>();
+  private final Map<ByteString, Integer> errorMap = new HashMap<>();
 
   public int getPort() {
     return port;

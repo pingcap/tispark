@@ -17,12 +17,16 @@
 
 package org.apache.spark.sql.catalyst.expressions
 
-import com.pingcap.tikv.expression.visitor.{ColumnMatcher, MetaResolver, SupportedExpressionValidator}
+import com.pingcap.tikv.expression.visitor.{
+  ColumnMatcher,
+  MetaResolver,
+  SupportedExpressionValidator
+}
 import com.pingcap.tikv.expression.{AggregateFunction, ByItem, ColumnRef, ExpressionBlacklist}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tispark.TiDBRelation
-import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Count, DeclarativeAggregate, First, Max, Min, PromotedSum, Sum, SumNotNullable}
+import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.execution.TiConverter.fromSparkType
 
 import scala.collection.JavaConversions._
@@ -30,9 +34,13 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 object ExprUtils {
-  def transformGroupingToTiGrouping(expr: Expression,
-                                    meta: TiTableInfo,
-                                    dagRequest: TiDAGRequest): Unit =
+  type TiDataType = com.pingcap.tikv.types.DataType
+  type TiExpression = com.pingcap.tikv.expression.Expression
+
+  def transformGroupingToTiGrouping(
+      expr: Expression,
+      meta: TiTableInfo,
+      dagRequest: TiDAGRequest): Unit =
     expr match {
       case BasicExpression(keyExpr) =>
         MetaResolver.resolve(keyExpr, meta)
@@ -48,14 +56,14 @@ object ExprUtils {
                     .newCall(
                       AggregateFunction.FunctionType.First,
                       ref,
-                      meta.getColumn(ref.getName).getType
-                    )
-              )
-          )
+                      meta.getColumn(ref.getName).getType)))
       case _ =>
     }
 
-  def transformAggExprToTiAgg(expr: Expression, meta: TiTableInfo, dagRequest: TiDAGRequest): Any =
+  def transformAggExprToTiAgg(
+      expr: Expression,
+      meta: TiTableInfo,
+      dagRequest: TiDAGRequest): Any =
     expr match {
       case _: Average =>
         throw new IllegalArgumentException("Should never be here")
@@ -83,51 +91,48 @@ object ExprUtils {
         }
         dagRequest.addAggregate(
           AggregateFunction
-            .newCall(AggregateFunction.FunctionType.Count, tiArg, fromSparkType(f.dataType))
-        )
+            .newCall(AggregateFunction.FunctionType.Count, tiArg, fromSparkType(f.dataType)))
 
       case _ @Min(BasicExpression(arg)) =>
         MetaResolver.resolve(arg, meta)
         dagRequest
           .addAggregate(
             AggregateFunction
-              .newCall(AggregateFunction.FunctionType.Min, arg)
-          )
+              .newCall(AggregateFunction.FunctionType.Min, arg))
 
       case _ @Max(BasicExpression(arg)) =>
         MetaResolver.resolve(arg, meta)
         dagRequest
           .addAggregate(
             AggregateFunction
-              .newCall(AggregateFunction.FunctionType.Max, arg)
-          )
+              .newCall(AggregateFunction.FunctionType.Max, arg))
 
       case _ @First(BasicExpression(arg), _) =>
         MetaResolver.resolve(arg, meta)
         dagRequest
           .addAggregate(
             AggregateFunction
-              .newCall(AggregateFunction.FunctionType.First, arg)
-          )
+              .newCall(AggregateFunction.FunctionType.First, arg))
 
       case _ =>
     }
 
-  private def addingSumAggToDAgReq(meta: TiTableInfo,
-                                   dagRequest: TiDAGRequest,
-                                   f: DeclarativeAggregate,
-                                   arg: TiExpression) = {
+  private def addingSumAggToDAgReq(
+      meta: TiTableInfo,
+      dagRequest: TiDAGRequest,
+      f: DeclarativeAggregate,
+      arg: TiExpression) = {
     MetaResolver.resolve(arg, meta)
     dagRequest
       .addAggregate(
         AggregateFunction
-          .newCall(AggregateFunction.FunctionType.Sum, arg, fromSparkType(f.dataType))
-      )
+          .newCall(AggregateFunction.FunctionType.Sum, arg, fromSparkType(f.dataType)))
   }
 
-  def transformFilter(expr: Expression,
-                      meta: TiTableInfo,
-                      dagRequest: TiDAGRequest): TiExpression = {
+  def transformFilter(
+      expr: Expression,
+      meta: TiTableInfo,
+      dagRequest: TiDAGRequest): TiExpression = {
     expr match {
       case BasicExpression(arg) =>
         MetaResolver.resolve(arg, meta)
@@ -135,9 +140,10 @@ object ExprUtils {
     }
   }
 
-  def transformSortOrderToTiOrderBy(request: TiDAGRequest,
-                                    sortOrder: Seq[SortOrder],
-                                    meta: TiTableInfo): Unit = {
+  def transformSortOrderToTiOrderBy(
+      request: TiDAGRequest,
+      sortOrder: Seq[SortOrder],
+      meta: TiTableInfo): Unit = {
     val byItems = sortOrder.map { order =>
       {
         val expr = order.child
@@ -145,10 +151,7 @@ object ExprUtils {
           case BasicExpression(arg) => arg
         }
         MetaResolver.resolve(tiExpr, meta)
-        ByItem.create(
-          tiExpr,
-          order.direction.sql.equalsIgnoreCase("DESC")
-        )
+        ByItem.create(tiExpr, order.direction.sql.equalsIgnoreCase("DESC"))
       }
     }
     byItems.foreach(request.addOrderByItem)
@@ -161,23 +164,24 @@ object ExprUtils {
         expr
     }
   }
-  type TiDataType = com.pingcap.tikv.types.DataType
-  type TiExpression = com.pingcap.tikv.expression.Expression
 
-  def isSupportedAggregate(aggExpr: AggregateExpression,
-                           tiDBRelation: TiDBRelation,
-                           blacklist: ExpressionBlacklist): Boolean =
+  def isSupportedAggregate(
+      aggExpr: AggregateExpression,
+      tiDBRelation: TiDBRelation,
+      blacklist: ExpressionBlacklist): Boolean =
     aggExpr.aggregateFunction match {
-      case Average(_) | Sum(_) | SumNotNullable(_) | PromotedSum(_) | Count(_) | Min(_) | Max(_) =>
+      case Average(_) | Sum(_) | SumNotNullable(_) | PromotedSum(_) | Count(_) | Min(_) | Max(
+            _) =>
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
             .forall(isSupportedBasicExpression(_, tiDBRelation, blacklist))
       case _ => false
     }
 
-  def isSupportedBasicExpression(expr: Expression,
-                                 tiDBRelation: TiDBRelation,
-                                 blacklist: ExpressionBlacklist): Boolean = {
+  def isSupportedBasicExpression(
+      expr: Expression,
+      tiDBRelation: TiDBRelation,
+      blacklist: ExpressionBlacklist): Boolean = {
     if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG)) return false
 
     BasicExpression.convertToTiExpr(expr).fold(false) { expr: TiExpression =>
@@ -220,19 +224,22 @@ object ExprUtils {
     true
   }
 
-  def isSupportedOrderBy(expr: Expression,
-                         source: TiDBRelation,
-                         blacklist: ExpressionBlacklist): Boolean =
+  def isSupportedOrderBy(
+      expr: Expression,
+      source: TiDBRelation,
+      blacklist: ExpressionBlacklist): Boolean =
     isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
 
-  def isSupportedFilter(expr: Expression,
-                        source: TiDBRelation,
-                        blacklist: ExpressionBlacklist): Boolean =
+  def isSupportedFilter(
+      expr: Expression,
+      source: TiDBRelation,
+      blacklist: ExpressionBlacklist): Boolean =
     isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
 
   // if contains UDF / functions that cannot be folded
-  def isSupportedGroupingExpr(expr: NamedExpression,
-                              source: TiDBRelation,
-                              blacklist: ExpressionBlacklist): Boolean =
+  def isSupportedGroupingExpr(
+      expr: NamedExpression,
+      source: TiDBRelation,
+      blacklist: ExpressionBlacklist): Boolean =
     isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
 }

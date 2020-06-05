@@ -33,12 +33,23 @@ import com.pingcap.tikv.key.IndexScanKeyRangeBuilder;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
-import com.pingcap.tikv.meta.*;
+import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.meta.TiDAGRequest;
+import com.pingcap.tikv.meta.TiIndexColumn;
+import com.pingcap.tikv.meta.TiIndexInfo;
+import com.pingcap.tikv.meta.TiPartitionDef;
+import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.util.Pair;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
@@ -49,175 +60,73 @@ public class TiKVScanAnalyzer {
   private static final long TABLE_PREFIX_SIZE = 8;
   private static final long INDEX_PREFIX_SIZE = 8;
 
-  public static class TiKVScanPlan {
-    public static class Builder {
-      private Map<Long, List<KeyRange>> keyRanges;
-      private Set<Expression> filters;
-      private double cost;
-      private TiIndexInfo index;
-      private boolean isDoubleRead;
-      private double estimatedRowCount = -1;
-      private List<TiPartitionDef> prunedParts;
-      private TiStoreType storeType = TiStoreType.TiKV;
-
-      private Builder() {}
-
-      public static Builder newBuilder() {
-        return new Builder();
-      }
-
-      public Builder setKeyRanges(Map<Long, List<KeyRange>> keyRanges) {
-        this.keyRanges = keyRanges;
-        return this;
-      }
-
-      public Builder setFilters(Set<Expression> filters) {
-        this.filters = filters;
-        return this;
-      }
-
-      public Builder setCost(double cost) {
-        this.cost = cost;
-        return this;
-      }
-
-      public Builder setIndex(TiIndexInfo index) {
-        this.index = index;
-        return this;
-      }
-
-      public Builder setDoubleRead(boolean doubleRead) {
-        isDoubleRead = doubleRead;
-        return this;
-      }
-
-      public Builder setEstimatedRowCount(double estimatedRowCount) {
-        this.estimatedRowCount = estimatedRowCount;
-        return this;
-      }
-
-      public Builder setPrunedParts(List<TiPartitionDef> prunedParts) {
-        this.prunedParts = prunedParts;
-        return this;
-      }
-
-      public Builder setStoreType(TiStoreType storeType) {
-        this.storeType = storeType;
-        return this;
-      }
-
-      public TiKVScanPlan build() {
-        return new TiKVScanPlan(
-            keyRanges,
-            filters,
-            index,
-            cost,
-            isDoubleRead,
-            estimatedRowCount,
-            prunedParts,
-            storeType);
-      }
-
-      // TODO: Fine-grained statistics usage
-      Builder calculateCostAndEstimateCount(long tableColSize) {
-        cost = 100.0;
-        cost *= tableColSize * TABLE_SCAN_COST_FACTOR;
-        return this;
-      }
-
-      Builder calculateCostAndEstimateCount(
-          TableStatistics tableStatistics,
-          List<Expression> conditions,
-          List<IndexRange> irs,
-          long indexSize,
-          long tableColSize) {
-        if (tableStatistics != null) {
-          long totalRowCount = tableStatistics.getCount();
-          IndexStatistics indexStatistics = tableStatistics.getIndexHistMap().get(index.getId());
-          if (conditions.isEmpty()) {
-            cost = 100.0; // Full index scan cost
-            // TODO: Fine-grained statistics usage
-            estimatedRowCount = totalRowCount;
-          } else if (indexStatistics != null) {
-            double idxRangeRowCnt = indexStatistics.getRowCount(irs);
-            // guess the percentage of rows hit
-            cost = 100.0 * idxRangeRowCnt / totalRowCount;
-            estimatedRowCount = idxRangeRowCnt;
+  @VisibleForTesting
+  public static ScanSpec extractConditions(
+      List<Expression> conditions, TiTableInfo table, TiIndexInfo index) {
+    // 0. Different than TiDB implementation, here logic has been unified for TableScan and
+    // IndexScan by
+    // adding fake index on clustered table's pk
+    // 1. Generate access point based on equal conditions
+    // 2. Cut access point condition if index is not continuous
+    // 3. Push back prefix index conditions since prefix index retrieve more result than needed
+    // 4. For remaining indexes (since access conditions consume some index, and they will
+    // not be used in filter push down later), find continuous matching index until first unmatched
+    // 5. Push back index related filter if prefix index, for remaining filters
+    // Equal conditions needs to be process first according to index sequence
+    // When index is null, no access condition can be applied
+    ScanSpec.Builder specBuilder = new ScanSpec.Builder(table, index);
+    if (index != null) {
+      Set<Expression> visited = new HashSet<>();
+      IndexMatchingLoop:
+      for (int i = 0; i < index.getIndexColumns().size(); i++) {
+        // for each index column try matches an equal condition
+        // and push remaining back
+        // TODO: if more than one equal conditions match an
+        // index, it likely yields nothing. Maybe a check needed
+        // to simplify it to a false condition
+        TiIndexColumn col = index.getIndexColumns().get(i);
+        IndexMatcher eqMatcher = IndexMatcher.equalOnlyMatcher(col);
+        boolean found = false;
+        // For first prefix index encountered, it equals to a range
+        // and we cannot push equal conditions further
+        for (Expression cond : conditions) {
+          if (visited.contains(cond)) {
+            continue;
           }
-
-          if (isDoubleRead) {
-            cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
-          } else {
-            cost *= indexSize * INDEX_SCAN_COST_FACTOR;
+          if (eqMatcher.match(cond)) {
+            specBuilder.addPointPredicate(col, cond);
+            if (col.isPrefixIndex()) {
+              specBuilder.addResidualPredicate(cond);
+              break IndexMatchingLoop;
+            }
+            visited.add(cond);
+            found = true;
+            break;
           }
         }
-        return this;
+        if (!found) {
+          // For first "broken index chain piece"
+          // search for a matching range condition
+          IndexMatcher matcher = IndexMatcher.matcher(col);
+          for (Expression cond : conditions) {
+            if (visited.contains(cond)) {
+              continue;
+            }
+            if (matcher.match(cond)) {
+              specBuilder.addRangePredicate(col, cond);
+              if (col.isPrefixIndex()) {
+                specBuilder.addResidualPredicate(cond);
+                break;
+              }
+            }
+          }
+          break;
+        }
       }
     }
 
-    private TiKVScanPlan(
-        Map<Long, List<KeyRange>> keyRanges,
-        Set<Expression> filters,
-        TiIndexInfo index,
-        double cost,
-        boolean isDoubleRead,
-        double estimatedRowCount,
-        List<TiPartitionDef> partDefs,
-        TiStoreType storeType) {
-      this.filters = filters;
-      this.keyRanges = keyRanges;
-      this.cost = cost;
-      this.index = index;
-      this.isDoubleRead = isDoubleRead;
-      this.estimatedRowCount = estimatedRowCount;
-      this.prunedParts = partDefs;
-      this.storeType = storeType;
-    }
-
-    private final Map<Long, List<KeyRange>> keyRanges;
-    private final Set<Expression> filters;
-    private final double cost;
-    private final TiIndexInfo index;
-    private final boolean isDoubleRead;
-    private final double estimatedRowCount;
-    private final List<TiPartitionDef> prunedParts;
-    private final TiStoreType storeType;
-
-    public double getEstimatedRowCount() {
-      return estimatedRowCount;
-    }
-
-    public Map<Long, List<KeyRange>> getKeyRanges() {
-      return keyRanges;
-    }
-
-    public Set<Expression> getFilters() {
-      return filters;
-    }
-
-    public double getCost() {
-      return cost;
-    }
-
-    public boolean isIndexScan() {
-      return index != null && !index.isFakePrimaryKey();
-    }
-
-    public TiIndexInfo getIndex() {
-      return index;
-    }
-
-    public boolean isDoubleRead() {
-      return isDoubleRead;
-    }
-
-    public List<TiPartitionDef> getPrunedParts() {
-      return prunedParts;
-    }
-
-    public TiStoreType getStoreType() {
-      return storeType;
-    }
+    specBuilder.addAllPredicates(conditions);
+    return specBuilder.build();
   }
 
   // build a scan for debug purpose.
@@ -522,72 +431,174 @@ public class TiKVScanAnalyzer {
     return true;
   }
 
-  @VisibleForTesting
-  public static ScanSpec extractConditions(
-      List<Expression> conditions, TiTableInfo table, TiIndexInfo index) {
-    // 0. Different than TiDB implementation, here logic has been unified for TableScan and
-    // IndexScan by
-    // adding fake index on clustered table's pk
-    // 1. Generate access point based on equal conditions
-    // 2. Cut access point condition if index is not continuous
-    // 3. Push back prefix index conditions since prefix index retrieve more result than needed
-    // 4. For remaining indexes (since access conditions consume some index, and they will
-    // not be used in filter push down later), find continuous matching index until first unmatched
-    // 5. Push back index related filter if prefix index, for remaining filters
-    // Equal conditions needs to be process first according to index sequence
-    // When index is null, no access condition can be applied
-    ScanSpec.Builder specBuilder = new ScanSpec.Builder(table, index);
-    if (index != null) {
-      Set<Expression> visited = new HashSet<>();
-      IndexMatchingLoop:
-      for (int i = 0; i < index.getIndexColumns().size(); i++) {
-        // for each index column try matches an equal condition
-        // and push remaining back
-        // TODO: if more than one equal conditions match an
-        // index, it likely yields nothing. Maybe a check needed
-        // to simplify it to a false condition
-        TiIndexColumn col = index.getIndexColumns().get(i);
-        IndexMatcher eqMatcher = IndexMatcher.equalOnlyMatcher(col);
-        boolean found = false;
-        // For first prefix index encountered, it equals to a range
-        // and we cannot push equal conditions further
-        for (Expression cond : conditions) {
-          if (visited.contains(cond)) {
-            continue;
-          }
-          if (eqMatcher.match(cond)) {
-            specBuilder.addPointPredicate(col, cond);
-            if (col.isPrefixIndex()) {
-              specBuilder.addResidualPredicate(cond);
-              break IndexMatchingLoop;
-            }
-            visited.add(cond);
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          // For first "broken index chain piece"
-          // search for a matching range condition
-          IndexMatcher matcher = IndexMatcher.matcher(col);
-          for (Expression cond : conditions) {
-            if (visited.contains(cond)) {
-              continue;
-            }
-            if (matcher.match(cond)) {
-              specBuilder.addRangePredicate(col, cond);
-              if (col.isPrefixIndex()) {
-                specBuilder.addResidualPredicate(cond);
-                break;
-              }
-            }
-          }
-          break;
-        }
-      }
+  public static class TiKVScanPlan {
+    private final Map<Long, List<KeyRange>> keyRanges;
+    private final Set<Expression> filters;
+    private final double cost;
+    private final TiIndexInfo index;
+    private final boolean isDoubleRead;
+    private final double estimatedRowCount;
+    private final List<TiPartitionDef> prunedParts;
+    private final TiStoreType storeType;
+
+    private TiKVScanPlan(
+        Map<Long, List<KeyRange>> keyRanges,
+        Set<Expression> filters,
+        TiIndexInfo index,
+        double cost,
+        boolean isDoubleRead,
+        double estimatedRowCount,
+        List<TiPartitionDef> partDefs,
+        TiStoreType storeType) {
+      this.filters = filters;
+      this.keyRanges = keyRanges;
+      this.cost = cost;
+      this.index = index;
+      this.isDoubleRead = isDoubleRead;
+      this.estimatedRowCount = estimatedRowCount;
+      this.prunedParts = partDefs;
+      this.storeType = storeType;
     }
 
-    specBuilder.addAllPredicates(conditions);
-    return specBuilder.build();
+    public double getEstimatedRowCount() {
+      return estimatedRowCount;
+    }
+
+    public Map<Long, List<KeyRange>> getKeyRanges() {
+      return keyRanges;
+    }
+
+    public Set<Expression> getFilters() {
+      return filters;
+    }
+
+    public double getCost() {
+      return cost;
+    }
+
+    public boolean isIndexScan() {
+      return index != null && !index.isFakePrimaryKey();
+    }
+
+    public TiIndexInfo getIndex() {
+      return index;
+    }
+
+    public boolean isDoubleRead() {
+      return isDoubleRead;
+    }
+
+    public List<TiPartitionDef> getPrunedParts() {
+      return prunedParts;
+    }
+
+    public TiStoreType getStoreType() {
+      return storeType;
+    }
+
+    public static class Builder {
+      private Map<Long, List<KeyRange>> keyRanges;
+      private Set<Expression> filters;
+      private double cost;
+      private TiIndexInfo index;
+      private boolean isDoubleRead;
+      private double estimatedRowCount = -1;
+      private List<TiPartitionDef> prunedParts;
+      private TiStoreType storeType = TiStoreType.TiKV;
+
+      private Builder() {}
+
+      public static Builder newBuilder() {
+        return new Builder();
+      }
+
+      public Builder setKeyRanges(Map<Long, List<KeyRange>> keyRanges) {
+        this.keyRanges = keyRanges;
+        return this;
+      }
+
+      public Builder setFilters(Set<Expression> filters) {
+        this.filters = filters;
+        return this;
+      }
+
+      public Builder setCost(double cost) {
+        this.cost = cost;
+        return this;
+      }
+
+      public Builder setIndex(TiIndexInfo index) {
+        this.index = index;
+        return this;
+      }
+
+      public Builder setDoubleRead(boolean doubleRead) {
+        isDoubleRead = doubleRead;
+        return this;
+      }
+
+      public Builder setEstimatedRowCount(double estimatedRowCount) {
+        this.estimatedRowCount = estimatedRowCount;
+        return this;
+      }
+
+      public Builder setPrunedParts(List<TiPartitionDef> prunedParts) {
+        this.prunedParts = prunedParts;
+        return this;
+      }
+
+      public Builder setStoreType(TiStoreType storeType) {
+        this.storeType = storeType;
+        return this;
+      }
+
+      public TiKVScanPlan build() {
+        return new TiKVScanPlan(
+            keyRanges,
+            filters,
+            index,
+            cost,
+            isDoubleRead,
+            estimatedRowCount,
+            prunedParts,
+            storeType);
+      }
+
+      // TODO: Fine-grained statistics usage
+      Builder calculateCostAndEstimateCount(long tableColSize) {
+        cost = 100.0;
+        cost *= tableColSize * TABLE_SCAN_COST_FACTOR;
+        return this;
+      }
+
+      Builder calculateCostAndEstimateCount(
+          TableStatistics tableStatistics,
+          List<Expression> conditions,
+          List<IndexRange> irs,
+          long indexSize,
+          long tableColSize) {
+        if (tableStatistics != null) {
+          long totalRowCount = tableStatistics.getCount();
+          IndexStatistics indexStatistics = tableStatistics.getIndexHistMap().get(index.getId());
+          if (conditions.isEmpty()) {
+            cost = 100.0; // Full index scan cost
+            // TODO: Fine-grained statistics usage
+            estimatedRowCount = totalRowCount;
+          } else if (indexStatistics != null) {
+            double idxRangeRowCnt = indexStatistics.getRowCount(irs);
+            // guess the percentage of rows hit
+            cost = 100.0 * idxRangeRowCnt / totalRowCount;
+            estimatedRowCount = idxRangeRowCnt;
+          }
+
+          if (isDoubleRead) {
+            cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
+          } else {
+            cost *= indexSize * INDEX_SCAN_COST_FACTOR;
+          }
+        }
+        return this;
+      }
+    }
   }
 }

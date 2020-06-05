@@ -20,8 +20,8 @@ package com.pingcap.tikv.columnar;
  * data in columnar format.
  */
 public class TiChunk {
-  private TiColumnVector[] columnVectors;
-  private int numOfRows;
+  private final TiColumnVector[] columnVectors;
+  private final int numOfRows;
 
   public TiChunk(TiColumnVector[] columnVectors) {
     this.columnVectors = columnVectors;

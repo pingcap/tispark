@@ -18,11 +18,11 @@ package com.pingcap.tikv.util;
 import java.lang.reflect.Method;
 
 public class ReflectionWrapper {
+  private final Object obj;
+
   public ReflectionWrapper(Object obj) {
     this.obj = obj;
   }
-
-  private Object obj;
 
   public Object call(String methodName, Object... args) {
     try {

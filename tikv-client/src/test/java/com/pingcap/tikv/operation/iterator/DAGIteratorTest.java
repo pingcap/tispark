@@ -52,6 +52,10 @@ public class DAGIteratorTest extends MockServerTest {
         .build();
   }
 
+  private static KeyRange createByteStringRange(ByteString sKey, ByteString eKey) {
+    return KeyRange.newBuilder().setStart(sKey).setEnd(eKey).build();
+  }
+
   @Test
   public void staleEpochTest() {
     Metapb.Store store =
@@ -92,9 +96,5 @@ public class DAGIteratorTest extends MockServerTest {
       assertEquals(r.get(0, infer.getType(0)), 666L);
       assertEquals(r.get(1, infer.getType(1)), "value1");
     }
-  }
-
-  private static KeyRange createByteStringRange(ByteString sKey, ByteString eKey) {
-    return KeyRange.newBuilder().setStart(sKey).setEnd(eKey).build();
   }
 }

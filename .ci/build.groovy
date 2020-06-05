@@ -27,12 +27,15 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                         sh """
                         cp -R /home/jenkins/agent/git/tispark/. ./
                         git checkout -f ${ghprbActualCommit}
-                        mvn clean install -Dmaven.test.skip=true
+                        mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false
+                        mvn com.coveo:fmt-maven-plugin:format
                         git diff --quiet
                         formatted="\$?"
                         if [[ "\${formatted}" -eq 1 ]]
                         then
-                           echo "code format error"
+                           echo "code format error, please run the following commands:"
+                           echo "   mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false"
+                           echo "   mvn com.coveo:fmt-maven-plugin:format"
                            exit 1
                         fi
                         """

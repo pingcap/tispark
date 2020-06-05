@@ -25,18 +25,12 @@ import org.apache.spark.sql.types.GenerateUnitDataTypeTestAction
 import scala.util.Random
 
 trait GeneratePKDataTypeTestAction extends GenerateUnitDataTypeTestAction {
-  private def genIndex(dataType: ReflectedDataType, r: Random, len: String): List[Index] = {
-    if (isStringType(dataType)) {
-      List(PrimaryKey(List(PrefixColumn(1, r.nextInt(4) + 2))))
-    } else {
-      List(PrimaryKey(List(DefaultColumn(1))))
-    }
-  }
-
-  override def genSchema(dataType: ReflectedDataType,
-                         tableName: String,
-                         len: String,
-                         desc: String): Schema = {
+  override def genSchema(
+    dataType: ReflectedDataType,
+    tableName: String,
+    len: String,
+    desc: String
+  ): Schema = {
     val index = genIndex(dataType, r, len)
     schemaGenerator(
       database,
@@ -47,5 +41,13 @@ trait GeneratePKDataTypeTestAction extends GenerateUnitDataTypeTestAction {
       ),
       index
     )
+  }
+
+  private def genIndex(dataType: ReflectedDataType, r: Random, len: String): List[Index] = {
+    if (isStringType(dataType)) {
+      List(PrimaryKey(List(PrefixColumn(1, r.nextInt(4) + 2))))
+    } else {
+      List(PrimaryKey(List(DefaultColumn(1))))
+    }
   }
 }

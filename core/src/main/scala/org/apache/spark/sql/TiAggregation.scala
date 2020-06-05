@@ -34,12 +34,16 @@ object TiAggregation {
 object TiAggregationProjection {
   type ReturnType = (Seq[Expression], LogicalPlan, TiDBRelation, Seq[NamedExpression])
 
-  def unapply(plan: LogicalPlan): Option[ReturnType] = plan match {
-    // Only push down aggregates projection when all filters can be applied and
-    // all projection expressions are column references
-    case PhysicalOperation(projects, filters, rel @ LogicalRelation(source: TiDBRelation, _, _, _))
-        if projects.forall(_.isInstanceOf[Attribute]) =>
-      Some((filters, rel, source, projects))
-    case _ => Option.empty[ReturnType]
-  }
+  def unapply(plan: LogicalPlan): Option[ReturnType] =
+    plan match {
+      // Only push down aggregates projection when all filters can be applied and
+      // all projection expressions are column references
+      case PhysicalOperation(
+            projects,
+            filters,
+            rel @ LogicalRelation(source: TiDBRelation, _, _, _))
+          if projects.forall(_.isInstanceOf[Attribute]) =>
+        Some((filters, rel, source, projects))
+      case _ => Option.empty[ReturnType]
+    }
 }

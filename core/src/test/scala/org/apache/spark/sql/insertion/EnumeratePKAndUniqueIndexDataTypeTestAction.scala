@@ -1,13 +1,43 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.spark.sql.insertion
 
 import org.apache.commons.math3.util.Combinations
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
-import org.apache.spark.sql.test.generator.{DefaultColumn, Index, IndexColumn, Key, PrefixColumn, PrimaryKey}
 import org.apache.spark.sql.test.generator.TestDataGenerator.isStringType
+import org.apache.spark.sql.test.generator._
 
 import scala.util.Random
 
 trait EnumeratePKAndUniqueIndexDataTypeTestAction extends BaseEnumerateDataTypesTestSpec {
+  override def genIndex(dataTypes: List[ReflectedDataType], r: Random): List[List[Index]] = {
+    val pkIdxList = genPk(dataTypes, r)
+    val uniqueIdxList = genUniqueIndex(dataTypes, r)
+    val constraints = scala.collection.mutable.ListBuffer.empty[List[Index]]
+    for (i <- pkIdxList.indices) {
+      val tmpIdxList = scala.collection.mutable.ListBuffer.empty[Index]
+      for (j <- uniqueIdxList.indices) {
+        tmpIdxList += pkIdxList(i)
+        tmpIdxList += uniqueIdxList(j)
+      }
+      constraints += tmpIdxList.toList
+    }
+    constraints.toList
+  }
+
   private def genPk(dataTypes: List[ReflectedDataType], r: Random): List[Index] = {
     val size = dataTypes.length
     val keyList = scala.collection.mutable.ListBuffer.empty[PrimaryKey]
@@ -49,20 +79,5 @@ trait EnumeratePKAndUniqueIndexDataTypeTestAction extends BaseEnumerateDataTypes
     }
 
     keyList.toList
-  }
-
-  override def genIndex(dataTypes: List[ReflectedDataType], r: Random): List[List[Index]] = {
-    val pkIdxList = genPk(dataTypes, r)
-    val uniqueIdxList = genUniqueIndex(dataTypes, r)
-    val constraints = scala.collection.mutable.ListBuffer.empty[List[Index]]
-    for (i <- pkIdxList.indices) {
-      val tmpIdxList = scala.collection.mutable.ListBuffer.empty[Index]
-      for (j <- uniqueIdxList.indices) {
-        tmpIdxList += pkIdxList(i)
-        tmpIdxList += uniqueIdxList(j)
-      }
-      constraints += tmpIdxList.toList
-    }
-    constraints.toList
   }
 }

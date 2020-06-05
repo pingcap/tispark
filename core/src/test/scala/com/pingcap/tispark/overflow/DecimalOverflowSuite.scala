@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.overflow
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
@@ -10,7 +25,12 @@ import org.apache.spark.sql.types.{StructField, _}
  */
 class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_overflow") {
 
-  case class TestData(length: Int, precision: Int, writeData: Double, readData: Long) {}
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 
   test("Test DECIMAL Not Overflow") {
     if (!supportBatchWrite) {
@@ -30,10 +50,10 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
         TestData(38, 2, 1.4d, 140L) ::
         TestData(38, 2, -1.5d, -150L) ::
         TestData(38, 2, -1.4d, -140L) ::
-        TestData(38, 10, 1.4d, 1.4E10d.toLong) ::
-        TestData(38, 10, 1.5d, 1.5E10d.toLong) ::
-        TestData(38, 10, -1.4d, -1.4E10d.toLong) ::
-        TestData(38, 10, -1.5d, -1.5E10d.toLong) ::
+        TestData(38, 10, 1.4d, 1.4e10d.toLong) ::
+        TestData(38, 10, 1.5d, 1.5e10d.toLong) ::
+        TestData(38, 10, -1.4d, -1.4e10d.toLong) ::
+        TestData(38, 10, -1.5d, -1.5e10d.toLong) ::
         TestData(10, 4, 999999.9999d, 9999999999L) ::
         Nil
 
@@ -43,24 +63,18 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
           dropTable()
 
           jdbcUpdate(
-            s"create table $dbtable(i INT, c1 DECIMAL(${testData.length}, ${testData.precision}))"
-          )
+            s"create table $dbtable(i INT, c1 DECIMAL(${testData.length}, ${testData.precision}))")
 
           val row1 = Row(1, testData.writeData)
-          val schema = StructType(
-            List(
-              StructField("i", IntegerType),
-              StructField("c1", DoubleType)
-            )
-          )
+          val schema =
+            StructType(List(StructField("i", IntegerType), StructField("c1", DoubleType)))
 
-          val readRow1 = Row(1, java.math.BigDecimal.valueOf(testData.readData, testData.precision))
+          val readRow1 =
+            Row(1, java.math.BigDecimal.valueOf(testData.readData, testData.precision))
           val readSchema = StructType(
             List(
               StructField("i", IntegerType),
-              StructField("c1", DecimalType(testData.length, testData.precision))
-            )
-          )
+              StructField("c1", DecimalType(testData.length, testData.precision))))
 
           writeFunc(List(row1), schema, None)
           compareTiDBSelectWithJDBC(Seq(readRow1), readSchema)
@@ -68,7 +82,7 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
     }
   }
 
-  case class OverflowTestData(length: Int, precision: Int, writeData: Double) {}
+  case class TestData(length: Int, precision: Int, writeData: Double, readData: Long) {}
 
   test("Test DECIMAL Overflow") {
     if (!supportBatchWrite) {
@@ -85,16 +99,10 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
       dropTable()
 
       jdbcUpdate(
-        s"create table $dbtable(i INT, c1 DECIMAL(${testData.length}, ${testData.precision}))"
-      )
+        s"create table $dbtable(i INT, c1 DECIMAL(${testData.length}, ${testData.precision}))")
 
       val row1 = Row(1, testData.writeData)
-      val schema = StructType(
-        List(
-          StructField("i", IntegerType),
-          StructField("c1", DoubleType)
-        )
-      )
+      val schema = StructType(List(StructField("i", IntegerType), StructField("c1", DoubleType)))
 
       val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
       val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
@@ -105,16 +113,10 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
         schema,
         jdbcErrorClass,
         tidbErrorClass,
-        tidbErrorMsg
-      )
+        tidbErrorMsg)
 
     }
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
+  case class OverflowTestData(length: Int, precision: Int, writeData: Double) {}
 }

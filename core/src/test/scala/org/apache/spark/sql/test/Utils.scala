@@ -25,16 +25,16 @@ import scala.collection.JavaConversions._
 
 object Utils {
 
+  def writeFile(content: String, path: String): Unit =
+    TryResource(new PrintWriter(path))(_.close()) {
+      _.print(content)
+    }
+
   def TryResource[T](res: T)(closeOp: T => Unit)(taskOp: T => Unit): Unit =
     try {
       taskOp(res)
     } finally {
       closeOp(res)
-    }
-
-  def writeFile(content: String, path: String): Unit =
-    TryResource(new PrintWriter(path))(_.close()) {
-      _.print(content)
     }
 
   def readFile(path: String): List[String] =
@@ -54,14 +54,14 @@ object Utils {
     }
   }
 
-  private def getFlag(prop: Properties, key: String, defValue: String): Boolean =
-    getOrElse(prop, key, defValue).equalsIgnoreCase("true")
-
   def getFlagOrFalse(prop: Properties, key: String): Boolean =
     getFlag(prop, key, "false")
 
   def getFlagOrTrue(prop: Properties, key: String): Boolean =
     getFlag(prop, key, "true")
+
+  private def getFlag(prop: Properties, key: String, defValue: String): Boolean =
+    getOrElse(prop, key, defValue).equalsIgnoreCase("true")
 
   def getOrElse(prop: Properties, key: String, defValue: String): String = {
     val jvmProp = System.getProperty(key)
@@ -80,9 +80,9 @@ object Utils {
     result
   }
 
-  def joinPath(basePath: String, paths: String*): String =
-    Paths.get(basePath, paths: _*).toAbsolutePath.toString
-
   def ensurePath(basePath: String, paths: String*): Boolean =
     new File(joinPath(basePath, paths: _*)).mkdirs()
+
+  def joinPath(basePath: String, paths: String*): String =
+    Paths.get(basePath, paths: _*).toAbsolutePath.toString
 }

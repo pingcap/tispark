@@ -36,50 +36,9 @@ public class Histogram {
 
   private final long id; // Column ID
   private final long numberOfDistinctValue; // Number of distinct values.
-  private List<Bucket> buckets; // Histogram bucket list.
   private final long nullCount;
   private final long lastUpdateVersion;
-
-  public static class Builder {
-    private long id;
-    private long NDV;
-    private List<Bucket> buckets = new ArrayList<>();
-    private long nullCount;
-    private long lastUpdateVersion;
-
-    public Builder setId(long id) {
-      this.id = id;
-      return this;
-    }
-
-    public Builder setNDV(long NDV) {
-      this.NDV = NDV;
-      return this;
-    }
-
-    public Builder setBuckets(List<Bucket> buckets) {
-      this.buckets = new ArrayList<>(buckets);
-      return this;
-    }
-
-    public Builder setNullCount(long nullCount) {
-      this.nullCount = nullCount;
-      return this;
-    }
-
-    public Builder setLastUpdateVersion(long lastUpdateVersion) {
-      this.lastUpdateVersion = lastUpdateVersion;
-      return this;
-    }
-
-    public Histogram build() {
-      return new Histogram(id, NDV, buckets, nullCount, lastUpdateVersion);
-    }
-  }
-
-  public static Builder newBuilder() {
-    return new Builder();
-  }
+  private List<Bucket> buckets; // Histogram bucket list.
 
   private Histogram(
       long id,
@@ -92,6 +51,10 @@ public class Histogram {
     this.buckets = buckets;
     this.nullCount = nullCount;
     this.lastUpdateVersion = lastUpdateVersion;
+  }
+
+  public static Builder newBuilder() {
+    return new Builder();
   }
 
   public long getNumberOfDistinctValue() {
@@ -275,5 +238,42 @@ public class Histogram {
         + ", buckets:["
         + buckets
         + "]\n}";
+  }
+
+  public static class Builder {
+    private long id;
+    private long NDV;
+    private List<Bucket> buckets = new ArrayList<>();
+    private long nullCount;
+    private long lastUpdateVersion;
+
+    public Builder setId(long id) {
+      this.id = id;
+      return this;
+    }
+
+    public Builder setNDV(long NDV) {
+      this.NDV = NDV;
+      return this;
+    }
+
+    public Builder setBuckets(List<Bucket> buckets) {
+      this.buckets = new ArrayList<>(buckets);
+      return this;
+    }
+
+    public Builder setNullCount(long nullCount) {
+      this.nullCount = nullCount;
+      return this;
+    }
+
+    public Builder setLastUpdateVersion(long lastUpdateVersion) {
+      this.lastUpdateVersion = lastUpdateVersion;
+      return this;
+    }
+
+    public Histogram build() {
+      return new Histogram(id, NDV, buckets, nullCount, lastUpdateVersion);
+    }
   }
 }

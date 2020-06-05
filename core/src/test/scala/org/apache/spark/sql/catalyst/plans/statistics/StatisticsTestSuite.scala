@@ -16,8 +16,8 @@
 package org.apache.spark.sql.catalyst.plans.statistics
 
 import com.google.common.collect.ImmutableList
-import com.pingcap.tikv.expression.{ColumnRef, Constant, Expression, LogicalBinaryExpression}
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.{equal, greaterThan, lessEqual, lessThan}
+import com.pingcap.tikv.expression.{ColumnRef, Constant, Expression, LogicalBinaryExpression}
 import com.pingcap.tikv.meta.{TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges
 import com.pingcap.tikv.predicates.TiKVScanAnalyzer
@@ -28,20 +28,21 @@ import org.scalatest.exceptions.TestFailedException
 import scala.collection.JavaConverters._
 
 class StatisticsTestSuite extends BasePlanTest {
+  private val tableScanCases = Set(
+    "select * from full_data_type_table_idx where id_dt = 2333"
+  )
+  private val indexScanCases = Map(
+    // double read case
+    "select tp_bigint, tp_real from full_data_type_table_idx where tp_int = 2333" -> "idx_tp_int",
+    "select * from full_data_type_table_idx where tp_int = 2333" -> "idx_tp_int"
+  )
+  private val coveringIndexScanCases = Map(
+    // cover index case
+    "select id_dt from full_data_type_table_idx where tp_int = 2333" -> "idx_tp_int",
+    "select tp_int from full_data_type_table_idx where tp_bigint < 10 and tp_int < 40" -> "idx_tp_int_tp_bigint",
+    "select tp_int from full_data_type_table_idx where tp_bigint < -4511898209778166952 and tp_int < 40" -> "idx_tp_bigint_tp_int"
+  )
   protected var fDataTbl: TiTableInfo = _
-  protected var fDataIdxTbl: TiTableInfo = _
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    initTable()
-  }
-
-  private def initTable(): Unit = {
-    fDataTbl = getTableInfo("tispark_test", "full_data_type_table")
-    fDataIdxTbl = getTableInfo("tispark_test", "full_data_type_table_idx")
-    StatisticsManager.loadStatisticsInfo(fDataTbl)
-    StatisticsManager.loadStatisticsInfo(fDataIdxTbl)
-  }
 
   test("Test fixed table size estimation") {
     tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_float`")
@@ -127,10 +128,18 @@ class StatisticsTestSuite extends BasePlanTest {
     val expressions = ImmutableList.of(and).asScala
     testSelectRowCount(expressions, idx, 5)
   }
+  protected var fDataIdxTbl: TiTableInfo = _
 
-  def testSelectRowCount(expressions: Seq[Expression],
-                         idx: TiIndexInfo,
-                         expectedCount: Long): Unit = {
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    initTable()
+  }
+
+  def testSelectRowCount(
+    expressions: Seq[Expression],
+    idx: TiIndexInfo,
+    expectedCount: Long
+  ): Unit = {
     val result = TiKVScanAnalyzer.extractConditions(expressions.asJava, fDataIdxTbl, idx)
     val irs =
       expressionToIndexRanges(result.getPointPredicates, result.getRangePredicate, fDataIdxTbl, idx)
@@ -141,22 +150,12 @@ class StatisticsTestSuite extends BasePlanTest {
     assert(rc == expectedCount)
   }
 
-  private val tableScanCases = Set(
-    "select * from full_data_type_table_idx where id_dt = 2333"
-  )
-
-  private val indexScanCases = Map(
-    // double read case
-    "select tp_bigint, tp_real from full_data_type_table_idx where tp_int = 2333" -> "idx_tp_int",
-    "select * from full_data_type_table_idx where tp_int = 2333" -> "idx_tp_int"
-  )
-
-  private val coveringIndexScanCases = Map(
-    // cover index case
-    "select id_dt from full_data_type_table_idx where tp_int = 2333" -> "idx_tp_int",
-    "select tp_int from full_data_type_table_idx where tp_bigint < 10 and tp_int < 40" -> "idx_tp_int_tp_bigint",
-    "select tp_int from full_data_type_table_idx where tp_bigint < -4511898209778166952 and tp_int < 40" -> "idx_tp_bigint_tp_int"
-  )
+  private def initTable(): Unit = {
+    fDataTbl = getTableInfo("tispark_test", "full_data_type_table")
+    fDataIdxTbl = getTableInfo("tispark_test", "full_data_type_table_idx")
+    StatisticsManager.loadStatisticsInfo(fDataTbl)
+    StatisticsManager.loadStatisticsInfo(fDataIdxTbl)
+  }
 
   tableScanCases.foreach { query =>
     {

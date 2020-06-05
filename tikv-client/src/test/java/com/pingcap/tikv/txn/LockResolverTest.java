@@ -15,7 +15,9 @@
 
 package com.pingcap.tikv.txn;
 
-import static junit.framework.TestCase.*;
+import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertTrue;
+import static junit.framework.TestCase.fail;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiConfiguration;
@@ -44,18 +46,20 @@ import org.tikv.kvproto.Kvrpcpb.Mutation;
 import org.tikv.kvproto.Kvrpcpb.Op;
 
 abstract class LockResolverTest {
-  private Kvrpcpb.IsolationLevel isolationLevel;
-
-  protected final Logger logger = LoggerFactory.getLogger(this.getClass());
-  TiSession session;
-  static final int DEFAULT_TTL = 10;
-  RegionStoreClient.RegionStoreClientBuilder builder;
-  boolean init;
-  private static final String DEFAULT_PD_ADDR = "127.0.0.1:2379";
   protected static final long LARGE_LOCK_TTL = BackOffer.GET_MAX_BACKOFF + 2 * 1000;
-
+  static final int DEFAULT_TTL = 10;
   static final int GET_BACKOFF = 5 * 1000;
   static final int CHECK_TTL_BACKOFF = 1000;
+  private static final String DEFAULT_PD_ADDR = "127.0.0.1:2379";
+  protected final Logger logger = LoggerFactory.getLogger(this.getClass());
+  TiSession session;
+  RegionStoreClient.RegionStoreClientBuilder builder;
+  boolean init;
+  private final Kvrpcpb.IsolationLevel isolationLevel;
+
+  LockResolverTest(Kvrpcpb.IsolationLevel isolationLevel) {
+    this.isolationLevel = isolationLevel;
+  }
 
   private String getPdAddr() {
     String tmp = System.getenv("pdAddr");
@@ -69,10 +73,6 @@ abstract class LockResolverTest {
     }
 
     return DEFAULT_PD_ADDR;
-  }
-
-  LockResolverTest(Kvrpcpb.IsolationLevel isolationLevel) {
-    this.isolationLevel = isolationLevel;
   }
 
   @Before
@@ -272,11 +272,7 @@ abstract class LockResolverTest {
   }
 
   void versionTest(boolean hasLock) {
-    if (isLockResolverClientV4()) {
-      versionTest(hasLock, false);
-    } else {
-      versionTest(hasLock, true);
-    }
+    versionTest(hasLock, !isLockResolverClientV4());
   }
 
   private void versionTest(boolean hasLock, boolean blockingRead) {
@@ -313,7 +309,7 @@ abstract class LockResolverTest {
         int choice = rnd.nextInt(2) % 2 == 0 ? 65 : 97;
         ret.append((char) (choice + rnd.nextInt(26)));
       } else {
-        ret.append(Integer.toString(rnd.nextInt(10)));
+        ret.append(rnd.nextInt(10));
       }
     }
     return ret.toString();

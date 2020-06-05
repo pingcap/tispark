@@ -35,6 +35,7 @@ import java.util.Objects;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiColumnInfo implements Serializable {
+  @VisibleForTesting private static final int PK_MASK = 0x2;
   private final long id;
   private final String name;
   private final int offset;
@@ -45,18 +46,11 @@ public class TiColumnInfo implements Serializable {
   private final String defaultValue;
   private final String originDefaultValue;
   private final String defaultValueBit;
-
   // this version is from ColumnInfo which is used to address compatible issue.
   // If version is 0 then timestamp's default value will be read and decoded as local timezone.
   // if version is 1 then timestamp's default value will be read and decoded as utc.
   private final long version;
   private final String generatedExprString;
-
-  static TiColumnInfo getRowIdColumn(int offset) {
-    return new TiColumnInfo(-1, "_tidb_rowid", offset, IntegerType.ROW_ID_TYPE, true);
-  }
-
-  @VisibleForTesting private static final int PK_MASK = 0x2;
 
   @JsonCreator
   public TiColumnInfo(
@@ -113,6 +107,26 @@ public class TiColumnInfo implements Serializable {
     this.generatedExprString = generatedExprString;
   }
 
+  @VisibleForTesting
+  public TiColumnInfo(long id, String name, int offset, DataType type, boolean isPrimaryKey) {
+    this.id = id;
+    this.name = requireNonNull(name, "column name is null").toLowerCase();
+    this.offset = offset;
+    this.type = requireNonNull(type, "data type is null");
+    this.schemaState = SchemaState.StatePublic;
+    this.comment = "";
+    this.isPrimaryKey = isPrimaryKey;
+    this.originDefaultValue = "1";
+    this.defaultValue = "";
+    this.defaultValueBit = null;
+    this.version = DataType.COLUMN_VERSION_FLAG;
+    this.generatedExprString = "";
+  }
+
+  static TiColumnInfo getRowIdColumn(int offset) {
+    return new TiColumnInfo(-1, "_tidb_rowid", offset, IntegerType.ROW_ID_TYPE, true);
+  }
+
   TiColumnInfo copyWithoutPrimaryKey() {
     InternalTypeHolder typeHolder = type.toTypeHolder();
     typeHolder.setFlag(type.getFlag() & (~TiColumnInfo.PK_MASK));
@@ -129,22 +143,6 @@ public class TiColumnInfo implements Serializable {
         this.comment,
         this.version,
         this.generatedExprString);
-  }
-
-  @VisibleForTesting
-  public TiColumnInfo(long id, String name, int offset, DataType type, boolean isPrimaryKey) {
-    this.id = id;
-    this.name = requireNonNull(name, "column name is null").toLowerCase();
-    this.offset = offset;
-    this.type = requireNonNull(type, "data type is null");
-    this.schemaState = SchemaState.StatePublic;
-    this.comment = "";
-    this.isPrimaryKey = isPrimaryKey;
-    this.originDefaultValue = "1";
-    this.defaultValue = "";
-    this.defaultValueBit = null;
-    this.version = DataType.COLUMN_VERSION_FLAG;
-    this.generatedExprString = "";
   }
 
   public long getId() {
@@ -223,95 +221,6 @@ public class TiColumnInfo implements Serializable {
     return this.type.isAutoIncrement();
   }
 
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  public static class InternalTypeHolder {
-    private int tp;
-    private int flag;
-    private long flen;
-    private int decimal;
-    private String charset;
-    private String collate;
-    private List<String> elems;
-
-    public void setTp(int tp) {
-      this.tp = tp;
-    }
-
-    public void setFlag(int flag) {
-      this.flag = flag;
-    }
-
-    public void setFlen(long flen) {
-      this.flen = flen;
-    }
-
-    public void setDecimal(int decimal) {
-      this.decimal = decimal;
-    }
-
-    public void setCharset(String charset) {
-      this.charset = charset;
-    }
-
-    public void setCollate(String collate) {
-      this.collate = collate;
-    }
-
-    public void setElems(List<String> elems) {
-      this.elems = elems;
-    }
-
-    interface Builder<E extends DataType> {
-      E build(InternalTypeHolder holder);
-    }
-
-    @JsonCreator
-    public InternalTypeHolder(
-        @JsonProperty("Tp") int tp,
-        @JsonProperty("Flag") int flag,
-        @JsonProperty("Flen") long flen,
-        @JsonProperty("Decimal") int decimal,
-        @JsonProperty("Charset") String charset,
-        @JsonProperty("Collate") String collate,
-        @JsonProperty("Elems") List<String> elems) {
-      this.tp = tp;
-      this.flag = flag;
-      this.flen = flen;
-      this.decimal = decimal;
-      this.charset = charset;
-      this.collate = collate;
-      this.elems = elems;
-    }
-
-    public int getTp() {
-      return tp;
-    }
-
-    public int getFlag() {
-      return flag;
-    }
-
-    public long getFlen() {
-      return flen;
-    }
-
-    public int getDecimal() {
-      return decimal;
-    }
-
-    public String getCharset() {
-      return charset;
-    }
-
-    public String getCollate() {
-      return collate;
-    }
-
-    public List<String> getElems() {
-      return elems;
-    }
-  }
-
   TiIndexColumn toFakeIndexColumn() {
     // we don't use original length of column since for a clustered index column
     // it always full index instead of prefix index
@@ -368,5 +277,94 @@ public class TiColumnInfo implements Serializable {
 
   public boolean isGeneratedColumn() {
     return generatedExprString != null && !generatedExprString.isEmpty();
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  public static class InternalTypeHolder {
+    private int tp;
+    private int flag;
+    private long flen;
+    private int decimal;
+    private String charset;
+    private String collate;
+    private List<String> elems;
+
+    @JsonCreator
+    public InternalTypeHolder(
+        @JsonProperty("Tp") int tp,
+        @JsonProperty("Flag") int flag,
+        @JsonProperty("Flen") long flen,
+        @JsonProperty("Decimal") int decimal,
+        @JsonProperty("Charset") String charset,
+        @JsonProperty("Collate") String collate,
+        @JsonProperty("Elems") List<String> elems) {
+      this.tp = tp;
+      this.flag = flag;
+      this.flen = flen;
+      this.decimal = decimal;
+      this.charset = charset;
+      this.collate = collate;
+      this.elems = elems;
+    }
+
+    public int getTp() {
+      return tp;
+    }
+
+    public void setTp(int tp) {
+      this.tp = tp;
+    }
+
+    public int getFlag() {
+      return flag;
+    }
+
+    public void setFlag(int flag) {
+      this.flag = flag;
+    }
+
+    public long getFlen() {
+      return flen;
+    }
+
+    public void setFlen(long flen) {
+      this.flen = flen;
+    }
+
+    public int getDecimal() {
+      return decimal;
+    }
+
+    public void setDecimal(int decimal) {
+      this.decimal = decimal;
+    }
+
+    public String getCharset() {
+      return charset;
+    }
+
+    public void setCharset(String charset) {
+      this.charset = charset;
+    }
+
+    public String getCollate() {
+      return collate;
+    }
+
+    public void setCollate(String collate) {
+      this.collate = collate;
+    }
+
+    public List<String> getElems() {
+      return elems;
+    }
+
+    public void setElems(List<String> elems) {
+      this.elems = elems;
+    }
+
+    interface Builder<E extends DataType> {
+      E build(InternalTypeHolder holder);
+    }
   }
 }

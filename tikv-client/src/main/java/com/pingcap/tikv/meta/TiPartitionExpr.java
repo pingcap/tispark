@@ -20,9 +20,9 @@ import java.io.Serializable;
 import java.util.List;
 
 public class TiPartitionExpr implements Serializable {
-  private List<Expression> ranges;
-  private List<Expression> upperBound;
-  private Expression column;
+  private final List<Expression> ranges;
+  private final List<Expression> upperBound;
+  private final Expression column;
 
   public TiPartitionExpr(List<Expression> ranges, List<Expression> upperBound, Expression column) {
     this.ranges = ranges;

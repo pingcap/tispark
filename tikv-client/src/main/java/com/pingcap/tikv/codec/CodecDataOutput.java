@@ -22,9 +22,9 @@ import java.io.DataOutputStream;
 
 // A trivial implementation supposed to be replaced
 public class CodecDataOutput implements DataOutput {
-  private DataOutputStream s;
+  private final DataOutputStream s;
   // TODO: Switch to ByteBuffer if possible, or a chain of ByteBuffer
-  private ByteArrayOutputStream byteArray;
+  private final ByteArrayOutputStream byteArray;
 
   public CodecDataOutput() {
     byteArray = new ByteArrayOutputStream();

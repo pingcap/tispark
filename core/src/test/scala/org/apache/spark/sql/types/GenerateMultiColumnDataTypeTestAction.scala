@@ -18,9 +18,9 @@
 package org.apache.spark.sql.types
 
 import org.apache.spark.sql.BaseTestGenerationSpec
-import org.apache.spark.sql.test.generator.DataType.{getBaseType, getTypeName, DECIMAL, ReflectedDataType}
+import org.apache.spark.sql.test.generator.DataType.{getTypeName, ReflectedDataType}
+import org.apache.spark.sql.test.generator.TestDataGenerator.{randomDataGenerator, schemaGenerator}
 import org.apache.spark.sql.test.generator.{Data, Index, Schema}
-import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength, isCharOrBinary, isVarString, randomDataGenerator, schemaGenerator}
 
 trait GenerateMultiColumnDataTypeTestAction
     extends MultiColumnDataTypeTestSpec
@@ -29,15 +29,40 @@ trait GenerateMultiColumnDataTypeTestAction
 
   override val rowCount = 50
 
-  private def toString(dataTypes: Seq[String]): String = Math.abs(dataTypes.hashCode()).toString
-
-  override def getTableName(dataTypes: String*): String = s"test_${toString(dataTypes)}"
-
   override def getTableNameWithDesc(desc: String, dataTypes: String*): String =
     s"test_${desc}_${toString(dataTypes)}"
 
-  def genSchema(tableName: String,
-                dataTypesWithDescription: List[(ReflectedDataType, String, String)]): Schema = {
+  private def toString(dataTypes: Seq[String]): String = Math.abs(dataTypes.hashCode()).toString
+
+  def loadTestData(tableName: String): Unit
+
+  def test(): Unit = {
+    cols = dataTypes
+    val tableName = getTableName(dataTypes.map(getTypeName): _*)
+    init(tableName)
+    loadTestData(tableName)
+    if (canTestTiFlash) {
+      // sleep for some time to wait for TiFlash syncing
+      Thread.sleep(30 * 1000)
+    }
+  }
+
+  override def getTableName(dataTypes: String*): String = s"test_${toString(dataTypes)}"
+
+  def init(tableName: String): Unit = {
+    val dataTypesWithDescription = dataTypes.map { dataType =>
+      val len = getTypeLength(dataType)
+      (dataType, len, "")
+    }
+    val schema = genSchema(tableName, dataTypesWithDescription)
+    val data = genData(schema)
+    setTiFlashReplicaByConfig(data)
+  }
+
+  def genSchema(
+    tableName: String,
+    dataTypesWithDescription: List[(ReflectedDataType, String, String)]
+  ): Schema = {
     schemaGenerator(
       database,
       tableName,
@@ -53,28 +78,5 @@ trait GenerateMultiColumnDataTypeTestAction
     canTestTiFlash = enableTiFlashTest
     data.setTiFLashReplica(canTestTiFlash)
     data.save()
-  }
-
-  def init(tableName: String): Unit = {
-    val dataTypesWithDescription = dataTypes.map { dataType =>
-      val len = getTypeLength(dataType)
-      (dataType, len, "")
-    }
-    val schema = genSchema(tableName, dataTypesWithDescription)
-    val data = genData(schema)
-    setTiFlashReplicaByConfig(data)
-  }
-
-  def loadTestData(tableName: String): Unit
-
-  def test(): Unit = {
-    cols = dataTypes
-    val tableName = getTableName(dataTypes.map(getTypeName): _*)
-    init(tableName)
-    loadTestData(tableName)
-    if (canTestTiFlash) {
-      // sleep for some time to wait for TiFlash syncing
-      Thread.sleep(30 * 1000)
-    }
   }
 }

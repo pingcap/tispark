@@ -25,20 +25,29 @@ import java.util.Deque;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingDeque;
 import org.tikv.kvproto.PDGrpc;
-import org.tikv.kvproto.Pdpb.*;
+import org.tikv.kvproto.Pdpb.GetMembersRequest;
+import org.tikv.kvproto.Pdpb.GetMembersResponse;
+import org.tikv.kvproto.Pdpb.GetRegionByIDRequest;
+import org.tikv.kvproto.Pdpb.GetRegionRequest;
+import org.tikv.kvproto.Pdpb.GetRegionResponse;
+import org.tikv.kvproto.Pdpb.GetStoreRequest;
+import org.tikv.kvproto.Pdpb.GetStoreResponse;
+import org.tikv.kvproto.Pdpb.TsoRequest;
+import org.tikv.kvproto.Pdpb.TsoResponse;
 
 public class PDMockServer extends PDGrpc.PDImplBase {
+  private final Deque<java.util.Optional<GetMembersResponse>> getMembersResp =
+      new LinkedBlockingDeque<java.util.Optional<GetMembersResponse>>();
+  private final Deque<GetRegionResponse> getRegionResp = new LinkedBlockingDeque<>();
+  private final Deque<GetRegionResponse> getRegionByIDResp = new LinkedBlockingDeque<>();
+  private final Deque<Optional<GetStoreResponse>> getStoreResp = new LinkedBlockingDeque<>();
   public int port;
   private long clusterId;
-
   private Server server;
 
   public void addGetMemberResp(GetMembersResponse r) {
     getMembersResp.addLast(Optional.ofNullable(r));
   }
-
-  private final Deque<java.util.Optional<GetMembersResponse>> getMembersResp =
-      new LinkedBlockingDeque<java.util.Optional<GetMembersResponse>>();
 
   @Override
   public void getMembers(GetMembersRequest request, StreamObserver<GetMembersResponse> resp) {
@@ -74,8 +83,6 @@ public class PDMockServer extends PDGrpc.PDImplBase {
     getRegionResp.addLast(r);
   }
 
-  private final Deque<GetRegionResponse> getRegionResp = new LinkedBlockingDeque<>();
-
   @Override
   public void getRegion(GetRegionRequest request, StreamObserver<GetRegionResponse> resp) {
     try {
@@ -90,8 +97,6 @@ public class PDMockServer extends PDGrpc.PDImplBase {
     getRegionByIDResp.addLast(r);
   }
 
-  private final Deque<GetRegionResponse> getRegionByIDResp = new LinkedBlockingDeque<>();
-
   @Override
   public void getRegionByID(GetRegionByIDRequest request, StreamObserver<GetRegionResponse> resp) {
     try {
@@ -105,8 +110,6 @@ public class PDMockServer extends PDGrpc.PDImplBase {
   public void addGetStoreResp(GetStoreResponse r) {
     getStoreResp.addLast(Optional.ofNullable(r));
   }
-
-  private final Deque<Optional<GetStoreResponse>> getStoreResp = new LinkedBlockingDeque<>();
 
   public void getStore(GetStoreRequest request, StreamObserver<GetStoreResponse> resp) {
     try {

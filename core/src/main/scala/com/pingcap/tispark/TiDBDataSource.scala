@@ -17,9 +17,9 @@ package com.pingcap.tispark
 
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.write.{TiDBOptions, TiDBWriter}
+import org.apache.spark.sql._
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql._
 
 /**
  * TiDB Source implementation for Spark SQL
@@ -35,10 +35,35 @@ class TiDBDataSource
   override def toString: String = "TIDB"
 
   /**
+   * Load a `TiDBRelation` using user-provided schema, so no inference over TiDB will be used.
+   */
+  override def createRelation(
+      sqlContext: SQLContext,
+      parameters: Map[String, String],
+      schema: StructType): BaseRelation =
+    // TODO: use schema info
+    // pending: https://internal.pingcap.net/jira/browse/TISPARK-98
+    createRelation(sqlContext, parameters)
+
+  /**
+   * Creates a Relation instance by first writing the contents of the given DataFrame to TiDB
+   */
+  override def createRelation(
+      sqlContext: SQLContext,
+      saveMode: SaveMode,
+      parameters: Map[String, String],
+      df: DataFrame): BaseRelation = {
+    val options = new TiDBOptions(parameters)
+    TiDBWriter.write(df, sqlContext, saveMode, options)
+    createRelation(sqlContext, parameters)
+  }
+
+  /**
    * Create a new `TiDBRelation` instance using parameters from Spark SQL DDL.
    */
-  override def createRelation(sqlContext: SQLContext,
-                              parameters: Map[String, String]): BaseRelation = {
+  override def createRelation(
+      sqlContext: SQLContext,
+      parameters: Map[String, String]): BaseRelation = {
 
     val options = new TiDBOptions(parameters)
     val sparkSession = sqlContext.sparkSession
@@ -51,33 +76,8 @@ class TiDBDataSource
           options.getTiTableRef(tiContext.tiConf),
           tiContext.meta,
           ts,
-          Some(options)
-        )(
-          sqlContext
-        )
+          Some(options))(sqlContext)
       case None => throw new TiBatchWriteException("TiExtensions is disable!")
     }
-  }
-
-  /**
-   * Load a `TiDBRelation` using user-provided schema, so no inference over TiDB will be used.
-   */
-  override def createRelation(sqlContext: SQLContext,
-                              parameters: Map[String, String],
-                              schema: StructType): BaseRelation =
-    // TODO: use schema info
-    // pending: https://internal.pingcap.net/jira/browse/TISPARK-98
-    createRelation(sqlContext, parameters)
-
-  /**
-   * Creates a Relation instance by first writing the contents of the given DataFrame to TiDB
-   */
-  override def createRelation(sqlContext: SQLContext,
-                              saveMode: SaveMode,
-                              parameters: Map[String, String],
-                              df: DataFrame): BaseRelation = {
-    val options = new TiDBOptions(parameters)
-    TiDBWriter.write(df, sqlContext, saveMode, options)
-    createRelation(sqlContext, parameters)
   }
 }

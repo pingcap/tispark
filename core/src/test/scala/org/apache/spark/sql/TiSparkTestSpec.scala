@@ -22,10 +22,10 @@ import org.apache.spark.sql.test.SharedSQLContext
 import scala.util.Random
 
 trait TiSparkTestSpec extends SharedSQLContext {
-  val database: String
-  val testDesc: String
   // Randomizer for tests
   lazy val r: Random = new Random(generateDataSeed)
+  val database: String
+  val testDesc: String
 
   def test(): Unit
 }

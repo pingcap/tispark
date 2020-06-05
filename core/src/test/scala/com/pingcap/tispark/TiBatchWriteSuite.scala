@@ -21,8 +21,6 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 
 class TiBatchWriteSuite extends BaseTiSparkTest {
 
-  private var database: String = _
-
   private val tables =
     "CUSTOMER" ::
       //"LINEITEM" :: to large for test
@@ -33,11 +31,11 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
       "REGION" ::
       "SUPPLIER" ::
       Nil
-
   private val batchWriteTablePrefix = "BATCH.WRITE"
   private val isPkHandlePrefix = "isPkHandle"
   private val replacePKHandlePrefix = "replacePKHandle"
   private val replaceUniquePrefix = "replaceUnique"
+  private var database: String = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()

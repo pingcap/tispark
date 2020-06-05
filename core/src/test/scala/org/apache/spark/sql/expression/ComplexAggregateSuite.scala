@@ -29,7 +29,9 @@ class ComplexAggregateSuite extends BaseInitialOnceTest {
     "select max(tp_bigint) from full_data_type_table"
   )
 
-  allCases.map { _.replace(")", " / tp_int)") } ++ allCases.map { _.replace(")", " / tp_double)") } ++ allCases
+  allCases.map { _.replace(")", " / tp_int)") } ++ allCases.map {
+    _.replace(")", " / tp_double)")
+  } ++ allCases
     .map { _.replace(")", " + tp_float * 2)") } foreach { query =>
     test(query) {
       runTest(query)

@@ -24,11 +24,6 @@ public final class PDError {
 
   private final ErrorType errorType;
 
-  public enum ErrorType {
-    PD_ERROR,
-    REGION_PEER_NOT_ELECTED
-  }
-
   private PDError(Pdpb.Error error) {
     this.error = error;
     this.errorType = ErrorType.PD_ERROR;
@@ -66,6 +61,11 @@ public final class PDError {
   @Override
   public String toString() {
     return "\nErrorType: " + errorType + "\nError: " + error;
+  }
+
+  public enum ErrorType {
+    PD_ERROR,
+    REGION_PEER_NOT_ELECTED
   }
 
   public static final class RegionPeerNotElected {

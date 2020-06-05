@@ -15,16 +15,26 @@
 
 package com.pingcap.tikv;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
-import com.pingcap.tidb.tipb.*;
+import com.pingcap.tidb.tipb.Chunk;
+import com.pingcap.tidb.tipb.DAGRequest;
+import com.pingcap.tidb.tipb.ExecType;
+import com.pingcap.tidb.tipb.Executor;
+import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.Test;
 import org.tikv.kvproto.Coprocessor;
@@ -33,6 +43,10 @@ import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Metapb;
 
 public class RegionStoreClientTest extends MockServerTest {
+
+  private static KeyRange createByteStringRange(ByteString sKey, ByteString eKey) {
+    return KeyRange.newBuilder().setStart(sKey).setEnd(eKey).build();
+  }
 
   private RegionStoreClient createClientV2() {
     return createClient(Version.RESOLVE_LOCK_V2);
@@ -146,10 +160,6 @@ public class RegionStoreClientTest extends MockServerTest {
     }
     server.clearAllMap();
     client.close();
-  }
-
-  private static KeyRange createByteStringRange(ByteString sKey, ByteString eKey) {
-    return KeyRange.newBuilder().setStart(sKey).setEnd(eKey).build();
   }
 
   @Test

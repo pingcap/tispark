@@ -36,11 +36,11 @@ import java.util.Set;
 
 @SuppressWarnings("UnstableApiUsage")
 public class RangePartitionPruner {
+  private final TiPartitionInfo partInfo;
+  private final Set<ColumnRef> partExprColRefs = new HashSet<>();
   private Expression partExpr;
-  private Set<ColumnRef> partExprColRefs = new HashSet<>();
   private List<Expression> partExprs;
   private PrunedPartitionBuilder rangeBuilder;
-  private final TiPartitionInfo partInfo;
   private boolean foundUnsupportedPartExpr;
 
   RangePartitionPruner(TiTableInfo tableInfo) {

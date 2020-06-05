@@ -18,42 +18,31 @@
 package org.apache.spark.sql.types
 
 import org.apache.spark.sql.BaseTestGenerationSpec
+import org.apache.spark.sql.test.generator.DataType.{getTypeName, ReflectedDataType}
+import org.apache.spark.sql.test.generator.TestDataGenerator.{randomDataGenerator, schemaGenerator}
 import org.apache.spark.sql.test.generator.{Data, Index, Schema}
-import org.apache.spark.sql.test.generator.DataType.{getBaseType, getTypeName, DECIMAL, ReflectedDataType}
-import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength, isCharOrBinary, isVarString, randomDataGenerator, schemaGenerator}
 
 trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestSpec with BaseTestGenerationSpec {
 
   override val rowCount = 50
 
-  private def toString(dataTypes: Seq[String]) = {
-    assert(dataTypes.size == 1, "Unit data type tests can not manage multiple columns")
-    dataTypes.mkString("_")
-  }
-
-  override def getTableName(dataTypes: String*): String = s"test_${toString(dataTypes)}"
-
-  override def getTableNameWithDesc(desc: String, dataTypes: String*): String =
-    s"test_${desc}_${toString(dataTypes)}"
-
   override def getIndexName(dataTypes: String*): String = s"idx_${toString(dataTypes)}"
 
-  def genSchema(dataType: ReflectedDataType,
-                tableName: String,
-                len: String,
-                desc: String): Schema = {
-    schemaGenerator(
-      database,
-      tableName,
-      r,
-      List(
-        (dataType, len, desc)
-      ),
-      List.empty[Index]
-    )
-  }
+  def loadTestData(typeName: String): Unit
 
-  def genData(schema: Schema): Data = randomDataGenerator(schema, rowCount, dataTypeTestDir, r)
+  def loadUnsignedTestData(typeName: String): Unit
+
+  def test(): Unit = {
+    init()
+    for (dataType <- dataTypes) {
+      val typeName = getTypeName(dataType)
+      loadTestData(typeName)
+    }
+    for (dataType <- unsignedDataTypes) {
+      val typeName = getTypeName(dataType)
+      loadUnsignedTestData(typeName)
+    }
+  }
 
   def init(): Unit = {
     for (dataType <- dataTypes) {
@@ -74,19 +63,32 @@ trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestSpec with BaseTestG
     }
   }
 
-  def loadTestData(typeName: String): Unit
+  override def getTableName(dataTypes: String*): String = s"test_${toString(dataTypes)}"
 
-  def loadUnsignedTestData(typeName: String): Unit
+  override def getTableNameWithDesc(desc: String, dataTypes: String*): String =
+    s"test_${desc}_${toString(dataTypes)}"
 
-  def test(): Unit = {
-    init()
-    for (dataType <- dataTypes) {
-      val typeName = getTypeName(dataType)
-      loadTestData(typeName)
-    }
-    for (dataType <- unsignedDataTypes) {
-      val typeName = getTypeName(dataType)
-      loadUnsignedTestData(typeName)
-    }
+  private def toString(dataTypes: Seq[String]) = {
+    assert(dataTypes.size == 1, "Unit data type tests can not manage multiple columns")
+    dataTypes.mkString("_")
   }
+
+  def genSchema(
+    dataType: ReflectedDataType,
+    tableName: String,
+    len: String,
+    desc: String
+  ): Schema = {
+    schemaGenerator(
+      database,
+      tableName,
+      r,
+      List(
+        (dataType, len, desc)
+      ),
+      List.empty[Index]
+    )
+  }
+
+  def genData(schema: Schema): Data = randomDataGenerator(schema, rowCount, dataTypeTestDir, r)
 }

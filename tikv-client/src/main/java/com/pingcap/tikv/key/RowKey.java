@@ -79,6 +79,12 @@ public class RowKey extends Key implements Serializable {
     return prefixNext(encode(tableId, Long.MAX_VALUE));
   }
 
+  private static void encodePrefix(CodecDataOutput cdo, long tableId) {
+    cdo.write(TBL_PREFIX);
+    writeLong(cdo, tableId);
+    cdo.write(REC_PREFIX_SEP);
+  }
+
   @Override
   public RowKey next() {
     long handle = getHandle();
@@ -109,14 +115,9 @@ public class RowKey extends Key implements Serializable {
     return Long.toString(handle);
   }
 
-  private static void encodePrefix(CodecDataOutput cdo, long tableId) {
-    cdo.write(TBL_PREFIX);
-    writeLong(cdo, tableId);
-    cdo.write(REC_PREFIX_SEP);
-  }
-
   public static class DecodeResult {
     public long handle;
+    public Status status;
 
     public enum Status {
       MIN,
@@ -126,7 +127,5 @@ public class RowKey extends Key implements Serializable {
       GREATER,
       UNKNOWN_INF
     }
-
-    public Status status;
   }
 }

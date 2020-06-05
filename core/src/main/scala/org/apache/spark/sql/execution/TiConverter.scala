@@ -15,8 +15,6 @@
 
 package org.apache.spark.sql.execution
 
-import java.util.logging.Logger
-
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.types._
 import org.apache.spark.sql
@@ -29,16 +27,16 @@ object TiConverter {
     // TODO: review type system
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-99
     tp match {
-      case _: sql.types.BinaryType  => BytesType.BLOB
-      case _: sql.types.StringType  => StringType.VARCHAR
-      case _: sql.types.LongType    => IntegerType.BIGINT
+      case _: sql.types.BinaryType => BytesType.BLOB
+      case _: sql.types.StringType => StringType.VARCHAR
+      case _: sql.types.LongType => IntegerType.BIGINT
       case _: sql.types.IntegerType => IntegerType.INT
-      case _: sql.types.DoubleType  => RealType.DOUBLE
-      case _: sql.types.FloatType   => RealType.FLOAT
+      case _: sql.types.DoubleType => RealType.DOUBLE
+      case _: sql.types.FloatType => RealType.FLOAT
       case sql.types.DecimalType.Fixed(prec, scale) =>
         new DecimalType(prec, scale)
       case _: sql.types.TimestampType => TimestampType.TIMESTAMP
-      case _: sql.types.DateType      => DateType.DATE
+      case _: sql.types.DateType => DateType.DATE
     }
 
   /**
@@ -72,17 +70,17 @@ object TiConverter {
 
     import scala.collection.JavaConversions._
     val result: java.lang.Object = value match {
-      case v: java.lang.Boolean    => v
-      case v: java.lang.Byte       => v
-      case v: java.lang.Short      => v
-      case v: java.lang.Integer    => v
-      case v: java.lang.Long       => v
-      case v: java.lang.Float      => v
-      case v: java.lang.Double     => v
-      case v: java.lang.String     => v
+      case v: java.lang.Boolean => v
+      case v: java.lang.Byte => v
+      case v: java.lang.Short => v
+      case v: java.lang.Integer => v
+      case v: java.lang.Long => v
+      case v: java.lang.Float => v
+      case v: java.lang.Double => v
+      case v: java.lang.String => v
       case v: java.math.BigDecimal => v
-      case v: java.sql.Date        => v
-      case v: java.sql.Timestamp   => v
+      case v: java.sql.Date => v
+      case v: java.sql.Timestamp => v
       case v: Array[Byte] =>
         val r: java.util.List[java.lang.Byte] = v.toList.map(b => java.lang.Byte.valueOf(b))
         r
@@ -92,8 +90,7 @@ object TiConverter {
       //case v: org.apache.spark.sql.Row   =>
       case _ =>
         throw new TiBatchWriteException(
-          s"do not support converting SparkSQL Data Type ${value.getClass} to TiDB Data Type!"
-        )
+          s"do not support converting SparkSQL Data Type ${value.getClass} to TiDB Data Type!")
     }
     result
   }

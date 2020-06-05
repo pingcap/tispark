@@ -22,10 +22,9 @@ import java.util.List;
 import org.tikv.kvproto.Metapb;
 
 public class BatchKeys {
+  private final TiRegion region;
+  private final Metapb.Store store;
   private List<ByteString> keys;
-
-  private TiRegion region;
-  private Metapb.Store store;
 
   public BatchKeys(TiRegion region, Metapb.Store store, List<ByteString> keysInput) {
     this.region = region;

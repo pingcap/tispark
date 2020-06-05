@@ -18,37 +18,25 @@ package org.apache.spark.sql.catalyst.plans
 import com.pingcap.tikv.meta.TiDAGRequest.IndexScanType
 import com.pingcap.tikv.meta.{TiDAGRequest, TiIndexInfo}
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, ColumnarRegionTaskExec, SparkPlan}
-import org.apache.spark.sql.execution.ColumnarRegionTaskExec
 import org.apache.spark.sql.{BaseTiSparkTest, Dataset}
 
 class BasePlanTest extends BaseTiSparkTest {
-  def toPlan[T](df: Dataset[T]): SparkPlan = df.queryExecution.executedPlan
-
-  def explain[T](df: Dataset[T]): Unit = df.explain
-
   val extractCoprocessorRDD: PartialFunction[SparkPlan, ColumnarCoprocessorRDD] = {
     case plan: ColumnarCoprocessorRDD => plan
   }
   val extractRegionTaskExec: PartialFunction[SparkPlan, ColumnarRegionTaskExec] = {
     case plan: ColumnarRegionTaskExec => plan
   }
-
   val extractTiSparkPlan: PartialFunction[SparkPlan, SparkPlan] = {
     case plan: ColumnarCoprocessorRDD => plan
     case plan: ColumnarRegionTaskExec => plan
   }
-
   val extractDAGRequest: PartialFunction[SparkPlan, TiDAGRequest] = {
     case plan: ColumnarRegionTaskExec => plan.dagRequest
     case plan: ColumnarCoprocessorRDD => plan.dagRequest
   }
 
-  private def extractIndexInfo(coprocessorRDD: ColumnarCoprocessorRDD): TiIndexInfo =
-    coprocessorRDD.dagRequest.getIndexInfo
-
-  def extractTiSparkPlans[T](df: Dataset[T]): Seq[SparkPlan] = toPlan(df).collect {
-    extractTiSparkPlan
-  }
+  def explain[T](df: Dataset[T]): Unit = df.explain
 
   def extractDAGRequests[T](df: Dataset[T]): List[TiDAGRequest] = {
     toPlan(df).collect { extractDAGRequest }.toList
@@ -60,49 +48,39 @@ class BasePlanTest extends BaseTiSparkTest {
   def toRegionTaskExecs[T](df: Dataset[T]): List[ColumnarRegionTaskExec] =
     toPlan(df).collect { extractRegionTaskExec }.toList
 
-  private def checkIndex(coprocessorRDD: ColumnarCoprocessorRDD, index: String): Boolean = {
-    extractIndexInfo(coprocessorRDD).getName.equalsIgnoreCase(index)
-  }
-
-  private def checkIndex(plan: SparkPlan, index: String): Boolean = plan match {
-    case p: ColumnarCoprocessorRDD => checkIndex(p, index)
-    case _                         => false
-  }
+  def toPlan[T](df: Dataset[T]): SparkPlan = df.queryExecution.executedPlan
 
   def checkIndex[T](df: Dataset[T], index: String): Boolean = {
     extractTiSparkPlans(df).exists(checkIndex(_, index))
   }
 
-  private def getIndexScanType(dagRequest: TiDAGRequest): IndexScanType = {
-    dagRequest.getIndexScanType
-  }
-
-  private def getIndexScanType(coprocessorRDD: ColumnarCoprocessorRDD): IndexScanType = {
-    getIndexScanType(coprocessorRDD.dagRequest)
-  }
-
-  private def checkIndexScanType(plan: SparkPlan, indexScanType: IndexScanType): Boolean =
+  private def checkIndex(plan: SparkPlan, index: String): Boolean =
     plan match {
-      case p: ColumnarCoprocessorRDD => getIndexScanType(p).equals(indexScanType)
+      case p: ColumnarCoprocessorRDD => checkIndex(p, index)
       case _                         => false
     }
 
-  /**
-   * Explain dataset and fail the test with message
-   */
-  private def fail[T](df: Dataset[T], message: String): Unit = {
-    df.explain
-    fail(message)
+  private def checkIndex(coprocessorRDD: ColumnarCoprocessorRDD, index: String): Boolean = {
+    extractIndexInfo(coprocessorRDD).getName.equalsIgnoreCase(index)
   }
 
-  private def fail[T](df: Dataset[T], message: String, throwable: Throwable): Unit = {
-    df.explain
-    fail(message, throwable)
-  }
+  private def extractIndexInfo(coprocessorRDD: ColumnarCoprocessorRDD): TiIndexInfo =
+    coprocessorRDD.dagRequest.getIndexInfo
 
-  private def checkIndexScanType[T](df: Dataset[T],
-                                    tableName: String,
-                                    indexScanType: IndexScanType): Unit = {
+  def checkIsTableScan[T](df: Dataset[T], tableName: String): Unit =
+    checkIndexScanType(df, tableName, IndexScanType.TABLE_SCAN)
+
+  def checkIsCoveringIndexScan[T](df: Dataset[T], tableName: String): Unit =
+    checkIndexScanType(df, tableName, IndexScanType.COVERING_INDEX_SCAN)
+
+  def checkIsIndexScan[T](df: Dataset[T], tableName: String): Unit =
+    checkIndexScanType(df, tableName, IndexScanType.INDEX_SCAN)
+
+  private def checkIndexScanType[T](
+    df: Dataset[T],
+    tableName: String,
+    indexScanType: IndexScanType
+  ): Unit = {
     val tiSparkPlans = extractTiSparkPlans(df)
     if (tiSparkPlans.isEmpty) {
       fail(df, "No TiSpark plans found in Dataset")
@@ -120,21 +98,44 @@ class BasePlanTest extends BaseTiSparkTest {
     }
   }
 
-  def checkIsTableScan[T](df: Dataset[T], tableName: String): Unit =
-    checkIndexScanType(df, tableName, IndexScanType.TABLE_SCAN)
+  def extractTiSparkPlans[T](df: Dataset[T]): Seq[SparkPlan] =
+    toPlan(df).collect {
+      extractTiSparkPlan
+    }
 
-  def checkIsCoveringIndexScan[T](df: Dataset[T], tableName: String): Unit =
-    checkIndexScanType(df, tableName, IndexScanType.COVERING_INDEX_SCAN)
+  private def checkIndexScanType(plan: SparkPlan, indexScanType: IndexScanType): Boolean =
+    plan match {
+      case p: ColumnarCoprocessorRDD => getIndexScanType(p).equals(indexScanType)
+      case _                         => false
+    }
 
-  def checkIsIndexScan[T](df: Dataset[T], tableName: String): Unit =
-    checkIndexScanType(df, tableName, IndexScanType.INDEX_SCAN)
+  private def getIndexScanType(coprocessorRDD: ColumnarCoprocessorRDD): IndexScanType = {
+    getIndexScanType(coprocessorRDD.dagRequest)
+  }
 
-  def getEstimatedRowCount[T](df: Dataset[T], tableName: String): Double =
-    extractTiSparkPlans(df).collect { extractDAGRequest }.head.getEstimatedCount
+  private def getIndexScanType(dagRequest: TiDAGRequest): IndexScanType = {
+    dagRequest.getIndexScanType
+  }
+
+  /**
+   * Explain dataset and fail the test with message
+   */
+  private def fail[T](df: Dataset[T], message: String): Unit = {
+    df.explain
+    fail(message)
+  }
 
   def checkEstimatedRowCount[T](df: Dataset[T], tableName: String, answer: Double): Unit = {
     val estimatedRowCount = getEstimatedRowCount(df, tableName)
     assert(estimatedRowCount === answer)
+  }
+
+  def getEstimatedRowCount[T](df: Dataset[T], tableName: String): Double =
+    extractTiSparkPlans(df).collect { extractDAGRequest }.head.getEstimatedCount
+
+  private def fail[T](df: Dataset[T], message: String, throwable: Throwable): Unit = {
+    df.explain
+    fail(message, throwable)
   }
 
 }

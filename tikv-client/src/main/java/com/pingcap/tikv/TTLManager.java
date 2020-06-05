@@ -42,31 +42,26 @@ import org.tikv.kvproto.Metapb;
  * https://github.com/pingcap/tidb/blob/master/store/tikv/2pc.go
  */
 public class TTLManager {
-  private long startTS;
-  private ByteString primaryLock;
-
-  private TxnKVClient kvClient;
-  private RegionManager regionManager;
-  private ScheduledExecutorService scheduler;
-
-  private AtomicInteger state;
+  /** 20 seconds */
+  public static final int MANAGED_LOCK_TTL = 20000;
 
   private static final Logger LOG = LoggerFactory.getLogger(TTLManager.class);
-
   /** status */
   private static final int STATE_UNINITIALIZED = 0;
 
   private static final int STATE_RUNNING = 1;
   private static final int STATE_CLOSED = 2;
-
-  /** 20 seconds */
-  public static final int MANAGED_LOCK_TTL = 20000;
-
   /** 10 seconds */
   private static final int SCHEDULER_PERIOD = MANAGED_LOCK_TTL / 2;
-
   /** 5 seconds */
   private static final int SCHEDULER_INITIAL_DELAY = MANAGED_LOCK_TTL / 4;
+
+  private final long startTS;
+  private final ByteString primaryLock;
+  private final TxnKVClient kvClient;
+  private final RegionManager regionManager;
+  private final ScheduledExecutorService scheduler;
+  private final AtomicInteger state;
 
   public TTLManager(TiConfiguration conf, long startTS, byte[] primaryKey) {
     this.startTS = startTS;

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
@@ -10,22 +25,23 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
   }
 
   test("Combine unique index with null value test") {
-    doTestNullValues(
-      s"create table $dbtable(a int, b varchar(64), CONSTRAINT ab UNIQUE (a, b))"
-    )
+    doTestNullValues(s"create table $dbtable(a int, b varchar(64), CONSTRAINT ab UNIQUE (a, b))")
   }
 
   test("Combine primary key with null value test") {
-    doTestNullValues(
-      s"create table $dbtable(a int, b varchar(64), PRIMARY KEY (a, b))"
-    )
+    doTestNullValues(s"create table $dbtable(a int, b varchar(64), PRIMARY KEY (a, b))")
   }
 
   test("PK is handler with null value test") {
-    doTestNullValues(
-      s"create table $dbtable(a int, b varchar(64), PRIMARY KEY (a))"
-    )
+    doTestNullValues(s"create table $dbtable(a int, b varchar(64), PRIMARY KEY (a))")
   }
+
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 
   private def doTestNullValues(createTableSQL: String): Unit = {
     if (!supportBatchWrite) {
@@ -35,9 +51,7 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
       List(
         StructField("a", IntegerType),
         StructField("b", StringType),
-        StructField("c", StringType)
-      )
-    )
+        StructField("c", StringType)))
 
     val options = Some(Map("replace" -> "true"))
 
@@ -56,8 +70,10 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
 
     assert(queryTiDBViaJDBC(s"select c from $dbtable where a=11").head.head == null)
     assert(queryTiDBViaJDBC(s"select c from $dbtable where a=21").head.head == null)
-    assert(queryTiDBViaJDBC(s"select c from $dbtable where a=31").head.head.toString.equals("c33"))
-    assert(queryTiDBViaJDBC(s"select c from $dbtable where a=41").head.head.toString.equals("c43"))
+    assert(
+      queryTiDBViaJDBC(s"select c from $dbtable where a=31").head.head.toString.equals("c33"))
+    assert(
+      queryTiDBViaJDBC(s"select c from $dbtable where a=41").head.head.toString.equals("c43"))
 
     {
       val row1 = Row(11, "c12", "c13")
@@ -66,13 +82,11 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
       tidbWrite(List(row1, row3), schema, options)
 
       assert(
-        queryTiDBViaJDBC(s"select c from $dbtable where a=11").head.head.toString.equals("c13")
-      )
+        queryTiDBViaJDBC(s"select c from $dbtable where a=11").head.head.toString.equals("c13"))
       assert(queryTiDBViaJDBC(s"select c from $dbtable where a=21").head.head == null)
       assert(queryTiDBViaJDBC(s"select c from $dbtable where a=31").head.head == null)
       assert(
-        queryTiDBViaJDBC(s"select c from $dbtable where a=41").head.head.toString.equals("c43")
-      )
+        queryTiDBViaJDBC(s"select c from $dbtable where a=41").head.head.toString.equals("c43"))
     }
 
     {
@@ -80,20 +94,12 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
       val row3 = Row(31, "c32", "tt")
       tidbWrite(List(row1, row3), schema, options)
       assert(
-        queryTiDBViaJDBC(s"select c from $dbtable where a=11").head.head.toString.equals("c213")
-      )
+        queryTiDBViaJDBC(s"select c from $dbtable where a=11").head.head.toString.equals("c213"))
       assert(queryTiDBViaJDBC(s"select c from $dbtable where a=21").head.head == null)
-      assert(queryTiDBViaJDBC(s"select c from $dbtable where a=31").head.head.toString.equals("tt"))
       assert(
-        queryTiDBViaJDBC(s"select c from $dbtable where a=41").head.head.toString.equals("c43")
-      )
+        queryTiDBViaJDBC(s"select c from $dbtable where a=31").head.head.toString.equals("tt"))
+      assert(
+        queryTiDBViaJDBC(s"select c from $dbtable where a=41").head.head.toString.equals("c43"))
     }
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

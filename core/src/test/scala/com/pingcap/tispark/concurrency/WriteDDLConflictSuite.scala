@@ -19,7 +19,7 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 
-class WriteDDLConflictSuite extends ConcurrentcyTest {
+class WriteDDLConflictSuite extends ConcurrencyTest {
   test("write ddl conflict using TableLock") {
     if (!supportBatchWrite) {
       cancel

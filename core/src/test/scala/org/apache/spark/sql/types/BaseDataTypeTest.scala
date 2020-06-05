@@ -18,7 +18,6 @@
 package org.apache.spark.sql.types
 
 import org.apache.spark.sql.{BaseTestGenerationSpec, BaseTiSparkTest}
-import org.apache.spark.sql.test.SharedSQLContext
 
 trait BaseDataTypeTest extends BaseTiSparkTest {
 

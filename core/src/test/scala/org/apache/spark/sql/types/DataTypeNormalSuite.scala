@@ -21,14 +21,14 @@ import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 
 class DataTypeNormalSuite extends BaseDataTypeTest with RunUnitDataTypeTestAction {
-  override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: stringType ::: enumAndSets
+  override lazy protected val generator: BaseDataTypeGenerator =
+    BaseDataTypeGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc)
+  override val dataTypes: List[ReflectedDataType] =
+    integers ::: decimals ::: doubles ::: stringType ::: enumAndSets
   override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
   override val dataTypeTestDir = "dataType-test"
   override val database = "data_type_test"
   override val testDesc = "Test for single column data types (and unsigned types)"
-
-  override lazy protected val generator: BaseDataTypeGenerator =
-    BaseDataTypeGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc)
 
   def startTest(typeName: String): Unit = {
     test(s"Test $typeName - $testDesc") {

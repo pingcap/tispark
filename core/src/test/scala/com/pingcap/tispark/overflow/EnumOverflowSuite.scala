@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.overflow
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
@@ -24,33 +39,12 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
     testEnumValueOverflow(true)
   }
 
-  private def testEnumValueOverflow(testKey: Boolean): Unit = {
-
-    dropTable()
-    if (testKey) {
-      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
-    } else {
-      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown'))")
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
     }
-
-    val row = Row("abc")
-    val schema = StructType(
-      List(
-        StructField("c1", StringType)
-      )
-    )
-    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
-    val tidbErrorMsg = "Incorrect enum value: 'abc'"
-
-    compareTiDBWriteFailureWithJDBC(
-      List(row),
-      schema,
-      jdbcErrorClass,
-      tidbErrorClass,
-      tidbErrorMsg
-    )
-  }
 
   test("Test ENUM Number Overflow") {
     if (!supportBatchWrite) {
@@ -66,21 +60,42 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
     testEnumNumberOverflow(true)
   }
 
+  private def testEnumValueOverflow(testKey: Boolean): Unit = {
+
+    dropTable()
+    if (testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
+    } else {
+      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown'))")
+    }
+
+    val row = Row("abc")
+    val schema = StructType(List(StructField("c1", StringType)))
+    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
+    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorMsg = "Incorrect enum value: 'abc'"
+
+    compareTiDBWriteFailureWithJDBC(
+      List(row),
+      schema,
+      jdbcErrorClass,
+      tidbErrorClass,
+      tidbErrorMsg)
+  }
+
   private def testEnumNumberOverflow(testKey: Boolean): Unit = {
 
     dropTable()
     if (testKey) {
-      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
+      jdbcUpdate(
+        s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
     } else {
       jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown'))")
     }
 
     val row = Row("5")
-    val schema = StructType(
-      List(
-        StructField("c1", StringType)
-      )
-    )
+    val schema = StructType(List(StructField("c1", StringType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 5 > upperBound 4"
@@ -90,14 +105,6 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
       schema,
       jdbcErrorClass,
       tidbErrorClass,
-      tidbErrorMsg
-    )
+      tidbErrorMsg)
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

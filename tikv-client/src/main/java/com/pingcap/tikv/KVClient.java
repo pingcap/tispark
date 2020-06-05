@@ -27,8 +27,19 @@ import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,12 +47,11 @@ import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 
 public class KVClient implements AutoCloseable {
+  private static final Logger logger = LoggerFactory.getLogger(KVClient.class);
+  private static final int BATCH_GET_SIZE = 16 * 1024;
   private final RegionStoreClientBuilder clientBuilder;
   private final TiConfiguration conf;
   private final ExecutorService executorService;
-  private static final Logger logger = LoggerFactory.getLogger(KVClient.class);
-
-  private static final int BATCH_GET_SIZE = 16 * 1024;
 
   public KVClient(TiConfiguration conf, RegionStoreClientBuilder clientBuilder) {
     Objects.requireNonNull(conf, "conf is null");
@@ -137,17 +147,6 @@ public class KVClient implements AutoCloseable {
     return scan(startKey, version, Integer.MAX_VALUE);
   }
 
-  /** A Batch containing the region and a list of keys to send */
-  private static final class Batch {
-    private final TiRegion region;
-    private final List<ByteString> keys;
-
-    Batch(TiRegion region, List<ByteString> keys) {
-      this.region = region;
-      this.keys = keys;
-    }
-  }
-
   /**
    * Append batch to list and split them according to batch limit
    *
@@ -241,5 +240,16 @@ public class KVClient implements AutoCloseable {
       long version,
       int limit) {
     return new ConcreteScanIterator(conf, builder, startKey, version, limit);
+  }
+
+  /** A Batch containing the region and a list of keys to send */
+  private static final class Batch {
+    private final TiRegion region;
+    private final List<ByteString> keys;
+
+    Batch(TiRegion region, List<ByteString> keys) {
+      this.region = region;
+      this.keys = keys;
+    }
   }
 }

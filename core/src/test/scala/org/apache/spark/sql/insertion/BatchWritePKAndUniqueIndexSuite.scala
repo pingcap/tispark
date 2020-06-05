@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.spark.sql.insertion
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
@@ -9,11 +24,11 @@ import org.apache.spark.sql.test.generator.TestDataGenerator._
 class BatchWritePKAndUniqueIndexSuite
     extends BaseDataSourceTest(
       "batch_write_insertion_pk_and_one_unique_index",
-      "batch_write_test_index"
-    )
+      "batch_write_test_index")
     with EnumerateUniqueIndexDataTypeTestAction {
   // TODO: support binary insertion.
-  override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: charCharset
+  override val dataTypes: List[ReflectedDataType] =
+    integers ::: decimals ::: doubles ::: charCharset
   override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
   override val database = "batch_write_test_pk_and_index"
   override val testDesc = "Test for pk and unique index type in batch-write insertion"
@@ -22,6 +37,28 @@ class BatchWritePKAndUniqueIndexSuite
     super.beforeAll()
     tidbStmt.execute(s"drop database if exists $database")
     tidbStmt.execute(s"create database $database")
+  }
+
+  // this is only for mute the warning
+  override def test(): Unit = {}
+
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
+
+  test("test pk and unique indices cases") {
+    val schemas = genSchema(dataTypes, table)
+
+    schemas.foreach { schema =>
+      dropAndCreateTbl(schema)
+    }
+
+    schemas.foreach { schema =>
+      insertAndSelect(schema)
+    }
   }
 
   private def dropAndCreateTbl(schema: Schema): Unit = {
@@ -45,26 +82,4 @@ class BatchWritePKAndUniqueIndexSuite
     // select data from tikv and compare with tidb
     compareTiDBSelectWithJDBCWithTable_V2(tblName = tblName, "col_bigint")
   }
-
-  test("test pk and unique indices cases") {
-    val schemas = genSchema(dataTypes, table)
-
-    schemas.foreach { schema =>
-      dropAndCreateTbl(schema)
-    }
-
-    schemas.foreach { schema =>
-      insertAndSelect(schema)
-    }
-  }
-
-  // this is only for mute the warning
-  override def test(): Unit = {}
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

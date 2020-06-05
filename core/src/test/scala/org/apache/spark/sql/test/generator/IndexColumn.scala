@@ -32,15 +32,15 @@ case class PrefixColumn(id: Int, length: Int) extends IndexColumn {
   override def getLength: Integer = length
 }
 
-case class ColumnInfo(columnName: String,
-                      dataType: ReflectedDataType,
-                      length: (Integer, Integer),
-                      desc: String) {
+case class ColumnInfo(
+  columnName: String,
+  dataType: ReflectedDataType,
+  length: (Integer, Integer),
+  desc: String
+) {
 
   val isPrimaryKey: Boolean = desc.contains("primary key")
   val nullable: Boolean = !isPrimaryKey && !desc.contains("not null")
-
-  private val breakDown = desc.split(" ")
   val unsigned: Boolean = breakDown.contains("unsigned")
   val noDefault: Boolean = !breakDown.contains("default")
   val isUnique: Boolean = breakDown.contains("unique")
@@ -57,7 +57,6 @@ case class ColumnInfo(columnName: String,
       }
     }
   }
-
   val (len, decimal): (Long, Int) = {
     val baseType = getBaseType(dataType)
     if (length._1 == null) {
@@ -68,15 +67,6 @@ case class ColumnInfo(columnName: String,
       (length._1.toLong, length._2)
     }
   }
-
-  {
-    // validation
-    import TestDataGenerator._
-    if (isVarString(dataType) && len == -1) {
-      throw new IllegalArgumentException("Length must be specified for Text and BLOB Types")
-    }
-  }
-
   val generator: ColumnValueGenerator =
     ColumnValueGenerator(
       dataType,
@@ -89,6 +79,15 @@ case class ColumnInfo(columnName: String,
       isPrimaryKey,
       isUnique
     )
+
+  {
+    // validation
+    import TestDataGenerator._
+    if (isVarString(dataType) && len == -1) {
+      throw new IllegalArgumentException("Length must be specified for Text and BLOB Types")
+    }
+  }
+  private val breakDown = desc.split(" ")
 
   override def toString: String = s"`$columnName` ${generator.toString}"
 }

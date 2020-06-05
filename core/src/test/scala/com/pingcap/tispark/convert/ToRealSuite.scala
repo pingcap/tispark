@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.convert
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
@@ -12,7 +27,7 @@ import org.apache.spark.sql.types._
 class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
 
   //  + 1.0E-40f because of this issue: https://github.com/pingcap/tidb/issues/10587
-  private val minFloat: java.lang.Float = java.lang.Float.MIN_VALUE + 1.0E-40f
+  private val minFloat: java.lang.Float = java.lang.Float.MIN_VALUE + 1.0e-40f
   private val maxFloat: java.lang.Float = java.lang.Float.MAX_VALUE
   private val minDouble: java.lang.Double = java.lang.Double.MIN_VALUE
   private val maxDouble: java.lang.Double = java.lang.Double.MAX_VALUE
@@ -21,12 +36,14 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
     List(
       StructField("i", IntegerType),
       StructField("c1", FloatType),
-      StructField("c2", DoubleType)
-    )
-  )
+      StructField("c2", DoubleType)))
 
-  private def createTable(): Unit =
-    jdbcUpdate(s"create table $dbtable(i INT, c1 FLOAT, c2 DOUBLE)")
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 
   test("Test Convert from java.lang.Boolean to REAL") {
     if (!supportBatchWrite) {
@@ -47,9 +64,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
           List(
             StructField("i", IntegerType),
             StructField("c1", BooleanType),
-            StructField("c2", BooleanType)
-          )
-        )
+            StructField("c2", BooleanType)))
 
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, 1f, 0d)
@@ -87,9 +102,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
           List(
             StructField("i", IntegerType),
             StructField("c1", ByteType),
-            StructField("c2", ByteType)
-          )
-        )
+            StructField("c2", ByteType)))
 
         dropTable()
         createTable()
@@ -122,9 +135,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
           List(
             StructField("i", IntegerType),
             StructField("c1", ShortType),
-            StructField("c2", ShortType)
-          )
-        )
+            StructField("c2", ShortType)))
 
         dropTable()
         createTable()
@@ -154,9 +165,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
           List(
             StructField("i", IntegerType),
             StructField("c1", IntegerType),
-            StructField("c2", IntegerType)
-          )
-        )
+            StructField("c2", IntegerType)))
 
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, 22, 33d)
@@ -192,9 +201,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
           List(
             StructField("i", IntegerType),
             StructField("c1", LongType),
-            StructField("c2", LongType)
-          )
-        )
+            StructField("c2", LongType)))
 
         dropTable()
         createTable()
@@ -226,9 +233,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
           List(
             StructField("i", IntegerType),
             StructField("c1", FloatType),
-            StructField("c2", FloatType)
-          )
-        )
+            StructField("c2", FloatType)))
 
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, 22.2f, 33.3d)
@@ -248,8 +253,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
           readSchema,
-          skipTiDBAndExpectedAnswerCheck = true
-        )
+          skipTiDBAndExpectedAnswerCheck = true)
     }
   }
 
@@ -275,9 +279,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
           List(
             StructField("i", IntegerType),
             StructField("c1", DoubleType),
-            StructField("c2", DoubleType)
-          )
-        )
+            StructField("c2", DoubleType)))
 
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, 22.22f, 33.33d)
@@ -293,8 +295,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
-          readSchema
-        )
+          readSchema)
     }
   }
 
@@ -313,15 +314,13 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
         val row3 = Row(3, minFloat.toString, minDouble.toString)
         val row4 = Row(4, maxFloat.toString, maxDouble.toString)
         val row5 = Row(5, (-minFloat).toString, (-minDouble).toString)
-        val row6 = Row(6, (-maxFloat + 1.0E20).toString, (-maxDouble).toString)
+        val row6 = Row(6, (-maxFloat + 1.0e20).toString, (-maxDouble).toString)
 
         val schema = StructType(
           List(
             StructField("i", IntegerType),
             StructField("c1", StringType),
-            StructField("c2", StringType)
-          )
-        )
+            StructField("c2", StringType)))
 
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, 2.2f, -3.3d)
@@ -337,8 +336,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
-          readSchema
-        )
+          readSchema)
     }
   }
 
@@ -351,10 +349,6 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
   // scala.collection.Map
   // org.apache.spark.sql.Row
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
+  private def createTable(): Unit =
+    jdbcUpdate(s"create table $dbtable(i INT, c1 FLOAT, c2 DOUBLE)")
 }

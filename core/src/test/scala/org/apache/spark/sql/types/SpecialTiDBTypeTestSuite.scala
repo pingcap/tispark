@@ -145,7 +145,7 @@ class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
         List(-2147483648),
         List(9223372036854775807L),
         List(-9223372036854775808L),
-        List(9.223372036854776E18),
+        List(9.223372036854776e18),
         List(0.5),
         List(-0.5),
         List("\"\""),

@@ -32,16 +32,18 @@ object SparkWrapper {
     Alias(child, name)()
   }
 
-  def newAttributeReference(name: String,
-                            dataType: DataType,
-                            nullable: Boolean,
-                            metadata: Metadata): AttributeReference = {
+  def newAttributeReference(
+      name: String,
+      dataType: DataType,
+      nullable: Boolean,
+      metadata: Metadata): AttributeReference = {
     AttributeReference(name, dataType, nullable, metadata)()
   }
 
-  def callSessionCatalogCreateTable(obj: SessionCatalog,
-                                    tableDefinition: CatalogTable,
-                                    ignoreIfExists: Boolean): Unit = {
+  def callSessionCatalogCreateTable(
+      obj: SessionCatalog,
+      tableDefinition: CatalogTable,
+      ignoreIfExists: Boolean): Unit = {
     obj.createTable(tableDefinition, ignoreIfExists)
   }
 }

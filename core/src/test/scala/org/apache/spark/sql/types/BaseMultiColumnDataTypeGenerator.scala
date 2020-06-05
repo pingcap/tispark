@@ -20,12 +20,13 @@ package org.apache.spark.sql.types
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 
-case class BaseMultiColumnDataTypeGenerator(dataTypes: List[ReflectedDataType],
-                                            unsignedDataTypes: List[ReflectedDataType],
-                                            dataTypeTestDir: String,
-                                            database: String,
-                                            testDesc: String)
-    extends BaseTiSparkTest
+case class BaseMultiColumnDataTypeGenerator(
+  dataTypes: List[ReflectedDataType],
+  unsignedDataTypes: List[ReflectedDataType],
+  dataTypeTestDir: String,
+  database: String,
+  testDesc: String
+) extends BaseTiSparkTest
     with GenerateMultiColumnDataTypeTestAction {
   def loadTestData(tableName: String): Unit = {
     logger.info(s"${preDescription}Test $tableName - $testDesc")

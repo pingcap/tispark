@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.exception.TiBatchWriteException
@@ -13,27 +28,17 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   private val row2_v2 = Row(2, "TiSpark")
 
   private val schema = StructType(
-    List(
-      StructField("i", IntegerType),
-      StructField("s", StringType)
-    )
-  )
+    List(StructField("i", IntegerType), StructField("s", StringType)))
+
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 
   private def compareRow(r1: Row, r2: Row): Boolean = {
     r1.getAs[Int](0) < r2.getAs[Int](0)
-  }
-
-  private def generateData(start: Int, length: Int, skipFirstCol: Boolean = false): List[Row] = {
-    val strings = Array("Hello", "TiDB", "Spark", null, "TiSpark")
-    val ret = ArrayBuffer[Row]()
-    for (x <- start until start + length) {
-      if (skipFirstCol) {
-        ret += Row(strings(x % strings.length))
-      } else {
-        ret += Row(x, strings(x % strings.length))
-      }
-    }
-    ret.toList
   }
 
   test("Test insert to table without primary key") {
@@ -43,9 +48,7 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
 
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
-    jdbcUpdate(
-      s"insert into $dbtable values(null, 'Hello')"
-    )
+    jdbcUpdate(s"insert into $dbtable values(null, 'Hello')")
 
     var data = List(row1)
     // insert 2 rows
@@ -82,9 +85,7 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
 
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key, s varchar(128))")
-    jdbcUpdate(
-      s"insert into $dbtable values(2, 'TiDB')"
-    )
+    jdbcUpdate(s"insert into $dbtable values(2, 'TiDB')")
 
     var data = List(Row(2, "TiDB"))
     // insert 2 rows
@@ -119,9 +120,7 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
 
     dropTable()
     jdbcUpdate(s"create table $dbtable(i tinyint primary key, s varchar(128))")
-    jdbcUpdate(
-      s"insert into $dbtable values(2, 'TiDB')"
-    )
+    jdbcUpdate(s"insert into $dbtable values(2, 'TiDB')")
 
     var data = List(Row(2, "TiDB"))
     // insert 2 rows
@@ -138,9 +137,7 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
 
     dropTable()
     jdbcUpdate(s"create table $dbtable(i smallint primary key, s varchar(128))")
-    jdbcUpdate(
-      s"insert into $dbtable values(2, 'TiDB')"
-    )
+    jdbcUpdate(s"insert into $dbtable values(2, 'TiDB')")
 
     var data = List(Row(2, "TiDB"))
     // insert 2 rows
@@ -157,9 +154,7 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
 
     dropTable()
     jdbcUpdate(s"create table $dbtable(i mediumint primary key, s varchar(128))")
-    jdbcUpdate(
-      s"insert into $dbtable values(2, 'TiDB')"
-    )
+    jdbcUpdate(s"insert into $dbtable values(2, 'TiDB')")
 
     var data = List(Row(2, "TiDB"))
     // insert 2 rows
@@ -176,9 +171,7 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
 
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key AUTO_INCREMENT, s varchar(128))")
-    jdbcUpdate(
-      s"insert into $dbtable values(2, 'TiDB')"
-    )
+    jdbcUpdate(s"insert into $dbtable values(2, 'TiDB')")
 
     var data = List(Row(2, "TiDB"))
     // insert 2 rows
@@ -221,15 +214,9 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
 
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key AUTO_INCREMENT, s varchar(128))")
-    jdbcUpdate(
-      s"insert into $dbtable(s) values('Hello')"
-    )
+    jdbcUpdate(s"insert into $dbtable(s) values('Hello')")
 
-    val withOutIDSchema = StructType(
-      List(
-        StructField("s", StringType)
-      )
-    )
+    val withOutIDSchema = StructType(List(StructField("s", StringType)))
 
     var data = List(Row("Hello"))
 
@@ -252,10 +239,16 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
     testTiDBSelect(data, "i", "s")
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
+  private def generateData(start: Int, length: Int, skipFirstCol: Boolean = false): List[Row] = {
+    val strings = Array("Hello", "TiDB", "Spark", null, "TiSpark")
+    val ret = ArrayBuffer[Row]()
+    for (x <- start until start + length) {
+      if (skipFirstCol) {
+        ret += Row(strings(x % strings.length))
+      } else {
+        ret += Row(x, strings(x % strings.length))
+      }
     }
+    ret.toList
+  }
 }

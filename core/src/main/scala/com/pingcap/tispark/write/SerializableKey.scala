@@ -25,7 +25,7 @@ class SerializableKey(val bytes: Array[Byte]) extends Serializable {
   override def equals(that: Any): Boolean =
     that match {
       case that: SerializableKey => this.bytes.sameElements(that.bytes)
-      case _                     => false
+      case _ => false
     }
 
   override def hashCode(): Int =

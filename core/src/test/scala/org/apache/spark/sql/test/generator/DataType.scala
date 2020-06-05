@@ -25,47 +25,6 @@ import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder
 object DataType extends Enumeration {
   type ReflectedDataType = Value
   type TiDataType = com.pingcap.tikv.types.DataType
-
-  def getType(dataType: ReflectedDataType,
-              flag: Integer,
-              len: Long,
-              decimal: Integer,
-              charset: String,
-              collation: Integer): TiDataType =
-    dataType.asInstanceOf[Val].getType(flag, len, decimal, charset, collation)
-  def getBaseType(dataType: ReflectedDataType): TiDataType = dataType.asInstanceOf[Val].getBaseType
-  def getTypeName(dataType: ReflectedDataType): String = dataType.asInstanceOf[Val].typeName
-  def getBaseFlag(dataType: ReflectedDataType): Int = dataType.asInstanceOf[Val].getBaseFlag
-
-  case class Val(typeName: String, private val baseType: TiDataType) extends super.Val {
-
-    private[generator] def getType(flag: Integer,
-                                   len: Long,
-                                   decimal: Integer,
-                                   charset: String,
-                                   collation: Integer): TiDataType = {
-      val constructor = baseType.getClass.getDeclaredConstructor(classOf[InternalTypeHolder])
-      constructor.setAccessible(true)
-      constructor.newInstance(
-        new InternalTypeHolder(
-          baseType.getTypeCode,
-          flag,
-          len,
-          decimal,
-          charset,
-          Collation.translate(collation),
-          new util.ArrayList[String]()
-        )
-      )
-    }
-
-    private[generator] def getBaseFlag: Int = baseType.getFlag
-
-    private[generator] def getBaseType: TiDataType = baseType
-
-    override def toString(): String = typeName
-  }
-
   val BIT: Val = Val("bit", com.pingcap.tikv.types.BitType.BIT)
   val BOOLEAN: Val = Val("boolean", com.pingcap.tikv.types.IntegerType.BOOLEAN)
   val TINYINT: Val = Val("tinyint", com.pingcap.tikv.types.IntegerType.TINYINT)
@@ -96,4 +55,51 @@ object DataType extends Enumeration {
   val ENUM: Val = Val("enum", com.pingcap.tikv.types.EnumType.ENUM)
   val SET: Val = Val("set", com.pingcap.tikv.types.SetType.SET)
   val JSON: Val = Val("json", com.pingcap.tikv.types.JsonType.JSON)
+
+  def getType(
+    dataType: ReflectedDataType,
+    flag: Integer,
+    len: Long,
+    decimal: Integer,
+    charset: String,
+    collation: Integer
+  ): TiDataType =
+    dataType.asInstanceOf[Val].getType(flag, len, decimal, charset, collation)
+
+  def getBaseType(dataType: ReflectedDataType): TiDataType = dataType.asInstanceOf[Val].getBaseType
+
+  def getTypeName(dataType: ReflectedDataType): String = dataType.asInstanceOf[Val].typeName
+
+  def getBaseFlag(dataType: ReflectedDataType): Int = dataType.asInstanceOf[Val].getBaseFlag
+
+  case class Val(typeName: String, private val baseType: TiDataType) extends super.Val {
+
+    override def toString(): String = typeName
+
+    private[generator] def getType(
+      flag: Integer,
+      len: Long,
+      decimal: Integer,
+      charset: String,
+      collation: Integer
+    ): TiDataType = {
+      val constructor = baseType.getClass.getDeclaredConstructor(classOf[InternalTypeHolder])
+      constructor.setAccessible(true)
+      constructor.newInstance(
+        new InternalTypeHolder(
+          baseType.getTypeCode,
+          flag,
+          len,
+          decimal,
+          charset,
+          Collation.translate(collation),
+          new util.ArrayList[String]()
+        )
+      )
+    }
+
+    private[generator] def getBaseFlag: Int = baseType.getFlag
+
+    private[generator] def getBaseType: TiDataType = baseType
+  }
 }

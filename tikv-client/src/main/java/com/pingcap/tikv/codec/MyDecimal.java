@@ -98,6 +98,39 @@ public class MyDecimal implements Serializable {
     this.negative = negative;
     this.wordBuf = wordBuf;
   }
+
+  /**
+   * Reads a word from a array at given size.
+   *
+   * @param b b is source data of unsigned byte as int[]
+   * @param size is word size which can be used in switch statement.
+   * @param start start indicates the where start to read.
+   */
+  @VisibleForTesting
+  public static int readWord(int[] b, int size, int start) {
+    int x = 0;
+    switch (size) {
+      case 1:
+        x = (byte) b[start];
+        break;
+      case 2:
+        x = (((byte) b[start]) << 8) + (b[start + 1] & 0xFF);
+        break;
+      case 3:
+        int sign = b[start] & 128;
+        if (sign > 0) {
+          x = 0xFF << 24 | (b[start] << 16) | (b[start + 1] << 8) | (b[start + 2]);
+        } else {
+          x = b[start] << 16 | (b[start + 1] << 8) | b[start + 2];
+        }
+        break;
+      case 4:
+        x = b[start + 3] + (b[start + 2] << 8) + (b[start + 1] << 16) + (b[start] << 24);
+        break;
+    }
+    return x;
+  }
+
   /*
    * Returns total precision of this decimal. Basically, it is sum of digitsInt and digitsFrac. But there
    * are some special cases need to be token care of such as 000.001.
@@ -292,38 +325,6 @@ public class MyDecimal implements Serializable {
       return div9[digits + digitsPerWord - 1];
     }
     return (digits + digitsPerWord - 1) / digitsPerWord;
-  }
-
-  /**
-   * Reads a word from a array at given size.
-   *
-   * @param b b is source data of unsigned byte as int[]
-   * @param size is word size which can be used in switch statement.
-   * @param start start indicates the where start to read.
-   */
-  @VisibleForTesting
-  public static int readWord(int[] b, int size, int start) {
-    int x = 0;
-    switch (size) {
-      case 1:
-        x = (byte) b[start];
-        break;
-      case 2:
-        x = (((byte) b[start]) << 8) + (b[start + 1] & 0xFF);
-        break;
-      case 3:
-        int sign = b[start] & 128;
-        if (sign > 0) {
-          x = 0xFF << 24 | (b[start] << 16) | (b[start + 1] << 8) | (b[start + 2]);
-        } else {
-          x = b[start] << 16 | (b[start + 1] << 8) | b[start + 2];
-        }
-        break;
-      case 4:
-        x = b[start + 3] + (b[start + 2] << 8) + (b[start + 1] << 16) + (b[start] << 24);
-        break;
-    }
-    return x;
   }
 
   /**
