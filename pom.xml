@@ -179,11 +179,6 @@
                     <artifactId>fmt-maven-plugin</artifactId>
                     <version>2.6.0</version>
                 </plugin>
-                <plugin>
-                    <groupId>org.antipathy</groupId>
-                    <artifactId>mvn-scalafmt_${scala.binary.version}</artifactId>
-                    <version>1.0.3</version>
-                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -233,6 +228,24 @@
                     <serverId>ossrh</serverId>
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                     <autoReleaseAfterClose>false</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
+            <!-- Scala Format Plug-in -->
+            <plugin>
+                <groupId>org.antipathy</groupId>
+                <artifactId>mvn-scalafmt_${scala.binary.version}</artifactId>
+                <version>1.0.3</version>
+                <configuration>
+                    <skipSources>${scalafmt.skip}</skipSources>
+                    <skipTestSources>${scalafmt.skip}</skipTestSources>
+                    <sourceDirectories> <!-- (Optional) Paths to source-directories. Overrides ${project.build.sourceDirectory} -->
+                        <sourceDirectory>${project.basedir}/src/main/scala</sourceDirectory>
+                    </sourceDirectories>
+                    <testSourceDirectories> <!-- (Optional) Paths to test-source-directories. Overrides ${project.build.testSourceDirectory} -->
+                        <param>${project.basedir}/src/test/scala</param>
+                    </testSourceDirectories>
+                    <configLocation>dev/.scalafmt.conf</configLocation> <!-- (Optional) config location -->
+                    <onlyChangedFiles>false</onlyChangedFiles>
                 </configuration>
             </plugin>
         </plugins>
