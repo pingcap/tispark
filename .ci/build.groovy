@@ -25,6 +25,11 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                 stage('Format') {
                     dir("go/src/github.com/pingcap/tispark") {
                         sh """
+                        echo \$LC_ALL
+                        echo \$LANG
+                        export LC_ALL=en_US.UTF-8
+                        export LANG=en_US.UTF-8
+                        export LANGUAGE=en_US.UTF-8
                         cp -R /home/jenkins/agent/git/tispark/. ./
                         git checkout -f ${ghprbActualCommit}
                         mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false
