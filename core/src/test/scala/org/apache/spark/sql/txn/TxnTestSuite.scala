@@ -89,7 +89,7 @@ class TxnTestSuite extends BaseTiSparkTest {
    */
   protected def doThread(i: Int, doQuery: => Unit): Thread =
     new Thread {
-      override def run() {
+      override def run(): Unit = {
         while (try {
             doQuery
             logger.info("query " + i.toString + " success!")

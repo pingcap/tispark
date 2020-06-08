@@ -70,7 +70,7 @@ class TiBatchWrite(
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  import TiBatchWrite._
+  import com.pingcap.tispark.write.TiBatchWrite._
 
   private var tiConf: TiConfiguration = _
   @transient private var tiSession: TiSession = _
@@ -154,7 +154,7 @@ class TiBatchWrite(
     // check empty
     var allEmpty = true
     tiBatchWriteTables.foreach { table =>
-      if (!table.isDFEmpty()) {
+      if (!table.isDFEmpty) {
         allEmpty = false
       }
     }
@@ -164,7 +164,7 @@ class TiBatchWrite(
     }
 
     // lock table
-    useTableLock = getUseTableLock()
+    useTableLock = getUseTableLock
     if (useTableLock) {
       tiBatchWriteTables.foreach(_.lockTable())
     } else {
@@ -313,7 +313,7 @@ class TiBatchWrite(
     }
   }
 
-  private def getUseTableLock(): Boolean = {
+  private def getUseTableLock: Boolean = {
     if (!options.useTableLock(StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient))) {
       false
     } else {

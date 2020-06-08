@@ -59,7 +59,7 @@ case class Data(schema: Schema, data: List[TiRow], directory: String) {
       case _: Number => value.toString
       case arr: Array[Byte] =>
         s"X\'${arr.map { b =>
-          String.format("%02x", new java.lang.Byte(b))
+          f"${new java.lang.Byte(b)}%02x"
         }.mkString}\'"
       case arr: Array[Boolean] =>
         s"b\'${arr.map {

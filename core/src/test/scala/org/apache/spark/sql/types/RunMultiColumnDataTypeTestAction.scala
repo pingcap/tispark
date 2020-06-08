@@ -25,5 +25,5 @@ trait RunMultiColumnDataTypeTestAction extends MultiColumnDataTypeTestSpec with 
     startTest(dataTypes)
   }
 
-  def startTest(dataTypes: List[ReflectedDataType]): Unit = ???
+  def startTest(dataTypes: List[ReflectedDataType]): Unit
 }

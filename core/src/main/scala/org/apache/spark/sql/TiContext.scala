@@ -39,6 +39,9 @@ import scala.collection.mutable
 
 class TiContext(val sparkSession: SparkSession) extends Serializable with Logging {
   final val version: String = TiSparkVersion.version
+  final val conf: SparkConf = sparkSession.sparkContext.conf
+  final val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(conf)
+  final val tiSession: TiSession = TiSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
   lazy val tiConcreteCatalog: TiSessionCatalog =
     new TiConcreteSessionCatalog(this)(newTiDirectExternalCatalog(this))
@@ -62,9 +65,6 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   CacheInvalidateListener
     .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
   tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
-  val conf: SparkConf = sparkSession.sparkContext.conf
-  val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(conf)
-  val tiSession: TiSession = TiSession.getInstance(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
   val debug: DebugTool = new DebugTool
   val autoLoad: Boolean =

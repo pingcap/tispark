@@ -24,13 +24,13 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 
 class ConcurrencyTest extends BaseDataSourceTest("test_concurrency_write_read") {
 
-  protected val row1 = Row(1, "Hello")
-  protected val row2 = Row(2, "TiDB")
-  protected val row3 = Row(3, "Spark")
-  protected val row4 = Row(4, "null")
-  protected val row5 = Row(5, "test")
+  protected val row1: Row = Row(1, "Hello")
+  protected val row2: Row = Row(2, "TiDB")
+  protected val row3: Row = Row(3, "Spark")
+  protected val row4: Row = Row(4, "null")
+  protected val row5: Row = Row(5, "test")
 
-  protected val schema = StructType(
+  protected val schema: StructType = StructType(
     List(StructField("i", IntegerType), StructField("s", StringType)))
 
   protected val sleepBeforeQuery = 10000

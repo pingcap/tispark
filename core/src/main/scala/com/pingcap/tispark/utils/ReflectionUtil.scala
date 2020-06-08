@@ -241,6 +241,8 @@ object ReflectionUtil {
   case class ReflectionMapPartitionWithIndexInternal(
       rdd: RDD[InternalRow],
       internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[InternalRow]) {
+    private val scalaReflectionException = ScalaReflectionException(
+      s"Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is ${TiSparkInfo.SPARK_VERSION}")
     // Spark HDP Release may not compatible with official Release
     // see https://github.com/pingcap/tispark/issues/1006
     def invoke(): RDD[InternalRow] = {
@@ -253,10 +255,7 @@ object ReflectionUtil {
               try {
                 reflectMapPartitionsWithIndexInternalV2(rdd, internalRowToUnsafeRowWithIndex)
               } catch {
-                case _: Throwable =>
-                  throw ScalaReflectionException(
-                    s"Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
-                      .format(TiSparkInfo.SPARK_VERSION))
+                case _: Throwable => throw scalaReflectionException
               }
           }
 
@@ -268,10 +267,7 @@ object ReflectionUtil {
               try {
                 reflectMapPartitionsWithIndexInternalV1(rdd, internalRowToUnsafeRowWithIndex)
               } catch {
-                case _: Throwable =>
-                  throw ScalaReflectionException(
-                    s"Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
-                      .format(TiSparkInfo.SPARK_VERSION))
+                case _: Throwable => throw scalaReflectionException
               }
           }
       }

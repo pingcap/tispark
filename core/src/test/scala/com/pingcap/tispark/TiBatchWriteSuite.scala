@@ -366,7 +366,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
                                         |GROUP BY $selectColumns, $updateColumn
                                         |HAVING count(*) != 2""".stripMargin)
         assert(diff2.nonEmpty)
-        assert(diff2.size == updateSize * 2)
+        assert(diff2.lengthCompare(updateSize * 2) == 0)
 
         val originCount =
           queryTiDBViaJDBC(s"select count(*) from $table").head.head.asInstanceOf[Long]
@@ -535,7 +535,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
                                         |GROUP BY $selectColumns, $updateColumn
                                         |HAVING count(*) != 2""".stripMargin)
         assert(diff2.nonEmpty)
-        assert(diff2.size == updateSize * 2)
+        assert(diff2.lengthCompare(updateSize * 2) == 0)
 
         val originCount =
           queryTiDBViaJDBC(s"select count(*) from $table").head.head.asInstanceOf[Long]

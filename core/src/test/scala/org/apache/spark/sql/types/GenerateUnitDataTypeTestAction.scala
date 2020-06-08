@@ -27,12 +27,14 @@ import org.apache.spark.sql.test.generator.{Data, Index, Schema}
 
 trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestSpec with BaseTestGenerationSpec {
 
-  override val rowCount = 50
+  override def rowCount = 50
 
   override def getIndexName(dataTypes: String*): String = s"idx_${toString(dataTypes)}"
 
   private def toString(dataTypes: Seq[String]) = {
-    assert(dataTypes.size == 1, "Unit data type tests can not manage multiple columns")
+    assert(
+      dataTypes.lengthCompare(1) == 0,
+      "Unit data type tests can not manage multiple columns")
     dataTypes.mkString("_")
   }
 
@@ -81,7 +83,7 @@ trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestSpec with BaseTestG
       tableName: String,
       len: String,
       desc: String): Schema = {
-    schemaGenerator(database, tableName, r, List((dataType, len, desc)), List.empty[Index])
+    schemaGenerator(dbName, tableName, r, List((dataType, len, desc)), List.empty[Index])
   }
 
   def genData(schema: Schema): Data = randomDataGenerator(schema, rowCount, dataTypeTestDir, r)

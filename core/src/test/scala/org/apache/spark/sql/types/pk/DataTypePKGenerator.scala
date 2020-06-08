@@ -25,7 +25,7 @@ case class DataTypePKGenerator(
     dataTypes: List[ReflectedDataType],
     unsignedDataTypes: List[ReflectedDataType],
     dataTypeTestDir: String,
-    database: String,
+    dbName: String,
     testDesc: String)
     extends BaseTiSparkTest
     with GeneratePKDataTypeTestAction {
@@ -42,11 +42,6 @@ case class DataTypePKGenerator(
 
 object DataTypePKGenerator {
   def apply(u: UnitDataTypeTestSpec): GeneratePKDataTypeTestAction = {
-    DataTypePKGenerator(
-      u.dataTypes,
-      u.unsignedDataTypes,
-      u.dataTypeTestDir,
-      u.database,
-      u.testDesc)
+    DataTypePKGenerator(u.dataTypes, u.unsignedDataTypes, u.dataTypeTestDir, u.dbName, u.testDesc)
   }
 }

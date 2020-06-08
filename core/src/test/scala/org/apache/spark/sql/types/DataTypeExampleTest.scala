@@ -21,22 +21,22 @@ import org.apache.spark.sql.test.generator.DataType.{ReflectedDataType, TINYINT}
 
 class DataTypeExampleTest extends BaseDataTypeTest with RunUnitDataTypeTestAction {
   override lazy protected val generator: BaseDataTypeGenerator =
-    BaseDataTypeGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc)
-  val dataTypes: List[ReflectedDataType] = List(TINYINT)
-  val unsignedDataTypes: List[ReflectedDataType] = List(TINYINT)
-  val dataTypeTestDir: String = "dataType-test"
-  val database: String = "data_type_test_example"
-  val testDesc: String = "Base test for data types"
+    BaseDataTypeGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, dbName, testDesc)
+  override def dataTypes: List[ReflectedDataType] = List(TINYINT)
+  override def unsignedDataTypes: List[ReflectedDataType] = List(TINYINT)
+  override def dataTypeTestDir: String = "dataType-test"
+  override def dbName: String = "data_type_test_example"
+  override def testDesc: String = "Base test for data types"
 
   def startTest(typeName: String): Unit = {
     test(s"Test $typeName - $testDesc") {
-      simpleSelect(database, typeName)
+      simpleSelect(dbName, typeName)
     }
   }
 
   def startUnsignedTest(typeName: String): Unit = {
     test(s"Test $extraDesc $typeName - $testDesc") {
-      simpleSelect(database, typeName, extraDesc)
+      simpleSelect(dbName, typeName, extraDesc)
     }
   }
 

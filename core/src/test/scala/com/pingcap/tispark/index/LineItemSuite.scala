@@ -211,7 +211,7 @@ class LineItemSuite extends BaseTiSparkTest {
                                    |) tbl
                                    |GROUP BY $selectColumns
                                    |HAVING count(*) != 2""".stripMargin)
-    assert(diff.size == dfCount2 * 2)
+    assert(diff.lengthCompare(dfCount2 * 2) == 0)
   }
 
   test("ti batch write: replace + uniqueKey: lineitem") {
@@ -289,7 +289,7 @@ class LineItemSuite extends BaseTiSparkTest {
                                    |) tbl
                                    |GROUP BY $selectColumns
                                    |HAVING count(*) != 2""".stripMargin)
-    assert(diff.size == dfCount2 * 2)
+    assert(diff.lengthCompare(dfCount2 * 2) == 0)
   }
 
   override def afterAll(): Unit = {

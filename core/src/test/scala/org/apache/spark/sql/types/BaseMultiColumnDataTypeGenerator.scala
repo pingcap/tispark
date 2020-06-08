@@ -24,7 +24,7 @@ case class BaseMultiColumnDataTypeGenerator(
     dataTypes: List[ReflectedDataType],
     unsignedDataTypes: List[ReflectedDataType],
     dataTypeTestDir: String,
-    database: String,
+    dbName: String,
     testDesc: String)
     extends BaseTiSparkTest
     with GenerateMultiColumnDataTypeTestAction {

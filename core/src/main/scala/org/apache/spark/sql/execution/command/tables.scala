@@ -38,9 +38,8 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
     if (delegate.partitionSpec.isEmpty) {
       // Show the information of tables.
       val tables =
-        delegate.tableIdentifierPattern
-          .map(tiCatalog.listTables(db, _))
-          .getOrElse(tiCatalog.listTables(db))
+        delegate.tableIdentifierPattern.fold(tiCatalog.listTables(db))(
+          tiCatalog.listTables(db, _))
       tables.map { tableIdent =>
         val database = tableIdent.database.getOrElse("")
         val tableName = tableIdent.table
@@ -226,10 +225,10 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
       // Show column stats when EXTENDED or FORMATTED is specified.
       buffer += Row("min", cs.flatMap(_.min.map(_.toString)).getOrElse("NULL"))
       buffer += Row("max", cs.flatMap(_.max.map(_.toString)).getOrElse("NULL"))
-      buffer += Row("num_nulls", cs.map(_.nullCount.toString).getOrElse("NULL"))
-      buffer += Row("distinct_count", cs.map(_.distinctCount.toString).getOrElse("NULL"))
-      buffer += Row("avg_col_len", cs.map(_.avgLen.toString).getOrElse("NULL"))
-      buffer += Row("max_col_len", cs.map(_.maxLen.toString).getOrElse("NULL"))
+      buffer += Row("num_nulls", cs.fold("NULL")(_.nullCount.toString))
+      buffer += Row("distinct_count", cs.fold("NULL")(_.distinctCount.toString))
+      buffer += Row("avg_col_len", cs.fold("NULL")(_.avgLen.toString))
+      buffer += Row("max_col_len", cs.fold("NULL")(_.maxLen.toString))
       val histDesc = for {
         c <- cs
         hist <- c.histogram

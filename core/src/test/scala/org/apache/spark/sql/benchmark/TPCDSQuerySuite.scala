@@ -56,7 +56,7 @@ class TPCDSQuerySuite extends BaseTiSparkTest {
         val t = new Thread("query runner") {
           override def run(): Unit =
             try {
-              sqlContext.sparkContext.setJobGroup(jobGroup, jobGroup, true)
+              sqlContext.sparkContext.setJobGroup(jobGroup, jobGroup, interruptOnCancel = true)
               df.show(numRows)
             } catch {
               case e: Exception =>
@@ -79,7 +79,7 @@ class TPCDSQuerySuite extends BaseTiSparkTest {
           }
         }
 
-        val res = queryViaTiSpark(queryString)
+        queryViaTiSpark(queryString)
         println(s"TiSpark finished $q")
       }
     } catch {

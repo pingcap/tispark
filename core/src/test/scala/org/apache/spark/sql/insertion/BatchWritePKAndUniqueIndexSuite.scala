@@ -27,16 +27,16 @@ class BatchWritePKAndUniqueIndexSuite
       "batch_write_test_index")
     with EnumerateUniqueIndexDataTypeTestAction {
   // TODO: support binary insertion.
-  override val dataTypes: List[ReflectedDataType] =
+  override def dataTypes: List[ReflectedDataType] =
     integers ::: decimals ::: doubles ::: charCharset
-  override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
-  override val database = "batch_write_test_pk_and_index"
-  override val testDesc = "Test for pk and unique index type in batch-write insertion"
+  override def unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
+  override def dbName = "batch_write_test_pk_and_index"
+  override def testDesc = "Test for pk and unique index type in batch-write insertion"
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    tidbStmt.execute(s"drop database if exists $database")
-    tidbStmt.execute(s"create database $database")
+    tidbStmt.execute(s"drop database if exists $dbName")
+    tidbStmt.execute(s"create database $dbName")
   }
 
   // this is only for mute the warning
@@ -72,7 +72,7 @@ class BatchWritePKAndUniqueIndexSuite
   private def insertAndSelect(schema: Schema): Unit = {
     val tblName = schema.tableName
 
-    val tiTblInfo = getTableInfo(database, tblName)
+    val tiTblInfo = getTableInfo(dbName, tblName)
     val tiColInfos = tiTblInfo.getColumns
     // gen data
     val rows =

@@ -31,7 +31,7 @@ trait GeneratePKDataTypeTestAction extends GenerateUnitDataTypeTestAction {
       len: String,
       desc: String): Schema = {
     val index = genIndex(dataType, r, len)
-    schemaGenerator(database, tableName, r, List((dataType, len, desc)), index)
+    schemaGenerator(dbName, tableName, r, List((dataType, len, desc)), index)
   }
 
   private def genIndex(dataType: ReflectedDataType, r: Random, len: String): List[Index] = {

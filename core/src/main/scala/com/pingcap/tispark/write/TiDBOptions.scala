@@ -28,7 +28,7 @@ import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
  */
 class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends Serializable {
 
-  import TiDBOptions._
+  import com.pingcap.tispark.write.TiDBOptions._
 
   // ------------------------------------------------------------
   // Required parameters

@@ -21,7 +21,7 @@ import org.apache.spark.sql.test.generator.DataType.{ReflectedDataType, getBaseT
 import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength}
 
 trait IndexColumn {
-  val id: Int
+  def id: Int
   def getId: Int = id - 1
   def getLength: Integer = null
 }
@@ -81,7 +81,7 @@ case class ColumnInfo(
 
   {
     // validation
-    import TestDataGenerator._
+    import org.apache.spark.sql.test.generator.TestDataGenerator._
     if (isVarString(dataType) && len == -1) {
       throw new IllegalArgumentException("Length must be specified for Text and BLOB Types")
     }

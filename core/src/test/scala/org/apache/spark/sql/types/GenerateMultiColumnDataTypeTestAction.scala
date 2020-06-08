@@ -30,7 +30,7 @@ trait GenerateMultiColumnDataTypeTestAction
     with BaseTestGenerationSpec
     with DataTypeTestDir {
 
-  override val rowCount = 50
+  override def rowCount = 50
 
   override def getTableNameWithDesc(desc: String, dataTypes: String*): String =
     s"test_${desc}_${toString(dataTypes)}"
@@ -65,7 +65,7 @@ trait GenerateMultiColumnDataTypeTestAction
   def genSchema(
       tableName: String,
       dataTypesWithDescription: List[(ReflectedDataType, String, String)]): Schema = {
-    schemaGenerator(database, tableName, r, dataTypesWithDescription, List.empty[Index])
+    schemaGenerator(dbName, tableName, r, dataTypesWithDescription, List.empty[Index])
   }
 
   def genData(schema: Schema): Data = randomDataGenerator(schema, rowCount, dataTypeTestDir, r)

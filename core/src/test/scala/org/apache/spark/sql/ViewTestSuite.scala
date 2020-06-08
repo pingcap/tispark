@@ -38,7 +38,7 @@ class ViewTestSuite extends BaseTiSparkTest {
     spark.sql("show tables").show(false)
   }
 
-  override def afterAll() = {
+  override def afterAll(): Unit = {
     dropTbl()
   }
 

@@ -27,7 +27,7 @@ import org.apache.spark.sql.test.generator.TestDataGenerator.{
 
 trait BaseTestGenerationSpec {
 
-  protected val rowCount: Int
+  protected def rowCount: Int
 
   protected val preDescription: String = "Generating Data for "
 
@@ -50,7 +50,7 @@ trait BaseTestGenerationSpec {
   def getColumnNameByOffset(offset: Int): String = {
     require(cols != null)
     assert(
-      cols.size > offset,
+      cols.lengthCompare(offset) > 0,
       s"column length incorrect ${cols.size} <= $offset, maybe `cols` is not initialized correctly?")
     val dataType = cols(offset)
     val suffix = if (cols.count(_ == dataType) > 1) {

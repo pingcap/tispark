@@ -87,7 +87,7 @@ abstract class QueryTest extends SparkFunSuite {
     }
 
     assert(
-      cachedData.size == numCachedTables,
+      cachedData.lengthCompare(numCachedTables) == 0,
       s"Expected query to contain $numCachedTables, but it actually had ${cachedData.size}\n" +
         planWithCaching)
   }
@@ -189,7 +189,7 @@ abstract class QueryTest extends SparkFunSuite {
           case _: Array[Byte] if rhs.isInstanceOf[Long] =>
             val l = lhs.asInstanceOf[Array[Byte]].toList.reverse
             val r = rhs.asInstanceOf[Long]
-            if (l.length > 8) {
+            if (l.lengthCompare(8) > 0) {
               false
             } else {
               var eq = true
@@ -220,7 +220,7 @@ abstract class QueryTest extends SparkFunSuite {
         true
       } else if (lhs == null || rhs == null) {
         false
-      } else if (lhs.length != rhs.length) {
+      } else if (lhs.lengthCompare(rhs.length) != 0) {
         false
       } else {
         !lhs.zipWithIndex.exists {
@@ -247,7 +247,7 @@ abstract class QueryTest extends SparkFunSuite {
 
     if (lhs != null && rhs != null) {
       try {
-        if (lhs.length != rhs.length) {
+        if (lhs.lengthCompare(rhs.length) != 0) {
           false
         } else {
           // the result order may be different in TiDB and TiSpark, so compare result as follows

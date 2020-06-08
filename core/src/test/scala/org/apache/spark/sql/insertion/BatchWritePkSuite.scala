@@ -25,16 +25,16 @@ class BatchWritePkSuite
     extends BaseDataSourceTest("batch_write_insertion_pk", "batch_write_test_pk")
     with EnumeratePKDataTypeTestAction {
   // TODO: support binary insertion.
-  override val dataTypes: List[ReflectedDataType] =
+  override def dataTypes: List[ReflectedDataType] =
     integers ::: decimals ::: doubles ::: charCharset
-  override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
-  override val database = "batch_write_test_pk"
+  override def unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
+  override val dbName = "batch_write_test_pk"
   override val testDesc = "Test for single PK column in batch-write insertion"
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    tidbStmt.execute(s"drop database if exists $database")
-    tidbStmt.execute(s"create database $database")
+    tidbStmt.execute(s"drop database if exists $dbName")
+    tidbStmt.execute(s"create database $dbName")
   }
 
   // this is only for mute the warning
@@ -70,7 +70,7 @@ class BatchWritePkSuite
   private def insertAndSelect(schema: Schema): Unit = {
     val tblName = schema.tableName
 
-    val tiTblInfo = getTableInfo(database, tblName)
+    val tiTblInfo = getTableInfo(dbName, tblName)
     val tiColInfos = tiTblInfo.getColumns
     // gen data
     val rows =

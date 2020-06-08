@@ -44,7 +44,7 @@ object TiDBUtils {
   /**
    * Returns a factory for creating connections to the given TiDB URL.
    *
-   * @param jdbcURL
+   * @param jdbcURL jdbc url
    */
   def createConnectionFactory(jdbcURL: String): () => Connection = {
     import scala.collection.JavaConverters._

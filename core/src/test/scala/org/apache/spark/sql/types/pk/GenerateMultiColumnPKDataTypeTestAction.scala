@@ -31,7 +31,7 @@ import scala.util.Random
 
 trait GenerateMultiColumnPKDataTypeTestAction extends GenerateMultiColumnDataTypeTestAction {
 
-  override val rowCount: Int = 10
+  override def rowCount: Int = 10
 
   private val dataTypesWithDescription = dataTypes.map { genDescription }
 
@@ -65,14 +65,14 @@ trait GenerateMultiColumnPKDataTypeTestAction extends GenerateMultiColumnDataTyp
       tableName: String,
       dataTypesWithDescription: List[(ReflectedDataType, String, String)]): Schema = {
     val index = genIndex(dataTypesWithDescription, r)
-    schemaGenerator(database, tableName, r, dataTypesWithDescription, index)
+    schemaGenerator(dbName, tableName, r, dataTypesWithDescription, index)
   }
 
   private def genIndex(
       dataTypesWithDescription: List[(ReflectedDataType, String, String)],
       r: Random): List[Index] = {
     assert(
-      dataTypesWithDescription.size >= 2,
+      dataTypesWithDescription.lengthCompare(2) >= 0,
       "column size should be at least 2 for multi-column tests")
     val result: mutable.ListBuffer[IndexColumn] = new mutable.ListBuffer[IndexColumn]()
     for (i <- 0 until 2) {

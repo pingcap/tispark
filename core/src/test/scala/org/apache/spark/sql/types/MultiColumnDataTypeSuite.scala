@@ -27,13 +27,13 @@ class MultiColumnDataTypeSuite
     dataTypes,
     unsignedDataTypes,
     dataTypeTestDir,
-    database,
+    dbName,
     testDesc)
-  val dataTypes: List[ReflectedDataType] = numeric ::: stringType
-  val unsignedDataTypes: List[ReflectedDataType] = numeric
-  val dataTypeTestDir: String = "multi-column-dataType-test"
-  val database: String = "multi_column_data_type_test"
-  val testDesc: String = "Base test for multi-column data types"
+  override def dataTypes: List[ReflectedDataType] = numeric ::: stringType
+  override def unsignedDataTypes: List[ReflectedDataType] = numeric
+  override def dataTypeTestDir: String = "multi-column-dataType-test"
+  override def dbName: String = "multi_column_data_type_test"
+  override def testDesc: String = "Base test for multi-column data types"
 
   override def startTest(dataTypes: List[ReflectedDataType]): Unit = {
     val typeNames = dataTypes.map(getTypeName)
@@ -46,7 +46,7 @@ class MultiColumnDataTypeSuite
       for (j <- i + 1 until columnNames.size) {
         val col2 = columnNames(j)
         val dataType2 = dataTypes(j)
-        simpleSelect(database, tblName, col1, col2, dataType2)
+        simpleSelect(dbName, tblName, col1, col2, dataType2)
       }
     }
   }

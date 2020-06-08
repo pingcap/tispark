@@ -45,7 +45,7 @@ class MultiTableWriteSuite extends BaseTiSparkTest {
 
     val data = tables.map { table =>
       val tableToWrite = s"${batchWriteTablePrefix}_$table"
-      val dbTable = new DBTable(database, tableToWrite)
+      val dbTable = DBTable(database, tableToWrite)
       val df = sql(s"select * from $table")
       (dbTable, df)
     }.toMap

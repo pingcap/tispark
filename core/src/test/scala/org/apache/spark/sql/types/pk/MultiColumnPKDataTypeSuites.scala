@@ -28,13 +28,13 @@ trait MultiColumnPKDataTypeSuites
     dataTypes,
     unsignedDataTypes,
     dataTypeTestDir,
-    database,
+    dbName,
     testDesc)
-  val dataTypes: List[ReflectedDataType] = baseDataTypes
-  val unsignedDataTypes: List[ReflectedDataType] = List(INT, BIGINT)
-  val dataTypeTestDir: String = "multi-column-dataType-test-pk"
-  val database: String = "multi_column_pk_data_type_test"
-  val testDesc: String = "Base test for multi-column pk data types"
+  override def dataTypes: List[ReflectedDataType] = baseDataTypes
+  override def unsignedDataTypes: List[ReflectedDataType] = List(INT, BIGINT)
+  override def dataTypeTestDir: String = "multi-column-dataType-test-pk"
+  override def dbName: String = "multi_column_pk_data_type_test"
+  override def testDesc: String = "Base test for multi-column pk data types"
   val tests: Map[Int, Seq[(Int, Int)]] = {
     val size = dataTypes.size - 1
     dataTypes.indices
@@ -53,7 +53,7 @@ trait MultiColumnPKDataTypeSuites
       }
       .withDefaultValue(Seq.empty[(Int, Int)])
   }
-  val currentTest: Seq[(Int, Int)]
+  def currentTest: Seq[(Int, Int)]
 
   def getId: Int = getClass.getName.substring(getClass.getName.length - 2).toInt
 
@@ -87,7 +87,7 @@ trait MultiColumnPKDataTypeSuites
       for (v <- u + 1 until dt.size) {
         val col2 = columnNames(v)
         val dataType = dt(v)
-        simpleSelect(database, tableName, col1, col2, dataType)
+        simpleSelect(dbName, tableName, col1, col2, dataType)
       }
     }
   }

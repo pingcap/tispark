@@ -260,7 +260,7 @@ object TestDataGenerator {
       singleColumnPrimaryKey ++
         indices.map { idx =>
           val columns = idx.indexColumns.map(x => (columnNames(x.getId), x.getLength))
-          if (idx.isPrimaryKey && idx.indexColumns.size == 1) {
+          if (idx.isPrimaryKey && idx.indexColumns.lengthCompare(1) == 0) {
             val pkColumn = columnNames(idx.indexColumns.head.getId)
             val x = columnDesc(pkColumn)
             columnDesc(pkColumn) = (x._1, x._2, x._3 + " not null")
@@ -341,7 +341,7 @@ object TestDataGenerator {
     // offset of pk columns
     val pkOffset: List[(Int, Int)] = {
       val primary = schema.indexInfo.filter(_.isPrimary)
-      if (primary.nonEmpty && primary.size == 1) {
+      if (primary.nonEmpty && primary.lengthCompare(1) == 0) {
         primary.head.indexColumns.map(
           x =>
             (

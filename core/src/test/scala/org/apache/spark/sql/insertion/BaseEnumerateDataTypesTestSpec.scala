@@ -26,7 +26,7 @@ import scala.util.Random
 trait BaseEnumerateDataTypesTestSpec
     extends MultiColumnDataTypeTestSpec
     with BaseTestGenerationSpec {
-  override val rowCount = 50
+  override def rowCount = 50
 
   def genIndex(dataTypes: List[ReflectedDataType], r: Random): List[List[Index]]
 
@@ -45,7 +45,7 @@ trait BaseEnumerateDataTypesTestSpec
 
     indices.zipWithIndex.map { index =>
       schemaGenerator(
-        database,
+        dbName,
         // table name
         tablePrefix + index._2,
         r,

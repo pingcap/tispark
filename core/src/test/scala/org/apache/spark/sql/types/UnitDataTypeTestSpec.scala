@@ -21,9 +21,9 @@ import org.apache.spark.sql.TiSparkTestSpec
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 
 trait UnitDataTypeTestSpec extends TiSparkTestSpec {
-  val dataTypes: List[ReflectedDataType]
-  val unsignedDataTypes: List[ReflectedDataType]
-  val dataTypeTestDir: String
+  def dataTypes: List[ReflectedDataType]
+  def unsignedDataTypes: List[ReflectedDataType]
+  def dataTypeTestDir: String
 
   val extraDesc = "unsigned"
 }

@@ -74,7 +74,7 @@ object ExprUtils {
       case f @ PromotedSum(BasicExpression(arg)) =>
         addingSumAggToDAgReq(meta, dagRequest, f, arg)
 
-      case f @ Count(args) if args.length == 1 =>
+      case f @ Count(args) if args.lengthCompare(1) == 0 =>
         val tiArg = if (args.head.isInstanceOf[Literal]) {
           val firstColRef = if (meta.hasPrimaryKey) {
             val col = meta.getColumns.asScala.filter(col => col.isPrimaryKey).head

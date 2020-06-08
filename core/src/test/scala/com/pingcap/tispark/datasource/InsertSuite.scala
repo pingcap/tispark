@@ -221,19 +221,19 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
     var data = List(Row("Hello"))
 
     // insert 2 rows
-    var insert = generateData(30000, 2, true)
+    var insert = generateData(30000, 2, skipFirstCol = true)
     data = data ::: insert
     tidbWrite(insert, withOutIDSchema)
     testTiDBSelect(data, "i", "s")
 
     // insert ~100 rows
-    insert = generateData(30002, 98, true)
+    insert = generateData(30002, 98, skipFirstCol = true)
     data = data ::: insert
     tidbWrite(insert, withOutIDSchema)
     testTiDBSelect(data, "i", "s")
 
     // insert ~1000 rows
-    insert = generateData(30100, 900, true)
+    insert = generateData(30100, 900, skipFirstCol = true)
     data = data ::: insert
     tidbWrite(insert, withOutIDSchema)
     testTiDBSelect(data, "i", "s")

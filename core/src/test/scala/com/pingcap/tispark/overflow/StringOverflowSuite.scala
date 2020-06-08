@@ -147,7 +147,7 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
 
     val base = "0123456789"
     var str = ""
-    for (i <- 1 to 30) {
+    for (_ <- 1 to 30) {
       str = str + base
     }
     val row = Row(str)

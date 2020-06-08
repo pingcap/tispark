@@ -60,10 +60,10 @@ object TiConverter {
    * 14. MapType -> scala.collection.Map (use getJavaMap for java.util.Map)
    * 15. StructType -> org.apache.spark.sql.Row
    *
-   * @param value
+   * @param value spark object to be transformed
    * @return
    */
-  def sparkSQLObjectToJavaObject(value: Any): java.lang.Object = {
+  def sparkSQLObjectToJavaObject(value: Any): Object = {
     if (value == null) {
       return null
     }

@@ -24,7 +24,7 @@ trait TiSessionCatalog extends SessionCatalog {
 
   protected lazy val globalTempDB: String =
     tiContext.sparkSession.conf.get(StaticSQLConf.GLOBAL_TEMP_DATABASE).toLowerCase(Locale.ROOT)
-  protected val tiContext: TiContext
+  protected def tiContext: TiContext
 
   /**
    * Returns the catalog in which the database is.

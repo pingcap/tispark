@@ -45,12 +45,12 @@ import scala.collection.mutable
 
 trait LeafColumnarExecRDD extends LeafExecNode {
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
-  private[execution] val tiRDDs: List[TiRDD]
+  private[execution] def tiRDDs: List[TiRDD]
 
   override def simpleString: String = verboseString
 
   override def verboseString: String =
-    if (tiRDDs.size > 1) {
+    if (tiRDDs.lengthCompare(1) > 0) {
       val b = new mutable.StringBuilder()
       b.append(s"TiSpark $nodeName on partition table:\n")
       tiRDDs.zipWithIndex.map {

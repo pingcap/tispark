@@ -50,7 +50,7 @@ class TiBatchWriteTable(
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  import TiBatchWrite._
+  import com.pingcap.tispark.write.TiBatchWrite._
   @transient private val tiSession = tiContext.tiSession
   private var tiTableRef: TiTableReference = _
   private var tiDBInfo: TiDBInfo = _
@@ -80,7 +80,7 @@ class TiBatchWriteTable(
     df.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
   }
 
-  def isDFEmpty(): Boolean = {
+  def isDFEmpty: Boolean = {
     if (TiUtil.isDataFrameEmpty(df)) {
       logger.warn(s"the dataframe write to $tiTableRef is empty!")
       true
@@ -268,12 +268,13 @@ class TiBatchWriteTable(
   }
 
   def checkColumnNumbers(): Unit = {
-    if (!tiTableInfo.hasAutoIncrementColumn && colsInDf.length != tableColSize) {
+    if (!tiTableInfo.hasAutoIncrementColumn && colsInDf.lengthCompare(tableColSize) != 0) {
       throw new TiBatchWriteException(
         s"table without auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize")
     }
 
-    if (tiTableInfo.hasAutoIncrementColumn && colsInDf.length != tableColSize && colsInDf.length != tableColSize - 1) {
+    if (tiTableInfo.hasAutoIncrementColumn && colsInDf.lengthCompare(
+        tableColSize) != 0 && colsInDf.lengthCompare(tableColSize - 1) != 0) {
       throw new TiBatchWriteException(
         s"table with auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize and table column size - 1 ${tableColSize - 1} ")
     }

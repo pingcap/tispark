@@ -446,7 +446,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
           dagRequest.addRequiredColumn(
             ColumnRef.create(attr.name, source.table.getColumn(attr.name))))
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
-      residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
+      residualFilter.fold(scan)(FilterExec(_, scan))
     } else {
       // for now all column used will be returned for old interface
       // TODO: once switch to new interface we change this pruning logic
@@ -456,7 +456,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
           dagRequest.addRequiredColumn(
             ColumnRef.create(attr.name, source.table.getColumn(attr.name))))
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
-      ProjectExec(projectList, residualFilter.map(FilterExec(_, scan)).getOrElse(scan))
+      ProjectExec(projectList, residualFilter.fold(scan)(FilterExec(_, scan)))
     }
   }
 
