@@ -74,7 +74,6 @@
         <spark.version.test>2.4.4</spark.version.test>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.12</scala.version>
-        <scalafmt.parameters>--test</scalafmt.parameters>
         <!-- for now, not running scalafmt as part of default verify pipeline -->
         <scalafmt.skip>true</scalafmt.skip>
         <scalatest.version>3.0.8</scalatest.version>

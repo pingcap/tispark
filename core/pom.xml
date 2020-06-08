@@ -268,8 +268,6 @@
                 <artifactId>mvn-scalafmt_${scala.binary.version}</artifactId>
                 <version>1.0.3</version>
                 <configuration>
-                    <parameters>${scalafmt.parameters}</parameters> <!-- (Optional) Additional command line arguments -->
-                    <skip>${scalafmt.skip}</skip> <!-- (Optional) skip formatting -->
                     <skipSources>${scalafmt.skip}</skipSources>
                     <skipTestSources>${scalafmt.skip}</skipTestSources>
                     <sourceDirectories> <!-- (Optional) Paths to source-directories. Overrides ${project.build.sourceDirectory} -->
