@@ -25,8 +25,6 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                 stage('Format') {
                     dir("go/src/github.com/pingcap/tispark") {
                         sh """
-                        echo \$LC_ALL
-                        echo \$LANG
                         export LC_ALL=en_US.UTF-8
                         export LANG=en_US.UTF-8
                         export LANGUAGE=en_US.UTF-8
@@ -50,7 +48,6 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                 stage('Build') {
                     dir("go/src/github.com/pingcap/tispark") {
                         sh """
-                        cp -R /home/jenkins/agent/git/tispark/. ./
                         git checkout -f ${ghprbActualCommit}
                         mvn clean package -Dmaven.test.skip=true
                         """
