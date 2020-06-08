@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.test.generator
 
+import com.pingcap.tikv.meta.Collation
 import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.GeneratorUtils._
 import org.apache.spark.sql.test.generator.TestDataGenerator._
@@ -25,29 +26,28 @@ import scala.collection.mutable
 import scala.util.Random
 
 case class ColumnValueGenerator(
-  dataType: ReflectedDataType,
-  M: Long = -1,
-  D: Int = -1,
-  nullable: Boolean = true,
-  isUnsigned: Boolean = false,
-  noDefault: Boolean = false,
-  default: Any = null,
-  isPrimaryKey: Boolean = false,
-  isUnique: Boolean = false,
-  isRandomEnumValue: Boolean = false
-) {
+    dataType: ReflectedDataType,
+    M: Long = -1,
+    D: Int = -1,
+    nullable: Boolean = true,
+    isUnsigned: Boolean = false,
+    noDefault: Boolean = false,
+    default: Any = null,
+    isPrimaryKey: Boolean = false,
+    isUnique: Boolean = false,
+    isRandomEnumValue: Boolean = false) {
 
-  val tiDataType: TiDataType = getType(dataType, flag, M, D, "", DEF_COLLATION_CODE)
-  val rangeSize: Long = dataType match {
-    case BIT        => 1 << tiDataType.getLength.toInt
-    case BOOLEAN    => 1 << 1
-    case TINYINT    => 1 << 8
-    case SMALLINT   => 1 << 16
-    case MEDIUMINT  => 1 << 24
-    case INT        => 1L << 32
-    case ENUM | SET => enumValues.size
-    // just treat the range size as infinity, the value is meaningless
-    case _ => Long.MaxValue
+  private val generateUnique = isPrimaryKey || isUnique
+  private val enumValues: List[String] = if (isRandomEnumValue) {
+    val r = new Random()
+    val randomEnumValues = new mutable.ListBuffer[String]
+    val set = new mutable.HashSet[String]
+    for (_ <- 0 until 50) {
+      randomEnumValues += randomUniqueString(r, set, 5)
+    }
+    randomEnumValues.toList
+  } else {
+    defaultEnumValues
   }
   private val flag: Int = {
     import com.pingcap.tikv.types.DataType._
@@ -70,31 +70,30 @@ case class ColumnValueGenerator(
     }
     ret
   }
-
-  import com.pingcap.tikv.meta.Collation._
-  private val generateUnique = isPrimaryKey || isUnique
-  private val enumValues: List[String] = if (isRandomEnumValue) {
-    val r = new Random()
-    val randomEnumValues = new mutable.ListBuffer[String]
-    val set = new mutable.HashSet[String]
-    for (_ <- 0 until 50) {
-      randomEnumValues += randomUniqueString(r, set, 5)
+  val tiDataType: TiDataType = getType(dataType, flag, M, D, "", Collation.DEF_COLLATION_CODE)
+  private val rangeSize: Long =
+    dataType match {
+      case BIT => 1 << tiDataType.getLength.toInt
+      case BOOLEAN => 1 << 1
+      case TINYINT => 1 << 8
+      case SMALLINT => 1 << 16
+      case MEDIUMINT => 1 << 24
+      case INT => 1L << 32
+      case ENUM | SET => enumValues.size
+      // just treat the range size as infinity, the value is meaningless
+      case _ => Long.MaxValue
     }
-    randomEnumValues.toList
-  } else {
-    defaultEnumValues
-  }
   ////////////////// Calculate Type Bound //////////////////
   private val lowerBound: Any = {
     if (tiDataType.isUnsigned) {
       dataType match {
         case TINYINT | SMALLINT | MEDIUMINT | INT | BIGINT => 0L
-        case _                                             => null
+        case _ => null
       }
     } else {
       dataType match {
         case TINYINT | SMALLINT | MEDIUMINT | INT | BIGINT => tiDataType.signedLowerBound()
-        case _                                             => null
+        case _ => null
       }
     }
   }
@@ -102,24 +101,24 @@ case class ColumnValueGenerator(
     if (tiDataType.isUnsigned) {
       dataType match {
         case TINYINT | SMALLINT | MEDIUMINT | INT => tiDataType.unsignedUpperBound()
-        case BIGINT                               => toUnsignedBigInt(tiDataType.unsignedUpperBound())
-        case _                                    => null
+        case BIGINT => toUnsignedBigInt(tiDataType.unsignedUpperBound())
+        case _ => null
       }
     } else {
       dataType match {
         case TINYINT | SMALLINT | MEDIUMINT | INT | BIGINT => tiDataType.signedUpperBound()
-        case _                                             => null
+        case _ => null
       }
     }
   }
   private val specialBound: List[Any] = {
     val list: List[Any] = dataType match {
-      case BIT                                                                     => List.empty[Array[Byte]]
+      case BIT => List.empty[Array[Byte]]
       case TINYINT | SMALLINT | MEDIUMINT | INT | BIGINT if !tiDataType.isUnsigned => List(-1L)
-      case TIMESTAMP                                                               => List(new java.sql.Timestamp(1000))
-      case _ if isCharCharset(dataType)                                            => List("")
-      case _ if isBinaryCharset(dataType)                                          => List(Array[Byte]())
-      case _                                                                       => List.empty[String]
+      case TIMESTAMP => List(new java.sql.Timestamp(1000))
+      case _ if isCharCharset(dataType) => List("")
+      case _ if isBinaryCharset(dataType) => List(Array[Byte]())
+      case _ => List.empty[String]
     }
     if (lowerBound != null && upperBound != null) {
       list ::: List(lowerBound, upperBound)
@@ -129,7 +128,7 @@ case class ColumnValueGenerator(
   }
   ////////////////// To Description String //////////////////
   private val typeDescString: String = dataType match {
-    case BOOLEAN    => ""
+    case BOOLEAN => ""
     case ENUM | SET => enumValues.mkString("('", "','", "')")
     case _ =>
       if (M == -1) {
@@ -173,7 +172,9 @@ case class ColumnValueGenerator(
   def preGenerateRandomValues(r: Random, n: Long, len: Int = -1): Unit = {
     if (n <= 1e6) {
       generatedRandomValues = if (generateUnique) {
-        assert(n <= rangeSize, "random generator cannot generate unique value less than available")
+        assert(
+          n <= rangeSize,
+          "random generator cannot generate unique value less than available")
         val set: mutable.Set[String] = mutable.HashSet.empty[String]
         set ++= specialBound.map(x => TestDataGenerator.hash(x, len))
         val size = set.size
@@ -189,8 +190,7 @@ case class ColumnValueGenerator(
       val expectedGeneratedRandomValuesLen = generatedRandomValues.size
       assert(
         expectedGeneratedRandomValuesLen >= n,
-        s"Generate values size=$expectedGeneratedRandomValuesLen less than n=$n on datatype $dataType. unique=$generateUnique "
-      )
+        s"Generate values size=$expectedGeneratedRandomValuesLen less than n=$n on datatype $dataType. unique=$generateUnique ")
       curPos = 0
     }
   }
@@ -234,50 +234,49 @@ case class ColumnValueGenerator(
       case BIT =>
         val bit: Array[Boolean] = new Array[Boolean](tiDataType.getLength.toInt)
         bit.map(_ => r.nextBoolean)
-      case BOOLEAN   => r.nextInt(1 << 1)
-      case TINYINT   => r.nextInt(1 << 8)
-      case SMALLINT  => r.nextInt(1 << 16)
+      case BOOLEAN => r.nextInt(1 << 1)
+      case TINYINT => r.nextInt(1 << 8)
+      case SMALLINT => r.nextInt(1 << 16)
       case MEDIUMINT => r.nextInt(1 << 24)
-      case INT       => r.nextInt + (1L << 31)
-      case BIGINT    => toUnsignedBigInt(r.nextLong)
-      case FLOAT     => Math.abs(r.nextFloat)
-      case DOUBLE    => Math.abs(r.nextDouble)
+      case INT => r.nextInt + (1L << 31)
+      case BIGINT => toUnsignedBigInt(r.nextLong)
+      case FLOAT => Math.abs(r.nextFloat)
+      case DOUBLE => Math.abs(r.nextDouble)
       case DECIMAL =>
         val len = getLength(tiDataType)
         val decimal = if (tiDataType.isDecimalUnSpecified) 0 else tiDataType.getDecimal
         (BigDecimal.apply(Math.abs(r.nextLong()) % Math.pow(10, len)) / BigDecimal.apply(
-          Math.pow(10, decimal)
-        )).bigDecimal
+          Math.pow(10, decimal))).bigDecimal
     }
   }
 
-  def toUnsignedBigInt(l: Long): BigInt = BigInt.long2bigInt(l) - BigInt.long2bigInt(Long.MinValue)
+  def toUnsignedBigInt(l: Long): BigInt =
+    BigInt.long2bigInt(l) - BigInt.long2bigInt(Long.MinValue)
 
   def randomSignedValue(r: Random): Any = {
     dataType match {
       case BIT =>
         val bit: Array[Boolean] = new Array[Boolean](tiDataType.getLength.toInt)
         bit.map(_ => r.nextBoolean)
-      case BOOLEAN   => r.nextInt(1 << 1)
-      case TINYINT   => (r.nextInt(1 << 8) - (1 << 7)).longValue()
-      case SMALLINT  => (r.nextInt(1 << 16) - (1 << 15)).longValue()
+      case BOOLEAN => r.nextInt(1 << 1)
+      case TINYINT => (r.nextInt(1 << 8) - (1 << 7)).longValue()
+      case SMALLINT => (r.nextInt(1 << 16) - (1 << 15)).longValue()
       case MEDIUMINT => (r.nextInt(1 << 24) - (1 << 23)).longValue()
-      case INT       => r.nextInt.longValue
-      case BIGINT    => r.nextLong
-      case FLOAT     => r.nextFloat
-      case DOUBLE    => r.nextDouble
+      case INT => r.nextInt.longValue
+      case BIGINT => r.nextLong
+      case FLOAT => r.nextFloat
+      case DOUBLE => r.nextDouble
       case DECIMAL =>
         val len = getLength(tiDataType)
         val decimal = if (tiDataType.isDecimalUnSpecified) 0 else tiDataType.getDecimal
         (BigDecimal.apply(r.nextLong % Math.pow(10, len)) / BigDecimal.apply(
-          Math.pow(10, decimal)
-        )).bigDecimal
-      case VARCHAR   => generateRandomString(r, tiDataType.getLength)
+          Math.pow(10, decimal))).bigDecimal
+      case VARCHAR => generateRandomString(r, tiDataType.getLength)
       case VARBINARY => generateRandomBinary(r, tiDataType.getLength)
       case CHAR | TEXT | TINYTEXT | MEDIUMTEXT | LONGTEXT =>
-        generateRandomString(r, getRandomLength(dataType, r))
+        generateRandomString(r, getRandomLength(r))
       case BINARY | BLOB | TINYBLOB | MEDIUMBLOB | LONGBLOB =>
-        generateRandomBinary(r, getRandomLength(dataType, r))
+        generateRandomBinary(r, getRandomLength(r))
       case DATE =>
         // start from 1000-01-01 to 9999-01-01
         val milliseconds =
@@ -288,12 +287,12 @@ case class ColumnValueGenerator(
         val milliseconds = Math.abs(r.nextInt * 1000L + 1000L) + Math.abs(r.nextInt(1000))
         new java.sql.Timestamp(milliseconds)
       case ENUM => generateRandomEnumValue(r)
-      case SET  => generateRandomSetValue(r)
-      case _    => throw new RuntimeException(s"random $dataType generator not supported yet")
+      case SET => generateRandomSetValue(r)
+      case _ => throw new RuntimeException(s"random $dataType generator not supported yet")
     }
   }
 
-  private def getRandomLength(dataType: ReflectedDataType, r: Random): Long = {
+  private def getRandomLength(r: Random): Long = {
     var len = getLength(tiDataType)
     if (len == -1) {
       len = r.nextInt(40) + 10
@@ -301,7 +300,10 @@ case class ColumnValueGenerator(
     len
   }
 
-  private def generateRandomString(r: Random, length: Long, isAlphaNum: Boolean = false): String = {
+  private def generateRandomString(
+      r: Random,
+      length: Long,
+      isAlphaNum: Boolean = false): String = {
     val alphaNum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
     val s = StringBuilder.newBuilder
     for (_ <- 0L until length) {
@@ -327,13 +329,11 @@ case class ColumnValueGenerator(
   def next: Any = {
     assert(
       generatedRandomValues.nonEmpty,
-      "Values not pre-generated, please generate values first to use next()"
-    )
+      "Values not pre-generated, please generate values first to use next()")
     if (!hasNext) {
       assert(
         !generateUnique,
-        s"Generated random values(${generatedRandomValues.size}) is less than needed(${curPos + 1})."
-      )
+        s"Generated random values(${generatedRandomValues.size}) is less than needed(${curPos + 1}).")
       // reuse previous generated data
       curPos = 0
     }

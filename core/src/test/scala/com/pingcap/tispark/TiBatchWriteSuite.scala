@@ -67,9 +67,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
         df,
         ti,
         new TiDBOptions(
-          tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")
-        )
-      )
+          tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")))
 
       // select
       queryTiDBViaJDBC(s"select * from `$tableToWrite`")
@@ -108,9 +106,10 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
                |  PRIMARY KEY(`C_CUSTKEY`)
                |)
         """.stripMargin,
-            "C_CUSTKEY, C_NAME, C_ADDRESS, C_NATIONKEY, C_PHONE, C_ACCTBAL, C_MKTSEGMENT, C_COMMENT"
-          )
-        case "NATION" => (s"""
+            "C_CUSTKEY, C_NAME, C_ADDRESS, C_NATIONKEY, C_PHONE, C_ACCTBAL, C_MKTSEGMENT, C_COMMENT")
+        case "NATION" =>
+          (
+            s"""
                              |CREATE TABLE `$tableToWrite` (
                              |  `N_NATIONKEY` int(11) NOT NULL,
                              |  `N_NAME` char(25) NOT NULL,
@@ -118,7 +117,8 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
                              |  `N_COMMENT` varchar(152) DEFAULT NULL,
                              |  PRIMARY KEY (`N_NATIONKEY`)
                              |)
-           """.stripMargin, "N_NATIONKEY, N_NAME, N_REGIONKEY, N_COMMENT")
+           """.stripMargin,
+            "N_NATIONKEY, N_NAME, N_REGIONKEY, N_COMMENT")
         case "ORDERS" =>
           (
             s"""
@@ -135,8 +135,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
                |  PRIMARY KEY (`O_ORDERKEY`)
                |)
            """.stripMargin,
-            "O_ORDERKEY, O_CUSTKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY, O_COMMENT"
-          )
+            "O_ORDERKEY, O_CUSTKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY, O_COMMENT")
         case "PART" =>
           (
             s"""
@@ -153,16 +152,18 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
                |  PRIMARY KEY (`P_PARTKEY`)
                |)
            """.stripMargin,
-            "P_PARTKEY, P_NAME, P_MFGR, P_BRAND, P_TYPE, P_SIZE, P_CONTAINER, P_RETAILPRICE, P_COMMENT"
-          )
-        case "REGION" => (s"""
+            "P_PARTKEY, P_NAME, P_MFGR, P_BRAND, P_TYPE, P_SIZE, P_CONTAINER, P_RETAILPRICE, P_COMMENT")
+        case "REGION" =>
+          (
+            s"""
                              |CREATE TABLE `$tableToWrite` (
                              |  `R_REGIONKEY` int(11) NOT NULL,
                              |  `R_NAME` char(25) NOT NULL,
                              |  `R_COMMENT` varchar(152) DEFAULT NULL,
                              |  PRIMARY KEY (`R_REGIONKEY`)
                              |)
-           """.stripMargin, "R_REGIONKEY, R_NAME, R_COMMENT")
+           """.stripMargin,
+            "R_REGIONKEY, R_NAME, R_COMMENT")
         case "SUPPLIER" =>
           (
             s"""
@@ -177,8 +178,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
                |  PRIMARY KEY (`S_SUPPKEY`)
                |)
            """.stripMargin,
-            "S_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, S_ACCTBAL, S_COMMENT"
-          )
+            "S_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, S_ACCTBAL, S_COMMENT")
         case _ => ("", "")
       }
 
@@ -191,9 +191,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
           df,
           ti,
           new TiDBOptions(
-            tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")
-          )
-        )
+            tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")))
 
         queryTiDBViaJDBC(s"select * from `$tableToWrite`")
 
@@ -240,9 +238,10 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
         """.stripMargin,
             "C_NAME",
             "C_CUSTKEY, C_ADDRESS, C_NATIONKEY, C_PHONE, C_ACCTBAL, C_MKTSEGMENT, C_COMMENT",
-            100
-          )
-        case "NATION" => (s"""
+            100)
+        case "NATION" =>
+          (
+            s"""
                              |CREATE TABLE `$tableToWrite` (
                              |  `N_NATIONKEY` int(11) NOT NULL,
                              |  `N_NAME` char(25) NOT NULL,
@@ -250,7 +249,10 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
                              |  `N_COMMENT` varchar(152) DEFAULT NULL,
                              |  PRIMARY KEY (`N_NATIONKEY`)
                              |)
-           """.stripMargin, "N_NAME", "N_NATIONKEY, N_REGIONKEY, N_COMMENT", 10)
+           """.stripMargin,
+            "N_NAME",
+            "N_NATIONKEY, N_REGIONKEY, N_COMMENT",
+            10)
         case "ORDERS" =>
           (
             s"""
@@ -269,8 +271,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
            """.stripMargin,
             "O_COMMENT",
             "O_ORDERKEY, O_CUSTKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY",
-            1000
-          )
+            1000)
         case "PART" =>
           (
             s"""
@@ -289,16 +290,20 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
            """.stripMargin,
             "P_NAME",
             "P_PARTKEY, P_MFGR, P_BRAND, P_TYPE, P_SIZE, P_CONTAINER, P_RETAILPRICE, P_COMMENT",
-            100
-          )
-        case "REGION" => (s"""
+            100)
+        case "REGION" =>
+          (
+            s"""
                              |CREATE TABLE `$tableToWrite` (
                              |  `R_REGIONKEY` int(11) NOT NULL,
                              |  `R_NAME` char(25) NOT NULL,
                              |  `R_COMMENT` varchar(152) DEFAULT NULL,
                              |  PRIMARY KEY (`R_REGIONKEY`)
                              |)
-           """.stripMargin, "R_NAME", "R_REGIONKEY, R_COMMENT", 3)
+           """.stripMargin,
+            "R_NAME",
+            "R_REGIONKEY, R_COMMENT",
+            3)
         case "SUPPLIER" =>
           (
             s"""
@@ -315,8 +320,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
            """.stripMargin,
             "S_NAME",
             "S_SUPPKEY, S_ADDRESS, S_NATIONKEY, S_PHONE, S_ACCTBAL, S_COMMENT",
-            5
-          )
+            5)
         case _ => ("", "", "", 0)
       }
 
@@ -328,17 +332,14 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
 
         // select
         val df = sql(
-          s"""select $selectColumns, CONCAT($updateColumn, "_t") AS $updateColumn from $table limit $updateSize"""
-        )
+          s"""select $selectColumns, CONCAT($updateColumn, "_t") AS $updateColumn from $table limit $updateSize""")
 
         // batch write
         TiBatchWrite.write(
           df,
           ti,
           new TiDBOptions(
-            tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "replace" -> "true", "isTest" -> "true")
-          )
-        )
+            tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "replace" -> "true", "isTest" -> "true")))
         // select
         queryTiDBViaJDBC(s"select * from `$tableToWrite`")
 
@@ -405,9 +406,10 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
         """.stripMargin,
             "C_NAME",
             "C_CUSTKEY, C_ADDRESS, C_NATIONKEY, C_PHONE, C_ACCTBAL, C_MKTSEGMENT, C_COMMENT",
-            100
-          )
-        case "NATION" => (s"""
+            100)
+        case "NATION" =>
+          (
+            s"""
                              |CREATE TABLE `$tableToWrite` (
                              |  `N_NATIONKEY` int(11) NOT NULL,
                              |  `N_NAME` char(25) NOT NULL,
@@ -415,7 +417,10 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
                              |  `N_COMMENT` varchar(152) DEFAULT NULL,
                              |  PRIMARY KEY (`N_NATIONKEY`)
                              |)
-           """.stripMargin, "N_NAME", "N_NATIONKEY, N_REGIONKEY, N_COMMENT", 10)
+           """.stripMargin,
+            "N_NAME",
+            "N_NATIONKEY, N_REGIONKEY, N_COMMENT",
+            10)
         case "ORDERS" =>
           (
             s"""
@@ -434,8 +439,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
            """.stripMargin,
             "O_COMMENT",
             "O_ORDERKEY, O_CUSTKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY",
-            1000
-          )
+            1000)
         case "PART" =>
           (
             s"""
@@ -454,16 +458,20 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
            """.stripMargin,
             "P_NAME",
             "P_PARTKEY, P_MFGR, P_BRAND, P_TYPE, P_SIZE, P_CONTAINER, P_RETAILPRICE, P_COMMENT",
-            100
-          )
-        case "REGION" => (s"""
+            100)
+        case "REGION" =>
+          (
+            s"""
                              |CREATE TABLE `$tableToWrite` (
                              |  `R_REGIONKEY` int(11) NOT NULL,
                              |  `R_NAME` char(25) NOT NULL,
                              |  `R_COMMENT` varchar(152) DEFAULT NULL,
                              |  UNIQUE KEY `idx_region_key` (`R_REGIONKEY`)
                              |)
-           """.stripMargin, "R_NAME", "R_REGIONKEY, R_COMMENT", 3)
+           """.stripMargin,
+            "R_NAME",
+            "R_REGIONKEY, R_COMMENT",
+            3)
         case "SUPPLIER" =>
           (
             s"""
@@ -480,8 +488,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
            """.stripMargin,
             "S_NAME",
             "S_SUPPKEY, S_ADDRESS, S_NATIONKEY, S_PHONE, S_ACCTBAL, S_COMMENT",
-            5
-          )
+            5)
         case _ => ("", "", "", 0)
       }
 
@@ -494,17 +501,14 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
 
         // select
         val df = sql(
-          s"""select $selectColumns, CONCAT($updateColumn, "_t") AS $updateColumn from $table limit $updateSize"""
-        )
+          s"""select $selectColumns, CONCAT($updateColumn, "_t") AS $updateColumn from $table limit $updateSize""")
 
         // batch write
         TiBatchWrite.write(
           df,
           ti,
           new TiDBOptions(
-            tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "replace" -> "true", "isTest" -> "true")
-          )
-        )
+            tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "replace" -> "true", "isTest" -> "true")))
         // select
         queryTiDBViaJDBC(s"select * from `$tableToWrite`")
 
@@ -556,9 +560,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
         df,
         ti,
         new TiDBOptions(
-          tidbOptions + ("database" -> s"$dbPrefix$database", "table" -> s"${batchWriteTablePrefix}_TABLE_NOT_EXISTS", "isTest" -> "true")
-        )
-      )
+          tidbOptions + ("database" -> s"$dbPrefix$database", "table" -> s"${batchWriteTablePrefix}_TABLE_NOT_EXISTS", "isTest" -> "true")))
     }
   }
 

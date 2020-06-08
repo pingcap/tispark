@@ -72,10 +72,9 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     }
 
   protected def createOrReplaceTempView(
-    dbName: String,
-    viewName: String,
-    postfix: String = "_j"
-  ): Unit =
+      dbName: String,
+      viewName: String,
+      postfix: String = "_j"): Unit =
     spark.read
       .format("jdbc")
       .option(JDBCOptions.JDBC_URL, jdbcUrl)
@@ -85,11 +84,9 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       .createOrReplaceTempView(s"`$viewName$postfix`")
 
   protected def setCurrentDatabase(dbName: String): Unit =
-    if (
-      tiCatalog
+    if (tiCatalog
         .catalogOf(Some(dbPrefix + dbName))
-        .exists(_.isInstanceOf[TiSessionCatalog])
-    ) {
+        .exists(_.isInstanceOf[TiSessionCatalog])) {
       if (!tidbConn.getCatalog.equals(dbName)) {
         // reuse previous connection if catalog is not changed
         logger.info(s"set catalog to $dbName!")
@@ -153,7 +150,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   protected def getTableInfo(databaseName: String, tableName: String): TiTableInfo = {
     ti.meta.getTable(s"$dbPrefix$databaseName", tableName) match {
       case Some(table) => table
-      case None        => fail(s"table info $databaseName.$tableName not found")
+      case None => fail(s"table info $databaseName.$tableName not found")
     }
   }
 
@@ -169,7 +166,9 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     resList.toList
   }
 
-  protected def refreshConnections(testTables: TestTables, isHiveEnabled: Boolean = false): Unit = {
+  protected def refreshConnections(
+      testTables: TestTables,
+      isHiveEnabled: Boolean = false): Unit = {
     super.refreshConnections(isHiveEnabled)
     loadTestData(testTables)
   }
@@ -193,10 +192,9 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   }
 
   protected def compSparkWithTiDB(
-    qSpark: String,
-    qTiDB: String = null,
-    checkLimit: Boolean = true
-  ): Unit =
+      qSpark: String,
+      qTiDB: String = null,
+      checkLimit: Boolean = true): Unit =
     if (qTiDB == null) {
       compSparkWithTiDB(qSpark, checkLimit)
     } else {
@@ -204,10 +202,9 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     }
 
   protected def checkSparkResult(
-    sql: String,
-    result: List[List[Any]],
-    checkLimit: Boolean = true
-  ): Unit =
+      sql: String,
+      result: List[List[Any]],
+      checkLimit: Boolean = true): Unit =
     assert(compSqlResult(sql, queryViaTiSpark(sql), result, checkLimit))
 
   protected def queryViaTiSpark(query: String): List[List[Any]] = {
@@ -218,11 +215,11 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   }
 
   protected def checkSparkResultContains(
-    sql: String,
-    result: List[Any],
-    checkLimit: Boolean = true
-  ): Unit =
-    assert(queryViaTiSpark(sql).exists(x => compSqlResult(sql, List(x), List(result), checkLimit)))
+      sql: String,
+      result: List[Any],
+      checkLimit: Boolean = true): Unit =
+    assert(
+      queryViaTiSpark(sql).exists(x => compSqlResult(sql, List(x), List(result), checkLimit)))
 
   protected def explainAndTest(str: String, skipped: Boolean = false): Unit =
     try {
@@ -233,32 +230,29 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     }
 
   protected def judge(
-    str: String,
-    skipped: Boolean = false,
-    canTestTiFlash: Boolean = false,
-    checkLimit: Boolean = true
-  ): Unit =
+      str: String,
+      skipped: Boolean = false,
+      canTestTiFlash: Boolean = false,
+      checkLimit: Boolean = true): Unit =
     runTest(
       str,
       skipped = skipped,
       skipJDBC = true,
       canTestTiFlash = canTestTiFlash,
-      checkLimit = checkLimit
-    )
+      checkLimit = checkLimit)
 
   protected def explainAndRunTest(
-    qSpark: String,
-    qJDBC: String = null,
-    skipped: Boolean = false,
-    rSpark: List[List[Any]] = null,
-    rJDBC: List[List[Any]] = null,
-    rTiDB: List[List[Any]] = null,
-    rTiFlash: List[List[Any]] = null,
-    skipJDBC: Boolean = false,
-    skipTiDB: Boolean = false,
-    canTestTiFlash: Boolean = false,
-    checkLimit: Boolean = true
-  ): Unit =
+      qSpark: String,
+      qJDBC: String = null,
+      skipped: Boolean = false,
+      rSpark: List[List[Any]] = null,
+      rJDBC: List[List[Any]] = null,
+      rTiDB: List[List[Any]] = null,
+      rTiFlash: List[List[Any]] = null,
+      skipJDBC: Boolean = false,
+      skipTiDB: Boolean = false,
+      canTestTiFlash: Boolean = false,
+      checkLimit: Boolean = true): Unit =
     try {
       explainSpark(qSpark, canTestTiFlash = canTestTiFlash)
       if (qJDBC == null) {
@@ -272,8 +266,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           skipJDBC = skipJDBC,
           skipTiDB = skipTiDB,
           canTestTiFlash = canTestTiFlash,
-          checkLimit = checkLimit
-        )
+          checkLimit = checkLimit)
       } else {
         runTestWithoutReplaceTableName(
           qSpark = qSpark,
@@ -286,8 +279,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           skipJDBC = skipJDBC,
           skipTiDB = skipTiDB,
           canTestTiFlash = canTestTiFlash,
-          checkLimit = checkLimit
-        )
+          checkLimit = checkLimit)
       }
     } catch {
       case e: Throwable => fail(e)
@@ -314,17 +306,16 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
    * @param checkLimit whether check if sql contains limit but not order by
    */
   protected def runTest(
-    qSpark: String,
-    skipped: Boolean = false,
-    rSpark: List[List[Any]] = null,
-    rJDBC: List[List[Any]] = null,
-    rTiDB: List[List[Any]] = null,
-    rTiFlash: List[List[Any]] = null,
-    skipJDBC: Boolean = false,
-    skipTiDB: Boolean = false,
-    canTestTiFlash: Boolean = false,
-    checkLimit: Boolean = true
-  ): Unit =
+      qSpark: String,
+      skipped: Boolean = false,
+      rSpark: List[List[Any]] = null,
+      rJDBC: List[List[Any]] = null,
+      rTiDB: List[List[Any]] = null,
+      rTiFlash: List[List[Any]] = null,
+      skipJDBC: Boolean = false,
+      skipTiDB: Boolean = false,
+      canTestTiFlash: Boolean = false,
+      checkLimit: Boolean = true): Unit =
     runTestWithoutReplaceTableName(
       qSpark = qSpark,
       qJDBC = replaceJDBCTableName(qSpark, skipJDBC),
@@ -336,8 +327,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       skipJDBC = skipJDBC,
       skipTiDB = skipTiDB,
       canTestTiFlash = canTestTiFlash,
-      checkLimit = checkLimit
-    )
+      checkLimit = checkLimit)
 
   /** Rename JDBC tables
    *   - currently we use table names with `_j` suffix for JDBC tests
@@ -382,18 +372,17 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
    * @param checkLimit whether check if sql contains limit but not order by
    */
   private def runTestWithoutReplaceTableName(
-    qSpark: String,
-    qJDBC: String,
-    skipped: Boolean = false,
-    rSpark: List[List[Any]] = null,
-    rJDBC: List[List[Any]] = null,
-    rTiDB: List[List[Any]] = null,
-    rTiFlash: List[List[Any]] = null,
-    skipJDBC: Boolean = false,
-    skipTiDB: Boolean = false,
-    canTestTiFlash: Boolean = false,
-    checkLimit: Boolean = true
-  ): Unit = {
+      qSpark: String,
+      qJDBC: String,
+      skipped: Boolean = false,
+      rSpark: List[List[Any]] = null,
+      rJDBC: List[List[Any]] = null,
+      rTiDB: List[List[Any]] = null,
+      rTiFlash: List[List[Any]] = null,
+      skipJDBC: Boolean = false,
+      skipTiDB: Boolean = false,
+      canTestTiFlash: Boolean = false,
+      checkLimit: Boolean = true): Unit = {
     if (skipped) {
       logger.warn(s"Test is skipped. [With Spark SQL: $qSpark]")
       return
@@ -442,8 +431,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
         // If JDBC and TiDB tests are both skipped, the correctness of test is not guaranteed.
         // However the result might still be useful when we only want to test if the query fails in TiSpark.
         logger.warn(
-          s"Unknown correctness of test result: Skipped in both JDBC and TiDB. [With Spark SQL: $qSpark]"
-        )
+          s"Unknown correctness of test result: Skipped in both JDBC and TiDB. [With Spark SQL: $qSpark]")
         return
       }
 
@@ -467,13 +455,11 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
         }
 
         if (skipTiDB || !compSqlResult(qSpark, r1, r3, checkLimit)) {
-          fail(
-            s"""Failed with
+          fail(s"""Failed with
                |TiSpark:\t\t${listToString(r1)}
                |Spark With JDBC:${listToString(r2)}
                |TiDB:\t\t\t${listToString(r3)}
-               |TiSpark Plan:\n$sparkPlan""".stripMargin
-          )
+               |TiSpark Plan:\n$sparkPlan""".stripMargin)
         }
       }
     } else if (shouldTestTiFlash) {
@@ -495,17 +481,14 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           r4 = queryViaTiSpark(qSpark)
           sparkPlan = getSparkPlan(qSpark)
           if (!compSqlResult(qSpark, r3, r4, checkLimit)) {
-            fail(
-              s"""Failed with
+            fail(s"""Failed with
                  |TiFlash:\t\t${listToString(r4)}
                  |TiDB:\t\t\t${listToString(r3)}
-                 |TiFlash Plan:\n$sparkPlan""".stripMargin
-            )
+                 |TiFlash Plan:\n$sparkPlan""".stripMargin)
           }
           spark.conf.set(
             TiConfigConst.ISOLATION_READ_ENGINES,
-            prev.getOrElse(TiConfigConst.DEFAULT_STORAGE_ENGINES)
-          )
+            prev.getOrElse(TiConfigConst.DEFAULT_STORAGE_ENGINES))
         } catch {
           case e: Throwable =>
             logger
@@ -517,10 +500,9 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   }
 
   protected def queryTiDBViaJDBC(
-    query: String,
-    retryOnFailure: Int = 3,
-    stmt: Statement = tidbStmt
-  ): List[List[Any]] = {
+      query: String,
+      retryOnFailure: Int = 3,
+      stmt: Statement = tidbStmt): List[List[Any]] = {
     val resultSet = callWithRetry(stmt.executeQuery(query), retryOnFailure)
     val rsMetaData = resultSet.getMetaData
     val retSet = ArrayBuffer.empty[List[Any]]
@@ -540,10 +522,9 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   }
 
   protected def explainSpark(
-    str: String,
-    skipped: Boolean = false,
-    canTestTiFlash: Boolean = false
-  ): Unit =
+      str: String,
+      skipped: Boolean = false,
+      canTestTiFlash: Boolean = false): Unit =
     try {
       if (skipped || (!canTestTiFlash && enableTiFlashTest)) {
         logger.warn(s"Test is skipped. [With Spark SQL: $str]")

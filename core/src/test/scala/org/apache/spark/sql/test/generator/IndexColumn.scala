@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.test.generator
 
-import org.apache.spark.sql.test.generator.DataType.{getBaseType, ReflectedDataType}
+import org.apache.spark.sql.test.generator.DataType.{ReflectedDataType, getBaseType}
 import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength}
 
 trait IndexColumn {
@@ -33,14 +33,14 @@ case class PrefixColumn(id: Int, length: Int) extends IndexColumn {
 }
 
 case class ColumnInfo(
-  columnName: String,
-  dataType: ReflectedDataType,
-  length: (Integer, Integer),
-  desc: String
-) {
+    columnName: String,
+    dataType: ReflectedDataType,
+    length: (Integer, Integer),
+    desc: String) {
 
   val isPrimaryKey: Boolean = desc.contains("primary key")
   val nullable: Boolean = !isPrimaryKey && !desc.contains("not null")
+  val breakDown: Array[String] = desc.split(" ")
   val unsigned: Boolean = breakDown.contains("unsigned")
   val noDefault: Boolean = !breakDown.contains("default")
   val isUnique: Boolean = breakDown.contains("unique")
@@ -77,8 +77,7 @@ case class ColumnInfo(
       noDefault,
       default,
       isPrimaryKey,
-      isUnique
-    )
+      isUnique)
 
   {
     // validation
@@ -87,7 +86,6 @@ case class ColumnInfo(
       throw new IllegalArgumentException("Length must be specified for Text and BLOB Types")
     }
   }
-  private val breakDown = desc.split(" ")
 
   override def toString: String = s"`$columnName` ${generator.toString}"
 }

@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.types.pk
 
-import org.apache.spark.sql.test.generator.DataType.{getTypeName, BIGINT, INT, ReflectedDataType}
+import org.apache.spark.sql.test.generator.DataType.{BIGINT, INT, ReflectedDataType, getTypeName}
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 import org.apache.spark.sql.types.{MultiColumnDataTypeTest, RunMultiColumnDataTypeTestAction}
 
@@ -29,8 +29,7 @@ trait MultiColumnPKDataTypeSuites
     unsignedDataTypes,
     dataTypeTestDir,
     database,
-    testDesc
-  )
+    testDesc)
   val dataTypes: List[ReflectedDataType] = baseDataTypes
   val unsignedDataTypes: List[ReflectedDataType] = List(INT, BIGINT)
   val dataTypeTestDir: String = "multi-column-dataType-test-pk"

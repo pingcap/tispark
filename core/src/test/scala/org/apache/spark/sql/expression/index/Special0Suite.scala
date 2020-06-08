@@ -76,8 +76,7 @@ class Special0Suite extends BaseInitialOnceTest {
     "select * from full_data_type_table_idx where tp_timestamp != timestamp(timestamp '2017-09-07 11:11:11')",
     "select * from full_data_type_table_idx where tp_timestamp <> timestamp(timestamp '2017-11-02 00:00:00')",
     "select * from full_data_type_table_idx where tp_timestamp <> timestamp(timestamp '2017-11-02 08:47:43')",
-    "select * from full_data_type_table_idx where tp_timestamp <> timestamp(timestamp '2017-09-07 11:11:11')"
-  )
+    "select * from full_data_type_table_idx where tp_timestamp <> timestamp(timestamp '2017-09-07 11:11:11')")
 
   allCases foreach { query =>
     {

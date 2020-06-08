@@ -54,16 +54,16 @@ case class Data(schema: Schema, data: List[TiRow], directory: String) {
 
   def toOutput(value: Any): String =
     value match {
-      case null       => null
+      case null => null
       case _: Boolean => value.toString
-      case _: Number  => value.toString
+      case _: Number => value.toString
       case arr: Array[Byte] =>
         s"X\'${arr.map { b =>
           String.format("%02x", new java.lang.Byte(b))
         }.mkString}\'"
       case arr: Array[Boolean] =>
         s"b\'${arr.map {
-          case true  => "1"
+          case true => "1"
           case false => "0"
         }.mkString}\'"
       case ts: java.sql.Timestamp =>

@@ -39,12 +39,12 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
     jdbcUpdate(s"drop table if exists $dbtable")
   }
 
-  protected def jdbcUpdate(query: String): Unit =
-    tidbStmt.execute(query)
-
   protected def dropTable(tblName: String): Unit = {
     jdbcUpdate(s"drop table if exists `$database`.`$tblName`")
   }
+
+  protected def jdbcUpdate(query: String): Unit =
+    tidbStmt.execute(query)
 
   protected def testTiDBSelect(
       expectedAnswer: Seq[Row],
@@ -71,6 +71,17 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
       df2 = df2.select(selectCol)
     }
     checkAnswer(df2, expectedAnswer)
+  }
+
+  protected def queryDatasourceTableScanWithTable(sortCol: String, tblName: String): DataFrame = {
+    sqlContext.read
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", database)
+      .option("table", tblName)
+      .option(TiConfigConst.ALLOW_INDEX_READ, "false")
+      .load()
+      .sort(sortCol)
   }
 
   protected def compareTiDBWriteFailureWithJDBC(
@@ -143,6 +154,8 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
       .save()
   }
 
+  protected def dbtable = s"`$database`.`$table`"
+
   private def startWith(a: String, b: String): Boolean = {
     (a == null && b == null) || a.startsWith(b)
   }
@@ -190,34 +203,8 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
 
   }
 
-  protected def dbtable = s"`$database`.`$table`"
-
-  private def seqRowToList(rows: Seq[Row], schema: StructType): List[List[Any]] =
-    rows
-      .map(row => {
-        val rowRes = ArrayBuffer.empty[Any]
-        for (i <- 0 until row.length) {
-          if (row.get(i) == null) {
-            rowRes += null
-          } else {
-            rowRes += toOutput(row.get(i), schema(i).dataType.typeName)
-          }
-        }
-        rowRes.toList
-      })
-      .toList
-
   protected def queryDatasourceTiDB(sortCol: String): DataFrame =
     queryDatasourceTiDBWithTable(sortCol, table)
-
-  protected def queryDatasourceTiDBWithTable(sortCol: String, tableName: String): DataFrame =
-    sqlContext.read
-      .format("tidb")
-      .options(tidbOptions)
-      .option("database", database)
-      .option("table", tableName)
-      .load()
-      .sort(sortCol)
 
   protected def compareTiDBSelectWithJDBC_V2(sortCol: String = "i"): Unit = {
     compareTiDBSelectWithJDBCWithTable_V2(table, sortCol)
@@ -241,19 +228,32 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
     }
   }
 
-  protected def queryDatasourceTableScan(sortCol: String): DataFrame = {
-    queryDatasourceTableScanWithTable(sortCol, table)
-  }
+  private def seqRowToList(rows: Seq[Row], schema: StructType): List[List[Any]] =
+    rows
+      .map(row => {
+        val rowRes = ArrayBuffer.empty[Any]
+        for (i <- 0 until row.length) {
+          if (row.get(i) == null) {
+            rowRes += null
+          } else {
+            rowRes += toOutput(row.get(i), schema(i).dataType.typeName)
+          }
+        }
+        rowRes.toList
+      })
+      .toList
 
-  protected def queryDatasourceTableScanWithTable(sortCol: String, tblName: String): DataFrame = {
+  protected def queryDatasourceTiDBWithTable(sortCol: String, tableName: String): DataFrame =
     sqlContext.read
       .format("tidb")
       .options(tidbOptions)
       .option("database", database)
-      .option("table", tblName)
-      .option(TiConfigConst.ALLOW_INDEX_READ, "false")
+      .option("table", tableName)
       .load()
       .sort(sortCol)
+
+  protected def queryDatasourceTableScan(sortCol: String): DataFrame = {
+    queryDatasourceTableScanWithTable(sortCol, table)
   }
 
   protected def testTiDBSelectFilter(filter: String, expectedAnswer: Seq[Row]): Unit = {

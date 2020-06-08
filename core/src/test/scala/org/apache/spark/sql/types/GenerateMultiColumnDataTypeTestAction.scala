@@ -18,8 +18,11 @@
 package org.apache.spark.sql.types
 
 import org.apache.spark.sql.BaseTestGenerationSpec
-import org.apache.spark.sql.test.generator.DataType.{getTypeName, ReflectedDataType}
-import org.apache.spark.sql.test.generator.TestDataGenerator.{randomDataGenerator, schemaGenerator}
+import org.apache.spark.sql.test.generator.DataType.{ReflectedDataType, getTypeName}
+import org.apache.spark.sql.test.generator.TestDataGenerator.{
+  randomDataGenerator,
+  schemaGenerator
+}
 import org.apache.spark.sql.test.generator.{Data, Index, Schema}
 
 trait GenerateMultiColumnDataTypeTestAction
@@ -60,16 +63,9 @@ trait GenerateMultiColumnDataTypeTestAction
   }
 
   def genSchema(
-    tableName: String,
-    dataTypesWithDescription: List[(ReflectedDataType, String, String)]
-  ): Schema = {
-    schemaGenerator(
-      database,
-      tableName,
-      r,
-      dataTypesWithDescription,
-      List.empty[Index]
-    )
+      tableName: String,
+      dataTypesWithDescription: List[(ReflectedDataType, String, String)]): Schema = {
+    schemaGenerator(database, tableName, r, dataTypesWithDescription, List.empty[Index])
   }
 
   def genData(schema: Schema): Data = randomDataGenerator(schema, rowCount, dataTypeTestDir, r)

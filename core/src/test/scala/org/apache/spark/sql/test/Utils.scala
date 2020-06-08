@@ -57,9 +57,6 @@ object Utils {
   def getFlagOrFalse(prop: Properties, key: String): Boolean =
     getFlag(prop, key, "false")
 
-  def getFlagOrTrue(prop: Properties, key: String): Boolean =
-    getFlag(prop, key, "true")
-
   private def getFlag(prop: Properties, key: String, defValue: String): Boolean =
     getOrElse(prop, key, defValue).equalsIgnoreCase("true")
 
@@ -71,6 +68,9 @@ object Utils {
       Option(prop.getProperty(key)).getOrElse(defValue)
     }
   }
+
+  def getFlagOrTrue(prop: Properties, key: String): Boolean =
+    getFlag(prop, key, "true")
 
   def time[R](block: => R)(logger: Logger): R = {
     val t0 = System.nanoTime()

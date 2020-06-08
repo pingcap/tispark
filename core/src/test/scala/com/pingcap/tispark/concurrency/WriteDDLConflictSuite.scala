@@ -42,8 +42,7 @@ class WriteDDLConflictSuite extends ConcurrencyTest {
     }
     assert(
       caught.getMessage
-        .startsWith("Table 'test_concurrency_write_read' was locked in WRITE LOCAL by server")
-    )
+        .startsWith("Table 'test_concurrency_write_read' was locked in WRITE LOCAL by server"))
   }
 
   test("write ddl conflict using SchemaVersionCheck") {

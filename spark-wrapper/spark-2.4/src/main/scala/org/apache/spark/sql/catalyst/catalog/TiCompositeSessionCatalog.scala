@@ -48,7 +48,8 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
   // Following are handled by composite catalog.
   override def dropDatabase(db: String, ignoreIfNotExists: Boolean, cascade: Boolean): Unit =
     catalogOf(Some(db))
-      .getOrElse(if (!ignoreIfNotExists) throw new NoSuchDatabaseException(db) else return )
+      .getOrElse(if (!ignoreIfNotExists) throw new NoSuchDatabaseException(db) else return
+      )
       .dropDatabase(db, ignoreIfNotExists, cascade)
 
   override def alterDatabase(dbDefinition: CatalogDatabase): Unit =
@@ -181,7 +182,7 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
               Some(sessionCatalog)
             } else {
               Seq(primaryCatalog, secondaryCatalog).find(_.databaseExists(db))
-          })
+            })
         .getOrElse(Some(currentCatalog))
     }
 

@@ -30,8 +30,7 @@ class InTest0Suite extends BaseInitialOnceTest {
     "select tp_datetime from full_data_type_table_idx  where tp_datetime in ('2043-11-28 00:00:00','2017-09-07 11:11:11','1986-02-03 00:00:00') order by id_dt ",
     "select tp_date from full_data_type_table_idx  where tp_date in ('2017-11-02', '2043-11-28 00:00:00') order by id_dt ",
     "select tp_timestamp from full_data_type_table_idx  where tp_timestamp in ('2017-11-02 16:48:01') order by id_dt ",
-    "select tp_real from full_data_type_table_idx  where tp_real in (4.44,0.5194052764001038) order by id_dt "
-  )
+    "select tp_real from full_data_type_table_idx  where tp_real in (4.44,0.5194052764001038) order by id_dt ")
 
   allCases foreach { query =>
     {

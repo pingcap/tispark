@@ -18,8 +18,11 @@
 package org.apache.spark.sql.types
 
 import org.apache.spark.sql.BaseTestGenerationSpec
-import org.apache.spark.sql.test.generator.DataType.{getTypeName, ReflectedDataType}
-import org.apache.spark.sql.test.generator.TestDataGenerator.{randomDataGenerator, schemaGenerator}
+import org.apache.spark.sql.test.generator.DataType.{ReflectedDataType, getTypeName}
+import org.apache.spark.sql.test.generator.TestDataGenerator.{
+  randomDataGenerator,
+  schemaGenerator
+}
 import org.apache.spark.sql.test.generator.{Data, Index, Schema}
 
 trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestSpec with BaseTestGenerationSpec {
@@ -27,6 +30,11 @@ trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestSpec with BaseTestG
   override val rowCount = 50
 
   override def getIndexName(dataTypes: String*): String = s"idx_${toString(dataTypes)}"
+
+  private def toString(dataTypes: Seq[String]) = {
+    assert(dataTypes.size == 1, "Unit data type tests can not manage multiple columns")
+    dataTypes.mkString("_")
+  }
 
   def loadTestData(typeName: String): Unit
 
@@ -68,26 +76,12 @@ trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestSpec with BaseTestG
   override def getTableNameWithDesc(desc: String, dataTypes: String*): String =
     s"test_${desc}_${toString(dataTypes)}"
 
-  private def toString(dataTypes: Seq[String]) = {
-    assert(dataTypes.size == 1, "Unit data type tests can not manage multiple columns")
-    dataTypes.mkString("_")
-  }
-
   def genSchema(
-    dataType: ReflectedDataType,
-    tableName: String,
-    len: String,
-    desc: String
-  ): Schema = {
-    schemaGenerator(
-      database,
-      tableName,
-      r,
-      List(
-        (dataType, len, desc)
-      ),
-      List.empty[Index]
-    )
+      dataType: ReflectedDataType,
+      tableName: String,
+      len: String,
+      desc: String): Schema = {
+    schemaGenerator(database, tableName, r, List((dataType, len, desc)), List.empty[Index])
   }
 
   def genData(schema: Schema): Data = randomDataGenerator(schema, rowCount, dataTypeTestDir, r)

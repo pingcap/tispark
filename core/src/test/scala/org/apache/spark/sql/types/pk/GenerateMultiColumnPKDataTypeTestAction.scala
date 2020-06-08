@@ -17,8 +17,12 @@
 
 package org.apache.spark.sql.types.pk
 
-import org.apache.spark.sql.test.generator.DataType.{getTypeName, ReflectedDataType}
-import org.apache.spark.sql.test.generator.TestDataGenerator.{isStringType, randomDataGenerator, schemaGenerator}
+import org.apache.spark.sql.test.generator.DataType.{ReflectedDataType, getTypeName}
+import org.apache.spark.sql.test.generator.TestDataGenerator.{
+  isStringType,
+  randomDataGenerator,
+  schemaGenerator
+}
 import org.apache.spark.sql.test.generator._
 import org.apache.spark.sql.types.GenerateMultiColumnDataTypeTestAction
 
@@ -52,35 +56,24 @@ trait GenerateMultiColumnPKDataTypeTestAction extends GenerateMultiColumnDataTyp
       tableName,
       List(
         genDescriptionNotNullable(dataTypes(i)),
-        genDescriptionNotNullable(dataTypes(j))
-      ) ++ dataTypesWithDescription
-    )
+        genDescriptionNotNullable(dataTypes(j))) ++ dataTypesWithDescription)
     val data = genData(schema)
     setTiFlashReplicaByConfig(data)
   }
 
   override def genSchema(
-    tableName: String,
-    dataTypesWithDescription: List[(ReflectedDataType, String, String)]
-  ): Schema = {
+      tableName: String,
+      dataTypesWithDescription: List[(ReflectedDataType, String, String)]): Schema = {
     val index = genIndex(dataTypesWithDescription, r)
-    schemaGenerator(
-      database,
-      tableName,
-      r,
-      dataTypesWithDescription,
-      index
-    )
+    schemaGenerator(database, tableName, r, dataTypesWithDescription, index)
   }
 
   private def genIndex(
-    dataTypesWithDescription: List[(ReflectedDataType, String, String)],
-    r: Random
-  ): List[Index] = {
+      dataTypesWithDescription: List[(ReflectedDataType, String, String)],
+      r: Random): List[Index] = {
     assert(
       dataTypesWithDescription.size >= 2,
-      "column size should be at least 2 for multi-column tests"
-    )
+      "column size should be at least 2 for multi-column tests")
     val result: mutable.ListBuffer[IndexColumn] = new mutable.ListBuffer[IndexColumn]()
     for (i <- 0 until 2) {
       val d = dataTypesWithDescription(i)._1
@@ -97,24 +90,21 @@ trait GenerateMultiColumnPKDataTypeTestAction extends GenerateMultiColumnDataTyp
     val pk = schema.pkColumnName.split(",", -1)
     assert(
       pk.nonEmpty && pk.head.nonEmpty,
-      "Schema incorrect for PK tests, must contain valid PK info"
-    )
+      "Schema incorrect for PK tests, must contain valid PK info")
     val cnt: Int = Math.min(
       (schema.pkIndexInfo.head.indexColumns.map {
-        case b if b.column.contains("col_bit")     => if (b.length == null) 2 else 1 << b.length.toInt
+        case b if b.column.contains("col_bit") => if (b.length == null) 2 else 1 << b.length.toInt
         case b if b.column.contains("col_boolean") => 2
         case i if i.column.contains("col_tinyint") => 256
-        case _                                     => 500
+        case _ => 500
       }.product + 2) / 3,
-      rowCount
-    )
+      rowCount)
     assert(cnt > 0, "row count should be greater than 0")
     randomDataGenerator(schema, cnt, dataTypeTestDir, r)
   }
 
   def genDescriptionNotNullable(
-    dataType: ReflectedDataType
-  ): (ReflectedDataType, String, String) = {
+      dataType: ReflectedDataType): (ReflectedDataType, String, String) = {
     val len = getTypeLength(dataType)
     (dataType, len, "not null")
   }

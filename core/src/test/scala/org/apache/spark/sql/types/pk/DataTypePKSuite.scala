@@ -24,7 +24,8 @@ import org.apache.spark.sql.types.{BaseDataTypeTest, RunUnitDataTypeTestAction}
 class DataTypePKSuite extends BaseDataTypeTest with RunUnitDataTypeTestAction {
   override lazy protected val generator: DataTypePKGenerator =
     DataTypePKGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc)
-  override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: stringType
+  override val dataTypes: List[ReflectedDataType] =
+    integers ::: decimals ::: doubles ::: stringType
   override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
   override val dataTypeTestDir = "dataType-test-pk"
   override val database = "data_type_test_pk"

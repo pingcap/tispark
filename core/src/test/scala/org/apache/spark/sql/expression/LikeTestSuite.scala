@@ -26,8 +26,7 @@ class LikeTestSuite extends BaseInitialOnceTest {
     "select tp_varchar from full_data_type_table where tp_varchar LIKE 'a%f'",
     "select tp_varchar from full_data_type_table where tp_varchar LIKE '%'",
     "select tp_varchar from full_data_type_table where tp_varchar LIKE '%dfs%df%'",
-    "select tp_varchar from full_data_type_table where tp_varchar LIKE 'ÿÿ%'"
-  )
+    "select tp_varchar from full_data_type_table where tp_varchar LIKE 'ÿÿ%'")
 
   private val indexScanCases = Seq[String](
     "select tp_varchar from full_data_type_table_idx where tp_varchar LIKE '%'",
@@ -35,8 +34,7 @@ class LikeTestSuite extends BaseInitialOnceTest {
     "select tp_varchar from full_data_type_table_idx where tp_varchar LIKE 'ÿ%'",
     "select * from full_data_type_table_idx where tp_varchar LIKE '%f'",
     "select * from full_data_type_table_idx where tp_varchar LIKE 'a%f'",
-    "select * from full_data_type_table_idx where tp_varchar LIKE 'ÿ%'"
-  )
+    "select * from full_data_type_table_idx where tp_varchar LIKE 'ÿ%'")
 
   tableScanCases foreach { query =>
     test(query) {

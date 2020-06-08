@@ -26,21 +26,12 @@ import scala.util.Random
 
 trait GeneratePKDataTypeTestAction extends GenerateUnitDataTypeTestAction {
   override def genSchema(
-    dataType: ReflectedDataType,
-    tableName: String,
-    len: String,
-    desc: String
-  ): Schema = {
+      dataType: ReflectedDataType,
+      tableName: String,
+      len: String,
+      desc: String): Schema = {
     val index = genIndex(dataType, r, len)
-    schemaGenerator(
-      database,
-      tableName,
-      r,
-      List(
-        (dataType, len, desc)
-      ),
-      index
-    )
+    schemaGenerator(database, tableName, r, List((dataType, len, desc)), index)
   }
 
   private def genIndex(dataType: ReflectedDataType, r: Random, len: String): List[Index] = {

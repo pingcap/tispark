@@ -35,10 +35,10 @@ object TiAggregationImpl {
   def unapply(plan: LogicalPlan): Option[ReturnType] =
     plan match {
       case PhysicalAggregation(
-          groupingExpressions,
-          aggregateExpressions,
-          resultExpressions,
-          child) =>
+            groupingExpressions,
+            aggregateExpressions,
+            resultExpressions,
+            child) =>
         // Rewrites all `Average`s into the form of `Divide(Sum / Count)` so that we can push the
         // converted `Sum`s and `Count`s down to TiKV.
         val averages =

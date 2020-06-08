@@ -51,7 +51,10 @@ class MultiTableWriteSuite extends BaseTiSparkTest {
     }.toMap
 
     // multi table batch write
-    TiBatchWrite.write(data, spark, tidbOptions ++ Map("multiTables" -> "true", "isTest" -> "true"))
+    TiBatchWrite.write(
+      data,
+      spark,
+      tidbOptions ++ Map("multiTables" -> "true", "isTest" -> "true"))
 
     for (table <- tables) {
       val tableToWrite = s"${batchWriteTablePrefix}_$table"

@@ -30,12 +30,11 @@ import org.apache.spark.sql.test.generator.DataType._
  * @param indexColumns in the format of (indexName, {list of column names})
  */
 case class Schema(
-  database: String,
-  tableName: String,
-  columnNames: List[String],
-  columnDesc: Map[String, (ReflectedDataType, (Integer, Integer), String)],
-  indexColumns: Map[String, (List[(String, Integer)], Boolean)]
-) {
+    database: String,
+    tableName: String,
+    columnNames: List[String],
+    columnDesc: Map[String, (ReflectedDataType, (Integer, Integer), String)],
+    indexColumns: Map[String, (List[(String, Integer)], Boolean)]) {
 
   // validations
   assert(columnDesc.size == columnNames.size, "columnDesc size not equal to column name size")
@@ -47,8 +46,7 @@ case class Schema(
       idx._2._1.map { x =>
         IndexColumnInfo(x._1, x._2)
       },
-      idx._2._2
-    )
+      idx._2._2)
   }.toList
 
   assert(indexInfo.count(_.isPrimary) <= 1, "more than one primary key exist in schema")

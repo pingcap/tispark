@@ -167,22 +167,20 @@ object TestDataGenerator {
    * @return Generated Schema
    */
   def schemaGenerator(
-    database: String,
-    table: String,
-    r: Random,
-    dataTypesWithDescription: List[(ReflectedDataType, String, String)],
-    indices: List[Index]
-  ): Schema = {
+      database: String,
+      table: String,
+      r: Random,
+      dataTypesWithDescription: List[(ReflectedDataType, String, String)],
+      indices: List[Index]): Schema = {
 
     // validation
     assert(
       dataTypesWithDescription.forall(x => supportedDataTypes.contains(x._1)),
-      "required data type not present for generator"
-    )
+      "required data type not present for generator")
     assert(
       indices
-        .forall(_.indexColumns.forall(x => x.getId >= 0 && x.getId < dataTypesWithDescription.size))
-    )
+        .forall(_.indexColumns.forall(x =>
+          x.getId >= 0 && x.getId < dataTypesWithDescription.size)))
 
     val dataTypeList: List[ReflectedDataType] = dataTypesWithDescription.map {
       _._1
@@ -229,11 +227,10 @@ object TestDataGenerator {
     }
 
     def buildColumnDesc(
-      dataType: ReflectedDataType,
-      r: Random,
-      typeDesc: String,
-      desc: String
-    ): (ReflectedDataType, (Integer, Integer), String) = {
+        dataType: ReflectedDataType,
+        r: Random,
+        typeDesc: String,
+        desc: String): (ReflectedDataType, (Integer, Integer), String) = {
       var (m, d) = extractFromTypeDesc(typeDesc)
       if (m == -1 && isVarString(dataType)) {
         assert(d == null, "TEXT/BLOB should/must have only length specified")
@@ -272,8 +269,7 @@ object TestDataGenerator {
             generateIndexName(columns.map {
               _._1
             }),
-            (columns, idx.isPrimaryKey)
-          )
+            (columns, idx.isPrimaryKey))
         }.toMap
 
     Schema(database, table, columnNames, columnDesc.toMap, idxColumns)
@@ -292,7 +288,7 @@ object TestDataGenerator {
 
   def hash(value: Any, len: Int = -1): String =
     value match {
-      case null             => "null"
+      case null => "null"
       case (v: Any, l: Int) => hash(v, l)
       case list: List[Any] =>
         val ret = StringBuilder.newBuilder
@@ -320,8 +316,8 @@ object TestDataGenerator {
         // timestamp was indexed as Integer when treated as unique key
         s"${t.getTime / 1000}"
       case s: String if len != -1 => s.slice(0, len)
-      case x if len == -1         => x.toString
-      case _                      => throw new RuntimeException(s"hash method for value $value not found!")
+      case x if len == -1 => x.toString
+      case _ => throw new RuntimeException(s"hash method for value $value not found!")
     }
 
   // value may be (Any, Int) or List[(Any, Int)], in this case, it means
@@ -342,18 +338,16 @@ object TestDataGenerator {
   }
 
   def generateRandomRows(schema: Schema, n: Long, r: Random): List[TiRow] = {
-    val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
     // offset of pk columns
     val pkOffset: List[(Int, Int)] = {
       val primary = schema.indexInfo.filter(_.isPrimary)
       if (primary.nonEmpty && primary.size == 1) {
-        primary.head.indexColumns.map(x =>
-          (
-            schema.columnNames.indexOf(x.column),
-            if (x.length == null) -1
-            else x.length.intValue()
-          )
-        )
+        primary.head.indexColumns.map(
+          x =>
+            (
+              schema.columnNames.indexOf(x.column),
+              if (x.length == null) -1
+              else x.length.intValue()))
       } else {
         List.empty[(Int, Int)]
       }
@@ -369,11 +363,11 @@ object TestDataGenerator {
     }
 
     (1.toLong to n).map { _ =>
-      generateRandomRow(schema, r, set)
+      generateRandomRow(schema, r)
     }.toList
   }
 
-  private def generateRandomRow(schema: Schema, r: Random, set: mutable.Set[Any]): TiRow = {
+  private def generateRandomRow(schema: Schema, r: Random): TiRow = {
     val length = schema.columnInfo.length
     val row: TiRow = ObjectRowImpl.create(length)
     for (i <- schema.columnInfo.indices) {
@@ -384,11 +378,10 @@ object TestDataGenerator {
   }
 
   private def generateRandomColValue(
-    row: TiRow,
-    offset: Int,
-    r: Random,
-    colValueGenerator: ColumnValueGenerator
-  ): Unit = {
+      row: TiRow,
+      offset: Int,
+      r: Random,
+      colValueGenerator: ColumnValueGenerator): Unit = {
     val value = colValueGenerator.next(r)
     if (value == null) {
       row.setNull(offset)
@@ -411,14 +404,11 @@ class TestDataGenerator extends SparkFunSuite {
         (INT, "", "default null"),
         (DOUBLE, "", "not null default 0.2"),
         (VARCHAR, "50", "default null"),
-        (DECIMAL, "20,3", "default null")
-      ),
+        (DECIMAL, "20,3", "default null")),
       List(
         Key(List(DefaultColumn(2), DefaultColumn(3))),
         Key(List(PrefixColumn(4, 20))),
-        Key(List(DefaultColumn(3), DefaultColumn(5)))
-      )
-    )
+        Key(List(DefaultColumn(3), DefaultColumn(5)))))
     val schema2 = TestDataGenerator.schemaGenerator(
       "tispark_test",
       "test_table",
@@ -428,15 +418,12 @@ class TestDataGenerator extends SparkFunSuite {
         (INT, "", "default null"),
         (DOUBLE, "", "not null default 0.2"),
         (VARCHAR, "50", "default null"),
-        (DECIMAL, "20,3", "default null")
-      ),
+        (DECIMAL, "20,3", "default null")),
       List(
         PrimaryKey(List(DefaultColumn(1))),
         Key(List(DefaultColumn(2), DefaultColumn(3))),
         Key(List(PrefixColumn(4, 20))),
-        Key(List(DefaultColumn(3), DefaultColumn(5)))
-      )
-    )
+        Key(List(DefaultColumn(3), DefaultColumn(5)))))
     val answer =
       """CREATE TABLE `tispark_test`.`test_table` (
         |  `col_int0` int not null,
@@ -465,14 +452,11 @@ class TestDataGenerator extends SparkFunSuite {
         (BIT, "3", "default null"),
         (DOUBLE, "", "not null default 0.2"),
         (VARCHAR, "50", "default null"),
-        (DECIMAL, "10,3", "default null")
-      ),
+        (DECIMAL, "10,3", "default null")),
       List(
         Key(List(DefaultColumn(2), DefaultColumn(4))),
         Key(List(PrefixColumn(5, 20))),
-        Key(List(DefaultColumn(4), DefaultColumn(5)))
-      )
-    )
+        Key(List(DefaultColumn(4), DefaultColumn(5)))))
     val data: Data = TestDataGenerator.randomDataGenerator(schema, 10, "tispark-test", r)
     data.save()
   }

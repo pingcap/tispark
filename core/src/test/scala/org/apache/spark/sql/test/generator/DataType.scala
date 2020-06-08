@@ -57,16 +57,16 @@ object DataType extends Enumeration {
   val JSON: Val = Val("json", com.pingcap.tikv.types.JsonType.JSON)
 
   def getType(
-    dataType: ReflectedDataType,
-    flag: Integer,
-    len: Long,
-    decimal: Integer,
-    charset: String,
-    collation: Integer
-  ): TiDataType =
+      dataType: ReflectedDataType,
+      flag: Integer,
+      len: Long,
+      decimal: Integer,
+      charset: String,
+      collation: Integer): TiDataType =
     dataType.asInstanceOf[Val].getType(flag, len, decimal, charset, collation)
 
-  def getBaseType(dataType: ReflectedDataType): TiDataType = dataType.asInstanceOf[Val].getBaseType
+  def getBaseType(dataType: ReflectedDataType): TiDataType =
+    dataType.asInstanceOf[Val].getBaseType
 
   def getTypeName(dataType: ReflectedDataType): String = dataType.asInstanceOf[Val].typeName
 
@@ -77,12 +77,11 @@ object DataType extends Enumeration {
     override def toString(): String = typeName
 
     private[generator] def getType(
-      flag: Integer,
-      len: Long,
-      decimal: Integer,
-      charset: String,
-      collation: Integer
-    ): TiDataType = {
+        flag: Integer,
+        len: Long,
+        decimal: Integer,
+        charset: String,
+        collation: Integer): TiDataType = {
       val constructor = baseType.getClass.getDeclaredConstructor(classOf[InternalTypeHolder])
       constructor.setAccessible(true)
       constructor.newInstance(
@@ -93,9 +92,7 @@ object DataType extends Enumeration {
           decimal,
           charset,
           Collation.translate(collation),
-          new util.ArrayList[String]()
-        )
-      )
+          new util.ArrayList[String]()))
     }
 
     private[generator] def getBaseFlag: Int = baseType.getFlag

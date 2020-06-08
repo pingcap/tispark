@@ -89,25 +89,22 @@ abstract class QueryTest extends SparkFunSuite {
     assert(
       cachedData.size == numCachedTables,
       s"Expected query to contain $numCachedTables, but it actually had ${cachedData.size}\n" +
-        planWithCaching
-    )
+        planWithCaching)
   }
 
   protected def spark: SparkSession
 
   protected def compSqlResult(
-    sql: String,
-    lhs: List[List[Any]],
-    rhs: List[List[Any]],
-    checkLimit: Boolean = true
-  ): Boolean = {
+      sql: String,
+      lhs: List[List[Any]],
+      rhs: List[List[Any]],
+      checkLimit: Boolean = true): Boolean = {
     val isOrdered = sql.contains(" order by ")
     val isLimited = sql.contains(" limit ")
 
     if (checkLimit && !isOrdered && isLimited) {
       logger.warn(
-        s"Unknown correctness of test result: sql contains \'limit\' but not \'order by\'."
-      )
+        s"Unknown correctness of test result: sql contains \'limit\' but not \'order by\'.")
       false
     } else {
       compResult(lhs, rhs, isOrdered)
@@ -121,27 +118,26 @@ abstract class QueryTest extends SparkFunSuite {
    * @return true if results are the same
    */
   protected def compResult(
-    lhs: List[List[Any]],
-    rhs: List[List[Any]],
-    isOrdered: Boolean = true
-  ): Boolean = {
+      lhs: List[List[Any]],
+      rhs: List[List[Any]],
+      isOrdered: Boolean = true): Boolean = {
     // If cannot be converted to double, it is also not comparable.
     def toDouble(x: Any): Double =
       x match {
-        case d: Double               => d
-        case d: Float                => d.toDouble
+        case d: Double => d
+        case d: Float => d.toDouble
         case d: java.math.BigDecimal => d.doubleValue()
-        case d: BigDecimal           => d.bigDecimal.doubleValue()
-        case d: Number               => d.doubleValue()
-        case d: String               => BigDecimal(d).doubleValue()
-        case d: Boolean              => if (d) 1d else 0d
-        case _                       => Double.NaN
+        case d: BigDecimal => d.bigDecimal.doubleValue()
+        case d: Number => d.doubleValue()
+        case d: String => BigDecimal(d).doubleValue()
+        case d: Boolean => if (d) 1d else 0d
+        case _ => Double.NaN
       }
 
     def toInteger(x: Any): Long =
       x match {
-        case d: BigInt  => d.bigInteger.longValue()
-        case d: Number  => d.longValue()
+        case d: BigInt => d.bigInteger.longValue()
+        case d: Number => d.longValue()
         case d: Boolean => if (d) 1L else 0L
         case d: Array[Byte] =>
           if (d.length > 8) {
@@ -239,10 +235,10 @@ abstract class QueryTest extends SparkFunSuite {
 
     def toComparableString(row: List[Any]): String = {
       row.map {
-        case null           => "null"
+        case null => "null"
         case a: Array[Byte] => a.mkString("[", ",", "]")
-        case b: Boolean     => if (b) "1" else "0"
-        case s              => s.toString
+        case b: Boolean => if (b) "1" else "0"
+        case s => s.toString
       }.mkString
     }
 
@@ -258,25 +254,18 @@ abstract class QueryTest extends SparkFunSuite {
           // 1. compare directly
           // 2. if 1 fails, use `NullableListOrdering` to sort the result, then compare
           // 3. if 2 fails and the sql does not contains `order by`, use string based `sortComp` to sort the result, then compare
-          var result = comp(
-            lhs,
-            rhs
-          )
+          var result = comp(lhs, rhs)
           if (!result) {
             implicit object NullableListOrdering extends Ordering[List[Any]] {
               override def compare(p1: List[Any], p2: List[Any]): Int =
                 p1.contains(null).compareTo(p2.contains(null))
             }
-            result = comp(
-              lhs.sortBy[List[Any]](x => x),
-              rhs.sortBy[List[Any]](x => x)
-            )
+            result = comp(lhs.sortBy[List[Any]](x => x), rhs.sortBy[List[Any]](x => x))
           }
           if (!result && !isOrdered) {
             result = comp(
               lhs.sortWith((_1, _2) => sortComp(_1, _2)),
-              rhs.sortWith((_1, _2) => sortComp(_1, _2))
-            )
+              rhs.sortWith((_1, _2) => sortComp(_1, _2)))
           }
           result
         }
@@ -338,7 +327,9 @@ abstract class QueryTest extends SparkFunSuite {
    * Evaluates a dataset to make sure that the result of calling collect matches the given
    * expected answer, after sort.
    */
-  protected def checkDatasetUnorderly[T: Ordering](ds: => Dataset[T], expectedAnswer: T*): Unit = {
+  protected def checkDatasetUnorderly[T: Ordering](
+      ds: => Dataset[T],
+      expectedAnswer: T*): Unit = {
     val result = getResult(ds)
 
     if (!compare(result.toSeq.sorted, expectedAnswer.sorted)) {
@@ -384,7 +375,7 @@ abstract class QueryTest extends SparkFunSuite {
 
     QueryTest.checkAnswer(analyzedDF, expectedAnswer) match {
       case Some(errorMessage) => fail(errorMessage)
-      case None               =>
+      case None =>
     }
   }
 
@@ -394,23 +385,19 @@ abstract class QueryTest extends SparkFunSuite {
   def assertEmptyMissingInput(query: Dataset[_]): Unit = {
     assert(
       query.queryExecution.analyzed.missingInput.isEmpty,
-      s"The analyzed logical plan has missing inputs:\n${query.queryExecution.analyzed}"
-    )
+      s"The analyzed logical plan has missing inputs:\n${query.queryExecution.analyzed}")
     assert(
       query.queryExecution.optimizedPlan.missingInput.isEmpty,
-      s"The optimized logical plan has missing inputs:\n${query.queryExecution.optimizedPlan}"
-    )
+      s"The optimized logical plan has missing inputs:\n${query.queryExecution.optimizedPlan}")
     assert(
       query.queryExecution.executedPlan.missingInput.isEmpty,
-      s"The physical plan has missing inputs:\n${query.queryExecution.executedPlan}"
-    )
+      s"The physical plan has missing inputs:\n${query.queryExecution.executedPlan}")
   }
 
   protected def checkAggregatesWithTol(
-    dataFrame: DataFrame,
-    expectedAnswer: Row,
-    absTol: Double
-  ): Unit =
+      dataFrame: DataFrame,
+      expectedAnswer: Row,
+      absTol: Double): Unit =
     checkAggregatesWithTol(dataFrame, Seq(expectedAnswer), absTol)
 
   /**
@@ -421,16 +408,14 @@ abstract class QueryTest extends SparkFunSuite {
    * @param absTol the absolute tolerance between actual and expected answers.
    */
   protected def checkAggregatesWithTol(
-    dataFrame: DataFrame,
-    expectedAnswer: Seq[Row],
-    absTol: Double
-  ): Unit = {
+      dataFrame: DataFrame,
+      expectedAnswer: Seq[Row],
+      absTol: Double): Unit = {
     // TODO: catch exceptions in data frame execution
     val actualAnswer = dataFrame.collect()
     require(
       actualAnswer.length == expectedAnswer.length,
-      s"actual num rows ${actualAnswer.length} != expected num of rows ${expectedAnswer.length}"
-    )
+      s"actual num rows ${actualAnswer.length} != expected num of rows ${expectedAnswer.length}")
 
     actualAnswer.zip(expectedAnswer).foreach {
       case (actualRow, expectedRow) =>
@@ -451,10 +436,9 @@ abstract class QueryTest extends SparkFunSuite {
    * @return result of command
    */
   protected def callWithRetry[A](
-    execute: => A,
-    retryOnFailure: Int,
-    exception: Exception = null
-  ): A = {
+      execute: => A,
+      retryOnFailure: Int,
+      exception: Exception = null): A = {
     if (retryOnFailure <= 0) {
       logger.error("callWithRetry failure", exception)
       fail(exception)
@@ -496,16 +480,15 @@ abstract class QueryTest extends SparkFunSuite {
              |${ds.exprEnc.deserializer.treeString}
              |${ds.queryExecution}
            """.stripMargin,
-          e
-        )
+          e)
     }
   }
 
   private def compare(obj1: Any, obj2: Any): Boolean =
     (obj1, obj2) match {
       case (null, null) => true
-      case (null, _)    => false
-      case (_, null)    => false
+      case (null, _) => false
+      case (_, null) => false
       case (a: Array[_], b: Array[_]) =>
         a.length == b.length && a.zip(b).forall { case (l, r) => compare(l, r) }
       case (a: Iterable[_], b: Iterable[_]) =>
@@ -527,10 +510,9 @@ object QueryTest {
    * @param checkToRDD whether to verify deserialization to an RDD. This runs the query twice.
    */
   def checkAnswer(
-    df: DataFrame,
-    expectedAnswer: Seq[Row],
-    checkToRDD: Boolean = true
-  ): Option[String] = {
+      df: DataFrame,
+      expectedAnswer: Seq[Row],
+      checkToRDD: Boolean = true): Option[String] = {
     val isSorted = df.logicalPlan.collect { case s: logical.Sort => s }.nonEmpty
     if (checkToRDD) {
       df.rdd.count() // Also attempt to deserialize as an RDD [SPARK-15791]
@@ -577,19 +559,18 @@ object QueryTest {
   // We need to call prepareRow recursively to handle schemas with struct types.
   def prepareRow(row: Row): Row =
     Row.fromSeq(row.toSeq.map {
-      case null                    => null
+      case null => null
       case d: java.math.BigDecimal => BigDecimal(d)
       // Convert array to Seq for easy equality check.
       case b: Array[_] => b.toSeq
-      case r: Row      => prepareRow(r)
-      case o           => o
+      case r: Row => prepareRow(r)
+      case o => o
     })
 
   def sameRows(
-    expectedAnswer: Seq[Row],
-    sparkAnswer: Seq[Row],
-    isSorted: Boolean = false
-  ): Option[String] = {
+      expectedAnswer: Seq[Row],
+      sparkAnswer: Seq[Row],
+      isSorted: Boolean = false): Option[String] = {
     val left = prepareAnswer(expectedAnswer, isSorted)
     val right = prepareAnswer(sparkAnswer, isSorted)
     if (left != right) {
@@ -600,8 +581,7 @@ object QueryTest {
           s"== Correct Answer - ${expectedAnswer.size} ==" +:
             prepareAnswer(expectedAnswer, isSorted).map(_.toString()),
           s"== Spark Answer - ${sparkAnswer.size} ==" +:
-            prepareAnswer(sparkAnswer, isSorted).map(_.toString())
-        ).mkString("\n")}
+            prepareAnswer(sparkAnswer, isSorted).map(_.toString())).mkString("\n")}
         """.stripMargin
       return Some(errorMessage)
     }
@@ -611,7 +591,7 @@ object QueryTest {
   def checkAnswer(df: DataFrame, expectedAnswer: java.util.List[Row]): String =
     checkAnswer(df, expectedAnswer.asScala) match {
       case Some(errorMessage) => errorMessage
-      case None               => null
+      case None => null
     }
 
   /**
@@ -622,15 +602,13 @@ object QueryTest {
    * @param absTol the absolute tolerance between actual and expected answers.
    */
   protected def checkAggregatesWithTol(
-    actualAnswer: Row,
-    expectedAnswer: Row,
-    absTol: Double
-  ): Unit = {
+      actualAnswer: Row,
+      expectedAnswer: Row,
+      absTol: Double): Unit = {
     require(
       actualAnswer.length == expectedAnswer.length,
       s"actual answer length ${actualAnswer.length} != " +
-        s"expected answer length ${expectedAnswer.length}"
-    )
+        s"expected answer length ${expectedAnswer.length}")
 
     // TODO: support other numeric types besides Double
     // TODO: support struct types?
@@ -638,8 +616,7 @@ object QueryTest {
       case (actual: Double, expected: Double) =>
         assert(
           math.abs(actual - expected) < absTol,
-          s"actual answer $actual not within $absTol of correct answer $expected"
-        )
+          s"actual answer $actual not within $absTol of correct answer $expected")
       case (actual, expected) =>
         assert(actual == expected, s"$actual did not equal $expected")
     }

@@ -33,12 +33,11 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
   }
 
   def simpleSelect(
-    dbName: String,
-    tableName: String,
-    col1: String,
-    col2: String,
-    dataType: ReflectedDataType
-  ): Unit = {
+      dbName: String,
+      tableName: String,
+      col1: String,
+      col2: String,
+      dataType: ReflectedDataType): Unit = {
     for ((op, value) <- getOperations(dataType)) {
       val query = s"select $col1 from $tableName where $col2 $op $value"
       test(query) {
@@ -52,17 +51,17 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
     List(("is", "null")) ++ {
       (cmps ++ eqs) cross {
         dataType match {
-          case TINYINT                     => List("1", "0")
-          case _ if isNumeric(dataType)    => List("1", "2333")
+          case TINYINT => List("1", "0")
+          case _ if isNumeric(dataType) => List("1", "2333")
           case _ if isStringType(dataType) => List("\'PingCAP\'", "\'\'")
-          case _                           => List.empty[String]
+          case _ => List.empty[String]
         }
       }
     } ++ {
       eqs cross {
         dataType match {
           case BOOLEAN => List("false", "true")
-          case _       => List.empty[String]
+          case _ => List.empty[String]
         }
       }
     }

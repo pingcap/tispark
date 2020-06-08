@@ -28,8 +28,7 @@ class MultiColumnDataTypeSuite
     unsignedDataTypes,
     dataTypeTestDir,
     database,
-    testDesc
-  )
+    testDesc)
   val dataTypes: List[ReflectedDataType] = numeric ::: stringType
   val unsignedDataTypes: List[ReflectedDataType] = numeric
   val dataTypeTestDir: String = "multi-column-dataType-test"

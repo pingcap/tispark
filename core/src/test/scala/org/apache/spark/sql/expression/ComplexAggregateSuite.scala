@@ -26,8 +26,7 @@ class ComplexAggregateSuite extends BaseInitialOnceTest {
     "select sum(tp_double) from full_data_type_table",
     "select min(tp_tinyint) from full_data_type_table",
     "select avg(tp_int) from full_data_type_table",
-    "select max(tp_bigint) from full_data_type_table"
-  )
+    "select max(tp_bigint) from full_data_type_table")
 
   allCases.map { _.replace(")", " / tp_int)") } ++ allCases.map {
     _.replace(")", " / tp_double)")

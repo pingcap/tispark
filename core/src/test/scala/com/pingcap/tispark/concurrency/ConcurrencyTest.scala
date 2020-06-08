@@ -31,11 +31,7 @@ class ConcurrencyTest extends BaseDataSourceTest("test_concurrency_write_read") 
   protected val row5 = Row(5, "test")
 
   protected val schema = StructType(
-    List(
-      StructField("i", IntegerType),
-      StructField("s", StringType)
-    )
-  )
+    List(StructField("i", IntegerType), StructField("s", StringType)))
 
   protected val sleepBeforeQuery = 10000
   protected val sleepAfterPrewriteSecondaryKey = 240000
@@ -71,8 +67,7 @@ class ConcurrencyTest extends BaseDataSourceTest("test_concurrency_write_read") 
           val result = queryTiDBViaJDBC(
             s"select * from $dbtable where i = $i",
             retryOnFailure = 1,
-            tidbConn.createStatement()
-          )
+            tidbConn.createStatement())
           logger.info(s"readThread$i:" + result)
           resultRowCount.addAndGet(result.size)
         } catch {

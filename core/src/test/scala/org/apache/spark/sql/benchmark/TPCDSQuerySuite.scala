@@ -49,8 +49,7 @@ class TPCDSQuerySuite extends BaseTiSparkTest {
         // We do not use statistic information here due to conflict of netty versions when physical plan has broadcast nodes.
         val queryString = resourceToString(
           s"tpcds-sql/$q.sql",
-          classLoader = Thread.currentThread().getContextClassLoader
-        )
+          classLoader = Thread.currentThread().getContextClassLoader)
         val df = spark.sql(queryString)
         var failed = false
         val jobGroup = s"benchmark $q"

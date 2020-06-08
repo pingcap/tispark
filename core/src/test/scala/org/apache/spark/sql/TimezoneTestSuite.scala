@@ -168,10 +168,9 @@ class TimezoneTestSuite extends BaseTiSparkTest {
     }
 
   protected def tidbWrite(
-    rows: List[Row],
-    schema: StructType,
-    param: Option[Map[String, String]] = None
-  ): Unit = {
+      rows: List[Row],
+      schema: StructType,
+      param: Option[Map[String, String]] = None): Unit = {
     val data: RDD[Row] = sc.makeRDD(rows)
     val df = sqlContext.createDataFrame(data, schema)
     df.write

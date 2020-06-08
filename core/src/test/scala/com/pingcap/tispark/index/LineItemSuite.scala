@@ -54,9 +54,7 @@ class LineItemSuite extends BaseTiSparkTest {
       df,
       ti,
       new TiDBOptions(
-        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")
-      )
-    )
+        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")))
 
     // refresh
     refreshConnections(TestTables(database, tableToWrite))
@@ -112,9 +110,7 @@ class LineItemSuite extends BaseTiSparkTest {
       df,
       ti,
       new TiDBOptions(
-        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")
-      )
-    )
+        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")))
 
     // select
     queryTiDBViaJDBC(s"select * from `$tableToWrite`")
@@ -180,24 +176,19 @@ class LineItemSuite extends BaseTiSparkTest {
       df1,
       ti,
       new TiDBOptions(
-        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")
-      )
-    )
+        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")))
 
     val tmpView = "lineitem_tempview"
     df1.createOrReplaceGlobalTempView(tmpView)
     val dfCount2 = dfCount1 / 2
     val df2 = sql(
-      s"select FAKEKEY, L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, CONCAT(L_COMMENT, '_t') AS L_COMMENT from global_temp.`$tmpView` limit $dfCount2"
-    )
+      s"select FAKEKEY, L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, CONCAT(L_COMMENT, '_t') AS L_COMMENT from global_temp.`$tmpView` limit $dfCount2")
 
     TiBatchWrite.write(
       df2,
       ti,
       new TiDBOptions(
-        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "replace" -> "true", "isTest" -> "true")
-      )
-    )
+        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "replace" -> "true", "isTest" -> "true")))
 
     // select
     queryTiDBViaJDBC(s"select * from `$tableToWrite`")
@@ -263,24 +254,19 @@ class LineItemSuite extends BaseTiSparkTest {
       df1,
       ti,
       new TiDBOptions(
-        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")
-      )
-    )
+        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")))
 
     val tmpView = "lineitem_tempview"
     df1.createOrReplaceGlobalTempView(tmpView)
     val dfCount2 = dfCount1 / 2
     val df2 = sql(
-      s"select FAKEKEY, L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, CONCAT(L_COMMENT, '_t') AS L_COMMENT from global_temp.`$tmpView` limit $dfCount2"
-    )
+      s"select FAKEKEY, L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, CONCAT(L_COMMENT, '_t') AS L_COMMENT from global_temp.`$tmpView` limit $dfCount2")
 
     TiBatchWrite.write(
       df2,
       ti,
       new TiDBOptions(
-        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "replace" -> "true", "isTest" -> "true")
-      )
-    )
+        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "replace" -> "true", "isTest" -> "true")))
 
     // select
     queryTiDBViaJDBC(s"select * from `$tableToWrite`")

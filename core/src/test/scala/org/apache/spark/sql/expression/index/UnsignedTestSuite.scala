@@ -21,23 +21,19 @@ class UnsignedTestSuite extends BaseTiSparkTest {
 
   test("Unsigned Index Tests for TISPARK-28 and TISPARK-29") {
     tidbStmt.execute("DROP TABLE IF EXISTS `unsigned_test`")
-    tidbStmt.execute(
-      """CREATE TABLE `unsigned_test` (
+    tidbStmt.execute("""CREATE TABLE `unsigned_test` (
         |  `c1` bigint(20) UNSIGNED NOT NULL,
         |  `c2` bigint(20) UNSIGNED DEFAULT NULL,
         |  `c3` bigint(20) DEFAULT NULL,
         |  PRIMARY KEY (`c1`),
         |  KEY `idx_c2` (`c2`)
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin
-    )
-    tidbStmt.execute(
-      """INSERT INTO `unsigned_test` VALUES
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin)
+    tidbStmt.execute("""INSERT INTO `unsigned_test` VALUES
         |  (1,1,1),
         |  (2,3,4),
         |  (3,5,7),
         |  (0,18446744073709551615,-9223372036854775808),
-        |  (18446744073709551615,18446744073709551615,9223372036854775807)""".stripMargin
-    )
+        |  (18446744073709551615,18446744073709551615,9223372036854775807)""".stripMargin)
 
     tidbStmt.execute("ANALYZE TABLE `unsigned_test`")
     refreshConnections()
@@ -60,8 +56,7 @@ class UnsignedTestSuite extends BaseTiSparkTest {
       "select c2 from unsigned_test where c2 < 18446744073709551616",
       "select c2 from unsigned_test where c2 > 18446744073709551616",
       "select c1 from unsigned_test where c2 < 18446744073709551615",
-      "select c1 from unsigned_test where c2 <= 18446744073709551615"
-    )
+      "select c1 from unsigned_test where c2 <= 18446744073709551615")
     val unsignedLongMaxValue = BigDecimal("18446744073709551615")
     val LongMaxValue = 9223372036854775807L
     val LongMinValue = -9223372036854775808L
@@ -71,36 +66,28 @@ class UnsignedTestSuite extends BaseTiSparkTest {
         List(1, 1, 1),
         List(2, 3, 4),
         List(3, 5, 7),
-        List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)
-      ),
+        List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)),
       List.empty,
       List(
         List(0, unsignedLongMaxValue, LongMinValue),
         List(1, 1, 1),
         List(2, 3, 4),
         List(3, 5, 7),
-        List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)
-      ),
-      List(
-        List(1, 1, 1),
-        List(2, 3, 4),
-        List(3, 5, 7)
-      ),
+        List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)),
+      List(List(1, 1, 1), List(2, 3, 4), List(3, 5, 7)),
       List.empty,
       List(
         List(0, unsignedLongMaxValue, LongMinValue),
         List(1, 1, 1),
         List(2, 3, 4),
         List(3, 5, 7),
-        List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)
-      ),
+        List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)),
       List(
         List(0, unsignedLongMaxValue, LongMinValue),
         List(1, 1, 1),
         List(2, 3, 4),
         List(3, 5, 7),
-        List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)
-      ),
+        List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)),
       List.empty,
       List.empty,
       List(List(unsignedLongMaxValue), List(1), List(3), List(5), List(unsignedLongMaxValue)),
@@ -110,8 +97,7 @@ class UnsignedTestSuite extends BaseTiSparkTest {
       List(List(unsignedLongMaxValue), List(1), List(3), List(5), List(unsignedLongMaxValue)),
       List.empty,
       List(List(1), List(2), List(3)),
-      List(List(0), List(1), List(2), List(3), List(unsignedLongMaxValue))
-    )
+      List(List(0), List(1), List(2), List(3), List(unsignedLongMaxValue)))
     assert(queries.size == answers.size)
     for (i <- queries.indices) {
       println(queries(i))

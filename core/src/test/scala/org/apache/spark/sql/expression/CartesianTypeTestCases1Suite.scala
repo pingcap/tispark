@@ -425,8 +425,7 @@ class CartesianTypeTestCases1Suite extends BaseInitialOnceTest {
     "select tp_decimal,tp_int from full_data_type_table  where tp_decimal <> tp_int order by id_dt  limit 20",
     "select tp_smallint,tp_double from full_data_type_table  where tp_smallint <> tp_double order by id_dt  limit 20",
     "select tp_real,tp_real from full_data_type_table  where tp_real <> tp_real order by id_dt  limit 20",
-    "select tp_smallint,tp_bigint from full_data_type_table  where tp_smallint <> tp_bigint order by id_dt  limit 20"
-  )
+    "select tp_smallint,tp_bigint from full_data_type_table  where tp_smallint <> tp_bigint order by id_dt  limit 20")
 
   allCases foreach { query =>
     {
