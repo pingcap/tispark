@@ -22,7 +22,7 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                     }
                 }
     
-                stage('Build') {
+                stage('Format') {
                     dir("go/src/github.com/pingcap/tispark") {
                         sh """
                         cp -R /home/jenkins/agent/git/tispark/. ./
@@ -38,6 +38,16 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                            echo "   mvn com.coveo:fmt-maven-plugin:format"
                            exit 1
                         fi
+                        """
+                    }
+                }
+
+                stage('Build') {
+                    dir("go/src/github.com/pingcap/tispark") {
+                        sh """
+                        cp -R /home/jenkins/agent/git/tispark/. ./
+                        git checkout -f ${ghprbActualCommit}
+                        mvn clean package -Dmaven.test.skip=true
                         """
                     }
                 }
