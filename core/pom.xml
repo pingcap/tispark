@@ -295,7 +295,7 @@
                     <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
                     <junitxml>.</junitxml>
                     <filereports>SparkTestSuite.txt</filereports>
-                    <argLine>-ea -Xmx4g -Xss4m -XX:ReservedCodeCacheSize=${CodeCacheSize} -Dfile.encoding=UTF-8 -Duser.timezone=GMT+8 -Dio.netty.leakDetection.level=paranoid -Dio.netty.tryReflectionSetAccessible=true</argLine>
+                    <argLine>-ea -Xmx6g -Xss4m -XX:ReservedCodeCacheSize=${CodeCacheSize} -Dfile.encoding=UTF-8 -Duser.timezone=GMT+8 -Dio.netty.leakDetection.level=paranoid -Dio.netty.tryReflectionSetAccessible=true</argLine>
                     <stderr/>
                     <environmentVariables>
                         <JAVA_HOME>${test.java.home}</JAVA_HOME>

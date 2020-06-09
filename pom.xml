@@ -209,7 +209,6 @@
                 <plugin>
                     <groupId>org.antipathy</groupId>
                     <artifactId>mvn-scalafmt_${scala.binary.version}</artifactId>
-                    <version>1.0.3</version>
                     <configuration>
                         <skipSources>true</skipSources>
                         <skipTestSources>true</skipTestSources>
@@ -217,6 +216,7 @@
                         <onlyChangedFiles>true</onlyChangedFiles>
                         <configLocation>dev/.scalafmt.conf</configLocation> <!-- (Optional) config location -->
                     </configuration>
+                    <version>1.0.3</version>
                 </plugin>
             </plugins>
         </pluginManagement>
