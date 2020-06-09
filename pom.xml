@@ -272,7 +272,7 @@
                         <param>${project.basedir}/src/test/scala</param>
                     </testSourceDirectories>
                     <configLocation>dev/.scalafmt.conf</configLocation> <!-- (Optional) config location -->
-                    <onlyChangedFiles>false</onlyChangedFiles>
+                    <onlyChangedFiles>true</onlyChangedFiles>
                 </configuration>
             </plugin>
         </plugins>

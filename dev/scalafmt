@@ -2,4 +2,4 @@
 
 echo $MAVEN_HOME
 
-mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false -Dfile.encoding=UTF-8
+mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false
