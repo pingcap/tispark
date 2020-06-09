@@ -35,7 +35,7 @@ class MultiColumnDataTypeSuite
   override def dbName: String = "multi_column_data_type_test"
   override def testDesc: String = "Base test for multi-column data types"
 
-  override def startTest(dataTypes: List[ReflectedDataType]): Unit = {
+  def startTest(dataTypes: List[ReflectedDataType]): Unit = {
     val typeNames = dataTypes.map(getTypeName)
     val tblName = generator.getTableName(typeNames: _*)
     val columnNames = typeNames.zipWithIndex.map { x =>
@@ -55,6 +55,10 @@ class MultiColumnDataTypeSuite
     if (generateData) {
       generator.test()
     }
+  }
+
+  override def test(): Unit = {
+    startTest(dataTypes)
   }
 
   check()

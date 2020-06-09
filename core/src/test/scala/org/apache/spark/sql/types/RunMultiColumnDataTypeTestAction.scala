@@ -17,13 +17,4 @@
 
 package org.apache.spark.sql.types
 
-import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
-
-trait RunMultiColumnDataTypeTestAction extends MultiColumnDataTypeTestSpec with DataTypeTestDir {
-
-  def test(): Unit = {
-    startTest(dataTypes)
-  }
-
-  def startTest(dataTypes: List[ReflectedDataType]): Unit
-}
+trait RunMultiColumnDataTypeTestAction extends MultiColumnDataTypeTestSpec with DataTypeTestDir {}
