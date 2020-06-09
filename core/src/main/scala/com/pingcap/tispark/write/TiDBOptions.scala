@@ -143,7 +143,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
 }
 
 object TiDBOptions {
-  private final val tidbOptionNames = collection.mutable.Set[String]()
+  private final val _tidbOptionNames = collection.mutable.Set[String]()
   val TIDB_ADDRESS: String = newOption("tidb.addr")
   val TIDB_PORT: String = newOption("tidb.port")
   val TIDB_USER: String = newOption("tidb.user")
@@ -171,7 +171,7 @@ object TiDBOptions {
   val TIDB_SLEEP_AFTER_GET_COMMIT_TS: String = newOption("sleepAfterGetCommitTS")
 
   private def newOption(name: String): String = {
-    tidbOptionNames += name.toLowerCase(Locale.ROOT)
+    _tidbOptionNames += name.toLowerCase(Locale.ROOT)
     name
   }
 
