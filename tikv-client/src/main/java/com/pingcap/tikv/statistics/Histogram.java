@@ -192,6 +192,9 @@ public class Histogram {
    * element greater than the key
    */
   private int lowerBound(Key key) {
+    if (buckets.isEmpty()) {
+      return -1;
+    }
     assert key.getClass() == buckets.get(0).getUpperBound().getClass();
     return Arrays.binarySearch(buckets.toArray(), new Bucket(key));
   }

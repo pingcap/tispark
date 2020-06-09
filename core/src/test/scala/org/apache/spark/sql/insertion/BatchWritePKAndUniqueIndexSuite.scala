@@ -24,13 +24,13 @@ import org.apache.spark.sql.test.generator.TestDataGenerator._
 class BatchWritePKAndUniqueIndexSuite
     extends BaseDataSourceTest(
       "batch_write_insertion_pk_and_one_unique_index",
-      "batch_write_test_index")
+      "batch_write_test_pk_and_index")
     with EnumerateUniqueIndexDataTypeTestAction {
   // TODO: support binary insertion.
   override def dataTypes: List[ReflectedDataType] =
     integers ::: decimals ::: doubles ::: charCharset
   override def unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
-  override def dbName = "batch_write_test_pk_and_index"
+  override def dbName: String = database
   override def testDesc = "Test for pk and unique index type in batch-write insertion"
 
   override def beforeAll(): Unit = {
