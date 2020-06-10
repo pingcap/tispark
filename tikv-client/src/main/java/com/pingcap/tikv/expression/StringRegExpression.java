@@ -15,7 +15,10 @@
 
 package com.pingcap.tikv.expression;
 
-import static com.pingcap.tikv.expression.StringRegExpression.Type.*;
+import static com.pingcap.tikv.expression.StringRegExpression.Type.CONTAINS;
+import static com.pingcap.tikv.expression.StringRegExpression.Type.ENDS_WITH;
+import static com.pingcap.tikv.expression.StringRegExpression.Type.LIKE;
+import static com.pingcap.tikv.expression.StringRegExpression.Type.STARTS_WITH;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
@@ -26,23 +29,29 @@ import java.util.List;
 import java.util.Objects;
 
 public class StringRegExpression extends Expression {
-  public enum Type {
-    STARTS_WITH,
-    CONTAINS,
-    ENDS_WITH,
-    LIKE
+  private final Expression left;
+  private final Expression right;
+  private final Expression reg;
+  private final Type regType;
+  private transient TypedKey key;
+
+  public StringRegExpression(Type type, Expression left, Expression right, Expression reg) {
+    super(IntegerType.BOOLEAN);
+    resolved = true;
+    this.left = requireNonNull(left, "left expression is null");
+    this.right = requireNonNull(right, "right expression is null");
+    this.regType = requireNonNull(type, "type is null");
+    this.reg = requireNonNull(reg, "reg string is null");
   }
 
   public static StringRegExpression startsWith(Expression left, Expression right) {
-    Expression reg =
-        Constant.create(((Constant) right).getValue() + "%", ((Constant) right).getDataType());
+    Expression reg = Constant.create(((Constant) right).getValue() + "%", right.getDataType());
     return new StringRegExpression(STARTS_WITH, left, right, reg);
   }
 
   public static StringRegExpression contains(Expression left, Expression right) {
     Expression reg =
-        Constant.create(
-            "%" + ((Constant) right).getValue() + "%", ((Constant) right).getDataType());
+        Constant.create("%" + ((Constant) right).getValue() + "%", right.getDataType());
     return new StringRegExpression(CONTAINS, left, right, reg);
   }
 
@@ -54,8 +63,6 @@ public class StringRegExpression extends Expression {
   public static StringRegExpression like(Expression left, Expression right) {
     return new StringRegExpression(LIKE, left, right, right);
   }
-
-  private transient TypedKey key;
 
   public ColumnRef getColumnRef() {
     return (ColumnRef) getLeft();
@@ -74,20 +81,6 @@ public class StringRegExpression extends Expression {
       key = TypedKey.toTypedKey(getValue().getValue(), getColumnRef().getDataType(), prefixLength);
     }
     return key;
-  }
-
-  private final Expression left;
-  private final Expression right;
-  private final Expression reg;
-  private final Type regType;
-
-  public StringRegExpression(Type type, Expression left, Expression right, Expression reg) {
-    super(IntegerType.BOOLEAN);
-    resolved = true;
-    this.left = requireNonNull(left, "left expression is null");
-    this.right = requireNonNull(right, "right expression is null");
-    this.regType = requireNonNull(type, "type is null");
-    this.reg = requireNonNull(reg, "reg string is null");
   }
 
   @Override
@@ -143,5 +136,12 @@ public class StringRegExpression extends Expression {
   @Override
   public int hashCode() {
     return Objects.hash(regType, left, right, reg);
+  }
+
+  public enum Type {
+    STARTS_WITH,
+    CONTAINS,
+    ENDS_WITH,
+    LIKE
   }
 }

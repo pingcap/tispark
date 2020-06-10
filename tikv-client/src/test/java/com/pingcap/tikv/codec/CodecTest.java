@@ -15,13 +15,25 @@
 
 package com.pingcap.tikv.codec;
 
-import static com.pingcap.tikv.codec.Codec.*;
+import static com.pingcap.tikv.codec.Codec.INT_FLAG;
+import static com.pingcap.tikv.codec.Codec.UINT_FLAG;
+import static com.pingcap.tikv.codec.Codec.UVARINT_FLAG;
+import static com.pingcap.tikv.codec.Codec.VARINT_FLAG;
 import static java.util.Objects.requireNonNull;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tikv.ExtendedDateTime;
-import com.pingcap.tikv.codec.Codec.*;
+import com.pingcap.tikv.codec.Codec.BytesCodec;
+import com.pingcap.tikv.codec.Codec.DateCodec;
+import com.pingcap.tikv.codec.Codec.DateTimeCodec;
+import com.pingcap.tikv.codec.Codec.DecimalCodec;
+import com.pingcap.tikv.codec.Codec.IntegerCodec;
+import com.pingcap.tikv.codec.Codec.RealCodec;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.util.Calendar;
@@ -34,6 +46,14 @@ import org.joda.time.format.DateTimeFormatter;
 import org.junit.Test;
 
 public class CodecTest {
+  private static byte[] toBytes(int[] arr) {
+    byte[] bytes = new byte[arr.length];
+    for (int i = 0; i < arr.length; i++) {
+      bytes[i] = (byte) (arr[i] & 0xFF);
+    }
+    return bytes;
+  }
+
   @Test
   public void writeDoubleAndReadDoubleTest() {
     // issue scientific notation in toBin
@@ -212,14 +232,6 @@ public class CodecTest {
     } catch (Exception e) {
       assertEquals("readUVarLong overflow", e.getMessage());
     }
-  }
-
-  private static byte[] toBytes(int[] arr) {
-    byte[] bytes = new byte[arr.length];
-    for (int i = 0; i < arr.length; i++) {
-      bytes[i] = (byte) (arr[i] & 0xFF);
-    }
-    return bytes;
   }
 
   @Test

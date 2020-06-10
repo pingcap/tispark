@@ -18,7 +18,7 @@ package com.pingcap.tispark.concurrency
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 
-class WriteWriteConflictSuite extends ConcurrentcyTest {
+class WriteWriteConflictSuite extends ConcurrencyTest {
   test("write write conflict using TableLock & jdbc") {
     if (!supportBatchWrite) {
       cancel
@@ -41,8 +41,7 @@ class WriteWriteConflictSuite extends ConcurrentcyTest {
     }
     assert(
       caught.getMessage
-        .startsWith("Table 'test_concurrency_write_read' was locked in WRITE LOCAL by server")
-    )
+        .startsWith("Table 'test_concurrency_write_read' was locked in WRITE LOCAL by server"))
   }
 
   test("write write conflict using TableLock & tispark") {
@@ -76,7 +75,6 @@ class WriteWriteConflictSuite extends ConcurrentcyTest {
     }
     assert(
       caught.getMessage
-        .startsWith("Table 'test_concurrency_write_read' was locked in WRITE LOCAL by server")
-    )
+        .startsWith("Table 'test_concurrency_write_read' was locked in WRITE LOCAL by server"))
   }
 }

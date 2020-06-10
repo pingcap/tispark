@@ -38,13 +38,14 @@ import scala.collection.JavaConverters._
  * is a list of primitive long which represents the handles lie in that region.
  *
  */
-class TiHandleRDD(override val dagRequest: TiDAGRequest,
-                  override val physicalId: Long,
-                  val output: Seq[Attribute],
-                  override val tiConf: TiConfiguration,
-                  override val tableRef: TiTableReference,
-                  @transient private val session: TiSession,
-                  @transient private val sparkSession: SparkSession)
+class TiHandleRDD(
+    override val dagRequest: TiDAGRequest,
+    override val physicalId: Long,
+    val output: Seq[Attribute],
+    override val tiConf: TiConfiguration,
+    override val tableRef: TiTableReference,
+    @transient private val session: TiSession,
+    @transient private val sparkSession: SparkSession)
     extends TiRDD(dagRequest, physicalId, tiConf, tableRef, session, sparkSession) {
 
   private val outputTypes = output.map(_.dataType)

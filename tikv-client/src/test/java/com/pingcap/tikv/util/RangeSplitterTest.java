@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tikv.util;
 
 import static com.pingcap.tikv.GrpcUtils.encodeKey;
@@ -27,40 +42,6 @@ import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Peer;
 
 public class RangeSplitterTest {
-  static class MockRegionManager extends RegionManager {
-    private final Map<KeyRange, TiRegion> mockRegionMap;
-
-    MockRegionManager(List<KeyRange> ranges) {
-      super(null, null);
-      mockRegionMap =
-          ranges.stream().collect(Collectors.toMap(kr -> kr, kr -> region(ranges.indexOf(kr), kr)));
-    }
-
-    @Override
-    public TiRegion getRegionById(long regionId) {
-      return mockRegionMap
-          .entrySet()
-          .stream()
-          .filter(e -> e.getValue().getId() == regionId)
-          .findFirst()
-          .get()
-          .getValue();
-    }
-
-    @Override
-    public Pair<TiRegion, Metapb.Store> getRegionStorePairByKey(
-        ByteString key, TiStoreType storeType) {
-      for (Map.Entry<KeyRange, TiRegion> entry : mockRegionMap.entrySet()) {
-        KeyRange range = entry.getKey();
-        if (KeyRangeUtils.makeRange(range.getStart(), range.getEnd()).contains(Key.toRawKey(key))) {
-          TiRegion region = entry.getValue();
-          return Pair.create(region, Metapb.Store.newBuilder().setId(region.getId()).build());
-        }
-      }
-      return null;
-    }
-  }
-
   private static KeyRange keyRange(Long s, Long e) {
     ByteString sKey = ByteString.EMPTY;
     ByteString eKey = ByteString.EMPTY;
@@ -293,5 +274,39 @@ public class RangeSplitterTest {
     assertEquals(2, result.get(4).size());
     assertEquals(2, result.get(5).size());
     assertEquals(3, result.get(6).size());
+  }
+
+  static class MockRegionManager extends RegionManager {
+    private final Map<KeyRange, TiRegion> mockRegionMap;
+
+    MockRegionManager(List<KeyRange> ranges) {
+      super(null, null);
+      mockRegionMap =
+          ranges.stream().collect(Collectors.toMap(kr -> kr, kr -> region(ranges.indexOf(kr), kr)));
+    }
+
+    @Override
+    public TiRegion getRegionById(long regionId) {
+      return mockRegionMap
+          .entrySet()
+          .stream()
+          .filter(e -> e.getValue().getId() == regionId)
+          .findFirst()
+          .get()
+          .getValue();
+    }
+
+    @Override
+    public Pair<TiRegion, Metapb.Store> getRegionStorePairByKey(
+        ByteString key, TiStoreType storeType) {
+      for (Map.Entry<KeyRange, TiRegion> entry : mockRegionMap.entrySet()) {
+        KeyRange range = entry.getKey();
+        if (KeyRangeUtils.makeRange(range.getStart(), range.getEnd()).contains(Key.toRawKey(key))) {
+          TiRegion region = entry.getValue();
+          return Pair.create(region, Metapb.Store.newBuilder().setId(region.getId()).build());
+        }
+      }
+      return null;
+    }
   }
 }

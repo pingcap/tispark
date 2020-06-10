@@ -15,7 +15,10 @@
 
 package com.pingcap.tikv.txn;
 
-import static junit.framework.TestCase.*;
+import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertFalse;
+import static junit.framework.TestCase.assertTrue;
+import static junit.framework.TestCase.fail;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.KeyException;

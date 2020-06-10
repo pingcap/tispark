@@ -17,14 +17,12 @@ package com.pingcap.tikv.columnar;
 
 import org.apache.spark.sql.vectorized.ColumnarBatch;
 
-/**
- * A helper class to create {@link ColumnarBatch} from {@link TiChunk}
- */
+/** A helper class to create {@link ColumnarBatch} from {@link TiChunk} */
 public final class TiColumnarBatchHelper {
   public static ColumnarBatch createColumnarBatch(TiChunk chunk) {
     int colLen = chunk.numOfCols();
     TiColumnVectorAdapter[] columns = new TiColumnVectorAdapter[colLen];
-    for(int i = 0; i < colLen; i++) {
+    for (int i = 0; i < colLen; i++) {
       columns[i] = new TiColumnVectorAdapter(chunk.column(i));
     }
     ColumnarBatch batch = new ColumnarBatch(columns);

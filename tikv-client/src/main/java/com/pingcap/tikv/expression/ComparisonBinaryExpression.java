@@ -16,7 +16,12 @@
 package com.pingcap.tikv.expression;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.*;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.EQUAL;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.GREATER_EQUAL;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.GREATER_THAN;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.LESS_EQUAL;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.LESS_THAN;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.NOT_EQUAL;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
@@ -28,13 +33,17 @@ import java.util.List;
 import java.util.Objects;
 
 public class ComparisonBinaryExpression extends Expression {
-  public enum Operator {
-    EQUAL,
-    NOT_EQUAL,
-    LESS_THAN,
-    LESS_EQUAL,
-    GREATER_THAN,
-    GREATER_EQUAL
+  private final Expression left;
+  private final Expression right;
+  private final Operator compOperator;
+  private transient NormalizedPredicate normalizedPredicate;
+
+  public ComparisonBinaryExpression(Operator operator, Expression left, Expression right) {
+    super(IntegerType.BOOLEAN);
+    this.resolved = true;
+    this.left = requireNonNull(left, "left expression is null");
+    this.right = requireNonNull(right, "right expression is null");
+    this.compOperator = requireNonNull(operator, "type is null");
   }
 
   public static ComparisonBinaryExpression equal(Expression left, Expression right) {
@@ -59,54 +68,6 @@ public class ComparisonBinaryExpression extends Expression {
 
   public static ComparisonBinaryExpression greaterEqual(Expression left, Expression right) {
     return new ComparisonBinaryExpression(GREATER_EQUAL, left, right);
-  }
-
-  public static class NormalizedPredicate {
-    private final ComparisonBinaryExpression pred;
-    private TypedKey key;
-
-    NormalizedPredicate(ComparisonBinaryExpression pred) {
-      checkArgument(pred.getLeft() instanceof ColumnRef);
-      checkArgument(pred.getRight() instanceof Constant);
-      this.pred = pred;
-    }
-
-    public ColumnRef getColumnRef() {
-      return (ColumnRef) pred.getLeft();
-    }
-
-    public Constant getValue() {
-      return (Constant) pred.getRight();
-    }
-
-    public Operator getType() {
-      return pred.getComparisonType();
-    }
-
-    TypedKey getTypedLiteral() {
-      return getTypedLiteral(DataType.UNSPECIFIED_LEN);
-    }
-
-    public TypedKey getTypedLiteral(int prefixLength) {
-      if (key == null) {
-        DataType colRefType = getColumnRef().getDataType();
-        key = TypedKey.toTypedKey(getValue().getValue(), colRefType, prefixLength);
-      }
-      return key;
-    }
-  }
-
-  private final Expression left;
-  private final Expression right;
-  private final Operator compOperator;
-  private transient NormalizedPredicate normalizedPredicate;
-
-  public ComparisonBinaryExpression(Operator operator, Expression left, Expression right) {
-    super(IntegerType.BOOLEAN);
-    this.resolved = true;
-    this.left = requireNonNull(left, "left expression is null");
-    this.right = requireNonNull(right, "right expression is null");
-    this.compOperator = requireNonNull(operator, "type is null");
   }
 
   @Override
@@ -198,5 +159,49 @@ public class ComparisonBinaryExpression extends Expression {
   @Override
   public int hashCode() {
     return Objects.hash(compOperator, left, right);
+  }
+
+  public enum Operator {
+    EQUAL,
+    NOT_EQUAL,
+    LESS_THAN,
+    LESS_EQUAL,
+    GREATER_THAN,
+    GREATER_EQUAL
+  }
+
+  public static class NormalizedPredicate {
+    private final ComparisonBinaryExpression pred;
+    private TypedKey key;
+
+    NormalizedPredicate(ComparisonBinaryExpression pred) {
+      checkArgument(pred.getLeft() instanceof ColumnRef);
+      checkArgument(pred.getRight() instanceof Constant);
+      this.pred = pred;
+    }
+
+    public ColumnRef getColumnRef() {
+      return (ColumnRef) pred.getLeft();
+    }
+
+    public Constant getValue() {
+      return (Constant) pred.getRight();
+    }
+
+    public Operator getType() {
+      return pred.getComparisonType();
+    }
+
+    TypedKey getTypedLiteral() {
+      return getTypedLiteral(DataType.UNSPECIFIED_LEN);
+    }
+
+    public TypedKey getTypedLiteral(int prefixLength) {
+      if (key == null) {
+        DataType colRefType = getColumnRef().getDataType();
+        key = TypedKey.toTypedKey(getValue().getValue(), colRefType, prefixLength);
+      }
+      return key;
+    }
   }
 }

@@ -29,8 +29,7 @@ class Between0Suite extends BaseInitialOnceTest {
     "select tp_datetime from full_data_type_table_idx  where tp_datetime between '2043-11-28 00:00:00' and '2017-09-07 11:11:11' order by id_dt ",
     "select tp_date from full_data_type_table_idx  where tp_date between '2017-11-02' and '2043-11-28' order by id_dt ",
     "select tp_real from full_data_type_table_idx  where tp_real between 4.44 and 0.5194052764001038 order by id_dt",
-    "select tp_real from full_data_type_table_idx  where tp_real between 0.5194052764001038 and 4.44 order by id_dt "
-  )
+    "select tp_real from full_data_type_table_idx  where tp_real between 0.5194052764001038 and 4.44 order by id_dt ")
 
   allCases foreach { query =>
     {

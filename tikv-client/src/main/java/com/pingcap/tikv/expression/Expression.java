@@ -20,12 +20,7 @@ import java.io.Serializable;
 import java.util.List;
 
 public abstract class Expression implements Serializable {
-  public abstract List<Expression> getChildren();
-
-  public abstract <R, C> R accept(Visitor<R, C> visitor, C context);
-
   protected DataType dataType;
-
   protected boolean resolved;
 
   public Expression(DataType dataType) {
@@ -36,6 +31,10 @@ public abstract class Expression implements Serializable {
   public Expression() {
     this.resolved = false;
   }
+
+  public abstract List<Expression> getChildren();
+
+  public abstract <R, C> R accept(Visitor<R, C> visitor, C context);
 
   public boolean isResolved() {
     return getChildren().stream().allMatch(Expression::isResolved);

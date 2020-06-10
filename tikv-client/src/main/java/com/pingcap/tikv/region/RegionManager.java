@@ -49,7 +49,7 @@ public class RegionManager {
   // https://github.com/pingcap/tispark/issues/1170
   private final RegionCache cache;
 
-  private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
+  private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
 
   // To avoid double retrieval, we used the async version of grpc
   // When rpc not returned, instead of call again, it wait for previous one done
@@ -57,6 +57,106 @@ public class RegionManager {
       ReadOnlyPDClient pdClient, Function<CacheInvalidateEvent, Void> cacheInvalidateCallback) {
     this.cache = new RegionCache(pdClient);
     this.cacheInvalidateCallback = cacheInvalidateCallback;
+  }
+
+  public Function<CacheInvalidateEvent, Void> getCacheInvalidateCallback() {
+    return cacheInvalidateCallback;
+  }
+
+  public TiRegion getRegionByKey(ByteString key) {
+    return cache.getRegionByKey(key);
+  }
+
+  public TiRegion getRegionById(long regionId) {
+    return cache.getRegionById(regionId);
+  }
+
+  public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key) {
+    return getRegionStorePairByKey(key, TiStoreType.TiKV);
+  }
+
+  public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key, TiStoreType storeType) {
+    TiRegion region = cache.getRegionByKey(key);
+    if (region == null) {
+      throw new TiClientInternalException("Region not exist for key:" + formatBytesUTF8(key));
+    }
+    if (!region.isValid()) {
+      throw new TiClientInternalException("Region invalid: " + region.toString());
+    }
+
+    Store store = null;
+    if (storeType == TiStoreType.TiKV) {
+      Peer leader = region.getLeader();
+      store = cache.getStoreById(leader.getStoreId());
+    } else {
+      outerLoop:
+      for (Peer peer : region.getLearnerList()) {
+        Store s = getStoreById(peer.getStoreId());
+        for (Metapb.StoreLabel label : s.getLabelsList()) {
+          if (label.getKey().equals(storeType.getLabelKey())
+              && label.getValue().equals(storeType.getLabelValue())) {
+            store = s;
+            break outerLoop;
+          }
+        }
+      }
+      if (store == null) {
+        // clear the region cache so we may get the learner peer next time
+        cache.invalidateRegion(region.getId());
+      }
+    }
+
+    if (store == null) {
+      throw new TiClientInternalException(
+          "Cannot find valid store on " + storeType + " for region " + region.toString());
+    }
+
+    return Pair.create(region, store);
+  }
+
+  public Store getStoreById(long id) {
+    return cache.getStoreById(id);
+  }
+
+  public void onRegionStale(long regionId) {
+    cache.invalidateRegion(regionId);
+  }
+
+  public boolean updateLeader(long regionId, long storeId) {
+    TiRegion r = cache.regionCache.get(regionId);
+    if (r != null) {
+      if (!r.switchPeer(storeId)) {
+        // failed to switch leader, possibly region is outdated, we need to drop region cache from
+        // regionCache
+        logger.warn("Cannot find peer when updating leader (" + regionId + "," + storeId + ")");
+        // drop region cache using verId
+        cache.invalidateRegion(regionId);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Clears all cache when a TiKV server does not respond
+   *
+   * @param region region
+   */
+  public void onRequestFail(TiRegion region) {
+    onRequestFail(region.getId(), region.getLeader().getStoreId());
+  }
+
+  public void onRequestFail(long regionId, long storeId) {
+    cache.invalidateRegion(regionId);
+    cache.invalidateAllRegionForStore(storeId);
+  }
+
+  public void invalidateStore(long storeId) {
+    cache.invalidateStore(storeId);
+  }
+
+  public void invalidateRegion(long regionId) {
+    cache.invalidateRegion(regionId);
   }
 
   public static class RegionCache {
@@ -171,105 +271,5 @@ public class RegionManager {
         throw new GrpcException(e);
       }
     }
-  }
-
-  public Function<CacheInvalidateEvent, Void> getCacheInvalidateCallback() {
-    return cacheInvalidateCallback;
-  }
-
-  public TiRegion getRegionByKey(ByteString key) {
-    return cache.getRegionByKey(key);
-  }
-
-  public TiRegion getRegionById(long regionId) {
-    return cache.getRegionById(regionId);
-  }
-
-  public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key) {
-    return getRegionStorePairByKey(key, TiStoreType.TiKV);
-  }
-
-  public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key, TiStoreType storeType) {
-    TiRegion region = cache.getRegionByKey(key);
-    if (region == null) {
-      throw new TiClientInternalException("Region not exist for key:" + formatBytesUTF8(key));
-    }
-    if (!region.isValid()) {
-      throw new TiClientInternalException("Region invalid: " + region.toString());
-    }
-
-    Store store = null;
-    if (storeType == TiStoreType.TiKV) {
-      Peer leader = region.getLeader();
-      store = cache.getStoreById(leader.getStoreId());
-    } else {
-      outerLoop:
-      for (Peer peer : region.getLearnerList()) {
-        Store s = getStoreById(peer.getStoreId());
-        for (Metapb.StoreLabel label : s.getLabelsList()) {
-          if (label.getKey().equals(storeType.getLabelKey())
-              && label.getValue().equals(storeType.getLabelValue())) {
-            store = s;
-            break outerLoop;
-          }
-        }
-      }
-      if (store == null) {
-        // clear the region cache so we may get the learner peer next time
-        cache.invalidateRegion(region.getId());
-      }
-    }
-
-    if (store == null) {
-      throw new TiClientInternalException(
-          "Cannot find valid store on " + storeType + " for region " + region.toString());
-    }
-
-    return Pair.create(region, store);
-  }
-
-  public Store getStoreById(long id) {
-    return cache.getStoreById(id);
-  }
-
-  public void onRegionStale(long regionId) {
-    cache.invalidateRegion(regionId);
-  }
-
-  public boolean updateLeader(long regionId, long storeId) {
-    TiRegion r = cache.regionCache.get(regionId);
-    if (r != null) {
-      if (!r.switchPeer(storeId)) {
-        // failed to switch leader, possibly region is outdated, we need to drop region cache from
-        // regionCache
-        logger.warn("Cannot find peer when updating leader (" + regionId + "," + storeId + ")");
-        // drop region cache using verId
-        cache.invalidateRegion(regionId);
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Clears all cache when a TiKV server does not respond
-   *
-   * @param region region
-   */
-  public void onRequestFail(TiRegion region) {
-    onRequestFail(region.getId(), region.getLeader().getStoreId());
-  }
-
-  public void onRequestFail(long regionId, long storeId) {
-    cache.invalidateRegion(regionId);
-    cache.invalidateAllRegionForStore(storeId);
-  }
-
-  public void invalidateStore(long storeId) {
-    cache.invalidateStore(storeId);
-  }
-
-  public void invalidateRegion(long regionId) {
-    cache.invalidateRegion(regionId);
   }
 }

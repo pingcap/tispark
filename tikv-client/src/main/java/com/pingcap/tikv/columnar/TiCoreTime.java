@@ -43,7 +43,7 @@ public class TiCoreTime {
   private static final long MICROSECOND_BIT_FIELD_MASK =
       ((1L << MICROSECOND_BIT_FIELD_WIDTH) - 1) << MICROSECOND_BIT_FIELD_OFFSET;
 
-  private long coreTime;
+  private final long coreTime;
 
   public TiCoreTime(long coreTime) {
     this.coreTime = coreTime;

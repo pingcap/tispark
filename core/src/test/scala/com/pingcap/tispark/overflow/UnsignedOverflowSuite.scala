@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.overflow
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
@@ -28,36 +43,12 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testTinyIntUnsignedUpperBound(true)
   }
 
-  private def testTinyIntUnsignedUpperBound(testKey: Boolean): Unit = {
-    dropTable()
-    if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT UNSIGNED primary key)"
-      )
-    } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT UNSIGNED)"
-      )
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
     }
-
-    val row = Row(256)
-    val schema = StructType(
-      List(
-        StructField("c1", IntegerType)
-      )
-    )
-    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
-    val tidbErrorMsg = "value 256 > upperBound 255"
-
-    compareTiDBWriteFailureWithJDBC(
-      List(row),
-      schema,
-      jdbcErrorClass,
-      tidbErrorClass,
-      tidbErrorMsg
-    )
-  }
 
   test("Test TINYINT UNSIGNED Lower bound Overflow") {
     if (!supportBatchWrite) {
@@ -73,35 +64,26 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testTinyIntUnsignedLowerBound(false)
   }
 
-  private def testTinyIntUnsignedLowerBound(testKey: Boolean): Unit = {
+  private def testTinyIntUnsignedUpperBound(testKey: Boolean): Unit = {
     dropTable()
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT UNSIGNED primary key)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 TINYINT UNSIGNED primary key)")
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT UNSIGNED)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 TINYINT UNSIGNED)")
     }
 
-    val row = Row(-1)
-    val schema = StructType(
-      List(
-        StructField("c1", IntegerType)
-      )
-    )
+    val row = Row(256)
+    val schema = StructType(List(StructField("c1", IntegerType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
-    val tidbErrorMsg = "value -1 < lowerBound 0"
+    val tidbErrorMsg = "value 256 > upperBound 255"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
       jdbcErrorClass,
       tidbErrorClass,
-      tidbErrorMsg
-    )
+      tidbErrorMsg)
   }
 
   test("Test SMALLINT UNSIGNED Upper bound Overflow") {
@@ -118,35 +100,26 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testSmallIntUnsignedUpperBound(true)
   }
 
-  private def testSmallIntUnsignedUpperBound(testKey: Boolean): Unit = {
+  private def testTinyIntUnsignedLowerBound(testKey: Boolean): Unit = {
     dropTable()
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT UNSIGNED primary key)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 TINYINT UNSIGNED primary key)")
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT UNSIGNED)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 TINYINT UNSIGNED)")
     }
 
-    val row = Row(65536)
-    val schema = StructType(
-      List(
-        StructField("c1", IntegerType)
-      )
-    )
+    val row = Row(-1)
+    val schema = StructType(List(StructField("c1", IntegerType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
-    val tidbErrorMsg = "value 65536 > upperBound 65535"
+    val tidbErrorMsg = "value -1 < lowerBound 0"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
       jdbcErrorClass,
       tidbErrorClass,
-      tidbErrorMsg
-    )
+      tidbErrorMsg)
   }
 
   test("Test SMALLINT UNSIGNED Lower bound Overflow") {
@@ -163,35 +136,26 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testSmallIntUnsignedLowerBound(true)
   }
 
-  private def testSmallIntUnsignedLowerBound(testKey: Boolean): Unit = {
+  private def testSmallIntUnsignedUpperBound(testKey: Boolean): Unit = {
     dropTable()
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT UNSIGNED primary key)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 SMALLINT UNSIGNED primary key)")
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT UNSIGNED)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 SMALLINT UNSIGNED)")
     }
 
-    val row = Row(-1)
-    val schema = StructType(
-      List(
-        StructField("c1", IntegerType)
-      )
-    )
+    val row = Row(65536)
+    val schema = StructType(List(StructField("c1", IntegerType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
-    val tidbErrorMsg = "value -1 < lowerBound 0"
+    val tidbErrorMsg = "value 65536 > upperBound 65535"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
       jdbcErrorClass,
       tidbErrorClass,
-      tidbErrorMsg
-    )
+      tidbErrorMsg)
   }
 
   test("Test MEDIUMINT UNSIGNED Upper bound Overflow") {
@@ -208,35 +172,26 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testMediumIntUnsignedUpperBound(true)
   }
 
-  private def testMediumIntUnsignedUpperBound(testKey: Boolean): Unit = {
+  private def testSmallIntUnsignedLowerBound(testKey: Boolean): Unit = {
     dropTable()
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT UNSIGNED primary key)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 SMALLINT UNSIGNED primary key)")
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT UNSIGNED)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 SMALLINT UNSIGNED)")
     }
 
-    val row = Row(16777216)
-    val schema = StructType(
-      List(
-        StructField("c1", IntegerType)
-      )
-    )
+    val row = Row(-1)
+    val schema = StructType(List(StructField("c1", IntegerType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
-    val tidbErrorMsg = "value 16777216 > upperBound 16777215"
+    val tidbErrorMsg = "value -1 < lowerBound 0"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
       jdbcErrorClass,
       tidbErrorClass,
-      tidbErrorMsg
-    )
+      tidbErrorMsg)
   }
 
   test("Test MEDIUMINT UNSIGNED Lower bound Overflow") {
@@ -253,35 +208,26 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testMediumIntUnsignedLowerBound(true)
   }
 
-  private def testMediumIntUnsignedLowerBound(testKey: Boolean): Unit = {
+  private def testMediumIntUnsignedUpperBound(testKey: Boolean): Unit = {
     dropTable()
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT UNSIGNED primary key)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 MEDIUMINT UNSIGNED primary key)")
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT UNSIGNED)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 MEDIUMINT UNSIGNED)")
     }
 
-    val row = Row(-1)
-    val schema = StructType(
-      List(
-        StructField("c1", IntegerType)
-      )
-    )
+    val row = Row(16777216)
+    val schema = StructType(List(StructField("c1", IntegerType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
-    val tidbErrorMsg = "value -1 < lowerBound 0"
+    val tidbErrorMsg = "value 16777216 > upperBound 16777215"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
       jdbcErrorClass,
       tidbErrorClass,
-      tidbErrorMsg
-    )
+      tidbErrorMsg)
   }
 
   test("Test INT UNSIGNED Upper bound Overflow") {
@@ -298,35 +244,26 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testIntUnsignedUpperBound(true)
   }
 
-  private def testIntUnsignedUpperBound(testKey: Boolean): Unit = {
+  private def testMediumIntUnsignedLowerBound(testKey: Boolean): Unit = {
     dropTable()
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 INT UNSIGNED primary key)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 MEDIUMINT UNSIGNED primary key)")
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 INT UNSIGNED)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 MEDIUMINT UNSIGNED)")
     }
 
-    val row = Row(4294967296L)
-    val schema = StructType(
-      List(
-        StructField("c1", LongType)
-      )
-    )
+    val row = Row(-1)
+    val schema = StructType(List(StructField("c1", IntegerType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
-    val tidbErrorMsg = "value 4294967296 > upperBound 4294967295"
+    val tidbErrorMsg = "value -1 < lowerBound 0"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
       jdbcErrorClass,
       tidbErrorClass,
-      tidbErrorMsg
-    )
+      tidbErrorMsg)
   }
 
   test("Test INT UNSIGNED Lower bound Overflow") {
@@ -343,37 +280,26 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testIntUnsignedLowerBound(true)
   }
 
-  private def testIntUnsignedLowerBound(testKey: Boolean): Unit = {
+  private def testIntUnsignedUpperBound(testKey: Boolean): Unit = {
     dropTable()
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 INT UNSIGNED primary key)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 INT UNSIGNED primary key)")
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 INT UNSIGNED)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 INT UNSIGNED)")
     }
 
-    val row = Row(-1)
-    val schema = StructType(
-      List(
-        StructField("c1", LongType)
-      )
-    )
-    val jdbcErrorClass = classOf[java.lang.RuntimeException]
-    val tidbErrorClass = classOf[java.lang.RuntimeException]
-    val tidbErrorMsgStartWith =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
+    val row = Row(4294967296L)
+    val schema = StructType(List(StructField("c1", LongType)))
+    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
+    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorMsg = "value 4294967296 > upperBound 4294967295"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
       jdbcErrorClass,
       tidbErrorClass,
-      tidbErrorMsgStartWith,
-      msgStartWith = true
-    )
+      tidbErrorMsg)
   }
 
   test("Test BIGINT UNSIGNED Upper bound Overflow") {
@@ -390,35 +316,28 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testBigIntUnsignedUpperBound(true)
   }
 
-  private def testBigIntUnsignedUpperBound(testKey: Boolean): Unit = {
+  private def testIntUnsignedLowerBound(testKey: Boolean): Unit = {
     dropTable()
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT UNSIGNED primary key)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 INT UNSIGNED primary key)")
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT UNSIGNED)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 INT UNSIGNED)")
     }
 
-    val row = Row("18446744073709551616")
-    val schema = StructType(
-      List(
-        StructField("c1", StringType)
-      )
-    )
-    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[java.lang.NumberFormatException]
-    val tidbErrorMsg = "Too large for unsigned long: 18446744073709551616"
+    val row = Row(-1)
+    val schema = StructType(List(StructField("c1", LongType)))
+    val jdbcErrorClass = classOf[java.lang.RuntimeException]
+    val tidbErrorClass = classOf[java.lang.RuntimeException]
+    val tidbErrorMsgStartWith =
+      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
       jdbcErrorClass,
       tidbErrorClass,
-      tidbErrorMsg
-    )
+      tidbErrorMsgStartWith,
+      msgStartWith = true)
   }
 
   test("Test BIGINT UNSIGNED Lower bound Overflow") {
@@ -435,24 +354,38 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testBigIntUnsignedLowerBound(true)
   }
 
+  private def testBigIntUnsignedUpperBound(testKey: Boolean): Unit = {
+    dropTable()
+    if (testKey) {
+      jdbcUpdate(s"create table $dbtable(c1 BIGINT UNSIGNED primary key)")
+    } else {
+      jdbcUpdate(s"create table $dbtable(c1 BIGINT UNSIGNED)")
+    }
+
+    val row = Row("18446744073709551616")
+    val schema = StructType(List(StructField("c1", StringType)))
+    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
+    val tidbErrorClass = classOf[java.lang.NumberFormatException]
+    val tidbErrorMsg = "Too large for unsigned long: 18446744073709551616"
+
+    compareTiDBWriteFailureWithJDBC(
+      List(row),
+      schema,
+      jdbcErrorClass,
+      tidbErrorClass,
+      tidbErrorMsg)
+  }
+
   private def testBigIntUnsignedLowerBound(testKey: Boolean): Unit = {
     dropTable()
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT UNSIGNED primary key)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 BIGINT UNSIGNED primary key)")
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT UNSIGNED)"
-      )
+      jdbcUpdate(s"create table $dbtable(c1 BIGINT UNSIGNED)")
     }
 
     val row = Row("-1")
-    val schema = StructType(
-      List(
-        StructField("c1", StringType)
-      )
-    )
+    val schema = StructType(List(StructField("c1", StringType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
     val tidbErrorClass = classOf[java.lang.NumberFormatException]
     val tidbErrorMsg = "-1"
@@ -462,14 +395,6 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
       schema,
       jdbcErrorClass,
       tidbErrorClass,
-      tidbErrorMsg
-    )
+      tidbErrorMsg)
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

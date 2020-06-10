@@ -18,7 +18,15 @@ package com.pingcap.tikv.expression;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tikv.exception.TiExpressionException;
-import com.pingcap.tikv.types.*;
+import com.pingcap.tikv.types.BytesType;
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DateTimeType;
+import com.pingcap.tikv.types.DateType;
+import com.pingcap.tikv.types.DecimalType;
+import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.RealType;
+import com.pingcap.tikv.types.StringType;
+import com.pingcap.tikv.types.TimestampType;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
@@ -31,6 +39,14 @@ import org.joda.time.DateTime;
 // TODO: This might need a refactor to accept an DataType?
 public class Constant extends Expression {
   private final Object value;
+  private final BigDecimal UNSIGNED_LONG_MAX =
+      new BigDecimal(UnsignedLong.fromLongBits(-1).toString());
+
+  public Constant(Object value, DataType type) {
+    this.value = value;
+    this.dataType = (type == null && value != null) ? getDefaultType(value) : type;
+    this.resolved = true;
+  }
 
   public static Constant create(Object value, DataType type) {
     return new Constant(value, type);
@@ -39,12 +55,6 @@ public class Constant extends Expression {
   @Deprecated
   public static Constant create(Object value) {
     return new Constant(value, null);
-  }
-
-  public Constant(Object value, DataType type) {
-    this.value = value;
-    this.dataType = (type == null && value != null) ? getDefaultType(value) : type;
-    this.resolved = true;
   }
 
   protected static boolean isIntegerType(Object value) {
@@ -124,8 +134,6 @@ public class Constant extends Expression {
   public <R, C> R accept(Visitor<R, C> visitor, C context) {
     return visitor.visit(this, context);
   }
-
-  private BigDecimal UNSIGNED_LONG_MAX = new BigDecimal(UnsignedLong.fromLongBits(-1).toString());
 
   public boolean isOverflowed() {
     if (this.dataType instanceof IntegerType) {

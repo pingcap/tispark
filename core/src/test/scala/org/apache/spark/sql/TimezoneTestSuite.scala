@@ -160,9 +160,17 @@ class TimezoneTestSuite extends BaseTiSparkTest {
     assert(testData.equals(resultData.toString))
   }
 
-  protected def tidbWrite(rows: List[Row],
-                          schema: StructType,
-                          param: Option[Map[String, String]] = None): Unit = {
+  override def afterAll(): Unit =
+    try {
+      tidbStmt.execute(s"drop table if exists $table")
+    } finally {
+      super.afterAll()
+    }
+
+  protected def tidbWrite(
+      rows: List[Row],
+      schema: StructType,
+      param: Option[Map[String, String]] = None): Unit = {
     val data: RDD[Row] = sc.makeRDD(rows)
     val df = sqlContext.createDataFrame(data, schema)
     df.write
@@ -193,11 +201,4 @@ class TimezoneTestSuite extends BaseTiSparkTest {
       .option("database", database)
       .option("table", table)
       .load()
-
-  override def afterAll(): Unit =
-    try {
-      tidbStmt.execute(s"drop table if exists $table")
-    } finally {
-      super.afterAll()
-    }
 }

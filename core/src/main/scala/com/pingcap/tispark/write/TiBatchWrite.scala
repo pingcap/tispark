@@ -18,8 +18,8 @@ package com.pingcap.tispark.write
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer}
 import com.pingcap.tikv.{TTLManager, TiDBJDBCClient, _}
-import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.TiDBUtils
+import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -29,14 +29,14 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 
 object TiBatchWrite {
-  // Milliseconds
-  private val MIN_DELAY_CLEAN_TABLE_LOCK = 60000
-  private val DELAY_CLEAN_TABLE_LOCK_AND_COMMIT_BACKOFF_DELTA = 30000
-  private val PRIMARY_KEY_COMMIT_BACKOFF = MIN_DELAY_CLEAN_TABLE_LOCK - DELAY_CLEAN_TABLE_LOCK_AND_COMMIT_BACKOFF_DELTA
-
   type SparkRow = org.apache.spark.sql.Row
   type TiRow = com.pingcap.tikv.row.Row
   type TiDataType = com.pingcap.tikv.types.DataType
+  // Milliseconds
+  private val MIN_DELAY_CLEAN_TABLE_LOCK = 60000
+  private val DELAY_CLEAN_TABLE_LOCK_AND_COMMIT_BACKOFF_DELTA = 30000
+  private val PRIMARY_KEY_COMMIT_BACKOFF =
+    MIN_DELAY_CLEAN_TABLE_LOCK - DELAY_CLEAN_TABLE_LOCK_AND_COMMIT_BACKOFF_DELTA
 
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
@@ -47,29 +47,30 @@ object TiBatchWrite {
 
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
-  def write(dataToWrite: Map[DBTable, DataFrame],
-            sparkSession: SparkSession,
-            parameters: Map[String, String]): Unit = {
+  def write(
+      dataToWrite: Map[DBTable, DataFrame],
+      sparkSession: SparkSession,
+      parameters: Map[String, String]): Unit = {
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
         new TiBatchWrite(
           dataToWrite,
           tiContext,
-          new TiDBOptions(parameters ++ Map(TiDBOptions.TIDB_MULTI_TABLES -> "true"))
-        ).write()
+          new TiDBOptions(parameters ++ Map(TiDBOptions.TIDB_MULTI_TABLES -> "true"))).write()
       case None =>
         throw new TiBatchWriteException("TiExtensions is disable!")
     }
   }
 }
 
-class TiBatchWrite(@transient val dataToWrite: Map[DBTable, DataFrame],
-                   @transient val tiContext: TiContext,
-                   options: TiDBOptions)
+class TiBatchWrite(
+    @transient val dataToWrite: Map[DBTable, DataFrame],
+    @transient val tiContext: TiContext,
+    options: TiDBOptions)
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  import TiBatchWrite._
+  import com.pingcap.tispark.write.TiBatchWrite._
 
   private var tiConf: TiConfiguration = _
   @transient private var tiSession: TiSession = _
@@ -118,8 +119,7 @@ class TiBatchWrite(@transient val dataToWrite: Map[DBTable, DataFrame],
     // check if write enable
     if (!tiContext.tiConf.isWriteEnable) {
       throw new TiBatchWriteException(
-        "tispark batch write is disabled! set spark.tispark.write.enable to enable."
-      )
+        "tispark batch write is disabled! set spark.tispark.write.enable to enable.")
     }
 
     // initialize
@@ -141,8 +141,7 @@ class TiBatchWrite(@transient val dataToWrite: Map[DBTable, DataFrame],
             options.setDBTable(dbTable),
             tiConf,
             tiDBJDBCClient,
-            isEnableSplitRegion
-          )
+            isEnableSplitRegion)
       }.toList
     }
 
@@ -155,7 +154,7 @@ class TiBatchWrite(@transient val dataToWrite: Map[DBTable, DataFrame],
     // check empty
     var allEmpty = true
     tiBatchWriteTables.foreach { table =>
-      if (!table.isDFEmpty()) {
+      if (!table.isDFEmpty) {
         allEmpty = false
       }
     }
@@ -165,7 +164,7 @@ class TiBatchWrite(@transient val dataToWrite: Map[DBTable, DataFrame],
     }
 
     // lock table
-    useTableLock = getUseTableLock()
+    useTableLock = getUseTableLock
     if (useTableLock) {
       tiBatchWriteTables.foreach(_.lockTable())
     } else {
@@ -235,10 +234,7 @@ class TiBatchWrite(@transient val dataToWrite: Map[DBTable, DataFrame],
         new TwoPhaseCommitter(tiConf, startTs, lockTTLSeconds * 1000)
 
       val pairs = iterator.map { keyValue =>
-        new BytePairWrapper(
-          keyValue._1.bytes,
-          keyValue._2
-        )
+        new BytePairWrapper(keyValue._1.bytes, keyValue._2)
       }.asJava
 
       ti2PCClientOnExecutor.prewriteSecondaryKeys(primaryKey.bytes, pairs)
@@ -262,8 +258,7 @@ class TiBatchWrite(@transient val dataToWrite: Map[DBTable, DataFrame],
     // check commitTS
     if (commitTs <= startTs) {
       throw new TiBatchWriteException(
-        s"invalid transaction tso with startTs=$startTs, commitTs=$commitTs"
-      )
+        s"invalid transaction tso with startTs=$startTs, commitTs=$commitTs")
     }
 
     // check schema change
@@ -318,7 +313,7 @@ class TiBatchWrite(@transient val dataToWrite: Map[DBTable, DataFrame],
     }
   }
 
-  private def getUseTableLock(): Boolean = {
+  private def getUseTableLock: Boolean = {
     if (!options.useTableLock(StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient))) {
       false
     } else {
@@ -327,8 +322,7 @@ class TiBatchWrite(@transient val dataToWrite: Map[DBTable, DataFrame],
           true
         } else {
           logger.warn(
-            s"table lock disabled! to enable table lock, please set tidb config: delay-clean-table-lock >= $MIN_DELAY_CLEAN_TABLE_LOCK"
-          )
+            s"table lock disabled! to enable table lock, please set tidb config: delay-clean-table-lock >= $MIN_DELAY_CLEAN_TABLE_LOCK")
           false
         }
       } else {
@@ -337,8 +331,9 @@ class TiBatchWrite(@transient val dataToWrite: Map[DBTable, DataFrame],
     }
   }
 
-  private def mergeSparkConfWithDataSourceConf(conf: SparkConf,
-                                               options: TiDBOptions): TiConfiguration = {
+  private def mergeSparkConfWithDataSourceConf(
+      conf: SparkConf,
+      options: TiDBOptions): TiConfiguration = {
     val clonedConf = conf.clone()
     // priority: data source config > spark config
     clonedConf.setAll(options.parameters)

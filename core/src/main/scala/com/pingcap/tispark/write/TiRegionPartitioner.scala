@@ -21,7 +21,15 @@ import com.pingcap.tikv.key.Key
 import com.pingcap.tikv.region.TiRegion
 import org.apache.spark.Partitioner
 
-class TiRegionPartitioner(regions: util.List[TiRegion], writeConcurrency: Int) extends Partitioner {
+class TiRegionPartitioner(regions: util.List[TiRegion], writeConcurrency: Int)
+    extends Partitioner {
+  override def getPartition(key: Any): Int = {
+    val serializableKey = key.asInstanceOf[SerializableKey]
+    val rawKey = Key.toRawKey(serializableKey.bytes)
+
+    binarySearch(rawKey) % numPartitions
+  }
+
   def binarySearch(key: Key): Int = {
     if (regions.get(0).contains(key)) {
       return 0
@@ -41,12 +49,6 @@ class TiRegionPartitioner(regions: util.List[TiRegion], writeConcurrency: Int) e
     l
   }
 
-  override def numPartitions: Int = if (writeConcurrency <= 0) regions.size() else writeConcurrency
-
-  override def getPartition(key: Any): Int = {
-    val serializableKey = key.asInstanceOf[SerializableKey]
-    val rawKey = Key.toRawKey(serializableKey.bytes)
-
-    binarySearch(rawKey) % numPartitions
-  }
+  override def numPartitions: Int =
+    if (writeConcurrency <= 0) regions.size() else writeConcurrency
 }

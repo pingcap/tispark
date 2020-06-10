@@ -42,8 +42,7 @@ class CartesianTypeTestCases2Suite extends BaseInitialOnceTest {
     "select tp_bigint,tp_real from full_data_type_table  where tp_bigint <> tp_real order by id_dt  limit 20",
     "select tp_datetime,tp_timestamp from full_data_type_table  where tp_datetime <> tp_timestamp order by id_dt  limit 20",
     "select tp_real,tp_bigint from full_data_type_table  where tp_real <> tp_bigint order by id_dt  limit 20",
-    "select id_dt,tp_decimal from full_data_type_table  where id_dt <> tp_decimal order by id_dt  limit 20"
-  )
+    "select id_dt,tp_decimal from full_data_type_table  where id_dt <> tp_decimal order by id_dt  limit 20")
 
   allCases foreach { query =>
     {

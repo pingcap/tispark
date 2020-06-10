@@ -30,8 +30,7 @@ class Union0Suite extends BaseInitialOnceTest {
     "(select tp_real from full_data_type_table where tp_real < 0) union (select tp_real from full_data_type_table where tp_real > 0) order by tp_real",
     "(select tp_float from full_data_type_table where tp_float < 0) union (select tp_float from full_data_type_table where tp_float > 0) order by tp_float",
     "(select tp_double from full_data_type_table where tp_double < 0) union (select tp_double from full_data_type_table where tp_double > 0) order by tp_double",
-    "(select tp_tinyint from full_data_type_table where tp_tinyint < 0) union (select tp_tinyint from full_data_type_table where tp_tinyint > 0) order by tp_tinyint"
-  )
+    "(select tp_tinyint from full_data_type_table where tp_tinyint < 0) union (select tp_tinyint from full_data_type_table where tp_tinyint > 0) order by tp_tinyint")
 
   allCases foreach { query =>
     {

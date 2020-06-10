@@ -22,8 +22,8 @@ import org.antlr.v4.runtime.misc.Interval;
 
 // Check https://github.com/antlr/antlr4/blob/master/doc/resources/CaseChangingCharStream.java
 public class CaseChangingCharStream implements CharStream {
-  private final CharStream stream;
   final boolean upper;
+  private final CharStream stream;
 
   /**
    * Constructs a new CaseChangingCharStream wrapping the given {@link CharStream} forcing all

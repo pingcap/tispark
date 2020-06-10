@@ -24,4 +24,6 @@ echo '
 package com.pingcap.tispark
 
 object TiSparkVersion {
-  val version: String = "Release Version: '${TiSparkReleaseVersion}'\\nGit Commit Hash: '${TiSparkGitHash}'\\nGit Branch: '${TiSparkGitBranch}'\\nUTC Build Time: '${TiSparkBuildTS}'" }' > ${TISPARK_HOME}/core/src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
+  val version: String =
+    "Release Version: '${TiSparkReleaseVersion}'\\nGit Commit Hash: '${TiSparkGitHash}'\\nGit Branch: '${TiSparkGitBranch}'\\nUTC Build Time: '${TiSparkBuildTS}'"
+}' > ${TISPARK_HOME}/core/src/main/scala/com/pingcap/tispark/TiSparkVersion.scala

@@ -32,7 +32,13 @@ import java.util.stream.Collectors;
  * same type or not. If yes, no need for casting. If no, casting is needed here.
  */
 public class SchemaInfer {
-  private List<DataType> types;
+  private final List<DataType> types;
+
+  private SchemaInfer(TiDAGRequest dagRequest, boolean readHandle) {
+    types = new ArrayList<>();
+    dagRequest.init(readHandle);
+    extractFieldTypes(dagRequest, readHandle);
+  }
 
   public static SchemaInfer create(TiDAGRequest dagRequest) {
     return create(dagRequest, false);
@@ -40,12 +46,6 @@ public class SchemaInfer {
 
   public static SchemaInfer create(TiDAGRequest dagRequest, boolean readHandle) {
     return new SchemaInfer(dagRequest.copy(), readHandle);
-  }
-
-  private SchemaInfer(TiDAGRequest dagRequest, boolean readHandle) {
-    types = new ArrayList<>();
-    dagRequest.init(readHandle);
-    extractFieldTypes(dagRequest, readHandle);
   }
 
   /**

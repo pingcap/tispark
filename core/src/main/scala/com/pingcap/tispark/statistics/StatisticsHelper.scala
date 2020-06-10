@@ -32,21 +32,9 @@ import scala.collection.mutable
 
 object StatisticsHelper {
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
-  private val metaRequiredCols = Seq(
-    "version",
-    "table_id",
-    "modify_count",
-    "count"
-  )
-  private val histRequiredCols = Seq(
-    "table_id",
-    "is_index",
-    "hist_id",
-    "distinct_count",
-    "null_count",
-    "version",
-    "cm_sketch"
-  )
+  private val metaRequiredCols = Seq("version", "table_id", "modify_count", "count")
+  private val histRequiredCols =
+    Seq("table_id", "is_index", "hist_id", "distinct_count", "null_count", "version", "cm_sketch")
   private val bucketRequiredCols = Seq(
     "table_id",
     "is_index",
@@ -55,19 +43,19 @@ object StatisticsHelper {
     "count",
     "repeats",
     "lower_bound",
-    "upper_bound"
-  )
+    "upper_bound")
 
   private[statistics] def isManagerReady: Boolean =
     StatisticsManager.metaTable != null &&
       StatisticsManager.bucketTable != null &&
       StatisticsManager.histTable != null
 
-  private[statistics] def extractStatisticsDTO(row: Row,
-                                               table: TiTableInfo,
-                                               loadAll: Boolean,
-                                               neededColIds: mutable.ArrayBuffer[Long],
-                                               histTable: TiTableInfo): StatisticsDTO = {
+  private[statistics] def extractStatisticsDTO(
+      row: Row,
+      table: TiTableInfo,
+      loadAll: Boolean,
+      neededColIds: mutable.ArrayBuffer[Long],
+      histTable: TiTableInfo): StatisticsDTO = {
     if (row.fieldCount() < 6) return null
     if (row.getLong(0) != table.getId) {
       // table id should be the same as what we fetched via coprocessor
@@ -94,8 +82,7 @@ object StatisticsHelper {
       indexInfos = table.getIndices.filter { _.getId == histID }
       if (indexInfos.isEmpty) {
         logger.warn(
-          s"Cannot find index histogram id $histID in table info ${table.getName}[${table.getId}] now. It may be deleted."
-        )
+          s"Cannot find index histogram id $histID in table info ${table.getName}[${table.getId}] now. It may be deleted.")
         needed = false
         (1, null)
       } else {
@@ -105,8 +92,7 @@ object StatisticsHelper {
       colInfos = table.getColumns.filter { _.getId == histID }
       if (colInfos.isEmpty) {
         logger.warn(
-          s"Cannot find column histogram id $histID in table info ${table.getName}[${table.getId}] now. It may be deleted."
-        )
+          s"Cannot find column histogram id $histID in table info ${table.getName}[${table.getId}] now. It may be deleted.")
         needed = false
         (0, null)
       } else {
@@ -124,21 +110,18 @@ object StatisticsHelper {
         dataType,
         cMSketch,
         if (indexInfos.nonEmpty) indexInfos.head else null,
-        if (colInfos.nonEmpty) colInfos.head else null
-      )
+        if (colInfos.nonEmpty) colInfos.head else null)
     } else {
       null
     }
   }
 
-  private[statistics] def shouldUpdateHistogram(statistics: ColumnStatistics,
-                                                result: StatisticsResult): Boolean = {
-    if (statistics == null || result == null) return false
-    shouldUpdateHistogram(statistics.getHistogram, result.histogram)
-  }
+  private def checkColExists(table: TiTableInfo, column: String): Boolean =
+    table.getColumns.exists { _.matchName(column) }
 
-  private[statistics] def shouldUpdateHistogram(statistics: IndexStatistics,
-                                                result: StatisticsResult): Boolean = {
+  private[statistics] def shouldUpdateHistogram(
+      statistics: ColumnStatistics,
+      result: StatisticsResult): Boolean = {
     if (statistics == null || result == null) return false
     shouldUpdateHistogram(statistics.getHistogram, result.histogram)
   }
@@ -153,9 +136,17 @@ object StatisticsHelper {
     oldVersion.compareTo(newVersion) < 0
   }
 
-  private[statistics] def extractStatisticResult(histId: Long,
-                                                 rows: Iterator[Row],
-                                                 requests: Seq[StatisticsDTO]): StatisticsResult = {
+  private[statistics] def shouldUpdateHistogram(
+      statistics: IndexStatistics,
+      result: StatisticsResult): Boolean = {
+    if (statistics == null || result == null) return false
+    shouldUpdateHistogram(statistics.getHistogram, result.histogram)
+  }
+
+  private[statistics] def extractStatisticResult(
+      histId: Long,
+      rows: Iterator[Row],
+      requests: Seq[StatisticsDTO]): StatisticsResult = {
     val matches = requests.filter(_.colId == histId)
     if (matches.nonEmpty) {
       val matched = matches.head
@@ -212,13 +203,17 @@ object StatisticsHelper {
     }
   }
 
-  private def checkColExists(table: TiTableInfo, column: String): Boolean =
-    table.getColumns.exists { _.matchName(column) }
+  private[statistics] def buildHistogramsRequest(
+      histTable: TiTableInfo,
+      targetTblId: Long,
+      startTs: TiTimestamp): TiDAGRequest =
+    buildRequest(histTable, histRequiredCols, targetTblId, startTs)
 
-  private def buildRequest(tableInfo: TiTableInfo,
-                           requiredCols: Seq[String],
-                           targetTblId: Long,
-                           startTs: TiTimestamp): TiDAGRequest = {
+  private def buildRequest(
+      tableInfo: TiTableInfo,
+      requiredCols: Seq[String],
+      targetTblId: Long,
+      startTs: TiTimestamp): TiDAGRequest = {
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(tableInfo)
@@ -226,29 +221,22 @@ object StatisticsHelper {
         ComparisonBinaryExpression
           .equal(
             ColumnRef.create("table_id", IntegerType.BIGINT),
-            Constant.create(targetTblId, IntegerType.BIGINT)
-          )
-      )
-      .addRequiredCols(
-        requiredCols.filter(checkColExists(tableInfo, _))
-      )
+            Constant.create(targetTblId, IntegerType.BIGINT)))
+      .addRequiredCols(requiredCols.filter(checkColExists(tableInfo, _)))
       .setStartTs(startTs)
       .build(PushDownType.NORMAL)
   }
 
-  private[statistics] def buildHistogramsRequest(histTable: TiTableInfo,
-                                                 targetTblId: Long,
-                                                 startTs: TiTimestamp): TiDAGRequest =
-    buildRequest(histTable, histRequiredCols, targetTblId, startTs)
-
-  private[statistics] def buildMetaRequest(metaTable: TiTableInfo,
-                                           targetTblId: Long,
-                                           startTs: TiTimestamp): TiDAGRequest =
+  private[statistics] def buildMetaRequest(
+      metaTable: TiTableInfo,
+      targetTblId: Long,
+      startTs: TiTimestamp): TiDAGRequest =
     buildRequest(metaTable, metaRequiredCols, targetTblId, startTs)
 
-  private[statistics] def buildBucketRequest(bucketTable: TiTableInfo,
-                                             targetTblId: Long,
-                                             startTs: TiTimestamp): TiDAGRequest =
+  private[statistics] def buildBucketRequest(
+      bucketTable: TiTableInfo,
+      targetTblId: Long,
+      startTs: TiTimestamp): TiDAGRequest =
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(bucketTable)
@@ -256,14 +244,10 @@ object StatisticsHelper {
         ComparisonBinaryExpression
           .equal(
             ColumnRef.create("table_id", IntegerType.BIGINT),
-            Constant.create(targetTblId, IntegerType.BIGINT)
-          )
-      )
+            Constant.create(targetTblId, IntegerType.BIGINT)))
       .setLimit(Int.MaxValue)
       .addOrderBy(ByItem.create(ColumnRef.create("bucket_id", IntegerType.BIGINT), false))
-      .addRequiredCols(
-        bucketRequiredCols.filter(checkColExists(bucketTable, _))
-      )
+      .addRequiredCols(bucketRequiredCols.filter(checkColExists(bucketTable, _)))
       .setStartTs(startTs)
       .build(PushDownType.NORMAL)
 }

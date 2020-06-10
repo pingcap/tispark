@@ -17,10 +17,9 @@
 
 package org.apache.spark.sql.types
 
-import org.apache.spark.sql.{BaseTestGenerationSpec, BaseTiSparkTest}
-import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.TestDataGenerator._
+import org.apache.spark.sql.{BaseTestGenerationSpec, BaseTiSparkTest}
 
 trait MultiColumnDataTypeTest extends BaseTiSparkTest {
 
@@ -33,30 +32,12 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
     def cross[Y](ys: Traversable[Y]): Traversable[(X, Y)] = for { x <- xs; y <- ys } yield (x, y)
   }
 
-  def getOperations(dataType: ReflectedDataType): List[(String, String)] =
-    List(("is", "null")) ++ {
-      (cmps ++ eqs) cross {
-        dataType match {
-          case TINYINT                     => List("1", "0")
-          case _ if isNumeric(dataType)    => List("1", "2333")
-          case _ if isStringType(dataType) => List("\'PingCAP\'", "\'\'")
-          case _                           => List.empty[String]
-        }
-      }
-    } ++ {
-      eqs cross {
-        dataType match {
-          case BOOLEAN => List("false", "true")
-          case _       => List.empty[String]
-        }
-      }
-    }
-
-  def simpleSelect(dbName: String,
-                   tableName: String,
-                   col1: String,
-                   col2: String,
-                   dataType: ReflectedDataType): Unit = {
+  def simpleSelect(
+      dbName: String,
+      tableName: String,
+      col1: String,
+      col2: String,
+      dataType: ReflectedDataType): Unit = {
     for ((op, value) <- getOperations(dataType)) {
       val query = s"select $col1 from $tableName where $col2 $op $value"
       test(query) {
@@ -65,6 +46,25 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
       }
     }
   }
+
+  def getOperations(dataType: ReflectedDataType): List[(String, String)] =
+    List(("is", "null")) ++ {
+      (cmps ++ eqs) cross {
+        dataType match {
+          case TINYINT => List("1", "0")
+          case _ if isNumeric(dataType) => List("1", "2333")
+          case _ if isStringType(dataType) => List("\'PingCAP\'", "\'\'")
+          case _ => List.empty[String]
+        }
+      }
+    } ++ {
+      eqs cross {
+        dataType match {
+          case BOOLEAN => List("false", "true")
+          case _ => List.empty[String]
+        }
+      }
+    }
 
   init()
 }

@@ -42,11 +42,12 @@ class Count0Suite extends BaseInitialOnceTest {
     "select count(tp_nvarchar) from full_data_type_table ",
     "select count(id_dt) from full_data_type_table ",
     "select count(tp_real) from full_data_type_table ",
-    "select count(tp_bigint) from full_data_type_table "
-  )
+    "select count(tp_bigint) from full_data_type_table ")
 
   // count(distinct_*) cases
-  private val allCases = countCases.map { _.replace(")", "))").replace("count", "count(distinct") } ++ countCases
+  private val allCases = countCases.map {
+    _.replace(")", "))").replace("count", "count(distinct")
+  } ++ countCases
 
   allCases foreach { query =>
     {

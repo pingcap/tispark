@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.convert
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
@@ -23,14 +38,14 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
       StructField("c3", StringType),
       StructField("c4", StringType),
       StructField("c5", StringType),
-      StructField("c6", StringType)
-    )
-  )
+      StructField("c6", StringType)))
 
-  private def createTable(): Unit =
-    jdbcUpdate(
-      s"create table $dbtable(i INT, c1 CHAR(255), c2 VARCHAR(255), c3 TINYTEXT, c4 TEXT, c5 MEDIUMTEXT, c6 LONGTEXT)"
-    )
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 
   test("Test Convert from java.lang.Boolean to STRING") {
     if (!supportBatchWrite) {
@@ -58,9 +73,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
             StructField("c3", BooleanType),
             StructField("c4", BooleanType),
             StructField("c5", BooleanType),
-            StructField("c6", BooleanType)
-          )
-        )
+            StructField("c6", BooleanType)))
 
         val readA: java.lang.String = "1"
         val readB: java.lang.String = "0"
@@ -76,7 +89,9 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -108,9 +123,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
             StructField("c3", ByteType),
             StructField("c4", ByteType),
             StructField("c5", ByteType),
-            StructField("c6", ByteType)
-          )
-        )
+            StructField("c6", ByteType)))
 
         val readA: java.lang.String = "11"
         val readB: java.lang.String = "-22"
@@ -128,7 +141,9 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -160,9 +175,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
             StructField("c3", ShortType),
             StructField("c4", ShortType),
             StructField("c5", ShortType),
-            StructField("c6", ShortType)
-          )
-        )
+            StructField("c6", ShortType)))
 
         val readA: java.lang.String = "11"
         val readB: java.lang.String = "-22"
@@ -180,7 +193,9 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -212,9 +227,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
             StructField("c3", IntegerType),
             StructField("c4", IntegerType),
             StructField("c5", IntegerType),
-            StructField("c6", IntegerType)
-          )
-        )
+            StructField("c6", IntegerType)))
 
         val readA: java.lang.String = "11"
         val readB: java.lang.String = "-22"
@@ -232,7 +245,9 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -264,9 +279,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
             StructField("c3", LongType),
             StructField("c4", LongType),
             StructField("c5", LongType),
-            StructField("c6", LongType)
-          )
-        )
+            StructField("c6", LongType)))
 
         val readA: java.lang.String = "11"
         val readB: java.lang.String = "-22"
@@ -284,7 +297,9 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -318,9 +333,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
             StructField("c3", FloatType),
             StructField("c4", FloatType),
             StructField("c5", FloatType),
-            StructField("c6", FloatType)
-          )
-        )
+            StructField("c6", FloatType)))
 
         val readA: java.lang.String = "1.1"
         val readB: java.lang.String = "-2.2"
@@ -343,8 +356,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
-          skipTiDBAndExpectedAnswerCheck = true
-        )
+          skipTiDBAndExpectedAnswerCheck = true)
     }
   }
 
@@ -377,9 +389,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
             StructField("c3", DoubleType),
             StructField("c4", DoubleType),
             StructField("c5", DoubleType),
-            StructField("c6", DoubleType)
-          )
-        )
+            StructField("c6", DoubleType)))
 
         dropTable()
         createTable()
@@ -418,9 +428,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
             StructField("c3", StringType),
             StructField("c4", StringType),
             StructField("c5", StringType),
-            StructField("c6", StringType)
-          )
-        )
+            StructField("c6", StringType)))
 
         dropTable()
         createTable()
@@ -459,9 +467,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
             StructField("c3", DecimalType(38, 0)),
             StructField("c4", DecimalType(38, 0)),
             StructField("c5", DecimalType(38, 0)),
-            StructField("c6", DecimalType(38, 0))
-          )
-        )
+            StructField("c6", DecimalType(38, 0))))
 
         val readA: java.lang.String = a.toString
         val readB: java.lang.String = b.toString
@@ -479,7 +485,9 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -511,9 +519,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
             StructField("c3", DateType),
             StructField("c4", DateType),
             StructField("c5", DateType),
-            StructField("c6", DateType)
-          )
-        )
+            StructField("c6", DateType)))
 
         val readA: java.lang.String = "2019-01-01"
         val readB: java.lang.String = "1990-12-12"
@@ -531,7 +537,9 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -563,9 +571,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
             StructField("c3", TimestampType),
             StructField("c4", TimestampType),
             StructField("c5", TimestampType),
-            StructField("c6", TimestampType)
-          )
-        )
+            StructField("c6", TimestampType)))
 
         val readA: java.lang.String = "2019-01-01 01:01:01"
         val readB: java.lang.String = "1990-12-12 11:11:11.111"
@@ -583,7 +589,9 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -593,10 +601,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
   // scala.collection.Map
   // org.apache.spark.sql.Row
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
+  private def createTable(): Unit =
+    jdbcUpdate(
+      s"create table $dbtable(i INT, c1 CHAR(255), c2 VARCHAR(255), c3 TINYTEXT, c4 TEXT, c5 MEDIUMTEXT, c6 LONGTEXT)")
 }

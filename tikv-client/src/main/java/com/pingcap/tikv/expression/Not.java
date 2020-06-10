@@ -24,16 +24,16 @@ import java.util.Objects;
 
 public class Not extends Expression {
 
-  public static Not not(Expression expression) {
-    return new Not(expression);
-  }
-
-  private Expression expression;
+  private final Expression expression;
 
   public Not(Expression expression) {
     super(IntegerType.BOOLEAN);
     resolved = true;
     this.expression = requireNonNull(expression, "expression is null");
+  }
+
+  public static Not not(Expression expression) {
+    return new Not(expression);
   }
 
   public Expression getExpression() {

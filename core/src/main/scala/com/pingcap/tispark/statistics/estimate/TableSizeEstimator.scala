@@ -18,7 +18,6 @@
 package com.pingcap.tispark.statistics.estimate
 
 import com.pingcap.tikv.meta.TiTableInfo
-import com.pingcap.tikv.types.MySQLType._
 import com.pingcap.tispark.statistics.StatisticsManager
 
 trait TableSizeEstimator {
@@ -56,6 +55,28 @@ trait TableSizeEstimator {
 object DefaultTableSizeEstimator extends TableSizeEstimator {
 
   /**
+   * Returns the estimated size of the table in bytes.
+   * Result overrides [[org.apache.spark.sql.sources.BaseRelation.sizeInBytes]],
+   * which decides whether to broadcast the table (by default not to broadcast).
+   *
+   * @param table table to evaluate
+   * @return estimated table size of this table
+   */
+  override def estimatedTableSize(table: TiTableInfo): Long = {
+    val tblCount = estimatedCount(table)
+    if (tblCount == Long.MaxValue) {
+      Long.MaxValue
+    } else {
+      val colWidth = estimatedRowSize(table)
+      if (Long.MaxValue / colWidth > tblCount) {
+        colWidth * tblCount
+      } else {
+        Long.MaxValue
+      }
+    }
+  }
+
+  /**
    * Returns Pseudo Table Size calculated roughly.
    */
   override def estimatedRowSize(table: TiTableInfo): Long = {
@@ -76,28 +97,6 @@ object DefaultTableSizeEstimator extends TableSizeEstimator {
       tblStats.getCount
     } else {
       Long.MaxValue
-    }
-  }
-
-  /**
-   * Returns the estimated size of the table in bytes.
-   * Result overrides [[org.apache.spark.sql.sources.BaseRelation.sizeInBytes]],
-   * which decides whether to broadcast the table (by default not to broadcast).
-   *
-   * @param table table to evaluate
-   * @return estimated table size of this table
-   */
-  override def estimatedTableSize(table: TiTableInfo): Long = {
-    val tblCount = estimatedCount(table)
-    if (tblCount == Long.MaxValue) {
-      Long.MaxValue
-    } else {
-      val colWidth = estimatedRowSize(table)
-      if (Long.MaxValue / colWidth > tblCount) {
-        colWidth * tblCount
-      } else {
-        Long.MaxValue
-      }
     }
   }
 }

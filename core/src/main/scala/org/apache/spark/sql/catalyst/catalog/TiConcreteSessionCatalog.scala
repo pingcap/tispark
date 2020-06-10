@@ -21,11 +21,7 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.EmptyFunctionRegistry
 
 class TiConcreteSessionCatalog(val tiContext: TiContext)(tiExternalCatalog: ExternalCatalog)
-    extends SessionCatalog(
-      tiExternalCatalog,
-      EmptyFunctionRegistry,
-      tiContext.sqlContext.conf
-    )
+    extends SessionCatalog(tiExternalCatalog, EmptyFunctionRegistry, tiContext.sqlContext.conf)
     with TiSessionCatalog {
 
   override def catalogOf(database: Option[String]): Option[SessionCatalog] = {
@@ -43,6 +39,5 @@ class TiConcreteSessionCatalog(val tiContext: TiContext)(tiExternalCatalog: Exte
     callTiDirectExternalCatalogTableExists(
       tiExternalCatalog,
       name.database.getOrElse(getCurrentDatabase),
-      name.table
-    )
+      name.table)
 }

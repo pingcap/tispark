@@ -54,8 +54,7 @@ class CacheInvalidateEventHandler(regionManager: RegionManager) {
         case CacheType.LEADER =>
           // Used for updating leader information cached in the given regionManager
           logger.info(
-            s"Invalidating leader of region:${event.getRegionId} store:${event.getStoreId} cache at driver."
-          )
+            s"Invalidating leader of region:${event.getRegionId} store:${event.getStoreId} cache at driver.")
           regionManager.updateLeader(event.getRegionId, event.getStoreId)
         case CacheType.REQ_FAILED =>
           logger.info(s"Request failed cache invalidation for region ${event.getRegionId}")

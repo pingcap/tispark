@@ -21,6 +21,7 @@ import com.google.protobuf.ByteString;
 import org.tikv.kvproto.Kvrpcpb;
 
 public class Lock {
+  private static final long DEFAULT_LOCK_TTL = 3000;
   private final long txnID;
   private final long ttl;
   private final ByteString key;
@@ -28,8 +29,6 @@ public class Lock {
   private final long txnSize;
   private final Kvrpcpb.Op lockType;
   private final long lockForUpdateTs;
-
-  private static final long DEFAULT_LOCK_TTL = 3000;
 
   public Lock(Kvrpcpb.LockInfo l) {
     txnID = l.getLockVersion();

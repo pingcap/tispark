@@ -205,8 +205,7 @@ class PlaceHolder2Suite extends BaseInitialOnceTest {
     "select tp_decimal from full_data_type_table_idx  where tp_decimal <> 127",
     "select tp_decimal from full_data_type_table_idx  where tp_decimal <> -128",
     "select tp_decimal from full_data_type_table_idx  where tp_decimal <> 0",
-    "select tp_decimal from full_data_type_table_idx  where tp_decimal <> 2147868.65536"
-  )
+    "select tp_decimal from full_data_type_table_idx  where tp_decimal <> 2147868.65536")
 
   allCases foreach { query =>
     {

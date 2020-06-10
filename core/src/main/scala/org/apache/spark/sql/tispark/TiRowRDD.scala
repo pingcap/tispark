@@ -17,9 +17,7 @@ package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
 import com.pingcap.tikv.columnar.TiColumnarBatchHelper
-import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.meta.TiDAGRequest
-import com.pingcap.tikv.types.Converter
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.sql.SparkSession
@@ -31,14 +29,15 @@ import org.slf4j.Logger
 
 import scala.collection.JavaConversions._
 
-class TiRowRDD(override val dagRequest: TiDAGRequest,
-               override val physicalId: Long,
-               val chunkBatchSize: Int,
-               override val tiConf: TiConfiguration,
-               val output: Seq[Attribute],
-               override val tableRef: TiTableReference,
-               @transient private val session: TiSession,
-               @transient private val sparkSession: SparkSession)
+class TiRowRDD(
+    override val dagRequest: TiDAGRequest,
+    override val physicalId: Long,
+    val chunkBatchSize: Int,
+    override val tiConf: TiConfiguration,
+    val output: Seq[Attribute],
+    override val tableRef: TiTableReference,
+    @transient private val session: TiSession,
+    @transient private val sparkSession: SparkSession)
     extends TiRDD(dagRequest, physicalId, tiConf, tableRef, session, sparkSession) {
 
   protected val logger: Logger = log

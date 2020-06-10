@@ -15,10 +15,14 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessThan;
 import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
 import static java.util.Objects.requireNonNull;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -27,10 +31,25 @@ import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.key.RowKey;
-import com.pingcap.tikv.meta.*;
+import com.pingcap.tikv.meta.CIStr;
+import com.pingcap.tikv.meta.IndexType;
+import com.pingcap.tikv.meta.MetaUtils;
+import com.pingcap.tikv.meta.SchemaState;
+import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
-import com.pingcap.tikv.types.*;
-import java.util.*;
+import com.pingcap.tikv.meta.TiIndexColumn;
+import com.pingcap.tikv.meta.TiIndexInfo;
+import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DataTypeFactory;
+import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.MySQLType;
+import com.pingcap.tikv.types.StringType;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.junit.Test;
 import org.tikv.kvproto.Coprocessor;
 
@@ -309,10 +328,10 @@ public class TiKVScanAnalyzerTest {
     offsetMap.put("holder", 4);
 
     class test {
-      private String[] columnNames;
-      private String[] indexNames;
-      private int[] indexLens;
-      private boolean isCovering;
+      private final String[] columnNames;
+      private final String[] indexNames;
+      private final int[] indexLens;
+      private final boolean isCovering;
 
       private test(String[] col, String[] idx, int[] idxLen, boolean result) {
         columnNames = col;

@@ -1,18 +1,29 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tikv.util;
 
 import com.pingcap.tikv.exception.GrpcException;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class BackOffFunction {
-  private int base;
-  private int cap;
+  private final int base;
+  private final int cap;
+  private final BackOffer.BackOffStrategy strategy;
   private long lastSleep;
   private int attempts;
-  private BackOffer.BackOffStrategy strategy;
-
-  public static BackOffFunction create(int base, int cap, BackOffer.BackOffStrategy strategy) {
-    return new BackOffFunction(base, cap, strategy);
-  }
 
   private BackOffFunction(int base, int cap, BackOffer.BackOffStrategy strategy) {
     this.base = base;
@@ -21,15 +32,8 @@ public class BackOffFunction {
     lastSleep = base;
   }
 
-  public enum BackOffFuncType {
-    BoTiKVRPC,
-    BoTxnLock,
-    BoTxnLockFast,
-    BoPDRPC,
-    BoRegionMiss,
-    BoUpdateLeader,
-    BoServerBusy,
-    BoTxnNotFound
+  public static BackOffFunction create(int base, int cap, BackOffer.BackOffStrategy strategy) {
+    return new BackOffFunction(base, cap, strategy);
   }
 
   /**
@@ -70,5 +74,16 @@ public class BackOffFunction {
 
   private int expo(int base, int cap, int n) {
     return (int) Math.min(cap, base * Math.pow(2.0d, n));
+  }
+
+  public enum BackOffFuncType {
+    BoTiKVRPC,
+    BoTxnLock,
+    BoTxnLockFast,
+    BoPDRPC,
+    BoRegionMiss,
+    BoUpdateLeader,
+    BoServerBusy,
+    BoTxnNotFound
   }
 }

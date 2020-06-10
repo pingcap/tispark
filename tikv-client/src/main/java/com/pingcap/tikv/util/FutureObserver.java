@@ -23,10 +23,6 @@ public class FutureObserver<Value, RespT> implements StreamObserver<RespT> {
   private final SettableFuture<Value> resultFuture;
   private final Getter<Value, RespT> getter;
 
-  public interface Getter<Value, RespT> {
-    Value getValue(RespT resp);
-  }
-
   public FutureObserver(Getter<Value, RespT> getter) {
     this.resultFuture = SettableFuture.create();
     this.getter = getter;
@@ -51,5 +47,9 @@ public class FutureObserver<Value, RespT> implements StreamObserver<RespT> {
 
   public Future<Value> getFuture() {
     return resultFuture;
+  }
+
+  public interface Getter<Value, RespT> {
+    Value getValue(RespT resp);
   }
 }

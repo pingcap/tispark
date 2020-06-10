@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class IsNull extends Expression {
-  private Expression expression;
+  private final Expression expression;
 
   public IsNull(Expression expression) {
     super(IntegerType.BOOLEAN);

@@ -95,32 +95,38 @@ import org.tikv.kvproto.TikvGrpc.TikvStub;
 
 /** Note that RegionStoreClient itself is not thread-safe */
 public class RegionStoreClient extends AbstractRegionStoreClient {
-  public enum RequestTypes {
-    REQ_TYPE_SELECT(101),
-    REQ_TYPE_INDEX(102),
-    REQ_TYPE_DAG(103),
-    REQ_TYPE_ANALYZE(104),
-    BATCH_ROW_COUNT(64);
-
-    private final int value;
-
-    RequestTypes(int value) {
-      this.value = value;
-    }
-
-    public int getValue() {
-      return value;
-    }
-  }
-
-  private TiStoreType storeType;
-
   private static final Logger logger = LoggerFactory.getLogger(RegionStoreClient.class);
-
   @VisibleForTesting public final AbstractLockResolverClient lockResolverClient;
-
+  private final TiStoreType storeType;
   /** startTS -> List(locks) */
-  private Map<Long, Set<Long>> resolvedLocks = new HashMap<>();
+  private final Map<Long, Set<Long>> resolvedLocks = new HashMap<>();
+
+  private RegionStoreClient(
+      TiConfiguration conf,
+      TiRegion region,
+      Store store,
+      TiStoreType storeType,
+      ChannelFactory channelFactory,
+      TikvBlockingStub blockingStub,
+      TikvStub asyncStub,
+      RegionManager regionManager,
+      PDClient pdClient,
+      RegionStoreClient.RegionStoreClientBuilder clientBuilder) {
+    super(conf, region, channelFactory, blockingStub, asyncStub, regionManager);
+    this.storeType = storeType;
+
+    this.lockResolverClient =
+        AbstractLockResolverClient.getInstance(
+            store,
+            conf,
+            region,
+            this.blockingStub,
+            this.asyncStub,
+            channelFactory,
+            regionManager,
+            pdClient,
+            clientBuilder);
+  }
 
   public synchronized boolean addResolvedLocks(Long version, List<Long> locks) {
     Set<Long> oldList = resolvedLocks.get(version);
@@ -721,6 +727,24 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     return doCoprocessor(responseIterator);
   }
 
+  public enum RequestTypes {
+    REQ_TYPE_SELECT(101),
+    REQ_TYPE_INDEX(102),
+    REQ_TYPE_DAG(103),
+    REQ_TYPE_ANALYZE(104),
+    BATCH_ROW_COUNT(64);
+
+    private final int value;
+
+    RequestTypes(int value) {
+      this.value = value;
+    }
+
+    public int getValue() {
+      return value;
+    }
+  }
+
   public static class RegionStoreClientBuilder {
     private final TiConfiguration conf;
     private final ChannelFactory channelFactory;
@@ -790,32 +814,5 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     public RegionManager getRegionManager() {
       return regionManager;
     }
-  }
-
-  private RegionStoreClient(
-      TiConfiguration conf,
-      TiRegion region,
-      Store store,
-      TiStoreType storeType,
-      ChannelFactory channelFactory,
-      TikvBlockingStub blockingStub,
-      TikvStub asyncStub,
-      RegionManager regionManager,
-      PDClient pdClient,
-      RegionStoreClient.RegionStoreClientBuilder clientBuilder) {
-    super(conf, region, channelFactory, blockingStub, asyncStub, regionManager);
-    this.storeType = storeType;
-
-    this.lockResolverClient =
-        AbstractLockResolverClient.getInstance(
-            store,
-            conf,
-            region,
-            this.blockingStub,
-            this.asyncStub,
-            channelFactory,
-            regionManager,
-            pdClient,
-            clientBuilder);
   }
 }

@@ -25,11 +25,32 @@ import com.pingcap.tidb.tipb.ScalarFuncSig;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiExpressionException;
-import com.pingcap.tikv.expression.*;
+import com.pingcap.tikv.expression.AggregateFunction;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
+import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
-import com.pingcap.tikv.types.*;
+import com.pingcap.tikv.expression.Constant;
+import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.FuncCallExpr;
+import com.pingcap.tikv.expression.IsNull;
+import com.pingcap.tikv.expression.LogicalBinaryExpression;
+import com.pingcap.tikv.expression.Not;
+import com.pingcap.tikv.expression.StringRegExpression;
+import com.pingcap.tikv.expression.Visitor;
+import com.pingcap.tikv.types.BitType;
+import com.pingcap.tikv.types.BytesType;
+import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataType.EncodeType;
+import com.pingcap.tikv.types.DateTimeType;
+import com.pingcap.tikv.types.DateType;
+import com.pingcap.tikv.types.DecimalType;
+import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.RealType;
+import com.pingcap.tikv.types.StringType;
+import com.pingcap.tikv.types.TimeType;
+import com.pingcap.tikv.types.TimestampType;
 import java.util.Map;
 import java.util.Objects;
 
@@ -66,6 +87,15 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     this.validateColPosition = validateColPosition;
   }
 
+  public static Expr toProto(Expression expression) {
+    return toProto(expression, null);
+  }
+
+  public static Expr toProto(Expression expression, Object context) {
+    ProtoConverter converter = new ProtoConverter();
+    return expression.accept(converter, context);
+  }
+
   private DataType getType(Expression expression) {
     DataType type = expression.getDataType();
 
@@ -86,15 +116,6 @@ public class ProtoConverter extends Visitor<Expr, Object> {
       throw new TiExpressionException(String.format("Type %s signature unknown", type));
     }
     return typeSignature;
-  }
-
-  public static Expr toProto(Expression expression) {
-    return toProto(expression, null);
-  }
-
-  public static Expr toProto(Expression expression, Object context) {
-    ProtoConverter converter = new ProtoConverter();
-    return expression.accept(converter, context);
   }
 
   private FieldType toPBFieldType(DataType fieldType) {

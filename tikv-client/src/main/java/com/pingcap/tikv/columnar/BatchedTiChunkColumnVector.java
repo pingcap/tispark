@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.pingcap.tikv.columnar;
 
 import java.math.BigDecimal;
@@ -20,9 +21,9 @@ import java.util.List;
 
 /** An implementation of {@link TiColumnVector}. All data is stored in TiDB chunk format. */
 public class BatchedTiChunkColumnVector extends TiColumnVector {
-  private List<TiChunkColumnVector> childColumns;
-  private int numOfNulls;
-  private int[] rightEndpoints;
+  private final List<TiChunkColumnVector> childColumns;
+  private final int numOfNulls;
+  private final int[] rightEndpoints;
 
   public BatchedTiChunkColumnVector(List<TiChunkColumnVector> child, int numOfRows) {
     super(child.get(0).dataType(), numOfRows);

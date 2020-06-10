@@ -26,41 +26,21 @@ import org.apache.spark.sql.execution._
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types.{ArrayType, LongType, Metadata, StructType}
-import org.apache.spark.sql.{execution, DataFrame, SQLContext, SaveMode}
+import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, execution}
 
 import scala.collection.mutable.ListBuffer
 
-case class TiDBRelation(session: TiSession,
-                        tableRef: TiTableReference,
-                        meta: MetaManager,
-                        var ts: TiTimestamp = null,
-                        options: Option[TiDBOptions] = None)(
-  @transient val sqlContext: SQLContext
-) extends BaseRelation
+case class TiDBRelation(
+    session: TiSession,
+    tableRef: TiTableReference,
+    meta: MetaManager,
+    var ts: TiTimestamp = null,
+    options: Option[TiDBOptions] = None)(@transient val sqlContext: SQLContext)
+    extends BaseRelation
     with InsertableRelation {
   lazy val table: TiTableInfo = getTableOrThrow(tableRef.databaseName, tableRef.tableName)
 
   override lazy val schema: StructType = TiUtil.getSchemaFromTable(table)
-
-  private def getTableOrThrow(database: String, table: String): TiTableInfo =
-    meta.getTable(database, table).getOrElse {
-      val db = meta.getDatabase(database)
-      if (db.isEmpty) {
-        throw new TiClientInternalException(
-          "Database not exist " + database + " valid databases are: " + meta.getDatabases
-            .map(_.getName)
-            .mkString("[", ",", "]")
-        )
-      } else {
-        throw new TiClientInternalException(
-          "Table not exist " + tableRef + " valid tables are: " + meta
-            .getTables(db.get)
-            .map(_.getName)
-            .mkString("[", ",", "]")
-        )
-      }
-    }
-
   lazy val isTiFlashReplicaAvailable: Boolean = {
     // Note:
     // - INFORMATION_SCHEMA.TIFLASH_REPLICA is not present in TiKV or PD,
@@ -89,20 +69,17 @@ case class TiDBRelation(session: TiSession,
     var tiRDDs = new ListBuffer[TiRowRDD]
     val tiConf = session.getConf
     tiConf.setPartitionPerSplit(TiUtil.getPartitionPerSplit(sqlContext))
-    ids.foreach(
-      id => {
-        tiRDDs += new TiRowRDD(
-          dagRequest,
-          id,
-          TiUtil.getChunkBatchSize(sqlContext),
-          tiConf,
-          output,
-          tableRef,
-          session,
-          sqlContext.sparkSession
-        )
-      }
-    )
+    ids.foreach(id => {
+      tiRDDs += new TiRowRDD(
+        dagRequest,
+        id,
+        TiUtil.getChunkBatchSize(sqlContext),
+        tiConf,
+        output,
+        tableRef,
+        session,
+        sqlContext.sparkSession)
+    })
     tiRDDs.toList
   }
 
@@ -116,26 +93,21 @@ case class TiDBRelation(session: TiSession,
         "Handles",
         ArrayType(LongType, containsNull = false),
         nullable = false,
-        Metadata.empty
-      )
-    )
+        Metadata.empty))
 
     val tiConf = session.getConf
     tiConf.setPartitionPerSplit(TiUtil.getPartitionPerSplit(sqlContext))
-    ids.foreach(
-      id => {
-        tiHandleRDDs +=
-          new TiHandleRDD(
-            dagRequest,
-            id,
-            attributeRef,
-            tiConf,
-            tableRef,
-            session,
-            sqlContext.sparkSession
-          )
-      }
-    )
+    ids.foreach(id => {
+      tiHandleRDDs +=
+        new TiHandleRDD(
+          dagRequest,
+          id,
+          attributeRef,
+          tiConf,
+          tableRef,
+          session,
+          sqlContext.sparkSession)
+    })
 
     // TODO: we may optimize by partitioning the result by region.
     // https://github.com/pingcap/tispark/issues/1200
@@ -148,16 +120,16 @@ case class TiDBRelation(session: TiSession,
       session.getConf,
       session.getTimestamp,
       session,
-      sqlContext.sparkSession
-    )
+      sqlContext.sparkSession)
   }
 
-  override def equals(obj: Any): Boolean = obj match {
-    case other: TiDBRelation =>
-      this.table.equals(other.table)
-    case _ =>
-      false
-  }
+  override def equals(obj: Any): Boolean =
+    obj match {
+      case other: TiDBRelation =>
+        this.table.equals(other.table)
+      case _ =>
+        false
+    }
 
   override def insert(data: DataFrame, overwrite: Boolean): Unit =
     // default forbid sql interface
@@ -171,11 +143,27 @@ case class TiDBRelation(session: TiSession,
       TiDBWriter.write(data, sqlContext, saveMode, options.get)
     } else {
       throw new TiBatchWriteException(
-        "SparkSQL entry for tispark write is disabled. Set spark.tispark.write.allow_spark_sql to enable."
-      )
+        "SparkSQL entry for tispark write is disabled. Set spark.tispark.write.allow_spark_sql to enable.")
     }
 
   override def toString: String = {
     s"TiDBRelation($tableRef, $ts)"
   }
+
+  private def getTableOrThrow(database: String, table: String): TiTableInfo =
+    meta.getTable(database, table).getOrElse {
+      val db = meta.getDatabase(database)
+      if (db.isEmpty) {
+        throw new TiClientInternalException(
+          "Database not exist " + database + " valid databases are: " + meta.getDatabases
+            .map(_.getName)
+            .mkString("[", ",", "]"))
+      } else {
+        throw new TiClientInternalException(
+          "Table not exist " + tableRef + " valid tables are: " + meta
+            .getTables(db.get)
+            .map(_.getName)
+            .mkString("[", ",", "]"))
+      }
+    }
 }

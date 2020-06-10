@@ -16,8 +16,8 @@
 package com.pingcap.tikv;
 
 public class BytePairWrapper {
-  private byte[] key;
-  private byte[] value;
+  private final byte[] key;
+  private final byte[] value;
 
   public BytePairWrapper(byte[] key, byte[] value) {
     this.key = key;

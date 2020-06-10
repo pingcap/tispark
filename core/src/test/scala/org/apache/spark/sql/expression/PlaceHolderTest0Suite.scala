@@ -650,8 +650,7 @@ class PlaceHolderTest0Suite extends BaseInitialOnceTest {
     "select  id_dt  from full_data_type_table  where tp_tinyint > -128",
     "select  id_dt  from full_data_type_table  where tp_tinyint > 0",
     "select  id_dt  from full_data_type_table  where tp_tinyint > 2017",
-    "select  id_dt  from full_data_type_table  where tp_tinyint > 2147868.65536"
-  )
+    "select  id_dt  from full_data_type_table  where tp_tinyint > 2147868.65536")
 
   allCases foreach { query =>
     {

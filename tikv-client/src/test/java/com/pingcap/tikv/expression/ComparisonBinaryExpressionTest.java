@@ -16,7 +16,14 @@
 package com.pingcap.tikv.expression;
 
 import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.divide;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.greaterEqual;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.greaterThan;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessThan;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.notEqual;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 

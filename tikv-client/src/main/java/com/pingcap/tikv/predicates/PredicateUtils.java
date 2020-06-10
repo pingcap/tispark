@@ -31,7 +31,11 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 public class PredicateUtils {
   public static Expression mergeCNFExpressions(List<Expression> exprs) {

@@ -32,8 +32,8 @@ public abstract class AbstractRegionStoreClient
     extends AbstractGRPCClient<TikvGrpc.TikvBlockingStub, TikvGrpc.TikvStub>
     implements RegionErrorReceiver {
 
-  protected TiRegion region;
   protected final RegionManager regionManager;
+  protected TiRegion region;
 
   protected AbstractRegionStoreClient(
       TiConfiguration conf,
