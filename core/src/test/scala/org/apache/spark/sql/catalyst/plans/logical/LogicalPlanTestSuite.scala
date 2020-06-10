@@ -33,19 +33,15 @@ class LogicalPlanTestSuite extends BasePlanTest {
     tidbStmt.execute("DROP TABLE IF EXISTS `test2`")
     tidbStmt.execute("DROP TABLE IF EXISTS `test3`")
     tidbStmt.execute(
-      "CREATE TABLE `test1` (`id` int primary key, `c1` int, `c2` int, KEY idx(c1, c2))"
-    )
+      "CREATE TABLE `test1` (`id` int primary key, `c1` int, `c2` int, KEY idx(c1, c2))")
     tidbStmt.execute("CREATE TABLE `test2` (`id` int, `c1` int, `c2` int)")
     tidbStmt.execute("CREATE TABLE `test3` (`id` int, `c1` int, `c2` int, KEY idx(c2))")
     tidbStmt.execute(
-      "insert into test1 values(1, 2, 3), /*(1, 3, 2), */(2, 2, 4), (3, 1, 3), (4, 2, 1)"
-    )
+      "insert into test1 values(1, 2, 3), /*(1, 3, 2), */(2, 2, 4), (3, 1, 3), (4, 2, 1)")
     tidbStmt.execute(
-      "insert into test2 values(1, 2, 3), (1, 2, 4), (2, 1, 4), (3, 1, 3), (4, 3, 1)"
-    )
+      "insert into test2 values(1, 2, 3), (1, 2, 4), (2, 1, 4), (3, 1, 3), (4, 3, 1)")
     tidbStmt.execute(
-      "insert into test3 values(1, 2, 3), (2, 1, 3), (2, 1, 4), (3, 2, 3), (4, 2, 1)"
-    )
+      "insert into test3 values(1, 2, 3), (2, 1, 3), (2, 1, 4), (3, 2, 3), (4, 2, 1)")
     refreshConnections()
     val df =
       spark.sql("""

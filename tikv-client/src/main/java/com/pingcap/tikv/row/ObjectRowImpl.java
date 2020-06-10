@@ -30,20 +30,20 @@ import java.sql.Timestamp;
 public class ObjectRowImpl implements Row {
   private final Object[] values;
 
-  public static Row create(Object[] values) {
-    return new ObjectRowImpl(values);
-  }
-
-  public static Row create(int fieldCount) {
-    return new ObjectRowImpl(fieldCount);
-  }
-
   private ObjectRowImpl(Object[] values) {
     this.values = values;
   }
 
   private ObjectRowImpl(int fieldCount) {
     values = new Object[fieldCount];
+  }
+
+  public static Row create(Object[] values) {
+    return new ObjectRowImpl(values);
+  }
+
+  public static Row create(int fieldCount) {
+    return new ObjectRowImpl(fieldCount);
   }
 
   @Override

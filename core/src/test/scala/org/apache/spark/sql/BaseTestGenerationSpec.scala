@@ -18,11 +18,16 @@
 package org.apache.spark.sql
 
 import org.apache.spark.sql.test.generator.DataType.{getBaseType, DECIMAL, ReflectedDataType}
-import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength, isCharOrBinary, isVarString}
+import org.apache.spark.sql.test.generator.TestDataGenerator.{
+  getDecimal,
+  getLength,
+  isCharOrBinary,
+  isVarString
+}
 
 trait BaseTestGenerationSpec {
 
-  protected val rowCount: Int
+  protected def rowCount: Int
 
   protected val preDescription: String = "Generating Data for "
 
@@ -34,14 +39,19 @@ trait BaseTestGenerationSpec {
 
   def getTableNameWithDesc(desc: String, dataTypes: String*): String
 
+  def getIndexName(dataTypes: String*): String =
+    s"idx_${dataTypes.map(getColumnName).mkString("_")}"
+
   def getColumnName(dataType: String): String = s"col_$dataType"
+
+  def getIndexNameByOffset(offsets: Int*): String =
+    s"idx_${offsets.map(getColumnNameByOffset).mkString("_")}"
 
   def getColumnNameByOffset(offset: Int): String = {
     require(cols != null)
     assert(
-      cols.size > offset,
-      s"column length incorrect ${cols.size} <= $offset, maybe `cols` is not initialized correctly?"
-    )
+      cols.lengthCompare(offset) > 0,
+      s"column length incorrect ${cols.size} <= $offset, maybe `cols` is not initialized correctly?")
     val dataType = cols(offset)
     val suffix = if (cols.count(_ == dataType) > 1) {
       var cnt = 0
@@ -57,20 +67,14 @@ trait BaseTestGenerationSpec {
     s"${getColumnName(dataType.toString)}$suffix"
   }
 
-  def getIndexName(dataTypes: String*): String =
-    s"idx_${dataTypes.map(getColumnName).mkString("_")}"
-
-  def getIndexNameByOffset(offsets: Int*): String =
-    s"idx_${offsets.map(getColumnNameByOffset).mkString("_")}"
-
   def getTypeLength(dataType: ReflectedDataType): String = {
     val baseType = getBaseType(dataType)
     val length = getLength(baseType)
     dataType match {
-      case DECIMAL                       => s"$length,${getDecimal(baseType)}"
-      case _ if isVarString(dataType)    => s"$length"
+      case DECIMAL => s"$length,${getDecimal(baseType)}"
+      case _ if isVarString(dataType) => s"$length"
       case _ if isCharOrBinary(dataType) => "10"
-      case _                             => ""
+      case _ => ""
     }
   }
 

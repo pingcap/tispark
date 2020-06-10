@@ -18,7 +18,7 @@ package com.pingcap.tikv;
 import java.util.Arrays;
 
 public class ByteWrapper {
-  private byte[] bytes;
+  private final byte[] bytes;
 
   public ByteWrapper(byte[] bytes) {
     this.bytes = bytes;

@@ -20,14 +20,12 @@ import org.apache.spark.sql._
 
 class MultiTableWriteSuite extends BaseTiSparkTest {
 
-  private var database: String = _
-
   private val tables =
     "CUSTOMER" ::
       "NATION" ::
       Nil
-
   private val batchWriteTablePrefix = "BATCH.WRITE"
+  private var database: String = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -47,13 +45,16 @@ class MultiTableWriteSuite extends BaseTiSparkTest {
 
     val data = tables.map { table =>
       val tableToWrite = s"${batchWriteTablePrefix}_$table"
-      val dbTable = new DBTable(database, tableToWrite)
+      val dbTable = DBTable(database, tableToWrite)
       val df = sql(s"select * from $table")
       (dbTable, df)
     }.toMap
 
     // multi table batch write
-    TiBatchWrite.write(data, spark, tidbOptions ++ Map("multiTables" -> "true", "isTest" -> "true"))
+    TiBatchWrite.write(
+      data,
+      spark,
+      tidbOptions ++ Map("multiTables" -> "true", "isTest" -> "true"))
 
     for (table <- tables) {
       val tableToWrite = s"${batchWriteTablePrefix}_$table"

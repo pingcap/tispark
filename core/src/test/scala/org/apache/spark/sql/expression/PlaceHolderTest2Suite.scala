@@ -650,8 +650,7 @@ class PlaceHolderTest2Suite extends BaseInitialOnceTest {
     "select  count(1)  from full_data_type_table  where tp_bigint <> 2017",
     "select  count(1)  from full_data_type_table  where tp_bigint <> 2147868.65536",
     "select  count(1)  from full_data_type_table  where tp_double <> null",
-    "select  count(1)  from full_data_type_table  where tp_double <> '2017-11-02'"
-  )
+    "select  count(1)  from full_data_type_table  where tp_double <> '2017-11-02'")
 
   allCases foreach { query =>
     {

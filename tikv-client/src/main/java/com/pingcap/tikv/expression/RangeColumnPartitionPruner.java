@@ -40,9 +40,9 @@ import java.util.Set;
 @SuppressWarnings("UnstableApiUsage")
 public class RangeColumnPartitionPruner
     extends DefaultVisitor<Set<Integer>, LogicalBinaryExpression> {
-  private Map<String, List<Expression>> partExprsPerColumnRef;
   private final int partsSize;
   private final TiPartitionInfo partInfo;
+  private final Map<String, List<Expression>> partExprsPerColumnRef;
 
   RangeColumnPartitionPruner(TiTableInfo tableInfo) {
     this.partExprsPerColumnRef = new HashMap<>();

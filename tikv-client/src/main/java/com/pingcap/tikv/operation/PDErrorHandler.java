@@ -31,15 +31,14 @@ import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Pdpb;
 
 public class PDErrorHandler<RespT> implements ErrorHandler<RespT> {
-  private static final Logger logger = LoggerFactory.getLogger(PDErrorHandler.class);
-  private final Function<RespT, PDError> getError;
-  private final PDClient client;
-
   public static final Function<Pdpb.GetRegionResponse, PDError> getRegionResponseErrorExtractor =
       r ->
           r.getHeader().hasError()
               ? buildFromPdpbError(r.getHeader().getError())
               : r.getRegion().getId() == 0 ? PDError.RegionPeerNotElected.DEFAULT_INSTANCE : null;
+  private static final Logger logger = LoggerFactory.getLogger(PDErrorHandler.class);
+  private final Function<RespT, PDError> getError;
+  private final PDClient client;
 
   public PDErrorHandler(Function<RespT, PDError> errorExtractor, PDClient client) {
     this.getError = errorExtractor;

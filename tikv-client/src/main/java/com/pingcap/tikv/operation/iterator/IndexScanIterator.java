@@ -34,11 +34,10 @@ public class IndexScanIterator implements Iterator<Row> {
   private final Iterator<Long> handleIterator;
   private final TiDAGRequest dagReq;
   private final Snapshot snapshot;
-  private Iterator<Row> rowIterator;
   private final ExecutorCompletionService<Iterator<Row>> completionService;
-
-  private int batchCount = 0;
   private final int batchSize;
+  private Iterator<Row> rowIterator;
+  private int batchCount = 0;
 
   public IndexScanIterator(Snapshot snapshot, TiDAGRequest req, Iterator<Long> handleIterator) {
     TiSession session = snapshot.getSession();

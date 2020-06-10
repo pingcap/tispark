@@ -17,7 +17,7 @@ package com.pingcap.tispark.concurrency
 
 import java.util.concurrent.atomic.AtomicInteger
 
-class WriteReadConflictSuite extends ConcurrentcyTest {
+class WriteReadConflictSuite extends ConcurrencyTest {
   test("read conflict using jdbc") {
     if (!supportBatchWrite) {
       cancel

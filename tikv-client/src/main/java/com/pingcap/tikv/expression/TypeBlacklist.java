@@ -17,7 +17,32 @@
 
 package com.pingcap.tikv.expression;
 
-import static com.pingcap.tikv.types.MySQLType.*;
+import static com.pingcap.tikv.types.MySQLType.TypeBlob;
+import static com.pingcap.tikv.types.MySQLType.TypeDate;
+import static com.pingcap.tikv.types.MySQLType.TypeDatetime;
+import static com.pingcap.tikv.types.MySQLType.TypeDecimal;
+import static com.pingcap.tikv.types.MySQLType.TypeDouble;
+import static com.pingcap.tikv.types.MySQLType.TypeDuration;
+import static com.pingcap.tikv.types.MySQLType.TypeEnum;
+import static com.pingcap.tikv.types.MySQLType.TypeFloat;
+import static com.pingcap.tikv.types.MySQLType.TypeInt24;
+import static com.pingcap.tikv.types.MySQLType.TypeJSON;
+import static com.pingcap.tikv.types.MySQLType.TypeLong;
+import static com.pingcap.tikv.types.MySQLType.TypeLongBlob;
+import static com.pingcap.tikv.types.MySQLType.TypeLonglong;
+import static com.pingcap.tikv.types.MySQLType.TypeMediumBlob;
+import static com.pingcap.tikv.types.MySQLType.TypeNewDate;
+import static com.pingcap.tikv.types.MySQLType.TypeNewDecimal;
+import static com.pingcap.tikv.types.MySQLType.TypeNull;
+import static com.pingcap.tikv.types.MySQLType.TypeSet;
+import static com.pingcap.tikv.types.MySQLType.TypeShort;
+import static com.pingcap.tikv.types.MySQLType.TypeString;
+import static com.pingcap.tikv.types.MySQLType.TypeTimestamp;
+import static com.pingcap.tikv.types.MySQLType.TypeTiny;
+import static com.pingcap.tikv.types.MySQLType.TypeTinyBlob;
+import static com.pingcap.tikv.types.MySQLType.TypeVarString;
+import static com.pingcap.tikv.types.MySQLType.TypeVarchar;
+import static com.pingcap.tikv.types.MySQLType.TypeYear;
 
 import com.pingcap.tikv.types.MySQLType;
 import java.util.HashMap;
@@ -25,6 +50,10 @@ import java.util.Map;
 
 public class TypeBlacklist extends Blacklist {
   private static final Map<MySQLType, String> typeToMySQLMap = initialTypeMap();
+
+  public TypeBlacklist(String typesString) {
+    super(typesString);
+  }
 
   private static HashMap<MySQLType, String> initialTypeMap() {
     HashMap<MySQLType, String> map = new HashMap<>();
@@ -55,10 +84,6 @@ public class TypeBlacklist extends Blacklist {
     map.put(TypeVarString, "varString");
     map.put(TypeString, "string");
     return map;
-  }
-
-  public TypeBlacklist(String typesString) {
-    super(typesString);
   }
 
   public boolean isUnsupportedType(MySQLType sqlType) {

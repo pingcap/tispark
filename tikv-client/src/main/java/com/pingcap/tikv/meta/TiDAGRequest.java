@@ -24,7 +24,17 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.pingcap.tidb.tipb.*;
+import com.pingcap.tidb.tipb.Aggregation;
+import com.pingcap.tidb.tipb.ColumnInfo;
+import com.pingcap.tidb.tipb.DAGRequest;
+import com.pingcap.tidb.tipb.EncodeType;
+import com.pingcap.tidb.tipb.ExecType;
+import com.pingcap.tidb.tipb.Executor;
+import com.pingcap.tidb.tipb.IndexScan;
+import com.pingcap.tidb.tipb.Limit;
+import com.pingcap.tidb.tipb.Selection;
+import com.pingcap.tidb.tipb.TableScan;
+import com.pingcap.tidb.tipb.TopN;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.DAGRequestException;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -39,8 +49,16 @@ import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.KeyRangeUtils;
-import java.io.*;
-import java.util.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.tikv.kvproto.Coprocessor;
@@ -51,91 +69,79 @@ import org.tikv.kvproto.Coprocessor;
  * <p>Used for constructing a new DAG request to TiKV
  */
 public class TiDAGRequest implements Serializable {
-  public static class Builder {
-    private List<String> requiredCols = new ArrayList<>();
-    private List<Expression> filters = new ArrayList<>();
-    private List<ByItem> orderBys = new ArrayList<>();
-    private Map<Long, List<Coprocessor.KeyRange>> ranges = new HashMap<>();
-    private TiTableInfo tableInfo;
-    private int limit;
-    private TiTimestamp startTs;
+  /** Predefined executor priority map. */
+  private static final Map<ExecType, Integer> EXEC_TYPE_PRIORITY_MAP =
+      ImmutableMap.<ExecType, Integer>builder()
+          .put(ExecType.TypeTableScan, 0)
+          .put(ExecType.TypeIndexScan, 0)
+          .put(ExecType.TypeSelection, 1)
+          .put(ExecType.TypeAggregation, 2)
+          .put(ExecType.TypeTopN, 3)
+          .put(ExecType.TypeLimit, 4)
+          .build();
 
-    public static Builder newBuilder() {
-      return new Builder();
-    }
+  private static final ColumnInfo handleColumn =
+      ColumnInfo.newBuilder()
+          .setColumnId(-1)
+          .setPkHandle(true)
+          // We haven't changed the field name in protobuf file, but
+          // we need to set this to true in order to retrieve the handle,
+          // so the name 'setPkHandle' may sounds strange.
+          .setTp(8)
+          .setColumnLen(20)
+          .setFlag(2)
+          .build();
+  private final List<ColumnRef> fields = new ArrayList<>();
+  private final List<DataType> indexDataTypes = new ArrayList<>();
+  private final List<Expression> filters = new ArrayList<>();
+  private final List<ByItem> groupByItems = new ArrayList<>();
+  private final List<ByItem> orderByItems = new ArrayList<>();
+  // System like Spark has different type promotion rules
+  // we need a cast to target when given
+  private final List<AggregateFunction> aggregates = new ArrayList<>();
+  private final Map<Long, List<Coprocessor.KeyRange>> idToRanges = new HashMap<>();
+  // If index scanning of this request is not possible in some scenario, we downgrade it
+  // to a table scan and use downGradeRanges instead of index scan ranges stored in
+  // idToRanges along with downgradeFilters to perform a table scan.
+  private final List<Expression> downgradeFilters = new ArrayList<>();
+  private final List<Expression> pushDownFilters = new ArrayList<>();
+  private final List<AggregateFunction> pushDownAggregates = new ArrayList<>();
+  private final List<ByItem> pushDownGroupBys = new ArrayList<>();
+  private final List<ByItem> pushDownOrderBys = new ArrayList<>();
+  private final PushDownType pushDownType;
+  private TiTableInfo tableInfo;
+  private List<TiPartitionDef> prunedParts;
+  private TiStoreType storeType = TiStoreType.TiKV;
+  private TiIndexInfo indexInfo;
+  private int pushDownLimits;
+  private int limit;
+  private int timeZoneOffset;
+  private long flags;
+  private TiTimestamp startTs;
+  private Expression having;
+  private boolean distinct;
+  private boolean isDoubleRead;
+  private EncodeType encodeType;
+  private double estimatedCount = -1;
 
-    public Builder setFullTableScan(TiTableInfo tableInfo) {
-      requireNonNull(tableInfo);
-      setTableInfo(tableInfo);
-      if (!tableInfo.isPartitionEnabled()) {
-        RowKey start = RowKey.createMin(tableInfo.getId());
-        RowKey end = RowKey.createBeyondMax(tableInfo.getId());
-        ranges.put(
-            tableInfo.getId(),
-            ImmutableList.of(
-                KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString())));
-      } else {
-        for (TiPartitionDef pDef : tableInfo.getPartitionInfo().getDefs()) {
-          RowKey start = RowKey.createMin(pDef.getId());
-          RowKey end = RowKey.createBeyondMax(pDef.getId());
-          ranges.put(
-              pDef.getId(),
-              ImmutableList.of(
-                  KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString())));
-        }
-      }
+  public TiDAGRequest(PushDownType pushDownType) {
+    this.pushDownType = pushDownType;
+    this.encodeType = EncodeType.TypeDefault;
+  }
 
-      return this;
-    }
+  private TiDAGRequest(PushDownType pushDownType, EncodeType encodeType) {
+    this.pushDownType = pushDownType;
+    this.encodeType = encodeType;
+  }
 
-    public Builder setLimit(int limit) {
-      this.limit = limit;
-      return this;
-    }
+  public TiDAGRequest(PushDownType pushDownType, EncodeType encodeType, int timeZoneOffset) {
+    this(pushDownType, encodeType);
+    this.timeZoneOffset = timeZoneOffset;
+  }
 
-    public Builder setTableInfo(TiTableInfo tableInfo) {
-      this.tableInfo = tableInfo;
-      return this;
-    }
-
-    public Builder addRequiredCols(List<String> cols) {
-      this.requiredCols.addAll(cols);
-      return this;
-    }
-
-    public Builder addFilter(Expression filter) {
-      this.filters.add(filter);
-      return this;
-    }
-
-    public Builder addOrderBy(ByItem item) {
-      this.orderBys.add(item);
-      return this;
-    }
-
-    public Builder setStartTs(@Nonnull TiTimestamp ts) {
-      this.startTs = ts;
-      return this;
-    }
-
-    public TiDAGRequest build(PushDownType pushDownType) {
-      TiDAGRequest req = new TiDAGRequest(pushDownType);
-      req.setTableInfo(tableInfo);
-      req.addRanges(ranges);
-      req.addFilters(filters);
-      // this request will push down all filters
-      req.addPushDownFilters();
-      if (!orderBys.isEmpty()) {
-        orderBys.forEach(req::addOrderByItem);
-      }
-      if (limit != 0) {
-        req.setLimit(limit);
-      }
-      requiredCols.forEach(c -> req.addRequiredColumn(ColumnRef.create(c, tableInfo.getColumn(c))));
-      req.setStartTs(startTs);
-
-      return req;
-    }
+  public TiDAGRequest(PushDownType pushDownType, int timeZoneOffset) {
+    this(pushDownType, EncodeType.TypeDefault);
+    this.timeZoneOffset = timeZoneOffset;
   }
 
   public List<TiPartitionDef> getPrunedParts() {
@@ -161,105 +167,6 @@ public class TiDAGRequest implements Serializable {
   public void setEncodeType(EncodeType encodeType) {
     this.encodeType = encodeType;
   }
-
-  public TiDAGRequest(PushDownType pushDownType) {
-    this.pushDownType = pushDownType;
-    this.encodeType = EncodeType.TypeDefault;
-  }
-
-  private TiDAGRequest(PushDownType pushDownType, EncodeType encodeType) {
-    this.pushDownType = pushDownType;
-    this.encodeType = encodeType;
-  }
-
-  public TiDAGRequest(PushDownType pushDownType, EncodeType encodeType, int timeZoneOffset) {
-    this(pushDownType, encodeType);
-    this.timeZoneOffset = timeZoneOffset;
-  }
-
-  public TiDAGRequest(PushDownType pushDownType, int timeZoneOffset) {
-    this(pushDownType, EncodeType.TypeDefault);
-    this.timeZoneOffset = timeZoneOffset;
-  }
-
-  public enum TruncateMode {
-    IgnoreTruncation(0x1),
-    TruncationAsWarning(0x2);
-
-    private final long mask;
-
-    TruncateMode(long mask) {
-      this.mask = mask;
-    }
-
-    public long mask(long flags) {
-      return flags | mask;
-    }
-  }
-
-  /** Whether we use streaming to push down the request */
-  public enum PushDownType {
-    STREAMING,
-    NORMAL
-  }
-
-  /** Predefined executor priority map. */
-  private static final Map<ExecType, Integer> EXEC_TYPE_PRIORITY_MAP =
-      ImmutableMap.<ExecType, Integer>builder()
-          .put(ExecType.TypeTableScan, 0)
-          .put(ExecType.TypeIndexScan, 0)
-          .put(ExecType.TypeSelection, 1)
-          .put(ExecType.TypeAggregation, 2)
-          .put(ExecType.TypeTopN, 3)
-          .put(ExecType.TypeLimit, 4)
-          .build();
-
-  private TiTableInfo tableInfo;
-  private List<TiPartitionDef> prunedParts;
-  private TiStoreType storeType = TiStoreType.TiKV;
-  private TiIndexInfo indexInfo;
-  private final List<ColumnRef> fields = new ArrayList<>();
-  private final List<DataType> indexDataTypes = new ArrayList<>();
-  private final List<Expression> filters = new ArrayList<>();
-  private final List<ByItem> groupByItems = new ArrayList<>();
-  private final List<ByItem> orderByItems = new ArrayList<>();
-  // System like Spark has different type promotion rules
-  // we need a cast to target when given
-  private final List<AggregateFunction> aggregates = new ArrayList<>();
-  private final Map<Long, List<Coprocessor.KeyRange>> idToRanges = new HashMap<>();
-  // If index scanning of this request is not possible in some scenario, we downgrade it
-  // to a table scan and use downGradeRanges instead of index scan ranges stored in
-  // idToRanges along with downgradeFilters to perform a table scan.
-  private final List<Expression> downgradeFilters = new ArrayList<>();
-
-  private final List<Expression> pushDownFilters = new ArrayList<>();
-  private final List<AggregateFunction> pushDownAggregates = new ArrayList<>();
-  private final List<ByItem> pushDownGroupBys = new ArrayList<>();
-  private final List<ByItem> pushDownOrderBys = new ArrayList<>();
-  private int pushDownLimits;
-
-  private int limit;
-  private int timeZoneOffset;
-  private long flags;
-  private TiTimestamp startTs;
-  private Expression having;
-  private boolean distinct;
-  private boolean isDoubleRead;
-  private final PushDownType pushDownType;
-  private EncodeType encodeType;
-  private double estimatedCount = -1;
-
-  private static ColumnInfo handleColumn =
-      ColumnInfo.newBuilder()
-          .setColumnId(-1)
-          .setPkHandle(true)
-          // We haven't changed the field name in protobuf file, but
-          // we need to set this to true in order to retrieve the handle,
-          // so the name 'setPkHandle' may sounds strange.
-          .setTp(8)
-          .setColumnLen(20)
-          .setFlag(2)
-          .build();
 
   public DAGRequest buildIndexScan() {
     List<Integer> outputOffsets = new ArrayList<>();
@@ -621,13 +528,13 @@ public class TiDAGRequest implements Serializable {
     }
   }
 
+  public TiTableInfo getTableInfo() {
+    return this.tableInfo;
+  }
+
   public TiDAGRequest setTableInfo(TiTableInfo tableInfo) {
     this.tableInfo = requireNonNull(tableInfo, "tableInfo is null");
     return this;
-  }
-
-  public TiTableInfo getTableInfo() {
-    return this.tableInfo;
   }
 
   public List<Long> getIds() {
@@ -642,13 +549,13 @@ public class TiDAGRequest implements Serializable {
     return ids;
   }
 
+  public TiIndexInfo getIndexInfo() {
+    return indexInfo;
+  }
+
   public TiDAGRequest setIndexInfo(TiIndexInfo indexInfo) {
     this.indexInfo = requireNonNull(indexInfo, "indexInfo is null");
     return this;
-  }
-
-  public TiIndexInfo getIndexInfo() {
-    return indexInfo;
   }
 
   public void clearIndexInfo() {
@@ -691,6 +598,11 @@ public class TiDAGRequest implements Serializable {
     return flags;
   }
 
+  @VisibleForTesting
+  public TiTimestamp getStartTs() {
+    return startTs;
+  }
+
   /**
    * set start timestamp for the transaction
    *
@@ -700,11 +612,6 @@ public class TiDAGRequest implements Serializable {
   public TiDAGRequest setStartTs(@Nonnull TiTimestamp startTs) {
     this.startTs = startTs;
     return this;
-  }
-
-  @VisibleForTesting
-  public TiTimestamp getStartTs() {
-    return startTs;
   }
 
   /**
@@ -718,13 +625,13 @@ public class TiDAGRequest implements Serializable {
     return this;
   }
 
+  public boolean isDistinct() {
+    return distinct;
+  }
+
   public TiDAGRequest setDistinct(boolean distinct) {
     this.distinct = distinct;
     return this;
-  }
-
-  public boolean isDistinct() {
-    return distinct;
   }
 
   public TiDAGRequest addAggregate(AggregateFunction expr) {
@@ -955,14 +862,14 @@ public class TiDAGRequest implements Serializable {
     return pushDownType;
   }
 
-  /** Set the estimated row count will be fetched from this request. */
-  public void setEstimatedCount(double estimatedCount) {
-    this.estimatedCount = estimatedCount;
-  }
-
   /** Get the estimated row count will be fetched from this request. */
   public double getEstimatedCount() {
     return estimatedCount;
+  }
+
+  /** Set the estimated row count will be fetched from this request. */
+  public void setEstimatedCount(double estimatedCount) {
+    this.estimatedCount = estimatedCount;
   }
 
   public void init(boolean readHandle) {
@@ -975,12 +882,6 @@ public class TiDAGRequest implements Serializable {
 
   private void init() {
     init(hasIndex());
-  }
-
-  public enum IndexScanType {
-    INDEX_SCAN,
-    COVERING_INDEX_SCAN,
-    TABLE_SCAN
   }
 
   public IndexScanType getIndexScanType() {
@@ -1096,6 +997,120 @@ public class TiDAGRequest implements Serializable {
       return ((TiDAGRequest) ois.readObject());
     } catch (Exception e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  public enum TruncateMode {
+    IgnoreTruncation(0x1),
+    TruncationAsWarning(0x2);
+
+    private final long mask;
+
+    TruncateMode(long mask) {
+      this.mask = mask;
+    }
+
+    public long mask(long flags) {
+      return flags | mask;
+    }
+  }
+
+  /** Whether we use streaming to push down the request */
+  public enum PushDownType {
+    STREAMING,
+    NORMAL
+  }
+
+  public enum IndexScanType {
+    INDEX_SCAN,
+    COVERING_INDEX_SCAN,
+    TABLE_SCAN
+  }
+
+  public static class Builder {
+    private final List<String> requiredCols = new ArrayList<>();
+    private final List<Expression> filters = new ArrayList<>();
+    private final List<ByItem> orderBys = new ArrayList<>();
+    private final Map<Long, List<Coprocessor.KeyRange>> ranges = new HashMap<>();
+    private TiTableInfo tableInfo;
+    private int limit;
+    private TiTimestamp startTs;
+
+    public static Builder newBuilder() {
+      return new Builder();
+    }
+
+    public Builder setFullTableScan(TiTableInfo tableInfo) {
+      requireNonNull(tableInfo);
+      setTableInfo(tableInfo);
+      if (!tableInfo.isPartitionEnabled()) {
+        RowKey start = RowKey.createMin(tableInfo.getId());
+        RowKey end = RowKey.createBeyondMax(tableInfo.getId());
+        ranges.put(
+            tableInfo.getId(),
+            ImmutableList.of(
+                KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString())));
+      } else {
+        for (TiPartitionDef pDef : tableInfo.getPartitionInfo().getDefs()) {
+          RowKey start = RowKey.createMin(pDef.getId());
+          RowKey end = RowKey.createBeyondMax(pDef.getId());
+          ranges.put(
+              pDef.getId(),
+              ImmutableList.of(
+                  KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString())));
+        }
+      }
+
+      return this;
+    }
+
+    public Builder setLimit(int limit) {
+      this.limit = limit;
+      return this;
+    }
+
+    public Builder setTableInfo(TiTableInfo tableInfo) {
+      this.tableInfo = tableInfo;
+      return this;
+    }
+
+    public Builder addRequiredCols(List<String> cols) {
+      this.requiredCols.addAll(cols);
+      return this;
+    }
+
+    public Builder addFilter(Expression filter) {
+      this.filters.add(filter);
+      return this;
+    }
+
+    public Builder addOrderBy(ByItem item) {
+      this.orderBys.add(item);
+      return this;
+    }
+
+    public Builder setStartTs(@Nonnull TiTimestamp ts) {
+      this.startTs = ts;
+      return this;
+    }
+
+    public TiDAGRequest build(PushDownType pushDownType) {
+      TiDAGRequest req = new TiDAGRequest(pushDownType);
+      req.setTableInfo(tableInfo);
+      req.addRanges(ranges);
+      req.addFilters(filters);
+      // this request will push down all filters
+      req.addPushDownFilters();
+      if (!orderBys.isEmpty()) {
+        orderBys.forEach(req::addOrderByItem);
+      }
+      if (limit != 0) {
+        req.setLimit(limit);
+      }
+      requiredCols.forEach(c -> req.addRequiredColumn(ColumnRef.create(c, tableInfo.getColumn(c))));
+      req.setStartTs(startTs);
+
+      return req;
     }
   }
 }

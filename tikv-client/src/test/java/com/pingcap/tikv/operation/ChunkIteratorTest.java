@@ -35,7 +35,16 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class ChunkIteratorTest {
-  private List<Chunk> chunks = new ArrayList<>();
+  private final List<Chunk> chunks = new ArrayList<>();
+
+  private static void setValueToRow(CodecDataInput cdi, DataType type, int pos, Row row) {
+    if (type.isNextNull(cdi)) {
+      cdi.readUnsignedByte();
+      row.setNull(pos);
+    } else {
+      row.set(pos, type, type.decode(cdi));
+    }
+  }
 
   @Before
   public void setup() {
@@ -50,15 +59,6 @@ public class ChunkIteratorTest {
             .addRowsMeta(2, RowMeta.newBuilder().setHandle(3).setLength(5))
             .build();
     chunks.add(chunk);
-  }
-
-  private static void setValueToRow(CodecDataInput cdi, DataType type, int pos, Row row) {
-    if (type.isNextNull(cdi)) {
-      cdi.readUnsignedByte();
-      row.setNull(pos);
-    } else {
-      row.set(pos, type, type.decode(cdi));
-    }
   }
 
   @Test

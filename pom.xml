@@ -74,7 +74,9 @@
         <spark.version.test>2.4.4</spark.version.test>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.12</scala.version>
-        <scalatest.version>3.0.4</scalatest.version>
+        <!-- for now, not running scalafmt as part of default verify pipeline -->
+        <scalafmt.skip>true</scalafmt.skip>
+        <scalatest.version>3.0.8</scalatest.version>
         <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
         <mysql.connector.version>5.1.44</mysql.connector.version>
         <gpg.keyname>fake gpg keyname</gpg.keyname>
@@ -82,7 +84,68 @@
         <javadoc.skip>true</javadoc.skip>
         <skipFetchTestData>false</skipFetchTestData>
         <skipCloneProtoFiles>false</skipCloneProtoFiles>
+        <CodeCacheSize>1g</CodeCacheSize>
+        <test.exclude.tags/>
+        <test.include.tags/>
     </properties>
+    <repositories>
+        <repository>
+            <id>gcs-maven-central-mirror</id>
+            <!--
+              Google Mirror of Maven Central, placed first so that it's used instead of flaky Maven Central.
+              See https://storage-download.googleapis.com/maven-central/index.html
+            -->
+            <name>GCS Maven Central mirror</name>
+            <url>https://maven-central.storage-download.googleapis.com/maven2/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <!--
+              This is used as a fallback when the first try fails.
+            -->
+            <id>central</id>
+            <name>Maven Repository</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>gcs-maven-central-mirror</id>
+            <!--
+              Google Mirror of Maven Central, placed first so that it's used instead of flaky Maven Central.
+              See https://storage-download.googleapis.com/maven-central/index.html
+            -->
+            <name>GCS Maven Central mirror</name>
+            <url>https://maven-central.storage-download.googleapis.com/repos/central/data/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+        <pluginRepository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <distributionManagement>
         <snapshotRepository>
@@ -114,6 +177,15 @@
                 <skipCloneProtoFiles>true</skipCloneProtoFiles>
             </properties>
         </profile>
+        <profile>
+            <id>test-java-home</id>
+            <activation>
+                <property><name>env.JAVA_HOME</name></property>
+            </activation>
+            <properties>
+                <test.java.home>${env.JAVA_HOME}</test.java.home>
+            </properties>
+        </profile>
     </profiles>
 
     <build>
@@ -128,6 +200,23 @@
                         <forkMode>always</forkMode>
                     </configuration>
                     <version>3.0.0-M3</version>
+                </plugin>
+                <plugin>
+                    <groupId>com.coveo</groupId>
+                    <artifactId>fmt-maven-plugin</artifactId>
+                    <version>2.6.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.antipathy</groupId>
+                    <artifactId>mvn-scalafmt_${scala.binary.version}</artifactId>
+                    <configuration>
+                        <skipSources>true</skipSources>
+                        <skipTestSources>true</skipTestSources>
+                        <branch>origin/master</branch>
+                        <onlyChangedFiles>true</onlyChangedFiles>
+                        <configLocation>dev/.scalafmt.conf</configLocation> <!-- (Optional) config location -->
+                    </configuration>
+                    <version>1.0.3</version>
                 </plugin>
             </plugins>
         </pluginManagement>

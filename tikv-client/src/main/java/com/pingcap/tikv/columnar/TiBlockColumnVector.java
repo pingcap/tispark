@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tikv.columnar;
 
 import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
@@ -14,16 +29,13 @@ import java.sql.Timestamp;
 import org.joda.time.LocalDate;
 
 public class TiBlockColumnVector extends TiColumnVector {
-  private int fixedLength;
-
   long offsetsAddr;
   ByteBuffer offsets;
-
   long nullMapAddr;
   ByteBuffer nullMap;
-
   long dataAddr;
   ByteBuffer data;
+  private int fixedLength;
 
   public TiBlockColumnVector(CHType type, ByteBuffer data, int numOfRows, int fixedLength) {
     super(type.toDataType(), numOfRows);
@@ -32,16 +44,6 @@ public class TiBlockColumnVector extends TiColumnVector {
     fillEmptyNullMap();
     fillEmptyOffsets();
     this.fixedLength = fixedLength;
-  }
-
-  private void fillEmptyNullMap() {
-    this.nullMap = EMPTY_BYTE_BUFFER_DIRECT;
-    this.nullMapAddr = MemoryUtil.getAddress(this.nullMap);
-  }
-
-  private void fillEmptyOffsets() {
-    this.offsets = EMPTY_BYTE_BUFFER_DIRECT;
-    this.offsetsAddr = MemoryUtil.getAddress(this.offsets);
   }
 
   public TiBlockColumnVector(CHType type) {
@@ -72,6 +74,16 @@ public class TiBlockColumnVector extends TiColumnVector {
     this.data = data;
     this.dataAddr = MemoryUtil.getAddress(data);
     this.fixedLength = -1;
+  }
+
+  private void fillEmptyNullMap() {
+    this.nullMap = EMPTY_BYTE_BUFFER_DIRECT;
+    this.nullMapAddr = MemoryUtil.getAddress(this.nullMap);
+  }
+
+  private void fillEmptyOffsets() {
+    this.offsets = EMPTY_BYTE_BUFFER_DIRECT;
+    this.offsetsAddr = MemoryUtil.getAddress(this.offsets);
   }
 
   /**

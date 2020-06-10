@@ -35,8 +35,7 @@ class ArithmeticTest2Suite extends BaseInitialOnceTest {
     "select id_dt from full_data_type_table where tp_double / tp_mediumint > 0 order by id_dt",
     "select id_dt from full_data_type_table where tp_int / tp_decimal < 0 order by id_dt",
     "select id_dt from full_data_type_table where tp_float / tp_decimal > 0 order by id_dt",
-    "select id_dt from full_data_type_table where tp_double / tp_float > 0 order by id_dt"
-  )
+    "select id_dt from full_data_type_table where tp_double / tp_float > 0 order by id_dt")
   private val multiCases = divideCases map { _.replace("/", "*") }
   private val minusCases = divideCases map { _.replace("/", "-") }
   private val addCases = divideCases map { _.replace("/", "+") }

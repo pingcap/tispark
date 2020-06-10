@@ -44,10 +44,10 @@ object BasicExpression {
         // and must be restored by DateTimeUtils.daysToMillis
         case DateType =>
           new DateTime(DateTimeUtils.daysToMillis(value.asInstanceOf[DateTimeUtils.SQLDate]))
-        case TimestampType  => new Timestamp(value.asInstanceOf[Long] / 1000)
-        case StringType     => value.toString
+        case TimestampType => new Timestamp(value.asInstanceOf[Long] / 1000)
+        case StringType => value.toString
         case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
-        case _              => value
+        case _ => value
       }
     }
 
@@ -59,7 +59,10 @@ object BasicExpression {
         // we do not support this expression in DAG mode
         expr.children.forall(
           (e: Expression) =>
-            sameCopType(childType, e.dataType) && isSupportedExpression(e, requestTypes) // Do it recursively
+            sameCopType(childType, e.dataType) && isSupportedExpression(
+              e,
+              requestTypes
+            ) // Do it recursively
         )
       // For other request types we assume them supported
       // by default
@@ -68,17 +71,18 @@ object BasicExpression {
 
   def sameCopType(lhs: DataType, rhs: DataType): Boolean = {
     (lhs, rhs) match {
-      case (_: IntegralType, _: IntegralType)                           => true
-      case (_: DecimalType, _: DecimalType)                             => true
+      case (_: IntegralType, _: IntegralType) => true
+      case (_: DecimalType, _: DecimalType) => true
       case (_: FloatType | _: DoubleType, _: FloatType | _: DoubleType) => true
-      case _                                                            => lhs.sameType(rhs)
+      case _ => lhs.sameType(rhs)
     }
   }
 
   def convertToTiExpr(expr: Expression): Option[TiExpression] =
     expr match {
       case Literal(value, dataType) =>
-        Some(Constant.create(convertLiteral(value, dataType), TiConverter.fromSparkType(dataType)))
+        Some(
+          Constant.create(convertLiteral(value, dataType), TiConverter.fromSparkType(dataType)))
 
       case Add(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(ArithmeticBinaryExpression.plus(lhs, rhs))

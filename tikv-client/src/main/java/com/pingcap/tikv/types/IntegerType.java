@@ -60,6 +60,10 @@ public class IntegerType extends DataType {
     super(tp);
   }
 
+  protected IntegerType(TiColumnInfo.InternalTypeHolder holder) {
+    super(holder);
+  }
+
   private static BigDecimal unsignedValueOf(long x) {
     return new BigDecimal(UnsignedLong.fromLongBits(x).bigIntegerValue());
   }
@@ -167,9 +171,5 @@ public class IntegerType extends DataType {
   @Override
   public Object getOriginDefaultValueNonNull(String value, long version) {
     return Long.parseLong(value);
-  }
-
-  protected IntegerType(TiColumnInfo.InternalTypeHolder holder) {
-    super(holder);
   }
 }

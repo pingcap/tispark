@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.exception.TiBatchWriteException
@@ -17,12 +32,7 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
     val row1 = Row(null, "Hello")
     val row2 = Row(2L, "TiDB")
 
-    val schema = StructType(
-      List(
-        StructField("i", LongType),
-        StructField("s", StringType)
-      )
-    )
+    val schema = StructType(List(StructField("i", LongType), StructField("s", StringType)))
 
     dropTable()
 
@@ -39,12 +49,7 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
 
     val row1 = Row(2L, 3L)
 
-    val schema = StructType(
-      List(
-        StructField("i", LongType),
-        StructField("i2", LongType)
-      )
-    )
+    val schema = StructType(List(StructField("i", LongType), StructField("i2", LongType)))
 
     dropTable()
 
@@ -57,9 +62,7 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
       assert(
         caught.getMessage
           .equals(
-            "table without auto increment column, but data col size 2 != table column size 1"
-          )
-      )
+            "table without auto increment column, but data col size 2 != table column size 1"))
     }
   }
 
@@ -70,12 +73,7 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
 
     val row1 = Row(2L, 3L)
 
-    val schema = StructType(
-      List(
-        StructField("i", LongType),
-        StructField("i2", LongType)
-      )
-    )
+    val schema = StructType(List(StructField("i", LongType), StructField("i2", LongType)))
 
     dropTable()
 
@@ -88,9 +86,7 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
       assert(
         caught.getMessage
           .equals(
-            "table without auto increment column, but data col size 2 != table column size 3"
-          )
-      )
+            "table without auto increment column, but data col size 2 != table column size 3"))
     }
   }
 
@@ -102,12 +98,7 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
     val row1 = Row(null, 3L)
     val row2 = Row(4L, null)
 
-    val schema = StructType(
-      List(
-        StructField("i", LongType),
-        StructField("i2", LongType)
-      )
-    )
+    val schema = StructType(List(StructField("i", LongType), StructField("i2", LongType)))
 
     dropTable()
 
@@ -119,10 +110,7 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
       }
       assert(
         caught.getMessage
-          .equals(
-            "Insert null value to not null column! 1 rows contain illegal null values!"
-          )
-      )
+          .equals("Insert null value to not null column! 1 rows contain illegal null values!"))
     }
   }
 

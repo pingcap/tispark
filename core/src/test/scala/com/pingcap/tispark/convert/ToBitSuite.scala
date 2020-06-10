@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.convert
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
@@ -28,14 +43,14 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
       StructField("i", IntegerType),
       StructField("c1", LongType),
       StructField("c2", LongType),
-      StructField("c3", LongType)
-    )
-  )
+      StructField("c3", LongType)))
 
-  private def createTable(): Unit =
-    jdbcUpdate(
-      s"create table $dbtable(i INT, c1 BIT(1), c2 BIT(8),  c3 BIT(64))"
-    )
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 
   test("Test Convert from java.lang.Boolean to BIT") {
     if (!supportBatchWrite) {
@@ -60,9 +75,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
             StructField("i", IntegerType),
             StructField("c1", BooleanType),
             StructField("c2", BooleanType),
-            StructField("c3", BooleanType)
-          )
-        )
+            StructField("c3", BooleanType)))
 
         val readRow1 = Row(1, null, null, null)
         val readRow2 = Row(2, readOne, readZero, readOne)
@@ -77,8 +90,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
-          readSchema
-        )
+          readSchema)
     }
   }
 
@@ -109,9 +121,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
             StructField("i", IntegerType),
             StructField("c1", ByteType),
             StructField("c2", ByteType),
-            StructField("c3", ByteType)
-          )
-        )
+            StructField("c3", ByteType)))
 
         dropTable()
         createTable()
@@ -149,9 +159,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
             StructField("i", IntegerType),
             StructField("c1", ShortType),
             StructField("c2", ShortType),
-            StructField("c3", ShortType)
-          )
-        )
+            StructField("c3", ShortType)))
 
         dropTable()
         createTable()
@@ -189,9 +197,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
             StructField("i", IntegerType),
             StructField("c1", IntegerType),
             StructField("c2", IntegerType),
-            StructField("c3", IntegerType)
-          )
-        )
+            StructField("c3", IntegerType)))
 
         dropTable()
         createTable()
@@ -229,9 +235,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
             StructField("i", IntegerType),
             StructField("c1", LongType),
             StructField("c2", LongType),
-            StructField("c3", LongType)
-          )
-        )
+            StructField("c3", LongType)))
 
         dropTable()
         createTable()
@@ -269,16 +273,16 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
             StructField("i", IntegerType),
             StructField("c1", FloatType),
             StructField("c2", FloatType),
-            StructField("c3", FloatType)
-          )
-        )
+            StructField("c3", FloatType)))
 
         dropTable()
         createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -309,9 +313,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
             StructField("i", IntegerType),
             StructField("c1", DoubleType),
             StructField("c2", DoubleType),
-            StructField("c3", DoubleType)
-          )
-        )
+            StructField("c3", DoubleType)))
 
         val readZero: java.lang.Long = 0L
         val readOne: java.lang.Long = 1L
@@ -331,16 +333,16 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
             StructField("i", IntegerType),
             StructField("c1", LongType),
             StructField("c2", LongType),
-            StructField("c3", LongType)
-          )
-        )
+            StructField("c3", LongType)))
 
         dropTable()
         createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -354,10 +356,6 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   // scala.collection.Map
   // org.apache.spark.sql.Row
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
+  private def createTable(): Unit =
+    jdbcUpdate(s"create table $dbtable(i INT, c1 BIT(1), c2 BIT(8),  c3 BIT(64))")
 }

@@ -15,7 +15,13 @@
 
 package com.pingcap.tikv.expression;
 
-import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.*;
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.BIT_AND;
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.BIT_OR;
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.BIT_XOR;
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.DIVIDE;
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.MINUS;
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.MULTIPLY;
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.PLUS;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
@@ -24,14 +30,17 @@ import java.util.List;
 import java.util.Objects;
 
 public class ArithmeticBinaryExpression extends Expression {
-  public enum Type {
-    PLUS,
-    MINUS,
-    MULTIPLY,
-    DIVIDE,
-    BIT_AND,
-    BIT_OR,
-    BIT_XOR
+  private final Expression left;
+  private final Expression right;
+  private final Type compType;
+
+  public ArithmeticBinaryExpression(
+      DataType dataType, Type type, Expression left, Expression right) {
+    super(dataType);
+    resolved = true;
+    this.left = requireNonNull(left, "left expression is null");
+    this.right = requireNonNull(right, "right expression is null");
+    this.compType = requireNonNull(type, "type is null");
   }
 
   public static ArithmeticBinaryExpression plus(Expression left, Expression right) {
@@ -70,19 +79,6 @@ public class ArithmeticBinaryExpression extends Expression {
 
   public static ArithmeticBinaryExpression bitXor(Expression left, Expression right) {
     return new ArithmeticBinaryExpression(left.dataType, BIT_XOR, left, right);
-  }
-
-  private final Expression left;
-  private final Expression right;
-  private final Type compType;
-
-  public ArithmeticBinaryExpression(
-      DataType dataType, Type type, Expression left, Expression right) {
-    super(dataType);
-    resolved = true;
-    this.left = requireNonNull(left, "left expression is null");
-    this.right = requireNonNull(right, "right expression is null");
-    this.compType = requireNonNull(type, "type is null");
   }
 
   public Expression getLeft() {
@@ -130,5 +126,15 @@ public class ArithmeticBinaryExpression extends Expression {
   @Override
   public String toString() {
     return String.format("[%s %s %s]", getLeft(), getCompType(), getRight());
+  }
+
+  public enum Type {
+    PLUS,
+    MINUS,
+    MULTIPLY,
+    DIVIDE,
+    BIT_AND,
+    BIT_OR,
+    BIT_XOR
   }
 }

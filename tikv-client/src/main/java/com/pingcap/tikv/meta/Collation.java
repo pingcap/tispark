@@ -19,24 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 
 public class Collation {
-  public static int translate(String collation) {
-    Integer code = collationMap.get(collation);
-    if (code == null) {
-      return DEF_COLLATION_CODE;
-    }
-    return code;
-  }
-
-  public static String translate(int code) {
-    String collation = collationCodeMap.get(code);
-    if (collation == null) {
-      return "";
-    }
-    return collation;
-  }
-
   public static final int DEF_COLLATION_CODE = 83;
-
   private static final Map<String, Integer> collationMap;
   private static final Map<Integer, String> collationCodeMap;
 
@@ -269,5 +252,21 @@ public class Collation {
       builder.put(collationMap.get(collation), collation);
     }
     collationCodeMap = builder.build();
+  }
+
+  public static int translate(String collation) {
+    Integer code = collationMap.get(collation);
+    if (code == null) {
+      return DEF_COLLATION_CODE;
+    }
+    return code;
+  }
+
+  public static String translate(int code) {
+    String collation = collationCodeMap.get(code);
+    if (collation == null) {
+      return "";
+    }
+    return collation;
   }
 }

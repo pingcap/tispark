@@ -22,8 +22,11 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.CatalogTransaction;
-import com.pingcap.tikv.expression.*;
+import com.pingcap.tikv.expression.AggregateFunction;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
+import com.pingcap.tikv.expression.ByItem;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.meta.TiTimestamp;
@@ -39,15 +42,15 @@ public class SchemaInferTest {
       "{\"id\":29,\"name\":{\"O\":\"t1\",\"L\":\"t1\"},\"charset\":\"\",\"collate\":\"\",\"cols\":[{\"id\":1,\"name\":{\"O\":\"time\",\"L\":\"time\"},\"offset\":0,\"origin_default\":null,\"default\":null,\"type\":{\"Tp\":10,\"Flag\":128,\"Flen\":-1,\"Decimal\":-1,\"Charset\":\"binary\",\"Collate\":\"binary\",\"Elems\":null},\"state\":5,\"comment\":\"\"},{\"id\":2,\"name\":{\"O\":\"number\",\"L\":\"number\"},\"offset\":1,\"origin_default\":null,\"default\":null,\"type\":{\"Tp\":3,\"Flag\":128,\"Flen\":-1,\"Decimal\":-1,\"Charset\":\"binary\",\"Collate\":\"binary\",\"Elems\":null},\"state\":5,\"comment\":\"\"},{\"id\":3,\"name\":{\"O\":\"name\",\"L\":\"name\"},\"offset\":2,\"origin_default\":null,\"default\":null,\"type\":{\"Tp\":15,\"Flag\":0,\"Flen\":-1,\"Decimal\":-1,\"Charset\":\"utf8\",\"Collate\":\"utf8_bin\",\"Elems\":null},\"state\":5,\"comment\":\"\"}],\"index_info\":null,\"fk_info\":null,\"state\":5,\"pk_is_handle\":false,\"comment\":\"\",\"auto_inc_id\":0,\"max_col_id\":3,\"max_idx_id\":0}";
   private final ByteString table29Bs = ByteString.copyFromUtf8(table29);
 
-  private TiTableInfo table = CatalogTransaction.parseFromJson(table29Bs, TiTableInfo.class);
-  private ColumnRef name = ColumnRef.create("name", table);
-  private ColumnRef number = ColumnRef.create("number", table);
-  private AggregateFunction sum =
+  private final TiTableInfo table = CatalogTransaction.parseFromJson(table29Bs, TiTableInfo.class);
+  private final ColumnRef name = ColumnRef.create("name", table);
+  private final ColumnRef number = ColumnRef.create("number", table);
+  private final AggregateFunction sum =
       AggregateFunction.newCall(FunctionType.Sum, number, number.getDataType());
-  private ByItem simpleGroupBy = ByItem.create(number, false);
-  private ByItem complexGroupBy =
+  private final ByItem simpleGroupBy = ByItem.create(number, false);
+  private final ByItem complexGroupBy =
       ByItem.create(plus(number, Constant.create(1, IntegerType.BIGINT)), false);
-  private TiTimestamp ts = new TiTimestamp(0, 1);
+  private final TiTimestamp ts = new TiTimestamp(0, 1);
 
   @Test
   public void simpleSelectSchemaInferTest() {

@@ -29,8 +29,7 @@ class IssueTestSuite extends BaseTiSparkTest {
         |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
         |PARTITION BY RANGE ( `pt` ) (PARTITION p202112 VALUES LESS THAN (20211201000000)
         |)
-      """.stripMargin
-    )
+      """.stripMargin)
     //error
     tidbStmt.execute("insert into t(xh, pt) values(1, 20211200000000)")
 
@@ -48,26 +47,22 @@ class IssueTestSuite extends BaseTiSparkTest {
       qSpark =
         "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int asc nulls last limit 2",
       qTiDB =
-        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int is null asc, tp_int asc limit 2"
-    )
+        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int is null asc, tp_int asc limit 2")
     compSparkWithTiDB(
       qSpark =
         "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int desc nulls first limit 2",
       qTiDB =
-        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int is null desc, tp_int desc limit 2"
-    )
+        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int is null desc, tp_int desc limit 2")
     compSparkWithTiDB(
       qSpark =
         "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int asc nulls first limit 2",
       qTiDB =
-        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int asc limit 2"
-    )
+        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int asc limit 2")
     compSparkWithTiDB(
       qSpark =
         "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int desc nulls last limit 2",
       qTiDB =
-        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int desc limit 2"
-    )
+        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int desc limit 2")
   }
 
   // https://github.com/pingcap/tispark/issues/1161
@@ -100,8 +95,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     def runBitTest(bitNumber: Int, bitString: String): Unit = {
       tidbStmt.execute("DROP TABLE IF EXISTS t_origin_default_value")
       tidbStmt.execute(
-        s"CREATE TABLE t_origin_default_value (id bigint(20) NOT NULL, approved bit($bitNumber) NOT NULL DEFAULT b'$bitString')"
-      )
+        s"CREATE TABLE t_origin_default_value (id bigint(20) NOT NULL, approved bit($bitNumber) NOT NULL DEFAULT b'$bitString')")
       tidbStmt.execute("insert into t_origin_default_value(id) values (1), (2), (3)")
       judge("select * from t_origin_default_value")
 
@@ -109,8 +103,7 @@ class IssueTestSuite extends BaseTiSparkTest {
       tidbStmt.execute("CREATE TABLE t_origin_default_value (id bigint(20) NOT NULL)")
       tidbStmt.execute("insert into t_origin_default_value(id) values (1), (2), (3)")
       tidbStmt.execute(
-        s"alter table t_origin_default_value add approved bit($bitNumber) NOT NULL DEFAULT b'$bitString'"
-      )
+        s"alter table t_origin_default_value add approved bit($bitNumber) NOT NULL DEFAULT b'$bitString'")
       judge("select * from t_origin_default_value")
     }
 
@@ -182,38 +175,29 @@ class IssueTestSuite extends BaseTiSparkTest {
     judge("select full_data_type_table.id_dt from full_data_type_table")
     spark
       .sql(
-        "select full_data_type_table.id_dt from full_data_type_table join full_data_type_table_idx on full_data_type_table.id_dt = full_data_type_table_idx.id_dt"
-      )
+        "select full_data_type_table.id_dt from full_data_type_table join full_data_type_table_idx on full_data_type_table.id_dt = full_data_type_table_idx.id_dt")
       .explain(true)
     judge(
-      "select full_data_type_table.id_dt from full_data_type_table join full_data_type_table_idx on full_data_type_table.id_dt = full_data_type_table_idx.id_dt"
-    )
+      "select full_data_type_table.id_dt from full_data_type_table join full_data_type_table_idx on full_data_type_table.id_dt = full_data_type_table_idx.id_dt")
   }
 
   test("test date") {
     judge("select tp_date from full_data_type_table where tp_date >= date '2065-04-19'")
     judge(
-      "select tp_date, tp_datetime, id_dt from full_data_type_table where tp_date <= date '2065-04-19' order by id_dt limit 10"
-    )
+      "select tp_date, tp_datetime, id_dt from full_data_type_table where tp_date <= date '2065-04-19' order by id_dt limit 10")
     judge(
-      "select tp_date, tp_datetime, tp_timestamp from full_data_type_table_idx where tp_date < date '2017-11-02' order by id_dt"
-    )
+      "select tp_date, tp_datetime, tp_timestamp from full_data_type_table_idx where tp_date < date '2017-11-02' order by id_dt")
     judge(
-      "select cast(tp_datetime as date) cast_datetime, date(tp_datetime) date_datetime, tp_datetime from full_data_type_table where tp_date < date '2017-11-02'"
-    )
+      "select cast(tp_datetime as date) cast_datetime, date(tp_datetime) date_datetime, tp_datetime from full_data_type_table where tp_date < date '2017-11-02'")
   }
 
   test("Test count") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
-    tidbStmt.execute(
-      """CREATE TABLE `t` (
+    tidbStmt.execute("""CREATE TABLE `t` (
         |  `a` int(11) DEFAULT NULL
         |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
-      """.stripMargin
-    )
-    tidbStmt.execute(
-      "insert into t values(1),(2),(3),(4),(null)"
-    )
+      """.stripMargin)
+    tidbStmt.execute("insert into t values(1),(2),(3),(4),(null)")
 
     assert(spark.sql("select * from t limit 10").count() == 5)
     assert(spark.sql("select a from t limit 10").count() == 5)
@@ -225,16 +209,12 @@ class IssueTestSuite extends BaseTiSparkTest {
 
   test("Test sql with limit without order by") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
-    tidbStmt.execute(
-      """CREATE TABLE `t` (
+    tidbStmt.execute("""CREATE TABLE `t` (
         |  `a` int(11) DEFAULT NULL,
         |  `b` decimal(15,2) DEFAULT NULL
         |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
-      """.stripMargin
-    )
-    tidbStmt.execute(
-      "insert into t values(1,771.64),(2,378.49),(3,920.92),(4,113.97)"
-    )
+      """.stripMargin)
+    tidbStmt.execute("insert into t values(1,771.64),(2,378.49),(3,920.92),(4,113.97)")
 
     assert(try {
       judge("select a, max(b) from t group by a limit 2", canTestTiFlash = true)
@@ -253,8 +233,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     explainAndRunTest(q, q.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
     sqlConf.setConfString(
       TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD,
-      prevRegionIndexScanDowngradeThreshold
-    )
+      prevRegionIndexScanDowngradeThreshold)
   }
 
   test("Test index task batch size") {
@@ -268,8 +247,7 @@ class IssueTestSuite extends BaseTiSparkTest {
 
   test("TISPARK-21 count(1) when single read results in DAGRequestException") {
     tidbStmt.execute("DROP TABLE IF EXISTS `single_read`")
-    tidbStmt.execute(
-      """CREATE TABLE `single_read` (
+    tidbStmt.execute("""CREATE TABLE `single_read` (
         |  `c1` int(11) NOT NULL,
         |  `c2` int(11) NOT NULL,
         |  `c3` int(11) NOT NULL,
@@ -277,11 +255,9 @@ class IssueTestSuite extends BaseTiSparkTest {
         |  `c5` int(11) DEFAULT NULL,
         |  PRIMARY KEY (`c3`,`c2`),
         |  KEY `c4` (`c4`)
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin
-    )
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin)
     tidbStmt.execute(
-      "insert into single_read values(1, 1, 1, 2, null), (1, 2, 1, 1, null), (2, 1, 3, 2, null), (2, 2, 2, 1, 0)"
-    )
+      "insert into single_read values(1, 1, 1, 2, null), (1, 2, 1, 1, null), (2, 1, 3, 2, null), (2, 2, 2, 1, 0)")
 
     judge("select count(1) from single_read")
     judge("select count(c1) from single_read")
@@ -310,20 +286,16 @@ class IssueTestSuite extends BaseTiSparkTest {
     }
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     tidbStmt.execute("DROP TABLE IF EXISTS `t2`")
-    tidbStmt.execute(
-      """CREATE TABLE `t1` (
+    tidbStmt.execute("""CREATE TABLE `t1` (
         |         `c1` bigint(20) DEFAULT NULL,
         |         `k2` int(20) DEFAULT NULL,
         |         `k1` varchar(32) DEFAULT NULL
-        |         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin
-    )
-    tidbStmt.execute(
-      """CREATE TABLE `t2` (
+        |         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin)
+    tidbStmt.execute("""CREATE TABLE `t2` (
         |         `c2` bigint(20) DEFAULT NULL,
         |         `k2` int(20) DEFAULT NULL,
         |         `k1` varchar(32) DEFAULT NULL
-        |         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin
-    )
+        |         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin)
     tidbStmt.execute("insert into t1 values(1, 201707, 'aa'), (2, 201707, 'aa')")
     tidbStmt.execute("insert into t2 values(2, 201707, 'aa')")
 
@@ -352,11 +324,9 @@ class IssueTestSuite extends BaseTiSparkTest {
     }
     tidbStmt.execute("DROP TABLE IF EXISTS `tmp_debug`")
     tidbStmt.execute(
-      "CREATE TABLE `tmp_debug` (\n  `tp_datetime` datetime DEFAULT NULL, `tp_date` date DEFAULT NULL, `tp_timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
-    )
+      "CREATE TABLE `tmp_debug` (\n  `tp_datetime` datetime DEFAULT NULL, `tp_date` date DEFAULT NULL, `tp_timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
     tidbStmt.execute(
-      "INSERT INTO `tmp_debug` VALUES ('0000-00-00 00:00:00','0000-00-00','0000-00-00 00:00:00')"
-    )
+      "INSERT INTO `tmp_debug` VALUES ('0000-00-00 00:00:00','0000-00-00','0000-00-00 00:00:00')")
     spark.sql("select * from tmp_debug").collect().foreach(println)
   }
 
@@ -411,9 +381,7 @@ class IssueTestSuite extends BaseTiSparkTest {
   // https://github.com/pingcap/tispark/issues/496
   test("NPE when count(1) on empty table") {
     tidbStmt.execute("DROP TABLE IF EXISTS `tmp_empty_tbl`")
-    tidbStmt.execute(
-      "CREATE TABLE `tmp_empty_tbl` (`c1` varchar(20))"
-    )
+    tidbStmt.execute("CREATE TABLE `tmp_empty_tbl` (`c1` varchar(20))")
     judge("select count(1) from `tmp_empty_tbl`")
     judge("select cast(count(1) as char(20)) from `tmp_empty_tbl`")
   }
@@ -423,17 +391,13 @@ class IssueTestSuite extends BaseTiSparkTest {
       cancel("ignored in tiflash test")
     }
     explainTestAndCollect(
-      "select id_dt, tp_int, tp_double, tp_varchar from full_data_type_table_idx limit 10"
-    )
+      "select id_dt, tp_int, tp_double, tp_varchar from full_data_type_table_idx limit 10")
     explainTestAndCollect(
-      "select id_dt, tp_int, tp_double, tp_varchar from full_data_type_table_idx where tp_int > 200 limit 10"
-    )
+      "select id_dt, tp_int, tp_double, tp_varchar from full_data_type_table_idx where tp_int > 200 limit 10")
     explainTestAndCollect(
-      "select id_dt, tp_int, tp_double, tp_varchar from full_data_type_table_idx where tp_int > 200 order by tp_varchar limit 10"
-    )
+      "select id_dt, tp_int, tp_double, tp_varchar from full_data_type_table_idx where tp_int > 200 order by tp_varchar limit 10")
     explainTestAndCollect(
-      "select max(tp_double) from full_data_type_table_idx where tp_int > 200 group by tp_bigint limit 10"
-    )
+      "select max(tp_double) from full_data_type_table_idx where tp_int > 200 group by tp_bigint limit 10")
   }
 
   test("unsigned bigint as group by column") {
@@ -450,26 +414,14 @@ class IssueTestSuite extends BaseTiSparkTest {
                        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
       """.stripMargin)
     tidbStmt.execute(
-      "insert into table_group_by_bigint values(1, 2, 18446744073709551615), (2, 18446744073709551615, 18446744073709551614), (3, 18446744073709551615, 5), (4, 18446744073709551614, 18446744073709551614)"
-    )
+      "insert into table_group_by_bigint values(1, 2, 18446744073709551615), (2, 18446744073709551615, 18446744073709551614), (3, 18446744073709551615, 5), (4, 18446744073709551614, 18446744073709551614)")
+    explainTestAndCollect("select sum(a) from table_group_by_bigint group by b")
+    explainTestAndCollect("select sum(a) from table_group_by_bigint where c > 0 group by b")
+    explainTestAndCollect("select sum(b) from table_group_by_bigint group by c")
+    explainTestAndCollect("select sum(a) from table_group_by_bigint group by b")
+    explainTestAndCollect("select b from table_group_by_bigint group by b")
     explainTestAndCollect(
-      "select sum(a) from table_group_by_bigint group by b"
-    )
-    explainTestAndCollect(
-      "select sum(a) from table_group_by_bigint where c > 0 group by b"
-    )
-    explainTestAndCollect(
-      "select sum(b) from table_group_by_bigint group by c"
-    )
-    explainTestAndCollect(
-      "select sum(a) from table_group_by_bigint group by b"
-    )
-    explainTestAndCollect(
-      "select b from table_group_by_bigint group by b"
-    )
-    explainTestAndCollect(
-      "select b from table_group_by_bigint where c=18446744073709551614 group by b"
-    )
+      "select b from table_group_by_bigint where c=18446744073709551614 group by b")
   }
 
   test("test large amount of tables") {

@@ -26,9 +26,7 @@ class PrefixIndexTestSuite extends BaseTiSparkTest {
     tidbStmt.execute(
       resourceToString(
         s"prefix-index/PrefixTest.sql",
-        classLoader = Thread.currentThread().getContextClassLoader
-      )
-    )
+        classLoader = Thread.currentThread().getContextClassLoader))
     refreshConnections()
     // add explain to show if we have actually used prefix index in plan
     explainAndRunTest("select a, b from prefix where b < \"bbc\"")
@@ -45,16 +43,14 @@ class PrefixIndexTestSuite extends BaseTiSparkTest {
     explainAndRunTest(
       "select c, b from prefix where b > \"ÿ\" and b < \"ÿÿc\"",
       skipJDBC = true,
-      rTiDB = List(List(8, "ÿÿ"), List(9, "ÿÿ0"))
-    )
+      rTiDB = List(List(8, "ÿÿ"), List(9, "ÿÿ0")))
     // add LIKE tests for prefix index
     explainAndRunTest("select a, b from prefix where b LIKE 'b%'")
     explainAndRunTest("select a, b from prefix where b LIKE 'ab%'")
     explainAndRunTest(
       "select a, b from prefix where b LIKE 'ÿÿ%'",
       skipJDBC = true,
-      rTiDB = List(List(7, "ÿÿ"), List(8, "ÿÿ0"), List(9, "ÿÿÿ"))
-    )
+      rTiDB = List(List(7, "ÿÿ"), List(8, "ÿÿ0"), List(9, "ÿÿÿ")))
     explainAndRunTest("select a, b from prefix where b LIKE 'b%b'")
     explainAndRunTest("select a, b from prefix where b LIKE 'ÿ%'", skipJDBC = true)
     explainAndRunTest("select a, b from prefix where b LIKE '%b'")
@@ -66,9 +62,7 @@ class PrefixIndexTestSuite extends BaseTiSparkTest {
     tidbStmt.execute(
       resourceToString(
         s"prefix-index/UTF8Test.sql",
-        classLoader = Thread.currentThread().getContextClassLoader
-      )
-    )
+        classLoader = Thread.currentThread().getContextClassLoader))
     refreshConnections()
 
     spark.sql("select * from t1").show
@@ -80,8 +74,7 @@ class PrefixIndexTestSuite extends BaseTiSparkTest {
   test("index double scan with predicate") {
     tidbStmt.execute("drop table if exists test_index")
     tidbStmt.execute(
-      "create table test_index(id bigint(20), c1 text default null, c2 int, c3 int, c4 int, KEY idx_c1(c1(10)))"
-    )
+      "create table test_index(id bigint(20), c1 text default null, c2 int, c3 int, c4 int, KEY idx_c1(c1(10)))")
     tidbStmt.execute("insert into test_index values(1, 'aairy', 10, 20, 30)")
     tidbStmt.execute("insert into test_index values(2, 'dairy', 20, 30, 40)")
     tidbStmt.execute("insert into test_index values(3, 'zairy', 30, 40, 50)")

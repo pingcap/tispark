@@ -106,24 +106,17 @@
             <plugin>
                 <groupId>org.antipathy</groupId>
                 <artifactId>mvn-scalafmt_${scala.binary.version}</artifactId>
-                <version>0.10_1.5.1</version>
+                <version>1.0.3</version>
                 <configuration>
+                    <skipSources>${scalafmt.skip}</skipSources>
+                    <skipTestSources>${scalafmt.skip}</skipTestSources>
                     <sourceDirectories> <!-- (Optional) Paths to source-directories. Overrides ${project.build.sourceDirectory} -->
                         <sourceDirectory>${project.basedir}/src/main/scala</sourceDirectory>
                     </sourceDirectories>
                     <testSourceDirectories> <!-- (Optional) Paths to test-source-directories. Overrides ${project.build.testSourceDirectory} -->
                         <param>${project.basedir}/src/test/scala</param>
                     </testSourceDirectories>
-                    <configLocation>${project.parent.basedir}/scalafmt.conf</configLocation>
                 </configuration>
-                <executions>
-                    <execution>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>format</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

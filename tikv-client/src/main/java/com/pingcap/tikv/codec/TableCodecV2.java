@@ -37,6 +37,10 @@ import org.joda.time.DateTimeZone;
 
 public class TableCodecV2 {
 
+  private static final long signMask = 0x8000000000000000L;
+  private static final long[] setIndexValue = initSetIndexVal();
+  private static final long[] setIndexInvertValue = initSetIndexInvertVal();
+
   /**
    * New Row Format: Reference
    * https://github.com/pingcap/tidb/blob/952d1d7541a8e86be0af58f5b7e3d5e982bab34e/docs/design/2018-07-19-row-format.md
@@ -159,8 +163,6 @@ public class TableCodecV2 {
     return (float) decodeDouble(val);
   }
 
-  private static final long signMask = 0x8000000000000000L;
-
   static double decodeDouble(byte[] val) {
     CodecDataInput cdi = new CodecDataInput(val);
     if (val.length < 8) {
@@ -225,9 +227,6 @@ public class TableCodecV2 {
     if (idx < 0 || idx >= elems.size()) throw new TypeException("Index is out of range");
     return elems.get(idx);
   }
-
-  private static final long[] setIndexValue = initSetIndexVal();
-  private static final long[] setIndexInvertValue = initSetIndexInvertVal();
 
   private static long[] initSetIndexInvertVal() {
     long[] tmpArr = new long[64];

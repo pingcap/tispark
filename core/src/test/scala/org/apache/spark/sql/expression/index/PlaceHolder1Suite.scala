@@ -511,8 +511,7 @@ class PlaceHolder1Suite extends BaseInitialOnceTest {
     "select tp_real from full_data_type_table_idx  where tp_real != 127",
     "select tp_real from full_data_type_table_idx  where tp_real != -128",
     "select tp_real from full_data_type_table_idx  where tp_real != 0",
-    "select tp_real from full_data_type_table_idx  where tp_real != 2147868.65536"
-  )
+    "select tp_real from full_data_type_table_idx  where tp_real != 2147868.65536")
 
   allCases foreach { query =>
     {

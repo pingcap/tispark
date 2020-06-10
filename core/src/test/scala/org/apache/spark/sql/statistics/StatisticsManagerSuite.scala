@@ -17,17 +17,6 @@
 
 package org.apache.spark.sql.statistics
 
-import com.google.common.collect.ImmutableList
-import com.pingcap.tikv.expression.ComparisonBinaryExpression._
-import com.pingcap.tikv.expression._
-import com.pingcap.tikv.meta.{TiIndexInfo, TiTableInfo}
-import com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges
-import com.pingcap.tikv.predicates.TiKVScanAnalyzer
-import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.BaseTiSparkTest
-import org.apache.spark.sql.execution.SparkPlan
-
-import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
 
 class StatisticsManagerSuite extends BaseTiSparkTest {}

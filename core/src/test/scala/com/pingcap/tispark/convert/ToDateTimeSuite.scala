@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.convert
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
@@ -10,20 +25,14 @@ import org.apache.spark.sql.types._
  */
 class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_datetime") {
 
-  private var readRow1: Row = _
-  private var readRow2: Row = _
-
   private val readSchema = StructType(
     List(
       StructField("i", IntegerType),
       StructField("c1", TimestampType),
       StructField("c2", TimestampType),
-      StructField("c2", TimestampType)
-    )
-  )
-
-  private def createTable(): Unit =
-    jdbcUpdate(s"create table $dbtable(i INT, c1 DATETIME(0), c2 DATETIME(3), c3 DATETIME(6))")
+      StructField("c2", TimestampType)))
+  private var readRow1: Row = _
+  private var readRow2: Row = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -35,6 +44,13 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
     readRow1 = Row(1, null, null, null)
     readRow2 = Row(2, readA, readB, readC)
   }
+
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 
   test("Test Convert from String to DATETIME") {
     if (!supportBatchWrite) {
@@ -54,9 +70,7 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
             StructField("i", IntegerType),
             StructField("c1", StringType),
             StructField("c2", StringType),
-            StructField("c3", StringType)
-          )
-        )
+            StructField("c3", StringType)))
 
         dropTable()
         createTable()
@@ -88,9 +102,7 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
             StructField("i", IntegerType),
             StructField("c1", DateType),
             StructField("c2", DateType),
-            StructField("c3", DateType)
-          )
-        )
+            StructField("c3", DateType)))
 
         dropTable()
         createTable()
@@ -122,9 +134,7 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
             StructField("i", IntegerType),
             StructField("c1", TimestampType),
             StructField("c2", TimestampType),
-            StructField("c3", TimestampType)
-          )
-        )
+            StructField("c3", TimestampType)))
 
         dropTable()
         createTable()
@@ -151,10 +161,6 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
   // scala.collection.Map
   // org.apache.spark.sql.Row
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
+  private def createTable(): Unit =
+    jdbcUpdate(s"create table $dbtable(i INT, c1 DATETIME(0), c2 DATETIME(3), c3 DATETIME(6))")
 }

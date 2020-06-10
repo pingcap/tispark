@@ -64,8 +64,6 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
     this.handleTypes = infer.getTypes().toArray(new DataType[] {});
   }
 
-  abstract void submitTasks();
-
   /**
    * Build a DAGIterator from TiDAGRequest and region tasks to get rows
    *
@@ -224,6 +222,8 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
       }
     };
   }
+
+  abstract void submitTasks();
 
   boolean tryAdvanceChunkIndex() {
     if (chunkList == null || chunkIndex >= chunkList.size() - 1) {

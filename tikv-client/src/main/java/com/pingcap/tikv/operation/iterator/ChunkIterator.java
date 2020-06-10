@@ -31,6 +31,19 @@ public abstract class ChunkIterator<T> implements Iterator<T> {
   protected int bufOffset;
   protected boolean eof;
 
+  protected ChunkIterator(List<Chunk> chunks) {
+    // Read and then advance semantics
+    this.chunks = chunks;
+    this.chunkIndex = 0;
+    this.metaIndex = 0;
+    this.bufOffset = 0;
+    if (chunks.size() == 0
+        || chunks.get(0).getRowsMetaCount() == 0
+        || chunks.get(0).getRowsData().size() == 0) {
+      eof = true;
+    }
+  }
+
   public static ChunkIterator<ByteString> getRawBytesChunkIterator(List<Chunk> chunks) {
     return new ChunkIterator<ByteString>(chunks) {
       @Override
@@ -58,19 +71,6 @@ public abstract class ChunkIterator<T> implements Iterator<T> {
         return result;
       }
     };
-  }
-
-  protected ChunkIterator(List<Chunk> chunks) {
-    // Read and then advance semantics
-    this.chunks = chunks;
-    this.chunkIndex = 0;
-    this.metaIndex = 0;
-    this.bufOffset = 0;
-    if (chunks.size() == 0
-        || chunks.get(0).getRowsMetaCount() == 0
-        || chunks.get(0).getRowsData().size() == 0) {
-      eof = true;
-    }
   }
 
   @Override

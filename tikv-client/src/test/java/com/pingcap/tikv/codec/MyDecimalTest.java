@@ -107,7 +107,7 @@ public class MyDecimalTest {
   }
 
   // MyDecimalTestStruct is only used for simplifying testing.
-  private class MyDecimalTestStruct {
+  private static class MyDecimalTestStruct {
     String in;
     String out;
     int precision;

@@ -36,8 +36,7 @@ class Aggregate0Suite extends BaseInitialOnceTest {
     "select tp_decimal from full_data_type_table_idx  group by (tp_decimal)  order by tp_decimal ",
     "select id_dt from full_data_type_table_idx  group by (id_dt)  order by id_dt ",
     "select tp_char from full_data_type_table_idx  group by (tp_char)  order by tp_char ",
-    "select tp_date from full_data_type_table_idx  group by (tp_date)  order by tp_date "
-  )
+    "select tp_date from full_data_type_table_idx  group by (tp_date)  order by tp_date ")
 
   allCases foreach { query =>
     {

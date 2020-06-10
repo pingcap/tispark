@@ -42,8 +42,7 @@ class SimpleSelect0Suite extends BaseInitialOnceTest {
     "select id_dt from full_data_type_table  order by id_dt  limit 20",
     "select tp_blob from full_data_type_table  order by tp_blob  limit 20",
     "select tp_varchar from full_data_type_table  order by tp_varchar  limit 20",
-    "select tp_tinytext from full_data_type_table  order by tp_tinytext  limit 20"
-  )
+    "select tp_tinytext from full_data_type_table  order by tp_tinytext  limit 20")
 
   allCases foreach { query =>
     {

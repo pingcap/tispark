@@ -73,6 +73,24 @@ public class TiIndexInfo implements Serializable {
     this.isFakePrimaryKey = isFakePrimaryKey;
   }
 
+  public static TiIndexInfo generateFakePrimaryKeyIndex(TiTableInfo table) {
+    TiColumnInfo pkColumn = table.getPKIsHandleColumn();
+    if (pkColumn != null) {
+      return new TiIndexInfo(
+          -1,
+          CIStr.newCIStr("fake_pk_" + table.getId()),
+          CIStr.newCIStr(table.getName()),
+          ImmutableList.of(pkColumn.toFakeIndexColumn()),
+          true,
+          true,
+          SchemaState.StatePublic.getStateCode(),
+          "Fake Column",
+          IndexType.IndexTypeHash.getTypeCode(),
+          true);
+    }
+    return null;
+  }
+
   private long calculateIndexColumnSize(TiIndexColumn indexColumn, List<TiColumnInfo> columns) {
     for (TiColumnInfo column : columns) {
       if (column.getName().equalsIgnoreCase(indexColumn.getName())) {
@@ -99,24 +117,6 @@ public class TiIndexInfo implements Serializable {
 
   public long getIndexColumnSize() {
     return this.indexColumnSize;
-  }
-
-  public static TiIndexInfo generateFakePrimaryKeyIndex(TiTableInfo table) {
-    TiColumnInfo pkColumn = table.getPKIsHandleColumn();
-    if (pkColumn != null) {
-      return new TiIndexInfo(
-          -1,
-          CIStr.newCIStr("fake_pk_" + table.getId()),
-          CIStr.newCIStr(table.getName()),
-          ImmutableList.of(pkColumn.toFakeIndexColumn()),
-          true,
-          true,
-          SchemaState.StatePublic.getStateCode(),
-          "Fake Column",
-          IndexType.IndexTypeHash.getTypeCode(),
-          true);
-    }
-    return null;
   }
 
   public long getId() {

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tikv.operation.iterator;
 
 import static com.pingcap.tikv.meta.TiDAGRequest.PushDownType.STREAMING;
@@ -17,7 +32,13 @@ import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.ExecutorCompletionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,20 +46,15 @@ import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Metapb;
 
 public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
+  private static final Logger logger = LoggerFactory.getLogger(DAGIterator.class.getName());
+  private final PushDownType pushDownType;
+  private final TiStoreType storeType;
+  private final long startTs;
+  protected EncodeType encodeType;
   private ExecutorCompletionService<Iterator<SelectResponse>> streamingService;
   private ExecutorCompletionService<SelectResponse> dagService;
   private SelectResponse response;
-  private static final Logger logger = LoggerFactory.getLogger(DAGIterator.class.getName());
-
   private Iterator<SelectResponse> responseIterator;
-
-  private final PushDownType pushDownType;
-
-  protected EncodeType encodeType;
-
-  private TiStoreType storeType;
-
-  private long startTs;
 
   DAGIterator(
       DAGRequest req,
