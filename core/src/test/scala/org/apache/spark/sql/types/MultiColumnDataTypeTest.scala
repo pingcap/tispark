@@ -45,7 +45,6 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
         runTest(query, canTestTiFlash = true)
       }
     }
-
   }
 
   def getOperations(dataType: ReflectedDataType): List[(String, String)] =
