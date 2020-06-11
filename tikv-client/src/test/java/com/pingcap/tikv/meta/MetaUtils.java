@@ -34,26 +34,25 @@ import org.tikv.kvproto.Metapb;
 
 public class MetaUtils {
   public static class TableBuilder {
-    static long autoId = 1;
+    long autoId = 1;
+    private boolean pkHandle;
+    private String name;
+    private final List<TiColumnInfo> columns = new ArrayList<>();
+    private final List<TiIndexInfo> indices = new ArrayList<>();
+    private TiPartitionInfo partInfo;
+    private Long tid = null;
+    private long version = 0L;
+    private final long updateTimestamp = 0L;
 
-    private static long newId() {
-      return autoId++;
-    }
+    public TableBuilder() {}
 
     public static TableBuilder newBuilder() {
       return new TableBuilder();
     }
 
-    private boolean pkHandle;
-    private String name;
-    private List<TiColumnInfo> columns = new ArrayList<>();
-    private List<TiIndexInfo> indices = new ArrayList<>();
-    private TiPartitionInfo partInfo;
-    private Long tid = null;
-    private long version = 0L;
-    private long updateTimestamp = 0L;
-
-    public TableBuilder() {}
+    private long newId() {
+      return autoId++;
+    }
 
     public TableBuilder name(String name) {
       this.name = name;
@@ -69,16 +68,24 @@ public class MetaUtils {
       return addColumn(name, type, false);
     }
 
-    public TableBuilder addColumn(String name, DataType type, boolean pk) {
+    public TableBuilder addColumn(String name, DataType type, long colId) {
+      return addColumn(name, type, false, colId);
+    }
+
+    public TableBuilder addColumn(String name, DataType type, boolean pk, long colId) {
       for (TiColumnInfo c : columns) {
         if (c.matchName(name)) {
           throw new TiClientInternalException("duplicated name: " + name);
         }
       }
 
-      TiColumnInfo col = new TiColumnInfo(newId(), name, columns.size(), type, pk);
+      TiColumnInfo col = new TiColumnInfo(colId, name, columns.size(), type, pk);
       columns.add(col);
       return this;
+    }
+
+    public TableBuilder addColumn(String name, DataType type, boolean pk) {
+      return addColumn(name, type, pk, newId());
     }
 
     public TableBuilder addPartition(
@@ -169,14 +176,13 @@ public class MetaUtils {
             .setEndKey(ByteString.EMPTY)
             .addPeers(Metapb.Peer.newBuilder().setId(1).setStoreId(1))
             .build();
+    private final KVMockServer kvServer;
+    private final PDMockServer pdServer;
 
     public MetaMockHelper(PDMockServer pdServer, KVMockServer kvServer) {
       this.kvServer = kvServer;
       this.pdServer = pdServer;
     }
-
-    private KVMockServer kvServer;
-    private PDMockServer pdServer;
 
     public void preparePDForRegionRead() {
       pdServer.addGetMemberResp(

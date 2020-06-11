@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.datasource
 
 import org.apache.spark.sql.Row
@@ -18,9 +33,7 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
       StructField("pk", IntegerType),
       StructField("c1", IntegerType),
       StructField("c2", IntegerType),
-      StructField("s", StringType)
-    )
-  )
+      StructField("s", StringType)))
 
   test("test unique index replace with primary key is handle and index") {
     if (!supportBatchWrite) {
@@ -29,11 +42,8 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
 
     dropTable()
     jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2), index(s))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
-    )
+      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2), index(s))")
+    jdbcUpdate(s"insert into $dbtable values(1, 1, 1, 'Hello')")
     // insert row2 row3
     tidbWrite(List(row2, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
@@ -53,12 +63,8 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
     }
 
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
-    )
+    jdbcUpdate(s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))")
+    jdbcUpdate(s"insert into $dbtable values(1, 1, 1, 'Hello')")
 
     // insert row2 row3
     tidbWrite(List(row2, row3, row4), schema)
@@ -76,11 +82,8 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
 
     dropTable()
     jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
-    )
+      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2))")
+    jdbcUpdate(s"insert into $dbtable values(1, 1, 1, 'Hello')")
     // insert row2 row3
     tidbWrite(List(row2, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
@@ -101,21 +104,14 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
 
     dropTable()
     jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), unique index(c1), unique index(c2))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
-    )
+      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), unique index(c1), unique index(c2))")
+    jdbcUpdate(s"insert into $dbtable values(1, 1, 1, 'Hello')")
     // insert row2 row3
     tidbWrite(List(row2, row4, row5), schema)
     testTiDBSelect(Seq(row1, row2, row4, row5), "c1")
 
     val options = Some(Map("replace" -> "true"))
-    tidbWrite(
-      List(row3, row3, conflcitWithOneIndex, conflcitWithTwoIndices),
-      schema,
-      options
-    )
+    tidbWrite(List(row3, row3, conflcitWithOneIndex, conflcitWithTwoIndices), schema, options)
     testTiDBSelect(Seq(row2, row3, conflcitWithOneIndex, conflcitWithTwoIndices), "c1")
   }
 
@@ -125,12 +121,8 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
     }
 
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
-    )
+    jdbcUpdate(s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))")
+    jdbcUpdate(s"insert into $dbtable values(1, 1, 1, 'Hello')")
     // insert row2 row3
     tidbWrite(List(row2, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4), "c1")

@@ -17,7 +17,10 @@
 
 package com.pingcap.tikv.types;
 
-import static com.pingcap.tikv.types.TimeType.*;
+import static com.pingcap.tikv.types.TimeType.HOUR;
+import static com.pingcap.tikv.types.TimeType.MICROSECOND;
+import static com.pingcap.tikv.types.TimeType.MINUTE;
+import static com.pingcap.tikv.types.TimeType.SECOND;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.primitives.UnsignedLong;
@@ -37,6 +40,14 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 public class Converter {
+
+  static final DateTimeFormatter UTC_TIME_FORMATTER =
+      DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(DateTimeZone.UTC);
+  private static final DateTimeZone localTimeZone = DateTimeZone.getDefault();
+  private static final DateTimeFormatter localDateTimeFormatter =
+      DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(localTimeZone);
+  private static final DateTimeFormatter localDateFormatter =
+      DateTimeFormat.forPattern("yyyy-MM-dd").withZone(localTimeZone);
 
   public static Long safeConvertToSigned(Object value, Long lowerBound, Long upperBound)
       throws ConvertNotSupportException, ConvertOverflowException {
@@ -205,14 +216,6 @@ public class Converter {
     throw new TypeException(
         String.format("Cannot cast %s to bytes", val.getClass().getSimpleName()));
   }
-
-  private static final DateTimeZone localTimeZone = DateTimeZone.getDefault();
-  private static final DateTimeFormatter localDateTimeFormatter =
-      DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(localTimeZone);
-  private static final DateTimeFormatter localDateFormatter =
-      DateTimeFormat.forPattern("yyyy-MM-dd").withZone(localTimeZone);
-  static final DateTimeFormatter UTC_TIME_FORMATTER =
-      DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(DateTimeZone.UTC);
 
   public static DateTimeZone getLocalTimezone() {
     return localTimeZone;

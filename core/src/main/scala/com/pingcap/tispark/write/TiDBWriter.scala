@@ -21,10 +21,11 @@ import org.apache.spark.sql._
 
 object TiDBWriter {
 
-  def write(df: DataFrame,
-            sqlContext: SQLContext,
-            saveMode: SaveMode,
-            options: TiDBOptions): Unit = {
+  def write(
+      df: DataFrame,
+      sqlContext: SQLContext,
+      saveMode: SaveMode,
+      options: TiDBOptions): Unit = {
     val sparkSession = sqlContext.sparkSession
 
     TiExtensions.getTiContext(sparkSession) match {
@@ -40,13 +41,11 @@ object TiDBWriter {
 
               case _ =>
                 throw new TiBatchWriteException(
-                  s"SaveMode: $saveMode is not supported. TiSpark only support SaveMode.Append."
-                )
+                  s"SaveMode: $saveMode is not supported. TiSpark only support SaveMode.Append.")
             }
           } else {
             throw new TiBatchWriteException(
-              s"table `${options.database}`.`${options.table}` does not exists!"
-            )
+              s"table `${options.database}`.`${options.table}` does not exists!")
             // TiDBUtils.createTable(conn, df, options, tiContext)
             // TiDBUtils.saveTable(tiContext, df, Some(df.schema), options)
           }

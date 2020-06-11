@@ -23,21 +23,19 @@ import org.apache.spark.sql.test.generator.TestDataGenerator._
 class MultiColumnDataTypeSuite
     extends MultiColumnDataTypeTest
     with RunMultiColumnDataTypeTestAction {
-  val dataTypes: List[ReflectedDataType] = numeric ::: stringType
-  val unsignedDataTypes: List[ReflectedDataType] = numeric
-  val dataTypeTestDir: String = "multi-column-dataType-test"
-  val database: String = "multi_column_data_type_test"
-  val testDesc: String = "Base test for multi-column data types"
-
   override val generator: BaseMultiColumnDataTypeGenerator = BaseMultiColumnDataTypeGenerator(
     dataTypes,
     unsignedDataTypes,
     dataTypeTestDir,
-    database,
-    testDesc
-  )
+    dbName,
+    testDesc)
+  override def dataTypes: List[ReflectedDataType] = numeric ::: stringType
+  override def unsignedDataTypes: List[ReflectedDataType] = numeric
+  override def dataTypeTestDir: String = "multi-column-dataType-test"
+  override def dbName: String = "multi_column_data_type_test"
+  override def testDesc: String = "Base test for multi-column data types"
 
-  override def startTest(dataTypes: List[ReflectedDataType]): Unit = {
+  def startTest(dataTypes: List[ReflectedDataType]): Unit = {
     val typeNames = dataTypes.map(getTypeName)
     val tblName = generator.getTableName(typeNames: _*)
     val columnNames = typeNames.zipWithIndex.map { x =>
@@ -48,7 +46,7 @@ class MultiColumnDataTypeSuite
       for (j <- columnNames.indices) {
         val col2 = columnNames(j)
         val dataType2 = dataTypes(j)
-        simpleSelect(database, tblName, col1, col2, dataType2)
+        simpleSelect(dbName, tblName, col1, col2, dataType2)
       }
     }
   }
@@ -57,6 +55,10 @@ class MultiColumnDataTypeSuite
     if (generateData) {
       generator.test()
     }
+  }
+
+  override def test(): Unit = {
+    startTest(dataTypes)
   }
 
   check()

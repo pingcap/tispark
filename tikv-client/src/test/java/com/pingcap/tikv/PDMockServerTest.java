@@ -20,10 +20,10 @@ import org.junit.After;
 import org.junit.Before;
 
 public abstract class PDMockServerTest {
-  protected PDMockServer pdServer;
-  static final long CLUSTER_ID = 1024;
   protected static final String LOCAL_ADDR = "127.0.0.1";
+  static final long CLUSTER_ID = 1024;
   protected static TiSession session;
+  protected PDMockServer pdServer;
 
   @Before
   public void setUp() throws IOException {

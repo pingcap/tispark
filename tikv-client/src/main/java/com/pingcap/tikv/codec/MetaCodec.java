@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tikv.codec;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -15,17 +30,15 @@ import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 
 public class MetaCodec {
+  public static final String ENCODED_DB_PREFIX = "DB";
+  public static final String KEY_TID = "TID";
   private static final byte[] META_PREFIX = new byte[] {'m'};
   private static final byte HASH_DATA_FLAG = 'h';
   private static final byte HASH_META_FLAG = 'H';
   private static final byte STR_DATA_FLAG = 's';
-
   public static ByteString KEY_DBs = ByteString.copyFromUtf8("DBs");
   public static String KEY_TABLE = "Table";
   public static ByteString KEY_SCHEMA_VERSION = ByteString.copyFromUtf8("SchemaVersionKey");
-
-  public static final String ENCODED_DB_PREFIX = "DB";
-  public static final String KEY_TID = "TID";
 
   public static void encodeStringDataKey(CodecDataOutput cdo, byte[] key) {
     cdo.write(META_PREFIX);

@@ -24,16 +24,14 @@ import java.util.List;
 import java.util.Objects;
 
 public class AggregateFunction extends Expression {
-  public enum FunctionType {
-    Sum,
-    Count,
-    Min,
-    Max,
-    First
-  }
-
   private final FunctionType type;
   private final Expression argument;
+
+  private AggregateFunction(FunctionType type, Expression argument, DataType dataType) {
+    super(dataType);
+    this.type = requireNonNull(type, "function type is null");
+    this.argument = requireNonNull(argument, "function argument is null");
+  }
 
   public static AggregateFunction newCall(FunctionType type, Expression argument) {
     return newCall(type, argument, argument.dataType);
@@ -42,12 +40,6 @@ public class AggregateFunction extends Expression {
   public static AggregateFunction newCall(
       FunctionType type, Expression argument, DataType dataType) {
     return new AggregateFunction(type, argument, dataType);
-  }
-
-  private AggregateFunction(FunctionType type, Expression argument, DataType dataType) {
-    super(dataType);
-    this.type = requireNonNull(type, "function type is null");
-    this.argument = requireNonNull(argument, "function argument is null");
   }
 
   public FunctionType getType() {
@@ -90,5 +82,13 @@ public class AggregateFunction extends Expression {
   public String toString() {
     return String.format(
         "%s(%s)", getType(), Joiner.on(",").useForNull("NULL").join(getChildren()));
+  }
+
+  public enum FunctionType {
+    Sum,
+    Count,
+    Min,
+    Max,
+    First
   }
 }

@@ -38,9 +38,9 @@ import org.tikv.kvproto.Metapb.Region;
 
 public class TiRegion implements Serializable {
   private final Region meta;
-  private Peer peer;
   private final IsolationLevel isolationLevel;
   private final Kvrpcpb.CommandPri commandPri;
+  private Peer peer;
 
   public TiRegion(
       Region meta, Peer peer, IsolationLevel isolationLevel, Kvrpcpb.CommandPri commandPri) {
@@ -124,39 +124,6 @@ public class TiRegion implements Serializable {
     builder.setRegionId(meta.getId()).setPeer(this.peer).setRegionEpoch(this.meta.getRegionEpoch());
     builder.addAllResolvedLocks(resolvedLocks);
     return builder.build();
-  }
-
-  public class RegionVerID {
-    final long id;
-    final long confVer;
-    final long ver;
-
-    RegionVerID(long id, long confVer, long ver) {
-      this.id = id;
-      this.confVer = confVer;
-      this.ver = ver;
-    }
-
-    @Override
-    public boolean equals(Object other) {
-      if (this == other) {
-        return true;
-      }
-      if (!(other instanceof RegionVerID)) {
-        return false;
-      }
-
-      RegionVerID that = (RegionVerID) other;
-      return id == that.id && confVer == that.confVer && ver == that.ver;
-    }
-
-    @Override
-    public int hashCode() {
-      int hash = Long.hashCode(id);
-      hash = hash * 31 + Long.hashCode(confVer);
-      hash = hash * 31 + Long.hashCode(ver);
-      return hash;
-    }
   }
 
   // getVerID returns the Region's RegionVerID.
@@ -248,5 +215,38 @@ public class TiRegion implements Serializable {
         getLeader().getStoreId(),
         KeyUtils.formatBytesUTF8(getStartKey()),
         KeyUtils.formatBytesUTF8(getEndKey()));
+  }
+
+  public class RegionVerID {
+    final long id;
+    final long confVer;
+    final long ver;
+
+    RegionVerID(long id, long confVer, long ver) {
+      this.id = id;
+      this.confVer = confVer;
+      this.ver = ver;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (this == other) {
+        return true;
+      }
+      if (!(other instanceof RegionVerID)) {
+        return false;
+      }
+
+      RegionVerID that = (RegionVerID) other;
+      return id == that.id && confVer == that.confVer && ver == that.ver;
+    }
+
+    @Override
+    public int hashCode() {
+      int hash = Long.hashCode(id);
+      hash = hash * 31 + Long.hashCode(confVer);
+      hash = hash * 31 + Long.hashCode(ver);
+      return hash;
+    }
   }
 }

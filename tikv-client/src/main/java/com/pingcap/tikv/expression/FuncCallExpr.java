@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tikv.expression;
 
 import com.google.common.collect.ImmutableList;
@@ -6,12 +21,8 @@ import java.util.Objects;
 import java.util.function.Function;
 
 public class FuncCallExpr extends Expression {
-  public enum Type {
-    YEAR
-  }
-
-  private Expression child;
-  private Type funcTp;
+  private final Expression child;
+  private final Type funcTp;
 
   public FuncCallExpr(Expression expr, Type funcTp) {
     this.child = expr;
@@ -77,5 +88,9 @@ public class FuncCallExpr extends Expression {
     Function<Constant, Constant> evalFn = FuncCallExprEval.getEvalFn(funcTp);
     if (evalFn != null) return evalFn.apply(literal);
     return literal;
+  }
+
+  public enum Type {
+    YEAR
   }
 }

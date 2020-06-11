@@ -35,12 +35,17 @@ public class CompoundKey extends Key {
     return builder.build();
   }
 
+  public static Builder newBuilder() {
+    return new Builder();
+  }
+
   public List<Key> getKeys() {
     return keys;
   }
 
-  public static Builder newBuilder() {
-    return new Builder();
+  @Override
+  public String toString() {
+    return String.format("[%s]", Joiner.on(",").useForNull("Null").join(keys));
   }
 
   public static class Builder {
@@ -69,10 +74,5 @@ public class CompoundKey extends Key {
       }
       return new CompoundKey(keys, cdo.toBytes());
     }
-  }
-
-  @Override
-  public String toString() {
-    return String.format("[%s]", Joiner.on(",").useForNull("Null").join(keys));
   }
 }

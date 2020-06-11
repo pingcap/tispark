@@ -15,9 +15,17 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.*;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
-import static com.pingcap.tikv.expression.LogicalBinaryExpression.*;
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.divide;
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.minus;
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.greaterThan;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessThan;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.notEqual;
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.or;
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.xor;
 import static com.pingcap.tikv.predicates.TiKVScanAnalyzer.extractConditions;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -127,22 +135,6 @@ public class PredicateUtilsTest {
     }
   }
 
-  private class Tests<K, V> {
-    List<K> input = new ArrayList<>();
-    List<V> output = new ArrayList<>();
-
-    void addTestCase(K in, V out) {
-      input.add(in);
-      output.add(out);
-    }
-
-    void test(BiConsumer<K, V> c) {
-      for (int i = 0; i < input.size(); i++) {
-        c.accept(input.get(i), output.get(i));
-      }
-    }
-  }
-
   @Test
   public void logicalBinaryExpressionToIndexRangesTest() {
     TiTableInfo table = createTable();
@@ -201,5 +193,21 @@ public class PredicateUtilsTest {
             assertEquals(irs.get(i).getRange(), v.get(i));
           }
         });
+  }
+
+  private class Tests<K, V> {
+    List<K> input = new ArrayList<>();
+    List<V> output = new ArrayList<>();
+
+    void addTestCase(K in, V out) {
+      input.add(in);
+      output.add(out);
+    }
+
+    void test(BiConsumer<K, V> c) {
+      for (int i = 0; i < input.size(); i++) {
+        c.accept(input.get(i), output.get(i));
+      }
+    }
   }
 }

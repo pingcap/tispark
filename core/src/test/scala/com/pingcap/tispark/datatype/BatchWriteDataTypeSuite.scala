@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.datatype
 
 import java.sql.{Date, Timestamp}
@@ -165,8 +180,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
         StructField("c28", StringType),
         StructField("c29", StringType)
         //StructField("c30", StringType),
-      )
-    )
+      ))
     val timestamp = new Timestamp(Calendar.getInstance().getTimeInMillis)
     val row1 = Row(
       1,
@@ -195,8 +209,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
       "Tidb mediumtext",
       "Tidb longblob",
       "Tidb longtext",
-      "male"
-    )
+      "male")
     val row2 = Row(
       2,
       1.toByte,
@@ -224,8 +237,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
       "Tidb mediumtext",
       "Tidb longblob",
       "Tidb longtext",
-      "female"
-    )
+      "female")
     val data = List(row1, row2)
     tidbWrite(data, schema)
     val row3 = Row(
@@ -255,8 +267,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
       "Tidb mediumtext",
       "Tidb longblob".toArray,
       "Tidb longtext",
-      "male"
-    )
+      "male")
     val row4 = Row(
       2,
       1.toByte,
@@ -284,8 +295,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
       "Tidb mediumtext",
       "Tidb longblob".toArray,
       "Tidb longtext",
-      "female"
-    )
+      "female")
     val ref = List(row3, row4)
     testTiDBSelect(ref)
   }
@@ -299,12 +309,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
                   |c1 varchar(64)
                   |)
       """.stripMargin)
-    val schema = StructType(
-      List(
-        StructField("i", IntegerType),
-        StructField("c1", StringType)
-      )
-    )
+    val schema = StructType(List(StructField("i", IntegerType), StructField("c1", StringType)))
     val row1 = Row(1, "test")
     val row2 = Row(2, "spark")
     var data = List(row1, row2)
@@ -331,12 +336,8 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
                   |c1 varchar(64)
                   |)
       """.stripMargin)
-    val schema = StructType(
-      List(
-        StructField("i", DecimalType(3, 2)),
-        StructField("c1", StringType)
-      )
-    )
+    val schema =
+      StructType(List(StructField("i", DecimalType(3, 2)), StructField("c1", StringType)))
     val row1 = Row(BigDecimal(1.23), "test")
     val row2 = Row(BigDecimal(1.24), "spark")
     var data = List(row1, row2)
@@ -363,12 +364,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
                   |c1 varchar(64)
                   |)
       """.stripMargin)
-    val schema = StructType(
-      List(
-        StructField("i", StringType),
-        StructField("c1", StringType)
-      )
-    )
+    val schema = StructType(List(StructField("i", StringType), StructField("c1", StringType)))
     val row1 = Row("row1", "test")
     val row2 = Row("row2", "spark")
     var data = List(row1, row2)
@@ -395,12 +391,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
                   |c1 varchar(64)
                   |)
       """.stripMargin)
-    val schema = StructType(
-      List(
-        StructField("i", StringType),
-        StructField("c1", StringType)
-      )
-    )
+    val schema = StructType(List(StructField("i", StringType), StructField("c1", StringType)))
     val row1 = Row("r1", "test")
     val row2 = Row("r2", "spark")
     var data = List(row1, row2)
@@ -427,12 +418,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
                   |c1 varchar(64)
                   |)
       """.stripMargin)
-    val schema = StructType(
-      List(
-        StructField("i", StringType),
-        StructField("c1", StringType)
-      )
-    )
+    val schema = StructType(List(StructField("i", StringType), StructField("c1", StringType)))
     val row1 = Row("2019-06-10", "test")
     val row2 = Row("2019-06-11", "spark")
     var data = List(row1, row2)
@@ -461,12 +447,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
                   |c1 varchar(64)
                   |)
       """.stripMargin)
-    val schema = StructType(
-      List(
-        StructField("i", TimestampType),
-        StructField("c1", StringType)
-      )
-    )
+    val schema = StructType(List(StructField("i", TimestampType), StructField("c1", StringType)))
     val timeInLong = Calendar.getInstance().getTimeInMillis
     val timeInLong1 = timeInLong + 12345
     val row1 = Row(new Timestamp(timeInLong), "test")
@@ -495,12 +476,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
                   |c1 varchar(64)
                   |)
       """.stripMargin)
-    val schema = StructType(
-      List(
-        StructField("i", TimestampType),
-        StructField("c1", StringType)
-      )
-    )
+    val schema = StructType(List(StructField("i", TimestampType), StructField("c1", StringType)))
     val timeInLong = Calendar.getInstance().getTimeInMillis
     val timeInLong1 = timeInLong + 12345
     val row1 = Row(new Timestamp(timeInLong), "test")
@@ -530,12 +506,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
                   |primary key(i(128))
                   |)
       """.stripMargin)
-    val schema = StructType(
-      List(
-        StructField("i", StringType),
-        StructField("c1", StringType)
-      )
-    )
+    val schema = StructType(List(StructField("i", StringType), StructField("c1", StringType)))
     val row1 = Row("row1", "test")
     val row2 = Row("row2", "spark")
     var data = List(row1, row2)
@@ -563,12 +534,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
                   |primary key(i(128))
                   |)
       """.stripMargin)
-    val schema = StructType(
-      List(
-        StructField("i", StringType),
-        StructField("c1", StringType)
-      )
-    )
+    val schema = StructType(List(StructField("i", StringType), StructField("c1", StringType)))
     val row1 = Row("row1", "test")
     val row2 = Row("row2", "spark")
     var data = List(row1, row2)
@@ -596,12 +562,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
                   |c1 varchar(64)
                   |)
       """.stripMargin)
-    val schema = StructType(
-      List(
-        StructField("i", StringType),
-        StructField("c1", StringType)
-      )
-    )
+    val schema = StructType(List(StructField("i", StringType), StructField("c1", StringType)))
     val row1 = Row("male", "test")
     val row2 = Row("female", "spark")
     var data = List(row2, row1)
@@ -634,9 +595,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
       List(
         StructField("i", IntegerType),
         StructField("i1", IntegerType),
-        StructField("c1", StringType)
-      )
-    )
+        StructField("c1", StringType)))
     val row1 = Row(1, 2, "test")
     val row2 = Row(2, 2, "tispark")
     var data = List(row1, row2)

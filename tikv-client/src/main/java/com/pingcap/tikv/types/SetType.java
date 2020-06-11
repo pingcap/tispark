@@ -32,13 +32,16 @@ public class SetType extends DataType {
   public static final SetType SET = new SetType(MySQLType.TypeSet);
 
   public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeSet};
+  private final long[] setIndexValue = initSetIndexVal();
+  private final long[] setIndexInvertValue = initSetIndexInvertVal();
 
   private SetType(MySQLType tp) {
     super(tp);
   }
 
-  private long[] setIndexValue = initSetIndexVal();
-  private long[] setIndexInvertValue = initSetIndexInvertVal();
+  protected SetType(TiColumnInfo.InternalTypeHolder holder) {
+    super(holder);
+  }
 
   private long[] initSetIndexInvertVal() {
     long[] tmpArr = new long[64];
@@ -55,10 +58,6 @@ public class SetType extends DataType {
       tmpArr[i] = 1L << i;
     }
     return tmpArr;
-  }
-
-  protected SetType(TiColumnInfo.InternalTypeHolder holder) {
-    super(holder);
   }
 
   /** {@inheritDoc} */

@@ -29,81 +29,47 @@ import org.apache.spark.sql.types.StructType
 
 /**
  * A composition of two catalogs that behaves as a concrete catalog.
+ *
  * @param tiContext
  */
 class TiCompositeSessionCatalog(val tiContext: TiContext)
     extends SessionCatalog(
       tiContext.tiConcreteCatalog.externalCatalog,
       EmptyFunctionRegistry,
-      tiContext.sqlContext.conf
-    )
+      tiContext.sqlContext.conf)
     with TiSessionCatalog {
 
-  /**
-   * Policy of operating composite catalog, with one TiCatalog being either primary or secondary catalog.
-   */
-  trait CompositeCatalogPolicy {
-    val primaryCatalog: SessionCatalog
-    val secondaryCatalog: SessionCatalog
-    val tiCatalog: TiSessionCatalog
-    val sessionCatalog: SessionCatalog
-  }
-
-  /**
-   * Legacy catalog first policy.
-   * @param tiContext
-   */
-  case class TiLegacyPolicy(tiContext: TiContext) extends CompositeCatalogPolicy {
-    override val primaryCatalog: SessionCatalog = tiContext.sessionCatalog
-    override val secondaryCatalog: SessionCatalog = tiContext.tiConcreteCatalog
-    override val tiCatalog: TiSessionCatalog = tiContext.tiConcreteCatalog
-    override val sessionCatalog: SessionCatalog = tiContext.sessionCatalog
-  }
-
   lazy val policy: CompositeCatalogPolicy = TiLegacyPolicy(tiContext)
-
   lazy val primaryCatalog: SessionCatalog = policy.primaryCatalog
   lazy val secondaryCatalog: SessionCatalog = policy.secondaryCatalog
   lazy val tiCatalog: TiSessionCatalog = policy.tiCatalog
   lazy val sessionCatalog: SessionCatalog = policy.sessionCatalog
-
-  class CatalogCache {
-    private var _catalog: SessionCatalog = _
-    private[catalog] def getCatalog: SessionCatalog = {
-      if (_catalog == null) {
-        _catalog = primaryCatalog
-      }
-      _catalog
-    }
-    private[catalog] def setCatalog(catalog: SessionCatalog): Unit =
-      _catalog = catalog
-  }
-
   lazy val catalogCache = new CatalogCache
-
-  // Used to manage catalog change by setting current database.
-  private def currentCatalog: SessionCatalog = catalogCache.getCatalog
-
-  // Following are routed to Ti catalog.
-  override def catalogOf(database: Option[String]): Option[SessionCatalog] = synchronized {
-    database
-      .map(
-        db =>
-          // Global temp db is special, route to session catalog.
-          if (db == globalTempDB) {
-            Some(sessionCatalog)
-          } else {
-            Seq(primaryCatalog, secondaryCatalog).find(_.databaseExists(db))
-        }
-      )
-      .getOrElse(Some(currentCatalog))
-  }
 
   // Following are handled by composite catalog.
   override def dropDatabase(db: String, ignoreIfNotExists: Boolean, cascade: Boolean): Unit =
     catalogOf(Some(db))
-      .getOrElse(if (!ignoreIfNotExists) throw new NoSuchDatabaseException(db) else return )
+      .getOrElse(if (!ignoreIfNotExists) throw new NoSuchDatabaseException(db) else return
+      )
       .dropDatabase(db, ignoreIfNotExists, cascade)
+
+  // Following are routed to Ti catalog.
+  override def catalogOf(database: Option[String]): Option[SessionCatalog] =
+    synchronized {
+      database
+        .map(
+          db =>
+            // Global temp db is special, route to session catalog.
+            if (db == globalTempDB) {
+              Some(sessionCatalog)
+            } else {
+              Seq(primaryCatalog, secondaryCatalog).find(_.databaseExists(db))
+            })
+        .getOrElse(Some(currentCatalog))
+    }
+
+  // Used to manage catalog change by setting current database.
+  private def currentCatalog: SessionCatalog = catalogCache.getCatalog
 
   override def alterDatabase(dbDefinition: CatalogDatabase): Unit =
     catalogOf(Some(dbDefinition.name))
@@ -124,35 +90,26 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
   override def listDatabases(pattern: String): Seq[String] =
     (primaryCatalog.listDatabases(pattern) ++ secondaryCatalog.listDatabases(pattern)).distinct
 
-  override def getCurrentDatabase: String = currentCatalog.getCurrentDatabase
-
-  override def setCurrentDatabase(db: String): Unit = synchronized {
-    catalogCache.setCatalog(catalogOf(Some(db)).getOrElse(throw new NoSuchDatabaseException(db)))
-    currentCatalog.setCurrentDatabase(db)
-  }
-
   override def alterTable(tableDefinition: CatalogTable): Unit =
     catalogOf(tableDefinition.identifier.database)
-      .getOrElse(
-        throw new NoSuchDatabaseException(
-          tableDefinition.identifier.database.getOrElse(getCurrentDatabase)
-        )
-      )
+      .getOrElse(throw new NoSuchDatabaseException(
+        tableDefinition.identifier.database.getOrElse(getCurrentDatabase)))
       .alterTable(tableDefinition)
 
-  override def alterTableDataSchema(identifier: TableIdentifier, newDataSchema: StructType): Unit =
+  override def alterTableDataSchema(
+      identifier: TableIdentifier,
+      newDataSchema: StructType): Unit =
     catalogOf(identifier.database)
       .getOrElse(
-        throw new NoSuchDatabaseException(identifier.database.getOrElse(getCurrentDatabase))
-      )
+        throw new NoSuchDatabaseException(identifier.database.getOrElse(getCurrentDatabase)))
       .alterTableDataSchema(identifier, newDataSchema)
 
-  override def alterTableStats(identifier: TableIdentifier,
-                               newStats: Option[CatalogStatistics]): Unit =
+  override def alterTableStats(
+      identifier: TableIdentifier,
+      newStats: Option[CatalogStatistics]): Unit =
     catalogOf(identifier.database)
       .getOrElse(
-        throw new NoSuchDatabaseException(identifier.database.getOrElse(getCurrentDatabase))
-      )
+        throw new NoSuchDatabaseException(identifier.database.getOrElse(getCurrentDatabase)))
       .alterTableStats(identifier, newStats)
 
   override def tableExists(name: TableIdentifier): Boolean =
@@ -161,8 +118,7 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
         // Need to exclude tables from Ti's default db.
         case tiCatalog: TiSessionCatalog =>
           !name.database.getOrElse(getCurrentDatabase).equals("default") && tiCatalog.tableExists(
-            name
-          )
+            name)
         case catalog: SessionCatalog => catalog.tableExists(name)
       }
       .getOrElse(throw new NoSuchDatabaseException(name.database.getOrElse(getCurrentDatabase)))
@@ -172,18 +128,29 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
       .getOrElse(throw new NoSuchDatabaseException(name.database.getOrElse(getCurrentDatabase)))
       .getTableMetadata(name)
 
+  override def getCurrentDatabase: String = currentCatalog.getCurrentDatabase
+
+  override def setCurrentDatabase(db: String): Unit =
+    synchronized {
+      catalogCache.setCatalog(
+        catalogOf(Some(db)).getOrElse(throw new NoSuchDatabaseException(db)))
+      currentCatalog.setCurrentDatabase(db)
+    }
+
   override def renameTable(oldName: TableIdentifier, newName: TableIdentifier): Unit =
     if (isTemporaryTable(oldName)) {
       sessionCatalog.renameTable(oldName, newName)
     } else {
       catalogOf(oldName.database)
         .getOrElse(
-          throw new NoSuchDatabaseException(oldName.database.getOrElse(getCurrentDatabase))
-        )
+          throw new NoSuchDatabaseException(oldName.database.getOrElse(getCurrentDatabase)))
         .renameTable(oldName, newName)
     }
 
-  override def dropTable(name: TableIdentifier, ignoreIfNotExists: Boolean, purge: Boolean): Unit =
+  override def dropTable(
+      name: TableIdentifier,
+      ignoreIfNotExists: Boolean,
+      purge: Boolean): Unit =
     if (isTemporaryTable(name)) {
       sessionCatalog.dropTable(name, ignoreIfNotExists, purge)
     } else {
@@ -255,35 +222,40 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
   override def createTable(tableDefinition: CatalogTable, ignoreIfExists: Boolean): Unit =
     sessionCatalog.createTable(tableDefinition, ignoreIfExists)
 
-  override def loadTable(name: TableIdentifier,
-                         loadPath: String,
-                         isOverwrite: Boolean,
-                         isSrcLocal: Boolean): Unit =
+  override def loadTable(
+      name: TableIdentifier,
+      loadPath: String,
+      isOverwrite: Boolean,
+      isSrcLocal: Boolean): Unit =
     sessionCatalog.loadTable(name, loadPath, isOverwrite, isSrcLocal)
 
-  override def loadPartition(name: TableIdentifier,
-                             loadPath: String,
-                             spec: TablePartitionSpec,
-                             isOverwrite: Boolean,
-                             inheritTableSpecs: Boolean,
-                             isSrcLocal: Boolean): Unit =
+  override def loadPartition(
+      name: TableIdentifier,
+      loadPath: String,
+      spec: TablePartitionSpec,
+      isOverwrite: Boolean,
+      inheritTableSpecs: Boolean,
+      isSrcLocal: Boolean): Unit =
     sessionCatalog.loadPartition(name, loadPath, spec, isOverwrite, inheritTableSpecs, isSrcLocal)
 
   override def defaultTablePath(tableIdent: TableIdentifier): URI =
     sessionCatalog.defaultTablePath(tableIdent)
 
-  override def createTempView(name: String,
-                              tableDefinition: LogicalPlan,
-                              overrideIfExists: Boolean): Unit =
+  override def createTempView(
+      name: String,
+      tableDefinition: LogicalPlan,
+      overrideIfExists: Boolean): Unit =
     sessionCatalog.createTempView(name, tableDefinition, overrideIfExists)
 
-  override def createGlobalTempView(name: String,
-                                    viewDefinition: LogicalPlan,
-                                    overrideIfExists: Boolean): Unit =
+  override def createGlobalTempView(
+      name: String,
+      viewDefinition: LogicalPlan,
+      overrideIfExists: Boolean): Unit =
     sessionCatalog.createGlobalTempView(name, viewDefinition, overrideIfExists)
 
-  override def alterTempViewDefinition(name: TableIdentifier,
-                                       viewDefinition: LogicalPlan): Boolean =
+  override def alterTempViewDefinition(
+      name: TableIdentifier,
+      viewDefinition: LogicalPlan): Boolean =
     sessionCatalog.alterTempViewDefinition(name, viewDefinition)
 
   override def getTempView(name: String): Option[LogicalPlan] = sessionCatalog.getTempView(name)
@@ -295,9 +267,6 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
 
   override def dropGlobalTempView(name: String): Boolean = sessionCatalog.dropGlobalTempView(name)
 
-  override def isTemporaryTable(name: TableIdentifier): Boolean =
-    sessionCatalog.isTemporaryTable(name)
-
   override def refreshTable(name: TableIdentifier): Unit =
     if (isTemporaryTable(name)) {
       sessionCatalog.refreshTable(name)
@@ -307,43 +276,54 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
         .refreshTable(name)
     }
 
+  override def isTemporaryTable(name: TableIdentifier): Boolean =
+    sessionCatalog.isTemporaryTable(name)
+
   override def clearTempTables(): Unit = sessionCatalog.clearTempTables()
 
-  override def createPartitions(tableName: TableIdentifier,
-                                parts: Seq[CatalogTablePartition],
-                                ignoreIfExists: Boolean): Unit =
+  override def createPartitions(
+      tableName: TableIdentifier,
+      parts: Seq[CatalogTablePartition],
+      ignoreIfExists: Boolean): Unit =
     sessionCatalog.createPartitions(tableName, parts, ignoreIfExists)
 
-  override def dropPartitions(tableName: TableIdentifier,
-                              specs: Seq[TablePartitionSpec],
-                              ignoreIfNotExists: Boolean,
-                              purge: Boolean,
-                              retainData: Boolean): Unit =
+  override def dropPartitions(
+      tableName: TableIdentifier,
+      specs: Seq[TablePartitionSpec],
+      ignoreIfNotExists: Boolean,
+      purge: Boolean,
+      retainData: Boolean): Unit =
     sessionCatalog.dropPartitions(tableName, specs, ignoreIfNotExists, purge, retainData)
 
-  override def renamePartitions(tableName: TableIdentifier,
-                                specs: Seq[TablePartitionSpec],
-                                newSpecs: Seq[TablePartitionSpec]): Unit =
+  override def renamePartitions(
+      tableName: TableIdentifier,
+      specs: Seq[TablePartitionSpec],
+      newSpecs: Seq[TablePartitionSpec]): Unit =
     sessionCatalog.renamePartitions(tableName, specs, newSpecs)
 
-  override def alterPartitions(tableName: TableIdentifier,
-                               parts: Seq[CatalogTablePartition]): Unit =
+  override def alterPartitions(
+      tableName: TableIdentifier,
+      parts: Seq[CatalogTablePartition]): Unit =
     sessionCatalog.alterPartitions(tableName, parts)
 
-  override def getPartition(tableName: TableIdentifier,
-                            spec: TablePartitionSpec): CatalogTablePartition =
+  override def getPartition(
+      tableName: TableIdentifier,
+      spec: TablePartitionSpec): CatalogTablePartition =
     sessionCatalog.getPartition(tableName, spec)
 
-  override def listPartitionNames(tableName: TableIdentifier,
-                                  partialSpec: Option[TablePartitionSpec]): Seq[String] =
+  override def listPartitionNames(
+      tableName: TableIdentifier,
+      partialSpec: Option[TablePartitionSpec]): Seq[String] =
     sessionCatalog.listPartitionNames(tableName, partialSpec)
 
-  override def listPartitions(tableName: TableIdentifier,
-                              partialSpec: Option[TablePartitionSpec]): Seq[CatalogTablePartition] =
+  override def listPartitions(
+      tableName: TableIdentifier,
+      partialSpec: Option[TablePartitionSpec]): Seq[CatalogTablePartition] =
     sessionCatalog.listPartitions(tableName, partialSpec)
 
-  override def listPartitionsByFilter(tableName: TableIdentifier,
-                                      predicates: Seq[Expression]): Seq[CatalogTablePartition] =
+  override def listPartitionsByFilter(
+      tableName: TableIdentifier,
+      predicates: Seq[Expression]): Seq[CatalogTablePartition] =
     sessionCatalog.listPartitionsByFilter(tableName, predicates)
 
   override def createFunction(funcDefinition: CatalogFunction, ignoreIfExists: Boolean): Unit =
@@ -364,9 +344,10 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
   override def loadFunctionResources(resources: Seq[FunctionResource]): Unit =
     sessionCatalog.loadFunctionResources(resources)
 
-  override def registerFunction(funcDefinition: CatalogFunction,
-                                overrideIfExists: Boolean,
-                                functionBuilder: Option[FunctionBuilder]): Unit =
+  override def registerFunction(
+      funcDefinition: CatalogFunction,
+      overrideIfExists: Boolean,
+      functionBuilder: Option[FunctionBuilder]): Unit =
     sessionCatalog.registerFunction(funcDefinition, overrideIfExists, functionBuilder)
 
   override def dropTempFunction(name: String, ignoreIfNotExists: Boolean): Unit =
@@ -391,4 +372,41 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
 
   override private[sql] def copyStateTo(target: SessionCatalog): Unit =
     sessionCatalog.copyStateTo(target)
+
+  /**
+   * Policy of operating composite catalog, with one TiCatalog being either primary or secondary catalog.
+   */
+  trait CompositeCatalogPolicy {
+    val primaryCatalog: SessionCatalog
+    val secondaryCatalog: SessionCatalog
+    val tiCatalog: TiSessionCatalog
+    val sessionCatalog: SessionCatalog
+  }
+
+  /**
+   * Legacy catalog first policy.
+   *
+   * @param tiContext
+   */
+  case class TiLegacyPolicy(tiContext: TiContext) extends CompositeCatalogPolicy {
+    override val primaryCatalog: SessionCatalog = tiContext.sessionCatalog
+    override val secondaryCatalog: SessionCatalog = tiContext.tiConcreteCatalog
+    override val tiCatalog: TiSessionCatalog = tiContext.tiConcreteCatalog
+    override val sessionCatalog: SessionCatalog = tiContext.sessionCatalog
+  }
+
+  class CatalogCache {
+    private var _catalog: SessionCatalog = _
+
+    private[catalog] def getCatalog: SessionCatalog = {
+      if (_catalog == null) {
+        _catalog = primaryCatalog
+      }
+      _catalog
+    }
+
+    private[catalog] def setCatalog(catalog: SessionCatalog): Unit =
+      _catalog = catalog
+  }
+
 }

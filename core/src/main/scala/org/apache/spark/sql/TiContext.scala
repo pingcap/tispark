@@ -38,11 +38,15 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 class TiContext(val sparkSession: SparkSession) extends Serializable with Logging {
+  final val version: String = TiSparkVersion.version
+  final val conf: SparkConf = sparkSession.sparkContext.conf
+  final val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(conf)
+  final val tiSession: TiSession = TiSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
-  val conf: SparkConf = sparkSession.sparkContext.conf
-  val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(conf)
-  val tiSession: TiSession = TiSession.getInstance(tiConf)
-  val meta: MetaManager = new MetaManager(tiSession.getCatalog)
+  lazy val tiConcreteCatalog: TiSessionCatalog =
+    new TiConcreteSessionCatalog(this)(newTiDirectExternalCatalog(this))
+  lazy val sessionCatalog: SessionCatalog = sqlContext.sessionState.catalog
+  lazy val tiCatalog: TiSessionCatalog = newTiCompositeSessionCatalog(this)
 
   sparkSession.sparkContext.addSparkListener(new SparkListener() {
     override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {
@@ -61,26 +65,72 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   CacheInvalidateListener
     .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
   tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
-
-  lazy val tiConcreteCatalog: TiSessionCatalog =
-    new TiConcreteSessionCatalog(this)(newTiDirectExternalCatalog(this))
-
-  lazy val sessionCatalog: SessionCatalog = sqlContext.sessionState.catalog
-
-  lazy val tiCatalog: TiSessionCatalog = newTiCompositeSessionCatalog(this)
-
+  val meta: MetaManager = new MetaManager(tiSession.getCatalog)
   val debug: DebugTool = new DebugTool
-
-  final val version: String = TiSparkVersion.version
-
   val autoLoad: Boolean =
     conf.getBoolean(TiConfigConst.ENABLE_AUTO_LOAD_STATISTICS, defaultValue = true)
 
+  // tidbMapTable does not do any check any meta information
+  // it just register table for later use
+  @Deprecated
+  def tidbMapTable(
+      dbName: String,
+      tableName: String,
+      dbNameAsPrefix: Boolean = false): DataFrame = {
+    val df = getDataFrame(dbName, tableName)
+    val viewName = getViewName(dbName, tableName, dbNameAsPrefix)
+    df.createOrReplaceTempView(viewName)
+    logInfo("Registered table [" + tableName + "] as [" + viewName + "]")
+    df
+  }
+
+  @Deprecated
+  def getDataFrame(dbName: String, tableName: String): DataFrame = {
+    val tiRelation =
+      TiDBRelation(tiSession, TiTableReference(dbName, tableName), meta)(sqlContext)
+    sqlContext.baseRelationToDataFrame(tiRelation)
+  }
+
+  @Deprecated
+  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean): Unit =
+    tidbMapDatabase(dbName, dbNameAsPrefix, autoLoad)
+
+  @Deprecated
+  def tidbMapDatabase(
+      dbName: String,
+      dbNameAsPrefix: Boolean = false,
+      autoLoadStatistics: Boolean = autoLoad): Unit =
+    for {
+      db <- meta.getDatabase(dbName)
+      table <- meta.getTables(db)
+    } {
+      var sizeInBytes = Long.MaxValue
+      val tableName = table.getName
+      if (autoLoadStatistics) {
+        StatisticsManager.loadStatisticsInfo(table)
+      }
+      sizeInBytes = StatisticsManager.estimateTableSize(table)
+
+      if (!sqlContext.sparkSession.catalog.tableExists("`" + tableName + "`")) {
+        val rel: TiDBRelation =
+          TiDBRelation(tiSession, TiTableReference(dbName, tableName, sizeInBytes), meta)(
+            sqlContext)
+
+        val viewName = getViewName(dbName, tableName, dbNameAsPrefix)
+        sqlContext.baseRelationToDataFrame(rel).createTempView(viewName)
+        logInfo("Registered table [" + tableName + "] as [" + viewName + "]")
+      } else {
+        logInfo(
+          "Duplicate table [" + tableName + "] exist in catalog, you might want to set dbNameAsPrefix = true")
+      }
+    }
+
+  // add backtick for table name in case it contains, e.g., a minus sign
+  private def getViewName(dbName: String, tableName: String, dbNameAsPrefix: Boolean): String =
+    "`" + (if (dbNameAsPrefix) dbName + "_" + tableName else tableName) + "`"
+
   class DebugTool {
     implicit val formats: DefaultFormats = DefaultFormats
-
-    def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] =
-      RegionUtils.getRegionDistribution(tiSession, dbName, tableName).asScala.toMap
 
     /**
      * Balance region leaders of a single table.
@@ -96,10 +146,11 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
      * @param maxTrans  Maximum number of transformations this function can perform
      * @return The re-distributed information of original table
      */
-    def balanceRegionByTable(pdAddress: String,
-                             dbName: String,
-                             tableName: String,
-                             maxTrans: Int = 50): Map[String, Integer] = {
+    def balanceRegionByTable(
+        pdAddress: String,
+        dbName: String,
+        tableName: String,
+        maxTrans: Int = 50): Map[String, Integer] = {
       val regionIDPrefix = "pd/api/v1/region/id"
       val operatorsPrefix = "pd/api/v1/operators"
       val storeRegionId = RegionUtils.getStoreRegionIdDistribution(tiSession, dbName, tableName)
@@ -124,100 +175,35 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
           val targetLeaders = peers
             .map(x => (x \ "store_id").extract[Long])
             .filterNot(_ == leaderStoreId)
-            .filter(
-              id =>
-                storeRegionCount.contains(id) &&
-                  storeRegionCount(id) < storeRegionCount(leaderStoreId) &&
-                  storeRegionCount(id) < avgRegionCount
-            )
+            .filter(id =>
+              storeRegionCount.contains(id) &&
+                storeRegionCount(id) < storeRegionCount(leaderStoreId) &&
+                storeRegionCount(id) < avgRegionCount)
 
           if (targetLeaders.nonEmpty && transCount < maxTrans) {
             val toStore = targetLeaders.minBy(storeRegionCount(_))
             val req = ("name" -> "transfer-leader") ~ ("region_id" -> JDecimal(
-              BigDecimal(regionId)
-            )) ~ ("to_store_id" -> JDecimal(BigDecimal(toStore)))
+              BigDecimal(regionId))) ~ ("to_store_id" -> JDecimal(BigDecimal(toStore)))
             val resp = Http(s"$pdAddress/$operatorsPrefix")
               .postData(compact(render(req)))
               .header("content-type", "application/json")
               .asString
             if (resp.isSuccess) {
               logInfo(
-                s"Transfer $regionId leader :Store $leaderStoreId to Store $toStore successfully"
-              )
+                s"Transfer $regionId leader :Store $leaderStoreId to Store $toStore successfully")
               storeRegionCount(leaderStoreId) -= 1
               storeRegionCount(toStore) += 1
             } else {
               logError(
-                s"Transfer $regionId leader :Store $leaderStoreId to Store $toStore failed -- ${resp.body}"
-              )
+                s"Transfer $regionId leader :Store $leaderStoreId to Store $toStore failed -- ${resp.body}")
             }
             transCount += 1
           }
         })
       getRegionDistribution(dbName, tableName)
     }
+
+    def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] =
+      RegionUtils.getRegionDistribution(tiSession, dbName, tableName).asScala.toMap
   }
-
-  @Deprecated
-  def getDataFrame(dbName: String, tableName: String): DataFrame = {
-    val tiRelation = TiDBRelation(
-      tiSession,
-      TiTableReference(dbName, tableName),
-      meta
-    )(sqlContext)
-    sqlContext.baseRelationToDataFrame(tiRelation)
-  }
-
-  // add backtick for table name in case it contains, e.g., a minus sign
-  private def getViewName(dbName: String, tableName: String, dbNameAsPrefix: Boolean): String =
-    "`" + (if (dbNameAsPrefix) dbName + "_" + tableName else tableName) + "`"
-
-  // tidbMapTable does not do any check any meta information
-  // it just register table for later use
-  @Deprecated
-  def tidbMapTable(dbName: String,
-                   tableName: String,
-                   dbNameAsPrefix: Boolean = false): DataFrame = {
-    val df = getDataFrame(dbName, tableName)
-    val viewName = getViewName(dbName, tableName, dbNameAsPrefix)
-    df.createOrReplaceTempView(viewName)
-    logInfo("Registered table [" + tableName + "] as [" + viewName + "]")
-    df
-  }
-
-  @Deprecated
-  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean): Unit =
-    tidbMapDatabase(dbName, dbNameAsPrefix, autoLoad)
-
-  @Deprecated
-  def tidbMapDatabase(dbName: String,
-                      dbNameAsPrefix: Boolean = false,
-                      autoLoadStatistics: Boolean = autoLoad): Unit =
-    for {
-      db <- meta.getDatabase(dbName)
-      table <- meta.getTables(db)
-    } {
-      var sizeInBytes = Long.MaxValue
-      val tableName = table.getName
-      if (autoLoadStatistics) {
-        StatisticsManager.loadStatisticsInfo(table)
-      }
-      sizeInBytes = StatisticsManager.estimateTableSize(table)
-
-      if (!sqlContext.sparkSession.catalog.tableExists("`" + tableName + "`")) {
-        val rel: TiDBRelation = TiDBRelation(
-          tiSession,
-          TiTableReference(dbName, tableName, sizeInBytes),
-          meta
-        )(sqlContext)
-
-        val viewName = getViewName(dbName, tableName, dbNameAsPrefix)
-        sqlContext.baseRelationToDataFrame(rel).createTempView(viewName)
-        logInfo("Registered table [" + tableName + "] as [" + viewName + "]")
-      } else {
-        logInfo(
-          "Duplicate table [" + tableName + "] exist in catalog, you might want to set dbNameAsPrefix = true"
-        )
-      }
-    }
 }

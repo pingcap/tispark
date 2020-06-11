@@ -35,6 +35,11 @@ import java.util.Objects;
 @SuppressWarnings("UnstableApiUsage")
 public class RangeSetBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<C>, Void> {
 
+  static void throwOnError(Expression node) {
+    final String errorFormat = "Unsupported conversion to Range: %s";
+    throw new TiExpressionException(String.format(errorFormat, node));
+  }
+
   /**
    * visits {@code ComparisonBinaryExpression} expression and constructs a range set.
    *
@@ -129,11 +134,6 @@ public class RangeSetBuilder<C extends Comparable> extends DefaultVisitor<RangeS
   public RangeSet<C> buildRange(Expression predicate) {
     Objects.requireNonNull(predicate, "predicate is null");
     return predicate.accept(this, null);
-  }
-
-  static void throwOnError(Expression node) {
-    final String errorFormat = "Unsupported conversion to Range: %s";
-    throw new TiExpressionException(String.format(errorFormat, node));
   }
 
   protected RangeSet<C> process(Expression node, Void context) {

@@ -55,8 +55,6 @@ Fow how to use it with extensions enabled, see [code examples with extensions](h
       setIfMissing("spark.tispark.pd.addresses", "pd0:2379").
       setIfMissing("spark.tispark.tidb.addr", "tidb").
       setIfMissing("spark.tispark.tidb.port", "4000")
-      // if tidb < 3.0.14, please set the spark.tispark.write.without_lock_table=true
-      // .setIfMissing("spark.tispark.write.without_lock_table", "true")
 
     val spark = SparkSession.builder.config(sparkConf).getOrCreate()
     ```
@@ -158,8 +156,6 @@ spark.tispark.pd.addresses 127.0.0.1:2379
 spark.tispark.tidb.addr 127.0.0.1
 spark.tispark.tidb.port 4000
 spark.tispark.write.allow_spark_sql true
-# if tidb <= 3.0.14, please set the spark.tispark.write.without_lock_table=true
-# spark.tispark.write.without_lock_table true
 ```
 
 2. Create a new table using mysql-client:
@@ -260,9 +256,17 @@ The following table shows the TiDB-specific options, which can be passed in thro
 
 ## TiDB Version and Configuration for Write
 
-TiDB's version must be 3.0.14 or later.
+TiDB's version must be **3.0.14 or later**.
 
-Make sure that the following TiDB configuration items are correctly set.
+Make sure that the following TiDB configuration item (`split-table`) is enabled.
+
+```
+# When creating table, split a separated Region for it. It is recommended to
+# turn off this option if there is a large number of tables created.
+split-table: true
+```
+
+Make sure that the following TiDB configuration items (`table-lock`) are correctly set if you are using TiDB-3.x.
 
 ```
 # enable-table-lock is used to control the table lock feature. The default value is false, indicating that the table lock feature is disabled.
@@ -270,16 +274,7 @@ enable-table-lock: true
 
 # delay-clean-table-lock is used to control the time (milliseconds) of delay before unlocking the table in abnormal situations.
 delay-clean-table-lock: 60000
-
-# When creating table, split a separated Region for it. It is recommended to
-# turn off this option if there is a large number of tables created.
-split-table: true
 ```
-
-If your TiDB's version is earlier than 3.0.14, set `spark.tispark.write.without_lock_table` to `true` to enable write, but ACID is **not** guaranteed.
-
-### WARNING
-**DO NOT set `spark.tispark.write.without_lock_table` to `true` on production environment (you may lost data).**
 
 ## Type Conversion for Write
 

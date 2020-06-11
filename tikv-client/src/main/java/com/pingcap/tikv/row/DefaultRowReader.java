@@ -23,12 +23,12 @@ import com.pingcap.tikv.types.DataType;
 public class DefaultRowReader implements RowReader {
   private final CodecDataInput cdi;
 
-  public static DefaultRowReader create(CodecDataInput cdi) {
-    return new DefaultRowReader(cdi);
-  }
-
   DefaultRowReader(CodecDataInput cdi) {
     this.cdi = cdi;
+  }
+
+  public static DefaultRowReader create(CodecDataInput cdi) {
+    return new DefaultRowReader(cdi);
   }
 
   public Row readRow(DataType[] dataTypes) {

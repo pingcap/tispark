@@ -29,7 +29,14 @@ import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
@@ -53,15 +60,13 @@ public class TwoPhaseCommitter {
   private static final long MAX_RETRY_TIMES = 3;
 
   private static final Logger LOG = LoggerFactory.getLogger(TwoPhaseCommitter.class);
-
-  private TxnKVClient kvClient;
-  private RegionManager regionManager;
-
   /** start timestamp of transaction which get from PD */
   private final long startTs;
-
   /** unit is millisecond */
   private final long lockTTL;
+
+  private final TxnKVClient kvClient;
+  private final RegionManager regionManager;
 
   public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
     this.kvClient = TiSession.getInstance(conf).createTxnClient();

@@ -18,7 +18,11 @@ package com.pingcap.tikv;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,9 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TiDBJDBCClient implements AutoCloseable {
-  private final Logger logger = LoggerFactory.getLogger(getClass().getName());
-  private Connection connection;
-
   private static final String UNLOCK_TABLES_SQL = "unlock tables";
   private static final String SELECT_TIDB_CONFIG_SQL = "select @@tidb_config";
   private static final String ENABLE_TABLE_LOCK_KEY = "enable-table-lock";
@@ -38,6 +39,8 @@ public class TiDBJDBCClient implements AutoCloseable {
   private static final int DELAY_CLEAN_TABLE_LOCK_DEFAULT = 0;
   private static final String ENABLE_SPLIT_TABLE_KEY = "split-table";
   private static final Boolean ENABLE_SPLIT_TABLE_DEFAULT = false;
+  private final Logger logger = LoggerFactory.getLogger(getClass().getName());
+  private final Connection connection;
 
   public TiDBJDBCClient(Connection connection) {
     this.connection = connection;

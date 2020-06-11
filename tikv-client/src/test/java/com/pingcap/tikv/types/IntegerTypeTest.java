@@ -26,6 +26,16 @@ import com.pingcap.tikv.types.DataType.EncodeType;
 import org.junit.Test;
 
 public class IntegerTypeTest {
+  private static byte[] encode(Object val, EncodeType encodeType, DataType type) {
+    CodecDataOutput cdo = new CodecDataOutput();
+    type.encode(cdo, encodeType, val);
+    return cdo.toBytes();
+  }
+
+  private static Object decode(byte[] val, DataType type) {
+    return type.decode(new CodecDataInput(val));
+  }
+
   @Test
   public void encodeTest() {
     DataType type = IntegerType.INT;
@@ -37,15 +47,5 @@ public class IntegerTypeTest {
     encodedKey = encode(null, EncodeType.KEY, type);
     val = decode(encodedKey, type);
     assertNull(val);
-  }
-
-  private static byte[] encode(Object val, EncodeType encodeType, DataType type) {
-    CodecDataOutput cdo = new CodecDataOutput();
-    type.encode(cdo, encodeType, val);
-    return cdo.toBytes();
-  }
-
-  private static Object decode(byte[] val, DataType type) {
-    return type.decode(new CodecDataInput(val));
   }
 }

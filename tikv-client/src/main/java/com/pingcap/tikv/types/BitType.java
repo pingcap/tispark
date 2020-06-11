@@ -28,11 +28,9 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import java.util.Base64;
 
 public class BitType extends IntegerType {
-  private static final long MAX_BIT_LENGTH = 64L;
-
   public static final BitType BIT = new BitType(MySQLType.TypeBit);
-
   public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeBit};
+  private static final long MAX_BIT_LENGTH = 64L;
 
   private BitType(MySQLType tp) {
     super(tp);

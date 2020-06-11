@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tikv.codec;
 
 import static org.junit.Assert.assertEquals;
@@ -18,7 +33,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-public class TableCodecTest {
+public class TableCodecV1Test {
+  @Rule public ExpectedException expectedEx = ExpectedException.none();
+  private Object[] values;
+  private final TiTableInfo tblInfo = createTable();
+
   private static TiTableInfo createTable() {
     StringType VARCHAR255 =
         new StringType(
@@ -39,9 +58,6 @@ public class TableCodecTest {
         .build();
   }
 
-  private Object[] values;
-  private TiTableInfo tblInfo = createTable();
-
   private void makeValues() {
     List<Object> values = new ArrayList<>();
     values.add(1L);
@@ -59,12 +75,10 @@ public class TableCodecTest {
     makeValues();
   }
 
-  @Rule public ExpectedException expectedEx = ExpectedException.none();
-
   @Test
   public void testRowCodecThrowException() {
     try {
-      TableCodec.encodeRow(
+      TableCodecV1.encodeRow(
           tblInfo.getColumns(), new Object[] {values[0], values[1]}, tblInfo.isPkHandle());
       expectedEx.expect(IllegalAccessException.class);
       expectedEx.expectMessage("encodeRow error: data and columnID count not match 6 vs 2");
@@ -75,7 +89,7 @@ public class TableCodecTest {
   @Test
   public void testEmptyValues() {
     try {
-      byte[] bytes = TableCodec.encodeRow(new ArrayList<>(), new Object[] {}, false);
+      byte[] bytes = TableCodecV1.encodeRow(new ArrayList<>(), new Object[] {}, false);
       assertEquals(1, bytes.length);
       assertEquals(Codec.NULL_FLAG, bytes[0]);
     } catch (IllegalAccessException ignored) {
@@ -87,9 +101,9 @@ public class TableCodecTest {
     // multiple test was added since encodeRow refuse its cdo
     for (int i = 0; i < 4; i++) {
       try {
-        byte[] bytes = TableCodec.encodeRow(tblInfo.getColumns(), values, tblInfo.isPkHandle());
+        byte[] bytes = TableCodecV1.encodeRow(tblInfo.getColumns(), values, tblInfo.isPkHandle());
         // testing the correctness via decodeRow
-        Row row = TableCodec.decodeRow(bytes, 1L, tblInfo);
+        Row row = TableCodecV1.decodeRow(bytes, 1L, tblInfo);
         for (int j = 0; j < tblInfo.getColumns().size(); j++) {
           assertEquals(row.get(j, null), values[j]);
         }

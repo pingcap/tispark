@@ -24,8 +24,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Expr;
-import com.pingcap.tikv.expression.*;
+import com.pingcap.tikv.expression.AggregateFunction;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
+import com.pingcap.tikv.expression.ByItem;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Constant;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
@@ -48,67 +52,6 @@ public class TiDAGRequestTest {
         .addColumn("c4", IntegerType.INT)
         .appendIndex("testIndex", ImmutableList.of("c1", "c2"), false)
         .build();
-  }
-
-  @Test
-  public void testTopNCouldPushDownLimit0() {
-    TiTableInfo table = createTable();
-    TiDAGRequest dagRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
-    ColumnRef col1 = ColumnRef.create("c1", table);
-    dagRequest.addOrderByItem(ByItem.create(col1, false));
-    dagRequest.addRequiredColumn(col1);
-    dagRequest.setLimit(0);
-    dagRequest.setTableInfo(table);
-    dagRequest.setStartTs(new TiTimestamp(0, 1));
-    dagRequest.buildTableScan();
-  }
-
-  @Test
-  public void testSerializable() throws Exception {
-    TiTableInfo table = createTable();
-    TiDAGRequest selReq = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
-    Constant c1 = Constant.create(1L, IntegerType.BIGINT);
-    Constant c2 = Constant.create(2L, IntegerType.BIGINT);
-    ColumnRef col1 = ColumnRef.create("c1", table);
-    ColumnRef col2 = ColumnRef.create("c2", table);
-    ColumnRef col3 = ColumnRef.create("c3", table);
-
-    AggregateFunction sum = AggregateFunction.newCall(FunctionType.Sum, col1, col1.getDataType());
-    AggregateFunction min = AggregateFunction.newCall(FunctionType.Min, col1, col1.getDataType());
-
-    selReq
-        .addRequiredColumn(col1)
-        .addRequiredColumn(col2)
-        .addRequiredColumn(col3)
-        .addAggregate(sum)
-        .addAggregate(min)
-        .addFilters(ImmutableList.of(plus(c1, c2)))
-        .addGroupByItem(ByItem.create(ColumnRef.create("c2", table), true))
-        .addOrderByItem(ByItem.create(ColumnRef.create("c3", table), false))
-        .setTableInfo(table)
-        .setStartTs(new TiTimestamp(0, 666))
-        .setTruncateMode(TiDAGRequest.TruncateMode.IgnoreTruncation)
-        .setDistinct(true)
-        .setIndexInfo(table.getIndices().get(0))
-        .setHaving(lessEqual(col3, c2))
-        .setLimit(100)
-        .addRanges(
-            ImmutableMap.of(
-                table.getId(),
-                ImmutableList.of(
-                    Coprocessor.KeyRange.newBuilder()
-                        .setStart(ByteString.copyFromUtf8("startkey"))
-                        .setEnd(ByteString.copyFromUtf8("endkey"))
-                        .build())));
-
-    ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream();
-    ObjectOutputStream oos = new ObjectOutputStream(byteOutStream);
-    oos.writeObject(selReq);
-
-    ByteArrayInputStream byteInStream = new ByteArrayInputStream(byteOutStream.toByteArray());
-    ObjectInputStream ois = new ObjectInputStream(byteInStream);
-    TiDAGRequest derselReq = (TiDAGRequest) ois.readObject();
-    assertTrue(selectRequestEquals(selReq, derselReq));
   }
 
   private static boolean selectRequestEquals(TiDAGRequest lhs, TiDAGRequest rhs) {
@@ -179,5 +122,66 @@ public class TiDAGRequestTest {
     assertEquals(lhs.getTimeZoneOffset(), rhs.getTimeZoneOffset());
     assertEquals(lhs.getFlags(), rhs.getFlags());
     return true;
+  }
+
+  @Test
+  public void testTopNCouldPushDownLimit0() {
+    TiTableInfo table = createTable();
+    TiDAGRequest dagRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
+    ColumnRef col1 = ColumnRef.create("c1", table);
+    dagRequest.addOrderByItem(ByItem.create(col1, false));
+    dagRequest.addRequiredColumn(col1);
+    dagRequest.setLimit(0);
+    dagRequest.setTableInfo(table);
+    dagRequest.setStartTs(new TiTimestamp(0, 1));
+    dagRequest.buildTableScan();
+  }
+
+  @Test
+  public void testSerializable() throws Exception {
+    TiTableInfo table = createTable();
+    TiDAGRequest selReq = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
+    Constant c1 = Constant.create(1L, IntegerType.BIGINT);
+    Constant c2 = Constant.create(2L, IntegerType.BIGINT);
+    ColumnRef col1 = ColumnRef.create("c1", table);
+    ColumnRef col2 = ColumnRef.create("c2", table);
+    ColumnRef col3 = ColumnRef.create("c3", table);
+
+    AggregateFunction sum = AggregateFunction.newCall(FunctionType.Sum, col1, col1.getDataType());
+    AggregateFunction min = AggregateFunction.newCall(FunctionType.Min, col1, col1.getDataType());
+
+    selReq
+        .addRequiredColumn(col1)
+        .addRequiredColumn(col2)
+        .addRequiredColumn(col3)
+        .addAggregate(sum)
+        .addAggregate(min)
+        .addFilters(ImmutableList.of(plus(c1, c2)))
+        .addGroupByItem(ByItem.create(ColumnRef.create("c2", table), true))
+        .addOrderByItem(ByItem.create(ColumnRef.create("c3", table), false))
+        .setTableInfo(table)
+        .setStartTs(new TiTimestamp(0, 666))
+        .setTruncateMode(TiDAGRequest.TruncateMode.IgnoreTruncation)
+        .setDistinct(true)
+        .setIndexInfo(table.getIndices().get(0))
+        .setHaving(lessEqual(col3, c2))
+        .setLimit(100)
+        .addRanges(
+            ImmutableMap.of(
+                table.getId(),
+                ImmutableList.of(
+                    Coprocessor.KeyRange.newBuilder()
+                        .setStart(ByteString.copyFromUtf8("startkey"))
+                        .setEnd(ByteString.copyFromUtf8("endkey"))
+                        .build())));
+
+    ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream();
+    ObjectOutputStream oos = new ObjectOutputStream(byteOutStream);
+    oos.writeObject(selReq);
+
+    ByteArrayInputStream byteInStream = new ByteArrayInputStream(byteOutStream.toByteArray());
+    ObjectInputStream ois = new ObjectInputStream(byteInStream);
+    TiDAGRequest derselReq = (TiDAGRequest) ois.readObject();
+    assertTrue(selectRequestEquals(selReq, derselReq));
   }
 }

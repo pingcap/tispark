@@ -38,8 +38,8 @@ class CacheInvalidateListener()
 }
 
 object CacheInvalidateListener {
-  private var manager: CacheInvalidateListener = _
   private final val logger = LoggerFactory.getLogger(getClass.getName)
+  private var manager: CacheInvalidateListener = _
 
   def getInstance(): CacheInvalidateListener = {
     if (manager == null) {
@@ -68,14 +68,15 @@ object CacheInvalidateListener {
       }
     }
 
-  def init(sc: SparkContext, regionManager: RegionManager, manager: CacheInvalidateListener): Unit =
+  def init(
+      sc: SparkContext,
+      regionManager: RegionManager,
+      manager: CacheInvalidateListener): Unit =
     if (sc != null && regionManager != null) {
       sc.register(manager.CACHE_INVALIDATE_ACCUMULATOR, manager.CACHE_ACCUMULATOR_NAME)
       sc.addSparkListener(
         new PDCacheInvalidateListener(
           manager.CACHE_INVALIDATE_ACCUMULATOR,
-          CacheInvalidateEventHandler(regionManager)
-        )
-      )
+          CacheInvalidateEventHandler(regionManager)))
     }
 }

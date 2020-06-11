@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+echo $MAVEN_HOME
+
+mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false

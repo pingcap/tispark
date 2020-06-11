@@ -18,7 +18,7 @@
 package org.apache.spark.sql.test.generator
 
 trait Index {
-  val indexColumns: List[IndexColumn]
+  def indexColumns: List[IndexColumn]
   val isPrimaryKey: Boolean = false
 }
 

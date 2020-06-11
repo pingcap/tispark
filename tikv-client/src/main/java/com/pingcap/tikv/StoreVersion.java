@@ -25,12 +25,11 @@ import org.tikv.kvproto.Metapb;
 
 public class StoreVersion {
 
-  private static int scale = 10000;
+  private static final int scale = 10000;
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
   private int v0 = 9999;
   private int v1 = 9999;
   private int v2 = 9999;
-
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   private StoreVersion(String version) {
     try {
@@ -51,14 +50,6 @@ public class StoreVersion {
     } catch (Exception e) {
       logger.warn("invalid store version: " + version, e);
     }
-  }
-
-  private int toIntVersion() {
-    return v0 * scale * scale + v1 * scale + v2;
-  }
-
-  private boolean greatThan(StoreVersion other) {
-    return toIntVersion() > other.toIntVersion();
   }
 
   public static int compareTo(String v0, String v1) {
@@ -87,5 +78,13 @@ public class StoreVersion {
       }
     }
     return false;
+  }
+
+  private int toIntVersion() {
+    return v0 * scale * scale + v1 * scale + v2;
+  }
+
+  private boolean greatThan(StoreVersion other) {
+    return toIntVersion() > other.toIntVersion();
   }
 }

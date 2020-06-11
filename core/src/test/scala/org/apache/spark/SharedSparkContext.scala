@@ -15,27 +15,16 @@
 
 package org.apache.spark
 
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 import org.apache.spark.SharedSparkContext._
 import org.apache.spark.sql.internal.StaticSQLConf
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 
 trait SharedSparkContext extends BeforeAndAfterAll with BeforeAndAfterEach { self: Suite =>
 
-  def sc: SparkContext = _sc
-
   protected var _isHiveEnabled: Boolean = false
-
   protected var conf: SparkConf = new SparkConf(false)
 
-  protected def initializeContext(): Unit = synchronized {
-    if (null == _sc) {
-      conf.set("spark.sql.test.key", "true")
-      if (_isHiveEnabled) {
-        conf.set(StaticSQLConf.CATALOG_IMPLEMENTATION, "hive")
-      }
-      _sc = new SparkContext("local[4]", "tispark-integration-test", conf)
-    }
-  }
+  def sc: SparkContext = _sc
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
@@ -44,6 +33,17 @@ trait SharedSparkContext extends BeforeAndAfterAll with BeforeAndAfterEach { sel
     }
     initializeContext()
   }
+
+  protected def initializeContext(): Unit =
+    synchronized {
+      if (null == _sc) {
+        conf.set("spark.sql.test.key", "true")
+        if (_isHiveEnabled) {
+          conf.set(StaticSQLConf.CATALOG_IMPLEMENTATION, "hive")
+        }
+        _sc = new SparkContext("local[4]", "tispark-integration-test", conf)
+      }
+    }
 
   override protected def afterAll(): Unit = {
     try {
@@ -58,13 +58,14 @@ object SharedSparkContext {
 
   @transient private var _sc: SparkContext = _
 
-  def stop(): Unit = synchronized {
-    if (_sc != null) {
-      _sc.stop()
-      _sc = null
+  def stop(): Unit =
+    synchronized {
+      if (_sc != null) {
+        _sc.stop()
+        _sc = null
+      }
+      // To avoid RPC rebinding to the same port, since it doesn't unbind immediately on shutdown
+      System.clearProperty("spark.driver.port")
     }
-    // To avoid RPC rebinding to the same port, since it doesn't unbind immediately on shutdown
-    System.clearProperty("spark.driver.port")
-  }
 
 }

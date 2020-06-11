@@ -42,7 +42,14 @@ import io.grpc.ManagedChannel;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,10 +57,22 @@ import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
 import org.tikv.kvproto.PDGrpc.PDStub;
-import org.tikv.kvproto.Pdpb.*;
+import org.tikv.kvproto.Pdpb.GetAllStoresRequest;
+import org.tikv.kvproto.Pdpb.GetMembersRequest;
+import org.tikv.kvproto.Pdpb.GetMembersResponse;
+import org.tikv.kvproto.Pdpb.GetRegionByIDRequest;
+import org.tikv.kvproto.Pdpb.GetRegionRequest;
+import org.tikv.kvproto.Pdpb.GetRegionResponse;
+import org.tikv.kvproto.Pdpb.GetStoreRequest;
+import org.tikv.kvproto.Pdpb.GetStoreResponse;
+import org.tikv.kvproto.Pdpb.RequestHeader;
+import org.tikv.kvproto.Pdpb.Timestamp;
+import org.tikv.kvproto.Pdpb.TsoRequest;
+import org.tikv.kvproto.Pdpb.TsoResponse;
 
 public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     implements ReadOnlyPDClient {
+  private static final String TIFLASH_TABLE_SYNC_PROGRESS_PATH = "/tiflash/table/sync";
   private final Logger logger = LoggerFactory.getLogger(PDClient.class);
   private RequestHeader header;
   private TsoRequest tsoReq;
@@ -64,7 +83,20 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private Client etcdClient;
   private ConcurrentMap<Long, Double> tiflashReplicaMap;
 
-  private static final String TIFLASH_TABLE_SYNC_PROGRESS_PATH = "/tiflash/table/sync";
+  private PDClient(TiConfiguration conf, ChannelFactory channelFactory) {
+    super(conf, channelFactory);
+    initCluster();
+    this.blockingStub = getBlockingStub();
+    this.asyncStub = getAsyncStub();
+  }
+
+  public static ReadOnlyPDClient create(TiConfiguration conf, ChannelFactory channelFactory) {
+    return createRaw(conf, channelFactory);
+  }
+
+  static PDClient createRaw(TiConfiguration conf, ChannelFactory channelFactory) {
+    return new PDClient(conf, channelFactory);
+  }
 
   @Override
   public TiTimestamp getTimestamp(BackOffer backOffer) {
@@ -213,10 +245,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     }
   }
 
-  public static ReadOnlyPDClient create(TiConfiguration conf, ChannelFactory channelFactory) {
-    return createRaw(conf, channelFactory);
-  }
-
   @VisibleForTesting
   RequestHeader getHeader() {
     return header;
@@ -225,45 +253,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   @VisibleForTesting
   LeaderWrapper getLeaderWrapper() {
     return leaderWrapper;
-  }
-
-  static class LeaderWrapper {
-    private final String leaderInfo;
-    private final PDBlockingStub blockingStub;
-    private final PDStub asyncStub;
-    private final long createTime;
-
-    LeaderWrapper(
-        String leaderInfo,
-        PDGrpc.PDBlockingStub blockingStub,
-        PDGrpc.PDStub asyncStub,
-        long createTime) {
-      this.leaderInfo = leaderInfo;
-      this.blockingStub = blockingStub;
-      this.asyncStub = asyncStub;
-      this.createTime = createTime;
-    }
-
-    String getLeaderInfo() {
-      return leaderInfo;
-    }
-
-    PDBlockingStub getBlockingStub() {
-      return blockingStub;
-    }
-
-    PDStub getAsyncStub() {
-      return asyncStub;
-    }
-
-    long getCreateTime() {
-      return createTime;
-    }
-
-    @Override
-    public String toString() {
-      return "[leaderInfo: " + leaderInfo + "]";
-    }
   }
 
   private GetMembersResponse getMembers(URI url) {
@@ -408,13 +397,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         .withDeadlineAfter(getConf().getTimeout(), getConf().getTimeoutUnit());
   }
 
-  private PDClient(TiConfiguration conf, ChannelFactory channelFactory) {
-    super(conf, channelFactory);
-    initCluster();
-    this.blockingStub = getBlockingStub();
-    this.asyncStub = getAsyncStub();
-  }
-
   private void initCluster() {
     GetMembersResponse resp = null;
     List<URI> pdAddrs = getConf().getPdAddrs();
@@ -454,7 +436,42 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         this::updateTiFlashReplicaStatus, 10, 10, TimeUnit.SECONDS);
   }
 
-  static PDClient createRaw(TiConfiguration conf, ChannelFactory channelFactory) {
-    return new PDClient(conf, channelFactory);
+  static class LeaderWrapper {
+    private final String leaderInfo;
+    private final PDBlockingStub blockingStub;
+    private final PDStub asyncStub;
+    private final long createTime;
+
+    LeaderWrapper(
+        String leaderInfo,
+        PDGrpc.PDBlockingStub blockingStub,
+        PDGrpc.PDStub asyncStub,
+        long createTime) {
+      this.leaderInfo = leaderInfo;
+      this.blockingStub = blockingStub;
+      this.asyncStub = asyncStub;
+      this.createTime = createTime;
+    }
+
+    String getLeaderInfo() {
+      return leaderInfo;
+    }
+
+    PDBlockingStub getBlockingStub() {
+      return blockingStub;
+    }
+
+    PDStub getAsyncStub() {
+      return asyncStub;
+    }
+
+    long getCreateTime() {
+      return createTime;
+    }
+
+    @Override
+    public String toString() {
+      return "[leaderInfo: " + leaderInfo + "]";
+    }
   }
 }

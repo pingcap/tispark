@@ -42,20 +42,6 @@ public class TypedKey extends Key {
     this.prefixLength = DataType.UNSPECIFIED_LEN;
   }
 
-  public DataType getType() {
-    return type;
-  }
-
-  public Object getValue() {
-    CodecDataInput cdi = new CodecDataInput(value);
-    return type.decode(cdi);
-  }
-
-  @Override
-  public TypedKey nextPrefix() {
-    return toRawTypedKey(prefixNext(value), type);
-  }
-
   /**
    * Map a typed value into TypedKey, only encoding first prefixLength bytes
    *
@@ -75,14 +61,28 @@ public class TypedKey extends Key {
     return toTypedKey(val, type, DataType.UNSPECIFIED_LEN);
   }
 
-  private TypedKey toRawTypedKey(byte[] val, DataType type) {
-    return new TypedKey(val, type);
-  }
-
   private static byte[] encodeKey(Object val, DataType type, int prefixLength) {
     CodecDataOutput cdo = new CodecDataOutput();
     type.encodeKey(cdo, val, prefixLength);
     return cdo.toBytes();
+  }
+
+  public DataType getType() {
+    return type;
+  }
+
+  public Object getValue() {
+    CodecDataInput cdi = new CodecDataInput(value);
+    return type.decode(cdi);
+  }
+
+  @Override
+  public TypedKey nextPrefix() {
+    return toRawTypedKey(prefixNext(value), type);
+  }
+
+  private TypedKey toRawTypedKey(byte[] val, DataType type) {
+    return new TypedKey(val, type);
   }
 
   /**

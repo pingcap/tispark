@@ -78,6 +78,17 @@ public enum MySQLType {
     defaultLength = M;
   }
 
+  public static MySQLType fromTypeCode(int typeCode) {
+    MySQLType type = typeMap.get(typeCode);
+    return requireNonNull(type, String.format("Cannot find Type from type code %d", typeCode));
+  }
+
+  public static long getTypeDefaultSize(int typeCode) {
+    Long size = sizeMap.get(typeCode);
+    return requireNonNull(
+        size, String.format("Cannot find default size from type code %d", typeCode));
+  }
+
   public int getTypeCode() {
     return typeCode;
   }
@@ -92,16 +103,5 @@ public enum MySQLType {
 
   public int getDefaultLength() {
     return defaultLength;
-  }
-
-  public static MySQLType fromTypeCode(int typeCode) {
-    MySQLType type = typeMap.get(typeCode);
-    return requireNonNull(type, String.format("Cannot find Type from type code %d", typeCode));
-  }
-
-  public static long getTypeDefaultSize(int typeCode) {
-    Long size = sizeMap.get(typeCode);
-    return requireNonNull(
-        size, String.format("Cannot find default size from type code %d", typeCode));
   }
 }

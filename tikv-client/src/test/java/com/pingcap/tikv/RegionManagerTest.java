@@ -15,7 +15,9 @@
 
 package com.pingcap.tikv;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.region.RegionManager;

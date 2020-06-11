@@ -31,21 +31,23 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-private[statistics] case class StatisticsDTO(colId: Long,
-                                             isIndex: Int,
-                                             distinct: Long,
-                                             version: Long,
-                                             nullCount: Long,
-                                             dataType: DataType,
-                                             rawCMSketch: Array[Byte],
-                                             idxInfo: TiIndexInfo,
-                                             colInfo: TiColumnInfo)
+private[statistics] case class StatisticsDTO(
+    colId: Long,
+    isIndex: Int,
+    distinct: Long,
+    version: Long,
+    nullCount: Long,
+    dataType: DataType,
+    rawCMSketch: Array[Byte],
+    idxInfo: TiIndexInfo,
+    colInfo: TiColumnInfo)
 
-private[statistics] case class StatisticsResult(histId: Long,
-                                                histogram: Histogram,
-                                                cMSketch: CMSketch,
-                                                idxInfo: TiIndexInfo,
-                                                colInfo: TiColumnInfo) {
+private[statistics] case class StatisticsResult(
+    histId: Long,
+    histogram: Histogram,
+    cMSketch: CMSketch,
+    idxInfo: TiIndexInfo,
+    colInfo: TiColumnInfo) {
   def hasIdxInfo: Boolean = idxInfo != null
 
   def hasColInfo: Boolean = colInfo != null
@@ -62,6 +64,11 @@ private[statistics] case class StatisticsResult(histId: Long,
  */
 object StatisticsManager {
 
+  private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
+  private final val statisticsMap = CacheBuilder
+    .newBuilder()
+    .build[java.lang.Long, TableStatistics]
+  protected var initialized: Boolean = false
   private var session: TiSession = _
   private var snapshot: Snapshot = _
   private var catalog: Catalog = _
@@ -92,10 +99,6 @@ object StatisticsManager {
   private[statistics] var metaTable: TiTableInfo = _
   private[statistics] var histTable: TiTableInfo = _
   private[statistics] var bucketTable: TiTableInfo = _
-  private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
-  private final val statisticsMap = CacheBuilder
-    .newBuilder()
-    .build[java.lang.Long, TableStatistics]
 
   /**
    * Load statistics information maintained by TiDB to TiSpark.
@@ -104,51 +107,48 @@ object StatisticsManager {
    * @param columns Concerning columns for `table`, only these columns' statistics information
    *                will be loaded, if empty, all columns' statistics info will be loaded
    */
-  def loadStatisticsInfo(table: TiTableInfo, columns: String*): Unit = synchronized {
-    require(table != null, "TableInfo should not be null")
-    if (!StatisticsHelper.isManagerReady) {
-      logger.warn(
-        "Some of the statistics information table are not loaded properly, " +
-          "make sure you have executed analyze table command before these information could be used by TiSpark."
-      )
-      return
+  def loadStatisticsInfo(table: TiTableInfo, columns: String*): Unit =
+    synchronized {
+      require(table != null, "TableInfo should not be null")
+      if (!StatisticsHelper.isManagerReady) {
+        logger.warn("Some of the statistics information table are not loaded properly, " +
+          "make sure you have executed analyze table command before these information could be used by TiSpark.")
+        return
+      }
+
+      // TODO load statistics by pid
+      val tblId = table.getId
+      val tblCols = table.getColumns
+      val loadAll = columns == null || columns.isEmpty
+      var neededColIds = mutable.ArrayBuffer[Long]()
+      if (!loadAll) {
+        // check whether input column could be found in the table
+        columns.distinct.foreach((col: String) => {
+          val isColValid = tblCols.exists(_.matchName(col))
+          if (!isColValid) {
+            throw new RuntimeException(s"Column $col cannot be found in table ${table.getName}")
+          } else {
+            neededColIds += tblCols.find(_.matchName(col)).get.getId
+          }
+        })
+      }
+
+      // use cached one for incremental update
+      val tblStatistic = if (statisticsMap.asMap.containsKey(tblId)) {
+        statisticsMap.getIfPresent(tblId)
+      } else {
+        new TableStatistics(tblId)
+      }
+
+      loadStatsFromStorage(tblId, tblStatistic, table, loadAll, neededColIds)
     }
 
-    // TODO load statistics by pid
-    val tblId = table.getId
-    val tblCols = table.getColumns
-    val loadAll = columns == null || columns.isEmpty
-    var neededColIds = mutable.ArrayBuffer[Long]()
-    if (!loadAll) {
-      // check whether input column could be found in the table
-      columns.distinct.foreach((col: String) => {
-        val isColValid = tblCols.exists(_.matchName(col))
-        if (!isColValid) {
-          throw new RuntimeException(s"Column $col cannot be found in table ${table.getName}")
-        } else {
-          neededColIds += tblCols.find(_.matchName(col)).get.getId
-        }
-      })
-    }
-
-    // use cached one for incremental update
-    val tblStatistic = if (statisticsMap.asMap.containsKey(tblId)) {
-      statisticsMap.getIfPresent(tblId)
-    } else {
-      new TableStatistics(tblId)
-    }
-
-    loadStatsFromStorage(tblId, tblStatistic, table, loadAll, neededColIds)
-  }
-
-  private[statistics] def readDAGRequest(req: TiDAGRequest, physicalId: Long): Iterator[Row] =
-    snapshot.tableReadRow(req, physicalId)
-
-  private def loadStatsFromStorage(tblId: Long,
-                                   tblStatistic: TableStatistics,
-                                   table: TiTableInfo,
-                                   loadAll: Boolean,
-                                   neededColIds: mutable.ArrayBuffer[Long]): Unit = {
+  private def loadStatsFromStorage(
+      tblId: Long,
+      tblStatistic: TableStatistics,
+      table: TiTableInfo,
+      loadAll: Boolean,
+      neededColIds: mutable.ArrayBuffer[Long]): Unit = {
     // load count, modify_count, version info
     loadMetaToTblStats(tblId, tblStatistic)
     val req = StatisticsHelper
@@ -172,8 +172,7 @@ object StatisticsManager {
     if (result.hasIdxInfo) {
       val oldIdxSts = tblStatistic.getIndexHistMap.putIfAbsent(
         result.histId,
-        new IndexStatistics(result.histogram, result.cMSketch, result.idxInfo)
-      )
+        new IndexStatistics(result.histogram, result.cMSketch, result.idxInfo))
       if (shouldUpdateHistogram(oldIdxSts, result)) {
         oldIdxSts.setHistogram { result.histogram }
         oldIdxSts.setCmSketch { result.cMSketch }
@@ -187,9 +186,7 @@ object StatisticsManager {
             result.histogram,
             result.cMSketch,
             result.histogram.totalRowCount.toLong,
-            result.colInfo
-          )
-        )
+            result.colInfo))
       if (shouldUpdateHistogram(oldColSts, result)) {
         oldColSts.setHistogram { result.histogram }
         oldColSts.setCmSketch { result.cMSketch }
@@ -210,8 +207,12 @@ object StatisticsManager {
     tableStatistics.setCount { row.getUnsignedLong(3) }
   }
 
-  private def statisticsResultFromStorage(tableId: Long,
-                                          requests: Seq[StatisticsDTO]): Seq[StatisticsResult] = {
+  private[statistics] def readDAGRequest(req: TiDAGRequest, physicalId: Long): Iterator[Row] =
+    snapshot.tableReadRow(req, physicalId)
+
+  private def statisticsResultFromStorage(
+      tableId: Long,
+      requests: Seq[StatisticsDTO]): Seq[StatisticsResult] = {
     val req =
       StatisticsHelper.buildBucketRequest(bucketTable, tableId, session.getTimestamp)
 
@@ -228,8 +229,7 @@ object StatisticsManager {
         val (idxReq, colReq) = requests.partition { _.isIndex > 0 }
         Array(
           StatisticsHelper.extractStatisticResult(histId, idxRows.iterator, idxReq),
-          StatisticsHelper.extractStatisticResult(histId, colRows.iterator, colReq)
-        )
+          StatisticsHelper.extractStatisticResult(histId, colRows.iterator, colReq))
       }
       .filter { _ != null }
       .toSeq
@@ -255,7 +255,15 @@ object StatisticsManager {
 
   def setEstimator(estimator: TableSizeEstimator): Unit = tableSizeEstimator = estimator
 
-  protected var initialized: Boolean = false
+  def initStatisticsManager(tiSession: TiSession): Unit =
+    if (!initialized) {
+      synchronized {
+        if (!initialized) {
+          initialize(tiSession)
+          initialized = true
+        }
+      }
+    }
 
   protected def initialize(tiSession: TiSession): Unit = {
     session = tiSession
@@ -269,16 +277,6 @@ object StatisticsManager {
     bucketTable = catalog.getTable(s"${dbPrefix}mysql", "stats_buckets")
     statisticsMap.invalidateAll()
   }
-
-  def initStatisticsManager(tiSession: TiSession): Unit =
-    if (!initialized) {
-      synchronized {
-        if (!initialized) {
-          initialize(tiSession)
-          initialized = true
-        }
-      }
-    }
 
   def reset(): Unit = initialized = false
 }

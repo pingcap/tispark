@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tikv.util;
 
 import com.google.common.primitives.UnsignedLong;
@@ -19,12 +34,10 @@ import sun.nio.ch.DirectBuffer;
 
 // Copied from io.indexr.util.MemoryUtil.java with some modifications.
 public class MemoryUtil {
+  public static final ByteBuffer EMPTY_BYTE_BUFFER_DIRECT = allocateDirect(0);
+  public static final Unsafe unsafe;
   private static final Logger logger = LoggerFactory.getLogger(MemoryUtil.class);
   private static final long UNSAFE_COPY_THRESHOLD = 1024 * 1024L; // copied from java.nio.Bits
-
-  public static final ByteBuffer EMPTY_BYTE_BUFFER_DIRECT = allocateDirect(0);
-
-  public static final Unsafe unsafe;
   private static final Class<?> DIRECT_BYTE_BUFFER_CLASS;
   private static final long DIRECT_BYTE_BUFFER_ADDRESS_OFFSET;
   private static final long DIRECT_BYTE_BUFFER_CAPACITY_OFFSET;
@@ -284,24 +297,6 @@ public class MemoryUtil {
 
   public static double getDouble(long address) {
     return unsafe.getDouble(address);
-  }
-
-  private static class Deallocator implements Runnable {
-    private long address;
-
-    private Deallocator(long address) {
-      assert (address != 0);
-      this.address = address;
-    }
-
-    @Override
-    public void run() {
-      if (address == 0) {
-        return;
-      }
-      free(address);
-      address = 0;
-    }
   }
 
   public static ByteBuffer getByteBuffer(long address, int length, boolean autoFree) {
@@ -566,5 +561,23 @@ public class MemoryUtil {
       MemoryUtil.setByte(disAddr + bufPos + i, b);
     }
     dst.position((int) (bufPos + length));
+  }
+
+  private static class Deallocator implements Runnable {
+    private long address;
+
+    private Deallocator(long address) {
+      assert (address != 0);
+      this.address = address;
+    }
+
+    @Override
+    public void run() {
+      if (address == 0) {
+        return;
+      }
+      free(address);
+      address = 0;
+    }
   }
 }

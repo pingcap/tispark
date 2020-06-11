@@ -38,8 +38,7 @@ class Distinct0Suite extends BaseInitialOnceTest {
     "select  distinct(tp_timestamp)  from full_data_type_table  order by tp_timestamp ",
     "select  distinct(tp_bigint)  from full_data_type_table  order by tp_bigint ",
     "select  distinct(tp_smallint)  from full_data_type_table  order by tp_smallint ",
-    "select  distinct(tp_double)  from full_data_type_table  order by tp_double "
-  )
+    "select  distinct(tp_double)  from full_data_type_table  order by tp_double ")
 
   allCases foreach { query =>
     {

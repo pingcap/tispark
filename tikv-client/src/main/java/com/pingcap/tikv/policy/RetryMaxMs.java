@@ -25,7 +25,7 @@ public class RetryMaxMs<T> extends RetryPolicy<T> {
   }
 
   public static class Builder<T> implements RetryPolicy.Builder<T> {
-    private BackOffer backOffer;
+    private final BackOffer backOffer;
 
     public Builder(BackOffer backOffer) {
       this.backOffer = backOffer;

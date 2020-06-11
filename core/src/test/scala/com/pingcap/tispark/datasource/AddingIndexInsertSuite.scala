@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.exception.TiBatchWriteException
@@ -16,9 +31,7 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
     List(
       StructField("pk", IntegerType),
       StructField("i", IntegerType),
-      StructField("s", StringType)
-    )
-  )
+      StructField("s", StringType)))
 
   test("test column type can be truncated") {
     if (!supportBatchWrite) {
@@ -26,12 +39,8 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
     }
 
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(pk int, i int, s varchar(128), unique index(s(2)))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 'Hello')"
-    )
+    jdbcUpdate(s"create table $dbtable(pk int, i int, s varchar(128), unique index(s(2)))")
+    jdbcUpdate(s"insert into $dbtable values(1, 1, 'Hello')")
     // insert row2 row3
     tidbWrite(List(row2, row3), schema)
     testTiDBSelect(Seq(row1, row2, row3))
@@ -48,12 +57,8 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
     }
 
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(pk int, i int, s varchar(128), index(i))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 'Hello')"
-    )
+    jdbcUpdate(s"create table $dbtable(pk int, i int, s varchar(128), index(i))")
+    jdbcUpdate(s"insert into $dbtable values(1, 1, 'Hello')")
     // insert row2 row3
     tidbWrite(List(row2, row3), schema)
     testTiDBSelect(Seq(row1, row2, row3))
@@ -72,11 +77,8 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
 
     dropTable()
     jdbcUpdate(
-      s"create table $dbtable(pk int, i int, s varchar(128), unique index(i), primary key(s))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 'Hello')"
-    )
+      s"create table $dbtable(pk int, i int, s varchar(128), unique index(i), primary key(s))")
+    jdbcUpdate(s"insert into $dbtable values(1, 1, 'Hello')")
     // insert row2 row3
     tidbWrite(List(row2, row3), schema)
     testTiDBSelect(Seq(row1, row2, row3))
@@ -94,11 +96,8 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
 
     dropTable()
     jdbcUpdate(
-      s"create table $dbtable(pk int, i int, s varchar(128), unique index(i), primary key(pk))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 'Hello')"
-    )
+      s"create table $dbtable(pk int, i int, s varchar(128), unique index(i), primary key(pk))")
+    jdbcUpdate(s"insert into $dbtable values(1, 1, 'Hello')")
     // insert row2 row3
     tidbWrite(List(row2, row3), schema)
     testTiDBSelect(Seq(row1, row2, row3))
@@ -116,9 +115,7 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
 
     dropTable()
     jdbcUpdate(s"create table $dbtable(pk int, i int, s varchar(128), unique index(i))")
-    jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 'Hello')"
-    )
+    jdbcUpdate(s"insert into $dbtable values(1, 1, 'Hello')")
 
     // insert row2 row3
     tidbWrite(List(row2, row3), schema)

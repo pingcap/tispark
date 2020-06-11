@@ -23,14 +23,13 @@ object TiSparkInfo {
   val SPARK_MAJOR_VERSION: String = {
     SUPPORTED_SPARK_VERSION.find(SPARK_VERSION.startsWith).getOrElse("unknown")
   }
-
-  def versionSupport(): Boolean = {
-    TiSparkInfo.SUPPORTED_SPARK_VERSION.contains(SPARK_MAJOR_VERSION)
-  }
-
   val info: String = {
     s"""Supported Spark Version: ${SUPPORTED_SPARK_VERSION.mkString(" ")}
        |Current Spark Version: $SPARK_VERSION
        |Current Spark Major Version: $SPARK_MAJOR_VERSION""".stripMargin
+  }
+
+  def versionSupport(): Boolean = {
+    TiSparkInfo.SUPPORTED_SPARK_VERSION.contains(SPARK_MAJOR_VERSION)
   }
 }

@@ -15,6 +15,6 @@
 
 package com.pingcap.tispark.write
 
-import TiBatchWrite.TiRow
+import com.pingcap.tispark.write.TiBatchWrite.TiRow
 
 case class WrappedRow(row: TiRow, handle: Long)

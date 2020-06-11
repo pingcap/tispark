@@ -24,13 +24,6 @@ import org.slf4j.Logger
 abstract class SparkFunSuite extends FunSuite with Logging {
   protected val logger: Logger = log
 
-  // helper function
-  protected final def getTestResourceFile(file: String): File =
-    new File(getClass.getClassLoader.getResource(file).getFile)
-
-  protected final def getTestResourcePath(file: String): String =
-    getTestResourceFile(file).getCanonicalPath
-
   /**
    * Log the suite name and the test name before and after each test.
    *
@@ -49,5 +42,12 @@ abstract class SparkFunSuite extends FunSuite with Logging {
       logInfo(s"\n\n===== FINISHED $shortSuiteName: '$testName' =====\n")
     }
   }
+
+  protected final def getTestResourcePath(file: String): String =
+    getTestResourceFile(file).getCanonicalPath
+
+  // helper function
+  protected final def getTestResourceFile(file: String): File =
+    new File(getClass.getClassLoader.getResource(file).getFile)
 
 }

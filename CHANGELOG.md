@@ -1,6 +1,12 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.0-rc] 2020-06-05
+### New Features
+- Support working with TiDB-3.1 and TiDB-4.0
+- Support working with TiFlash
+- Support directly writing data to TiKV
+
 ## [TiSpark 2.1.9] 2020-05-11
 ### Fixes
 - Fix desc temp view [#1328](https://github.com/pingcap/tispark/pull/1328)

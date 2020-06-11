@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.convert
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
@@ -15,10 +30,12 @@ import org.apache.spark.sql.types.{StructField, _}
  */
 class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes") {
 
-  private def createTable(): Unit =
-    jdbcUpdate(
-      s"create table $dbtable(i INT, c1 BINARY(5), c2 VARBINARY(255), c3 TINYBLOB, c4 BLOB, c5 MEDIUMBLOB, c6 LONGBLOB)"
-    )
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 
   test("Test Convert from java.lang.Boolean to BYTES") {
     if (!supportBatchWrite) {
@@ -46,9 +63,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
             StructField("c3", BooleanType),
             StructField("c4", BooleanType),
             StructField("c5", BooleanType),
-            StructField("c6", BooleanType)
-          )
-        )
+            StructField("c6", BooleanType)))
 
         val readA: java.lang.Long = 49L
         val readB: java.lang.Long = 48L
@@ -70,9 +85,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
             StructField("c3", LongType),
             StructField("c4", LongType),
             StructField("c5", LongType),
-            StructField("c6", LongType)
-          )
-        )
+            StructField("c6", LongType)))
 
         dropTable()
         createTable()
@@ -83,8 +96,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
-          skipTiDBAndExpectedAnswerCheck = true
-        )
+          skipTiDBAndExpectedAnswerCheck = true)
     }
   }
 
@@ -114,9 +126,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
             StructField("c3", ByteType),
             StructField("c4", ByteType),
             StructField("c5", ByteType),
-            StructField("c6", ByteType)
-          )
-        )
+            StructField("c6", ByteType)))
 
         val readA: Array[Byte] = Array(49.toByte, 49.toByte)
         val readB: Array[Byte] = Array(45.toByte, 50.toByte, 50.toByte)
@@ -138,9 +148,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
             StructField("c3", BinaryType),
             StructField("c4", BinaryType),
             StructField("c5", BinaryType),
-            StructField("c6", BinaryType)
-          )
-        )
+            StructField("c6", BinaryType)))
 
         dropTable()
         createTable()
@@ -151,8 +159,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
-          skipTiDBAndExpectedAnswerCheck = true
-        )
+          skipTiDBAndExpectedAnswerCheck = true)
     }
   }
 
@@ -182,9 +189,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
             StructField("c3", ShortType),
             StructField("c4", ShortType),
             StructField("c5", ShortType),
-            StructField("c6", ShortType)
-          )
-        )
+            StructField("c6", ShortType)))
 
         val readA: Array[Byte] = Array(49.toByte, 49.toByte)
         val readB: Array[Byte] = Array(45.toByte, 50.toByte, 50.toByte)
@@ -206,9 +211,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
             StructField("c3", BinaryType),
             StructField("c4", BinaryType),
             StructField("c5", BinaryType),
-            StructField("c6", BinaryType)
-          )
-        )
+            StructField("c6", BinaryType)))
 
         dropTable()
         createTable()
@@ -219,8 +222,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
-          skipTiDBAndExpectedAnswerCheck = true
-        )
+          skipTiDBAndExpectedAnswerCheck = true)
     }
   }
 
@@ -250,9 +252,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
             StructField("c3", IntegerType),
             StructField("c4", IntegerType),
             StructField("c5", IntegerType),
-            StructField("c6", IntegerType)
-          )
-        )
+            StructField("c6", IntegerType)))
 
         val readA: Array[Byte] = Array(49.toByte, 49.toByte)
         val readB: Array[Byte] = Array(45.toByte, 50.toByte, 50.toByte)
@@ -274,9 +274,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
             StructField("c3", BinaryType),
             StructField("c4", BinaryType),
             StructField("c5", BinaryType),
-            StructField("c6", BinaryType)
-          )
-        )
+            StructField("c6", BinaryType)))
 
         dropTable()
         createTable()
@@ -287,8 +285,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
-          skipTiDBAndExpectedAnswerCheck = true
-        )
+          skipTiDBAndExpectedAnswerCheck = true)
     }
   }
 
@@ -318,9 +315,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
             StructField("c3", LongType),
             StructField("c4", LongType),
             StructField("c5", LongType),
-            StructField("c6", LongType)
-          )
-        )
+            StructField("c6", LongType)))
 
         val readA: Array[Byte] = Array(49.toByte, 49.toByte)
         val readB: Array[Byte] = Array(45.toByte, 50.toByte, 50.toByte)
@@ -342,9 +337,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
             StructField("c3", BinaryType),
             StructField("c4", BinaryType),
             StructField("c5", BinaryType),
-            StructField("c6", BinaryType)
-          )
-        )
+            StructField("c6", BinaryType)))
 
         dropTable()
         createTable()
@@ -355,8 +348,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
-          skipTiDBAndExpectedAnswerCheck = true
-        )
+          skipTiDBAndExpectedAnswerCheck = true)
     }
   }
 
@@ -386,9 +378,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
             StructField("c3", StringType),
             StructField("c4", StringType),
             StructField("c5", StringType),
-            StructField("c6", StringType)
-          )
-        )
+            StructField("c6", StringType)))
 
         val readA: Array[Byte] = Array(49.toByte, 49.toByte)
         val readB: Array[Byte] = Array(45.toByte, 50.toByte, 50.toByte)
@@ -410,9 +400,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
             StructField("c3", BinaryType),
             StructField("c4", BinaryType),
             StructField("c5", BinaryType),
-            StructField("c6", BinaryType)
-          )
-        )
+            StructField("c6", BinaryType)))
 
         dropTable()
         createTable()
@@ -423,8 +411,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
-          skipTiDBAndExpectedAnswerCheck = true
-        )
+          skipTiDBAndExpectedAnswerCheck = true)
     }
   }
 
@@ -439,10 +426,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
   // scala.collection.Map
   // org.apache.spark.sql.Row
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
+  private def createTable(): Unit =
+    jdbcUpdate(
+      s"create table $dbtable(i INT, c1 BINARY(5), c2 VARBINARY(255), c3 TINYBLOB, c4 BLOB, c5 MEDIUMBLOB, c6 LONGBLOB)")
 }

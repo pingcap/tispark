@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.spark.sql.extensions
 
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
@@ -20,34 +21,21 @@ import org.apache.spark.sql.catalyst.parser._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
 import org.apache.spark.sql.execution.SparkSqlParser
-import org.apache.spark.sql.execution.command.{CacheTableCommand, CreateViewCommand, ExplainCommand, UncacheTableCommand}
+import org.apache.spark.sql.execution.command.{
+  CacheTableCommand,
+  CreateViewCommand,
+  ExplainCommand,
+  UncacheTableCommand
+}
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{SparkSession, TiContext}
 
-case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession,
-                                                                     delegate: ParserInterface)
+case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
+    sparkSession: SparkSession,
+    delegate: ParserInterface)
     extends ParserInterface {
   private lazy val tiContext = getOrCreateTiContext(sparkSession)
   private lazy val internal = new SparkSqlParser(sparkSession.sqlContext.conf)
-
-  private def qualifyTableIdentifierInternal(tableIdentifier: TableIdentifier): TableIdentifier =
-    TableIdentifier(
-      tableIdentifier.table,
-      Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase))
-    )
-
-  /**
-   * Determines whether a table specified by tableIdentifier is
-   * needs to be qualified. This is used for TiSpark to transform
-   * plans and decides whether a relation should be resolved or parsed.
-   *
-   * @param tableIdentifier tableIdentifier
-   * @return whether it needs qualifying
-   */
-  private def needQualify(tableIdentifier: TableIdentifier) =
-    tableIdentifier.database.isEmpty && tiContext.sessionCatalog
-      .getTempView(tableIdentifier.table)
-      .isEmpty
 
   /**
    * WAR to lead Spark to consider this relation being on local files.
@@ -62,10 +50,8 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
       // When getting temp view, we leverage legacy catalog.
       i.copy(r.copy(qualifyTableIdentifierInternal(tableIdentifier)))
     case w @ With(_, cteRelations) =>
-      w.copy(
-        cteRelations = cteRelations
-          .map(p => (p._1, p._2.transform(qualifyTableIdentifier).asInstanceOf[SubqueryAlias]))
-      )
+      w.copy(cteRelations = cteRelations
+        .map(p => (p._1, p._2.transform(qualifyTableIdentifier).asInstanceOf[SubqueryAlias])))
     case cv @ CreateViewCommand(_, _, _, _, _, child, _, _, _) =>
       cv.copy(child = child transform qualifyTableIdentifier)
     case e @ ExplainCommand(plan, _, _, _) =>
@@ -102,4 +88,22 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
 
   override def parseDataType(sqlText: String): DataType =
     internal.parseDataType(sqlText)
+
+  private def qualifyTableIdentifierInternal(tableIdentifier: TableIdentifier): TableIdentifier =
+    TableIdentifier(
+      tableIdentifier.table,
+      Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase)))
+
+  /**
+   * Determines whether a table specified by tableIdentifier is
+   * needs to be qualified. This is used for TiSpark to transform
+   * plans and decides whether a relation should be resolved or parsed.
+   *
+   * @param tableIdentifier tableIdentifier
+   * @return whether it needs qualifying
+   */
+  private def needQualify(tableIdentifier: TableIdentifier) =
+    tableIdentifier.database.isEmpty && tiContext.sessionCatalog
+      .getTempView(tableIdentifier.table)
+      .isEmpty
 }

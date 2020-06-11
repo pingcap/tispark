@@ -20,8 +20,19 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import java.util.Arrays;
-import org.tikv.kvproto.Metapb.*;
-import org.tikv.kvproto.Pdpb.*;
+import org.tikv.kvproto.Metapb.Peer;
+import org.tikv.kvproto.Metapb.Region;
+import org.tikv.kvproto.Metapb.RegionEpoch;
+import org.tikv.kvproto.Metapb.Store;
+import org.tikv.kvproto.Metapb.StoreLabel;
+import org.tikv.kvproto.Metapb.StoreState;
+import org.tikv.kvproto.Pdpb.GetMembersResponse;
+import org.tikv.kvproto.Pdpb.GetRegionResponse;
+import org.tikv.kvproto.Pdpb.GetStoreResponse;
+import org.tikv.kvproto.Pdpb.Member;
+import org.tikv.kvproto.Pdpb.ResponseHeader;
+import org.tikv.kvproto.Pdpb.Timestamp;
+import org.tikv.kvproto.Pdpb.TsoResponse;
 
 public class GrpcUtils {
   private static ResponseHeader makeDefaultHeader(long clusterId) {

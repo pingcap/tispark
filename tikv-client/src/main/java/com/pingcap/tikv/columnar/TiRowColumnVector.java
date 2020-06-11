@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.pingcap.tikv.columnar;
 
 import com.pingcap.tikv.row.Row;
@@ -23,10 +24,10 @@ import java.math.BigDecimal;
  * in row format.
  */
 public class TiRowColumnVector extends TiColumnVector {
+  /** Represents the column index of original row */
+  private final int colIdx;
   /** row-wise format data and data is already decoded */
   private Row[] rows;
-  /** Represents the column index of original row */
-  private int colIdx;
   /** Sets up the data type of this column vector. */
   public TiRowColumnVector(DataType type, int colIdx, Row[] rows, int numOfRows) {
     super(type, numOfRows);

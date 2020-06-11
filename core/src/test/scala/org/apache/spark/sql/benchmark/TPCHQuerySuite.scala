@@ -17,7 +17,6 @@
 
 package org.apache.spark.sql.benchmark
 
-import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation
@@ -46,8 +45,7 @@ class TPCHQuerySuite extends BaseTiSparkTest {
     "q19",
     "q20",
     "q21", // May cause OOM if data set is large
-    "q22"
-  )
+    "q22")
 
   private val tpchTables = Seq(
     "lineitem",
@@ -58,8 +56,7 @@ class TPCHQuerySuite extends BaseTiSparkTest {
     "partsupp",
     "part",
     "region",
-    "supplier"
-  )
+    "supplier")
 
   private def tiSparkRes(name: String) =
     try {
@@ -67,15 +64,13 @@ class TPCHQuerySuite extends BaseTiSparkTest {
       // We do not use statistic information here due to conflict of netty versions when physical plan has broadcast nodes.
       val queryString = resourceToString(
         s"tpch-sql/$name.sql",
-        classLoader = Thread.currentThread().getContextClassLoader
-      )
+        classLoader = Thread.currentThread().getContextClassLoader)
       spark.sql(queryString).queryExecution.executedPlan.foreach {
         case scan: DataSourceScanExec =>
           scan.relation match {
             case _: JDBCRelation =>
               throw new AssertionError(
-                "Coprocessor plan should not use JDBC Scan as data source node!"
-              )
+                "Coprocessor plan should not use JDBC Scan as data source node!")
             case _ =>
           }
         case _ =>
@@ -94,8 +89,7 @@ class TPCHQuerySuite extends BaseTiSparkTest {
       tpchTables.foreach(createOrReplaceTempView(tpchDBName, _, ""))
       val queryString = resourceToString(
         s"tpch-sql/$name.sql",
-        classLoader = Thread.currentThread().getContextClassLoader
-      )
+        classLoader = Thread.currentThread().getContextClassLoader)
       spark.sql(queryString).queryExecution.executedPlan.foreach {
         case _: ColumnarCoprocessorRDD =>
           throw new AssertionError("JDBC plan should not use CoprocessorRDD as data source node!")
