@@ -96,7 +96,31 @@ trait SharedSQLContext
 
   protected def loadData: String = SharedSQLContext.loadData
 
-  protected def loadSQLFile(directory: String, file: String): Unit = {
+  private def checkLoadTiFlashWithRetry(tableName: String): Boolean = {
+    val check = queryTiDBViaJDBC(
+      s"select TABLE_SCHEMA from INFORMATION_SCHEMA.TABLES where TABLE_NAME = '$tableName'")
+    if (check.isEmpty) {
+      throw new RuntimeException(
+        s"$tableName not found in TiDB after load. Load SQL file failed.")
+    }
+    logger.info(s"Table $tableName found present in ${check.head.head}")
+    for (_ <- 0 until 60) {
+      // check every 5 secs
+      Thread.sleep(5000)
+      val available = queryTiDBViaJDBC(
+        s"select AVAILABLE from INFORMATION_SCHEMA.TIFLASH_REPLICA where TABLE_NAME = '$tableName'")
+      if (available.nonEmpty && available.head.head.toString == "true") {
+        return true
+      }
+    }
+    // timed out after 5 minutes
+    false
+  }
+
+  protected def loadSQLFile(
+      directory: String,
+      file: String,
+      checkTiFlashReplica: Boolean = false): Unit = {
     val fullFileName = s"$directory/$file.sql"
     initializeJDBCUrl()
     try {
@@ -108,6 +132,11 @@ trait SharedSQLContext
       _tidbConnection.setCatalog("mysql")
       initializeStatement()
       _statement.execute(queryString)
+      // file name is equivalent to table name
+      if (checkTiFlashReplica && !checkLoadTiFlashWithRetry(file)) {
+        // TiFlash replica not available after timeout, we will exit the test by exception
+        throw new RuntimeException(s"TiFlash replica of table $file not available after timeout.")
+      }
       logger.info(s"Load $fullFileName successfully.")
     } catch {
       case e: Exception =>
