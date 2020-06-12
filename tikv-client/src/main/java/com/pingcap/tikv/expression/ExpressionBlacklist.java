@@ -15,9 +15,9 @@
 
 package com.pingcap.tikv.expression;
 
-public class ExpressionBlacklist extends Blacklist {
+public class ExpressionBlocklist extends Blocklist {
 
-  public ExpressionBlacklist(String exprsString) {
+  public ExpressionBlocklist(String exprsString) {
     super(exprsString);
   }
 

@@ -22,7 +22,7 @@ import com.pingcap.tikv.expression.visitor.{
   MetaResolver,
   SupportedExpressionValidator
 }
-import com.pingcap.tikv.expression.{AggregateFunction, ByItem, ColumnRef, ExpressionBlacklist}
+import com.pingcap.tikv.expression.{AggregateFunction, ByItem, ColumnRef, ExpressionBlocklist}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tispark.TiDBRelation
@@ -168,25 +168,25 @@ object ExprUtils {
   def isSupportedAggregate(
       aggExpr: AggregateExpression,
       tiDBRelation: TiDBRelation,
-      blacklist: ExpressionBlacklist): Boolean =
+      blocklist: ExpressionBlocklist): Boolean =
     aggExpr.aggregateFunction match {
       case Average(_) | Sum(_) | SumNotNullable(_) | PromotedSum(_) | Count(_) | Min(_) | Max(
             _) =>
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
-            .forall(isSupportedBasicExpression(_, tiDBRelation, blacklist))
+            .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))
       case _ => false
     }
 
   def isSupportedBasicExpression(
       expr: Expression,
       tiDBRelation: TiDBRelation,
-      blacklist: ExpressionBlacklist): Boolean = {
+      blocklist: ExpressionBlocklist): Boolean = {
     if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG)) return false
 
     BasicExpression.convertToTiExpr(expr).fold(false) { expr: TiExpression =>
       MetaResolver.resolve(expr, tiDBRelation.table)
-      return SupportedExpressionValidator.isSupportedExpression(expr, blacklist)
+      return SupportedExpressionValidator.isSupportedExpression(expr, blocklist)
     }
   }
 
@@ -227,19 +227,19 @@ object ExprUtils {
   def isSupportedOrderBy(
       expr: Expression,
       source: TiDBRelation,
-      blacklist: ExpressionBlacklist): Boolean =
-    isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
+      blocklist: ExpressionBlocklist): Boolean =
+    isSupportedBasicExpression(expr, source, blocklist) && isPushDownSupported(expr, source)
 
   def isSupportedFilter(
       expr: Expression,
       source: TiDBRelation,
-      blacklist: ExpressionBlacklist): Boolean =
-    isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
+      blocklist: ExpressionBlocklist): Boolean =
+    isSupportedBasicExpression(expr, source, blocklist) && isPushDownSupported(expr, source)
 
   // if contains UDF / functions that cannot be folded
   def isSupportedGroupingExpr(
       expr: NamedExpression,
       source: TiDBRelation,
-      blacklist: ExpressionBlacklist): Boolean =
-    isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
+      blocklist: ExpressionBlocklist): Boolean =
+    isSupportedBasicExpression(expr, source, blocklist) && isPushDownSupported(expr, source)
 }

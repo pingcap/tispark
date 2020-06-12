@@ -23,10 +23,10 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class Blacklist {
+public class Blocklist {
   private final Set<String> unsupported = new HashSet<>();
 
-  Blacklist(String string) {
+  Blocklist(String string) {
     if (string != null) {
       String[] some = string.split(",");
       for (String one : some) {
