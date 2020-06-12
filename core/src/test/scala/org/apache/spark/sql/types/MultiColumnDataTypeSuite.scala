@@ -43,7 +43,7 @@ class MultiColumnDataTypeSuite
     }
     for (i <- columnNames.indices) {
       val col1 = columnNames(i)
-      for (j <- i + 1 until columnNames.size) {
+      for (j <- columnNames.indices) {
         val col2 = columnNames(j)
         val dataType2 = dataTypes(j)
         simpleSelect(dbName, tblName, col1, col2, dataType2)

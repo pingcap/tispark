@@ -45,10 +45,6 @@ trait GenerateMultiColumnPKDataTypeTestAction extends GenerateMultiColumnDataTyp
     val tableName = getTableName(cols.map(getTypeName): _*)
     init(tableName, i, j)
     loadTestData(tableName)
-    if (canTestTiFlash) {
-      // sleep for some time to wait for TiFlash syncing
-      Thread.sleep(10 * 1000)
-    }
   }
 
   def init(tableName: String, i: Int, j: Int): Unit = {
