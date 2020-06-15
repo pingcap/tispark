@@ -15,20 +15,24 @@
 
 package com.pingcap.tispark.concurrency
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
+case class ConcurrencyTestResult(
+    var hasError: Boolean = false,
+    var error: Throwable = null,
+    var isEmpty: Boolean = true,
+    var obj: String = null)
+
 class ConcurrencyTest extends BaseDataSourceTest("test_concurrency_write_read") {
 
-  protected val row1: Row = Row(1, "Hello")
-  protected val row2: Row = Row(2, "TiDB")
-  protected val row3: Row = Row(3, "Spark")
-  protected val row4: Row = Row(4, "null")
-  protected val row5: Row = Row(5, "test")
+  protected val row1 = Row(1, "Value1")
+  protected val row2 = Row(2, "Value2")
+  protected val row3 = Row(3, "Value3")
+  protected val row4 = Row(4, "Value4")
+  protected val row5 = Row(5, "Value5")
 
   protected val schema: StructType = StructType(
     List(StructField("i", IntegerType), StructField("s", StringType)))
@@ -58,36 +62,54 @@ class ConcurrencyTest extends BaseDataSourceTest("test_concurrency_write_read") 
     jdbcUpdate(s"drop table if exists $dbtable")
   }
 
-  protected def newJDBCReadThread(i: Int, resultRowCount: AtomicInteger): Thread = {
+  protected def newJDBCReadThread(i: Int, res: ConcurrencyTestResult): Thread = {
     new Thread(new Runnable {
       override def run(): Unit = {
         Thread.sleep(sleepBeforeQuery)
         logger.info(s"readThread$i: start query via jdbc")
         try {
           val result = queryTiDBViaJDBC(
-            s"select * from $dbtable where i = $i",
+            s"select s from $dbtable where i = $i",
             retryOnFailure = 1,
             tidbConn.createStatement())
           logger.info(s"readThread$i:" + result)
-          resultRowCount.addAndGet(result.size)
+          res.hasError = false
+          if (result.isEmpty) {
+            res.isEmpty = true
+          } else {
+            res.isEmpty = false
+            res.obj = result.head.head.toString
+          }
         } catch {
-          case e: Throwable => logger.info(s"readThread$i: jdbc with error", e)
+          case e: Throwable =>
+            res.hasError = true
+            res.error = e
+            logger.info(s"readThread$i: jdbc with error", e)
         }
       }
     })
   }
 
-  protected def newTiSparkReadThread(i: Int, resultRowCount: AtomicInteger): Thread = {
+  protected def newTiSparkReadThread(i: Int, res: ConcurrencyTestResult): Thread = {
     new Thread(new Runnable {
       override def run(): Unit = {
         Thread.sleep(sleepBeforeQuery)
         logger.info(s"readThread$i: start query via tispark")
         try {
-          val result = queryViaTiSpark(s"select * from $dbtableWithPrefix where i = $i")
+          val result = queryViaTiSpark(s"select s from $dbtableWithPrefix where i = $i")
           logger.info(s"readThread$i:" + result)
-          resultRowCount.addAndGet(result.size)
+          res.hasError = false
+          if (result.isEmpty) {
+            res.isEmpty = true
+          } else {
+            res.isEmpty = false
+            res.obj = result.head.head.toString
+          }
         } catch {
-          case e: Throwable => logger.info(s"readThread$i: tispark with error", e)
+          case e: Throwable =>
+            res.hasError = true
+            res.error = e
+            logger.info(s"readThread$i: tispark with error", e)
         }
       }
     })
@@ -97,7 +119,7 @@ class ConcurrencyTest extends BaseDataSourceTest("test_concurrency_write_read") 
     new Thread(new Runnable {
       override def run(): Unit = {
         logger.info("start doBatchWriteInBackground")
-        val data: RDD[Row] = sc.makeRDD(List(row1, row2, row3))
+        val data: RDD[Row] = sc.makeRDD(List(row1, row2))
         val df = sqlContext.createDataFrame(data, schema)
         df.write
           .format("tidb")
@@ -106,6 +128,7 @@ class ConcurrencyTest extends BaseDataSourceTest("test_concurrency_write_read") 
           .option("database", database)
           .option("table", table)
           .option("sleepAfterPrewriteSecondaryKey", sleepAfterPrewriteSecondaryKey)
+          .option("replace", "true")
           .mode("append")
           .save()
       }
