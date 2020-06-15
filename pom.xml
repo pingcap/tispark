@@ -71,7 +71,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
         <spark.version.compile>2.3.4</spark.version.compile>
-        <spark.version.test>2.4.4</spark.version.test>
+        <spark.version.test>2.4.6</spark.version.test>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.12</scala.version>
         <!-- for now, not running scalafmt as part of default verify pipeline -->
