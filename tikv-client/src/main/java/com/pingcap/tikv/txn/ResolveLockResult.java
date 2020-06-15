@@ -21,8 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ResolveLockResult {
-  private long msBeforeTxnExpired;
-  private List<Long> resolvedLocks;
+  private final long msBeforeTxnExpired;
+  private final List<Long> resolvedLocks;
 
   public ResolveLockResult(long msBeforeTxnExpired) {
     this.msBeforeTxnExpired = msBeforeTxnExpired;

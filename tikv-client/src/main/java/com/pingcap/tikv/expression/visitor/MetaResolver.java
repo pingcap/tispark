@@ -24,6 +24,12 @@ import java.util.List;
 import java.util.Objects;
 
 public class MetaResolver extends DefaultVisitor<Void, Expression> {
+  private final TiTableInfo table;
+
+  public MetaResolver(TiTableInfo table) {
+    this.table = table;
+  }
+
   public static void resolve(Expression expression, TiTableInfo table) {
     MetaResolver resolver = new MetaResolver(table);
     resolver.resolve(expression);
@@ -32,12 +38,6 @@ public class MetaResolver extends DefaultVisitor<Void, Expression> {
   public static void resolve(List<? extends Expression> expressions, TiTableInfo table) {
     MetaResolver resolver = new MetaResolver(table);
     resolver.resolve(expressions);
-  }
-
-  private final TiTableInfo table;
-
-  public MetaResolver(TiTableInfo table) {
-    this.table = table;
   }
 
   public void resolve(List<? extends Expression> expressions) {

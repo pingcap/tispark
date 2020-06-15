@@ -22,24 +22,24 @@ import org.apache.spark.sql.test.generator.TestDataGenerator._
 import org.apache.spark.sql.types.{BaseDataTypeTest, RunUnitDataTypeTestAction}
 
 class DataTypePKSuite extends BaseDataTypeTest with RunUnitDataTypeTestAction {
-  override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: stringType
-  override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
-  override val dataTypeTestDir = "dataType-test-pk"
-  override val database = "data_type_test_pk"
-  override val testDesc = "Test for single PK column data types (and unsigned types)"
-
   override lazy protected val generator: DataTypePKGenerator =
-    DataTypePKGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc)
+    DataTypePKGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, dbName, testDesc)
+  override def dataTypes: List[ReflectedDataType] =
+    integers ::: decimals ::: doubles ::: stringType
+  override def unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
+  override def dataTypeTestDir = "dataType-test-pk"
+  override def dbName = "data_type_test_pk"
+  override def testDesc = "Test for single PK column data types (and unsigned types)"
 
   def startTest(typeName: String): Unit = {
     test(s"Test $typeName - $testDesc") {
-      simpleSelect(database, typeName)
+      simpleSelect(dbName, typeName)
     }
   }
 
   def startUnsignedTest(typeName: String): Unit = {
     test(s"Test $extraDesc $typeName - $testDesc") {
-      simpleSelect(database, typeName, extraDesc)
+      simpleSelect(dbName, typeName, extraDesc)
     }
   }
 

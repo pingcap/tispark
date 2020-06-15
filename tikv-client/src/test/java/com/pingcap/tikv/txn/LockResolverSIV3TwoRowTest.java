@@ -23,10 +23,10 @@ import org.junit.Test;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 
 public class LockResolverSIV3TwoRowTest extends LockResolverTest {
-  private String value1 = "v1";
-  private String value2 = "v2";
-  private String value3 = "v3";
-  private String value4 = "v4";
+  private final String value1 = "v1";
+  private final String value2 = "v2";
+  private final String value3 = "v3";
+  private final String value4 = "v4";
 
   public LockResolverSIV3TwoRowTest() {
     super(IsolationLevel.SI);

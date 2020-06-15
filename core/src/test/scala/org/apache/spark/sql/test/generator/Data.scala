@@ -41,39 +41,38 @@ case class Data(schema: Schema, data: List[TiRow], directory: String) {
           .mkString("(", ",", ")")
       }
       .mkString(",")
+  private val sql = s"CREATE DATABASE IF NOT EXISTS `$database`;\n" +
+    s"DROP TABLE IF EXISTS `$database`.`$table`;\n" +
+    s"${schema.toString};\n" +
+    s"INSERT INTO `$database`.`$table` VALUES $text;\n"
+  private val tiflash_sql = s"ALTER TABLE `$database`.`$table` SET TIFLASH REPLICA 1"
   private var hasTiFlashReplica = false
 
   def setTiFLashReplica(has: Boolean): Unit = {
     hasTiFlashReplica = has
   }
 
-  def toOutput(value: Any): String = value match {
-    case null       => null
-    case _: Boolean => value.toString
-    case _: Number  => value.toString
-    case arr: Array[Byte] =>
-      s"X\'${arr.map { b =>
-        String.format("%02x", new java.lang.Byte(b))
-      }.mkString}\'"
-    case arr: Array[Boolean] =>
-      s"b\'${arr.map {
-        case true  => "1"
-        case false => "0"
-      }.mkString}\'"
-    case ts: java.sql.Timestamp =>
-      // convert to Timestamp output with current TimeZone
-      val zonedDateTime = ts.toLocalDateTime.atZone(java.util.TimeZone.getDefault.toZoneId)
-      val milliseconds = zonedDateTime.toEpochSecond * 1000L + zonedDateTime.getNano / 1000000
-      s"\'${new java.sql.Timestamp(milliseconds)}\'"
-    case _ => s"\'$value\'"
-  }
-
-  private val sql = s"CREATE DATABASE IF NOT EXISTS `$database`;\n" +
-    s"DROP TABLE IF EXISTS `$database`.`$table`;\n" +
-    s"${schema.toString};\n" +
-    s"INSERT INTO `$database`.`$table` VALUES $text;\n"
-
-  private val tiflash_sql = s"ALTER TABLE `$database`.`$table` SET TIFLASH REPLICA 1"
+  def toOutput(value: Any): String =
+    value match {
+      case null => null
+      case _: Boolean => value.toString
+      case _: Number => value.toString
+      case arr: Array[Byte] =>
+        s"X\'${arr.map { b =>
+          f"${new java.lang.Byte(b)}%02x"
+        }.mkString}\'"
+      case arr: Array[Boolean] =>
+        s"b\'${arr.map {
+          case true => "1"
+          case false => "0"
+        }.mkString}\'"
+      case ts: java.sql.Timestamp =>
+        // convert to Timestamp output with current TimeZone
+        val zonedDateTime = ts.toLocalDateTime.atZone(java.util.TimeZone.getDefault.toZoneId)
+        val milliseconds = zonedDateTime.toEpochSecond * 1000L + zonedDateTime.getNano / 1000000
+        s"\'${new java.sql.Timestamp(milliseconds)}\'"
+      case _ => s"\'$value\'"
+    }
 
   def save(): Unit = {
     import java.io._

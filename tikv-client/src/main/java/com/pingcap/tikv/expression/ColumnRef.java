@@ -24,6 +24,19 @@ import java.util.List;
 import java.util.Objects;
 
 public class ColumnRef extends Expression {
+  private final String name;
+
+  @Deprecated
+  public ColumnRef(String name) {
+    this.name = name;
+  }
+
+  public ColumnRef(String name, DataType dataType) {
+    super(dataType);
+    resolved = true;
+    this.name = name;
+  }
+
   public static ColumnRef create(String name, TiTableInfo table) {
     name = name.replaceAll("`", "");
     TiColumnInfo col = table.getColumn(name);
@@ -46,19 +59,6 @@ public class ColumnRef extends Expression {
 
   public static ColumnRef create(String name, TiColumnInfo columnInfo) {
     return new ColumnRef(name, columnInfo.getType());
-  }
-
-  private final String name;
-
-  @Deprecated
-  public ColumnRef(String name) {
-    this.name = name;
-  }
-
-  public ColumnRef(String name, DataType dataType) {
-    super(dataType);
-    resolved = true;
-    this.name = name;
   }
 
   public String getName() {

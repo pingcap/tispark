@@ -33,8 +33,7 @@ class Join0Suite extends BaseInitialOnceTest {
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_int = b.tp_int",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_tinyint = b.tp_tinyint",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_date = b.tp_date",
-    "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_timestamp = b.tp_timestamp"
-  )
+    "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_timestamp = b.tp_timestamp")
 
   allCases foreach { query =>
     {

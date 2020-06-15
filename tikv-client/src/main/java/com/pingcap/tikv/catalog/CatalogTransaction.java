@@ -44,6 +44,24 @@ public class CatalogTransaction {
     this.snapshot = snapshot;
   }
 
+  public static <T> T parseFromJson(ByteString json, Class<T> cls) {
+    Objects.requireNonNull(json, "json is null");
+    Objects.requireNonNull(cls, "cls is null");
+
+    logger.debug(String.format("Parse Json %s : %s", cls.getSimpleName(), json.toStringUtf8()));
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      return mapper.readValue(json.toStringUtf8(), cls);
+    } catch (JsonParseException | JsonMappingException e) {
+      String errMsg =
+          String.format(
+              "Invalid JSON value for Type %s: %s\n", cls.getSimpleName(), json.toStringUtf8());
+      throw new TiClientInternalException(errMsg, e);
+    } catch (Exception e1) {
+      throw new TiClientInternalException("Error parsing Json", e1);
+    }
+  }
+
   long getLatestSchemaVersion() {
     ByteString versionBytes = MetaCodec.bytesGet(MetaCodec.KEY_SCHEMA_VERSION, this.snapshot);
     CodecDataInput cdi = new CodecDataInput(versionBytes.toByteArray());
@@ -79,23 +97,5 @@ public class CatalogTransaction {
       }
     }
     return builder.build();
-  }
-
-  public static <T> T parseFromJson(ByteString json, Class<T> cls) {
-    Objects.requireNonNull(json, "json is null");
-    Objects.requireNonNull(cls, "cls is null");
-
-    logger.debug(String.format("Parse Json %s : %s", cls.getSimpleName(), json.toStringUtf8()));
-    ObjectMapper mapper = new ObjectMapper();
-    try {
-      return mapper.readValue(json.toStringUtf8(), cls);
-    } catch (JsonParseException | JsonMappingException e) {
-      String errMsg =
-          String.format(
-              "Invalid JSON value for Type %s: %s\n", cls.getSimpleName(), json.toStringUtf8());
-      throw new TiClientInternalException(errMsg, e);
-    } catch (Exception e1) {
-      throw new TiClientInternalException("Error parsing Json", e1);
-    }
   }
 }

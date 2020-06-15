@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tikv.codec;
 
 import static org.junit.Assert.assertEquals;
@@ -19,6 +34,10 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 public class TableCodecV1Test {
+  @Rule public ExpectedException expectedEx = ExpectedException.none();
+  private Object[] values;
+  private final TiTableInfo tblInfo = createTable();
+
   private static TiTableInfo createTable() {
     StringType VARCHAR255 =
         new StringType(
@@ -39,9 +58,6 @@ public class TableCodecV1Test {
         .build();
   }
 
-  private Object[] values;
-  private TiTableInfo tblInfo = createTable();
-
   private void makeValues() {
     List<Object> values = new ArrayList<>();
     values.add(1L);
@@ -58,8 +74,6 @@ public class TableCodecV1Test {
   public void setUp() {
     makeValues();
   }
-
-  @Rule public ExpectedException expectedEx = ExpectedException.none();
 
   @Test
   public void testRowCodecThrowException() {

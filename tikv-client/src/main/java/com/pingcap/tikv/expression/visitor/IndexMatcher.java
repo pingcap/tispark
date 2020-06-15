@@ -17,8 +17,12 @@ package com.pingcap.tikv.expression.visitor;
 
 import static java.util.Objects.requireNonNull;
 
-import com.pingcap.tikv.expression.*;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
+import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.LogicalBinaryExpression;
+import com.pingcap.tikv.expression.StringRegExpression;
 import com.pingcap.tikv.meta.TiIndexColumn;
 
 /**

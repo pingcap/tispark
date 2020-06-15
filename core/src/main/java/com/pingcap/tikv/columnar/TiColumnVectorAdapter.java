@@ -22,10 +22,9 @@ import org.apache.spark.sql.vectorized.ColumnarMap;
 import org.apache.spark.unsafe.types.UTF8String;
 
 public class TiColumnVectorAdapter extends ColumnVector {
-  private TiColumnVector tiColumnVector;
-  /**
-   * Sets up the data type of this column vector.
-   */
+  private final TiColumnVector tiColumnVector;
+
+  /** Sets up the data type of this column vector. */
   public TiColumnVectorAdapter(TiColumnVector tiColumnVector) {
     super(TypeMapping.toSparkType(tiColumnVector.dataType()));
     this.tiColumnVector = tiColumnVector;
@@ -37,27 +36,19 @@ public class TiColumnVectorAdapter extends ColumnVector {
    * <p>This overwrites `AutoCloseable.close` to remove the `throws` clause, as column vector is
    * in-memory and we don't expect any exception to happen during closing.
    */
-  public void close() {
+  public void close() {}
 
-  }
-
-  /**
-   * Returns true if this column vector contains any null values.
-   */
+  /** Returns true if this column vector contains any null values. */
   public boolean hasNull() {
     return tiColumnVector.hasNull();
   }
 
-  /**
-   * Returns the number of nulls in this column vector.
-   */
+  /** Returns the number of nulls in this column vector. */
   public int numNulls() {
     return tiColumnVector.numNulls();
   }
 
-  /**
-   * Returns whether the value at rowId is NULL.
-   */
+  /** Returns whether the value at rowId is NULL. */
   public boolean isNullAt(int rowId) {
     return tiColumnVector.isNullAt(rowId);
   }
@@ -121,13 +112,13 @@ public class TiColumnVectorAdapter extends ColumnVector {
   /**
    * Returns the array type value for rowId. If the slot for rowId is null, it should return null.
    *
-   * To support array type, implementations must construct an {@link ColumnarArray} and return it in
-   * this method. {@link ColumnarArray} requires a {@link ColumnVector} that stores the data of all
-   * the elements of all the arrays in this vector, and an offset and length which points to a range
-   * in that {@link ColumnVector}, and the range represents the array for rowId. Implementations are
-   * free to decide where to put the data vector and offsets and lengths. For example, we can use
-   * the first child vector as the data vector, and store offsets and lengths in 2 int arrays in
-   * this vector.
+   * <p>To support array type, implementations must construct an {@link ColumnarArray} and return it
+   * in this method. {@link ColumnarArray} requires a {@link ColumnVector} that stores the data of
+   * all the elements of all the arrays in this vector, and an offset and length which points to a
+   * range in that {@link ColumnVector}, and the range represents the array for rowId.
+   * Implementations are free to decide where to put the data vector and offsets and lengths. For
+   * example, we can use the first child vector as the data vector, and store offsets and lengths in
+   * 2 int arrays in this vector.
    */
   @Override
   public ColumnarArray getArray(int rowId) {
@@ -137,14 +128,14 @@ public class TiColumnVectorAdapter extends ColumnVector {
   /**
    * Returns the map type value for rowId. If the slot for rowId is null, it should return null.
    *
-   * In Spark, map type value is basically a key data array and a value data array. A key from the
-   * key array with a index and a value from the value array with the same index contribute to an
-   * entry of this map type value.
+   * <p>In Spark, map type value is basically a key data array and a value data array. A key from
+   * the key array with a index and a value from the value array with the same index contribute to
+   * an entry of this map type value.
    *
-   * To support map type, implementations must construct a {@link ColumnarMap} and return it in this
-   * method. {@link ColumnarMap} requires a {@link ColumnVector} that stores the data of all the
-   * keys of all the maps in this vector, and another {@link ColumnVector} that stores the data of
-   * all the values of all the maps in this vector, and a pair of offset and length which specify
+   * <p>To support map type, implementations must construct a {@link ColumnarMap} and return it in
+   * this method. {@link ColumnarMap} requires a {@link ColumnVector} that stores the data of all
+   * the keys of all the maps in this vector, and another {@link ColumnVector} that stores the data
+   * of all the values of all the maps in this vector, and a pair of offset and length which specify
    * the range of the key/value array that belongs to the map type value at rowId.
    */
   @Override
@@ -153,11 +144,10 @@ public class TiColumnVectorAdapter extends ColumnVector {
   }
 
   /**
-   * Returns the decimal type value for rowId. If the slot for rowId is null, it should return
-   * null.
+   * Returns the decimal type value for rowId. If the slot for rowId is null, it should return null.
    */
   public Decimal getDecimal(int rowId, int precision, int scale) {
-    return  Decimal.apply(tiColumnVector.getDecimal(rowId, precision, scale));
+    return Decimal.apply(tiColumnVector.getDecimal(rowId, precision, scale));
   }
 
   /**
@@ -176,9 +166,7 @@ public class TiColumnVectorAdapter extends ColumnVector {
     return tiColumnVector.getBinary(rowId);
   }
 
-  /**
-   * @return child [[ColumnVector]] at the given ordinal.
-   */
+  /** @return child [[ColumnVector]] at the given ordinal. */
   @Override
   protected ColumnVector getChild(int ordinal) {
     throw new UnsupportedOperationException("TiColumnVectorAdapter is not supported this method");

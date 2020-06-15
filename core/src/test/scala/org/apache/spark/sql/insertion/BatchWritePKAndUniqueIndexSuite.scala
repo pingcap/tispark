@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.spark.sql.insertion
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
@@ -9,42 +24,30 @@ import org.apache.spark.sql.test.generator.TestDataGenerator._
 class BatchWritePKAndUniqueIndexSuite
     extends BaseDataSourceTest(
       "batch_write_insertion_pk_and_one_unique_index",
-      "batch_write_test_index"
-    )
+      "batch_write_test_pk_and_index")
     with EnumerateUniqueIndexDataTypeTestAction {
   // TODO: support binary insertion.
-  override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: charCharset
-  override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
-  override val database = "batch_write_test_pk_and_index"
-  override val testDesc = "Test for pk and unique index type in batch-write insertion"
+  override def dataTypes: List[ReflectedDataType] =
+    integers ::: decimals ::: doubles ::: charCharset
+  override def unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
+  override def dbName: String = database
+  override def testDesc = "Test for pk and unique index type in batch-write insertion"
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    tidbStmt.execute(s"drop database if exists $database")
-    tidbStmt.execute(s"create database $database")
+    tidbStmt.execute(s"drop database if exists $dbName")
+    tidbStmt.execute(s"create database $dbName")
   }
 
-  private def dropAndCreateTbl(schema: Schema): Unit = {
-    // drop table if exits
-    dropTable(schema.tableName)
+  // this is only for mute the warning
+  override def test(): Unit = {}
 
-    // create table in tidb first
-    jdbcUpdate(schema.toString)
-  }
-
-  private def insertAndSelect(schema: Schema): Unit = {
-    val tblName = schema.tableName
-
-    val tiTblInfo = getTableInfo(database, tblName)
-    val tiColInfos = tiTblInfo.getColumns
-    // gen data
-    val rows =
-      generateRandomRows(schema, rowCount, r).map(row => tiRowToSparkRow(row, tiColInfos))
-    // insert data to tikv
-    tidbWriteWithTable(rows, TiUtil.getSchemaFromTable(tiTblInfo), tblName)
-    // select data from tikv and compare with tidb
-    compareTiDBSelectWithJDBCWithTable_V2(tblName = tblName, "col_bigint")
-  }
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 
   test("test pk and unique indices cases") {
     val schemas = genSchema(dataTypes, table)
@@ -58,13 +61,25 @@ class BatchWritePKAndUniqueIndexSuite
     }
   }
 
-  // this is only for mute the warning
-  override def test(): Unit = {}
+  private def dropAndCreateTbl(schema: Schema): Unit = {
+    // drop table if exits
+    dropTable(schema.tableName)
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
+    // create table in tidb first
+    jdbcUpdate(schema.toString)
+  }
+
+  private def insertAndSelect(schema: Schema): Unit = {
+    val tblName = schema.tableName
+
+    val tiTblInfo = getTableInfo(dbName, tblName)
+    val tiColInfos = tiTblInfo.getColumns
+    // gen data
+    val rows =
+      generateRandomRows(schema, rowCount, r).map(row => tiRowToSparkRow(row, tiColInfos))
+    // insert data to tikv
+    tidbWriteWithTable(rows, TiUtil.getSchemaFromTable(tiTblInfo), tblName)
+    // select data from tikv and compare with tidb
+    compareTiDBSelectWithJDBCWithTable_V2(tblName = tblName, "col_bigint")
+  }
 }

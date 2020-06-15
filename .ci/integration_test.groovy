@@ -199,8 +199,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
-                        export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
-                        mvn compile ${MVN_PROFILE}
+                        export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M"
                         mvn test ${MVN_PROFILE} -Dtest=moo ${mvnStr}
                     """
                 }
@@ -216,9 +215,8 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
-                        export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
+                        export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M"
                         mvn test ${MVN_PROFILE} -am -pl tikv-client
-                        mvn test ${MVN_PROFILE} -Dtest=moo -DwildcardSuites=com.pingcap.tispark.datasource.DataSourceWithoutExtensionsSuite,org.apache.spark.sql.IssueTestSuite -DfailIfNoTests=false
                     """
                     unstash "CODECOV_TOKEN"
                     sh 'curl -s https://codecov.io/bash | bash -s - -t @CODECOV_TOKEN'

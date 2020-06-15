@@ -1,13 +1,42 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tikv.codec;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.types.*;
+import com.pingcap.tikv.types.BitType;
+import com.pingcap.tikv.types.BytesType;
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DataTypeFactory;
+import com.pingcap.tikv.types.DateTimeType;
+import com.pingcap.tikv.types.DateType;
+import com.pingcap.tikv.types.DecimalType;
+import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.JsonType;
+import com.pingcap.tikv.types.MySQLType;
+import com.pingcap.tikv.types.RealType;
+import com.pingcap.tikv.types.StringType;
+import com.pingcap.tikv.types.TimeType;
+import com.pingcap.tikv.types.TimestampType;
+import com.pingcap.tikv.types.UninitializedType;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
@@ -17,108 +46,6 @@ import java.util.TimeZone;
 import org.junit.Test;
 
 public class TableCodecV2Test {
-
-  public static class TestCase {
-    private final byte[] bytes;
-    private final TiTableInfo tableInfo;
-    private final Long handle;
-    private final Object[] value;
-
-    public static TestCase createNew(
-        int[] unsignedBytes, TiTableInfo tableInfo, Long handle, Object[] value) {
-      return new TestCase(unsignedBytes, tableInfo, handle, value);
-    }
-
-    public static TestCase createNew(int[] unsignedBytes, TiTableInfo tableInfo, Object[] value) {
-      return new TestCase(unsignedBytes, tableInfo, -1L, value);
-    }
-
-    private TestCase(int[] unsignedBytes, TiTableInfo tableInfo, Long handle, Object[] value) {
-      this.bytes = new byte[unsignedBytes.length];
-      for (int i = 0; i < unsignedBytes.length; i++) {
-        this.bytes[i] = (byte) (unsignedBytes[i] & 0xff);
-      }
-      this.tableInfo = tableInfo;
-      this.handle = handle;
-      this.value = value;
-    }
-
-    private Object[] fromRow(Row row, TiTableInfo tableInfo) {
-      Object[] res = new Object[row.fieldCount()];
-      for (int i = 0; i < row.fieldCount(); i++) {
-        DataType colTp = tableInfo.getColumns().get(i).getType();
-        res[i] = row.get(i, colTp);
-      }
-      return res;
-    }
-
-    private static boolean equals(byte[] a1, byte[] a2) {
-      assert a1 != null && a2 != null;
-      int length = a1.length;
-      if (a2.length != length) return false;
-      for (int i = 0; i < length; i++) if (a1[i] != a2[i]) return false;
-      return true;
-    }
-
-    private static boolean equals(Object a1, Object a2) {
-      assert a1 != null && a2 != null;
-      if (a1 instanceof Double)
-        return Math.abs(((Double) a1) - ((Number) a2).doubleValue()) < 1.0e-6;
-      else return a1.equals(a2);
-    }
-
-    private static boolean deepEquals(Object[] e1, Object[] e2) {
-      if (e1.length != e2.length) {
-        return false;
-      }
-      for (int i = 0; i < e1.length; i++) {
-        if (!deepEquals0(e1[i], e2[i])) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    private static boolean deepEquals0(Object e1, Object e2) {
-      if (e1 == e2) return true;
-      if (e1 == null || e2 == null) return false;
-      boolean eq;
-      if (e1 instanceof Object[] && e2 instanceof Object[])
-        eq = deepEquals((Object[]) e1, (Object[]) e2);
-      else if (e1 instanceof byte[] && e2 instanceof byte[]) eq = equals((byte[]) e1, (byte[]) e2);
-      else eq = equals(e1, e2);
-      return eq;
-    }
-
-    private String toString(Object[] a) {
-      StringBuilder s = new StringBuilder();
-      for (int i = 0; i < a.length; i++) {
-        Object o = a[i];
-        if (i > 0) {
-          s.append(",");
-        }
-        if (o == null) {
-          s.append("null");
-        } else if (o instanceof byte[]) {
-          s.append(Arrays.toString((byte[]) o));
-        } else {
-          s.append(o.toString());
-        }
-      }
-      return s.toString();
-    }
-
-    private void debug(Object[] a1, Object[] a2) {
-      System.out.println("Expected=[" + toString(a1) + "]\nResult  =[" + toString(a2) + "]");
-    }
-
-    private void testDecode() {
-      Row res = TableCodecV2.decodeRow(this.bytes, this.handle, this.tableInfo);
-      Object[] o = fromRow(res, this.tableInfo);
-      debug(this.value, o);
-      assertTrue(deepEquals(this.value, o));
-    }
-  }
 
   private static final DataType TEST_BIT_TYPE =
       DataTypeFactory.of(
@@ -364,5 +291,107 @@ public class TableCodecV2Test {
               ""
             });
     testCase.testDecode();
+  }
+
+  public static class TestCase {
+    private final byte[] bytes;
+    private final TiTableInfo tableInfo;
+    private final Long handle;
+    private final Object[] value;
+
+    private TestCase(int[] unsignedBytes, TiTableInfo tableInfo, Long handle, Object[] value) {
+      this.bytes = new byte[unsignedBytes.length];
+      for (int i = 0; i < unsignedBytes.length; i++) {
+        this.bytes[i] = (byte) (unsignedBytes[i] & 0xff);
+      }
+      this.tableInfo = tableInfo;
+      this.handle = handle;
+      this.value = value;
+    }
+
+    public static TestCase createNew(
+        int[] unsignedBytes, TiTableInfo tableInfo, Long handle, Object[] value) {
+      return new TestCase(unsignedBytes, tableInfo, handle, value);
+    }
+
+    public static TestCase createNew(int[] unsignedBytes, TiTableInfo tableInfo, Object[] value) {
+      return new TestCase(unsignedBytes, tableInfo, -1L, value);
+    }
+
+    private static boolean equals(byte[] a1, byte[] a2) {
+      assert a1 != null && a2 != null;
+      int length = a1.length;
+      if (a2.length != length) return false;
+      for (int i = 0; i < length; i++) if (a1[i] != a2[i]) return false;
+      return true;
+    }
+
+    private static boolean equals(Object a1, Object a2) {
+      assert a1 != null && a2 != null;
+      if (a1 instanceof Double)
+        return Math.abs(((Double) a1) - ((Number) a2).doubleValue()) < 1.0e-6;
+      else return a1.equals(a2);
+    }
+
+    private static boolean deepEquals(Object[] e1, Object[] e2) {
+      if (e1.length != e2.length) {
+        return false;
+      }
+      for (int i = 0; i < e1.length; i++) {
+        if (!deepEquals0(e1[i], e2[i])) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    private static boolean deepEquals0(Object e1, Object e2) {
+      if (e1 == e2) return true;
+      if (e1 == null || e2 == null) return false;
+      boolean eq;
+      if (e1 instanceof Object[] && e2 instanceof Object[])
+        eq = deepEquals((Object[]) e1, (Object[]) e2);
+      else if (e1 instanceof byte[] && e2 instanceof byte[]) eq = equals((byte[]) e1, (byte[]) e2);
+      else eq = equals(e1, e2);
+      return eq;
+    }
+
+    private Object[] fromRow(Row row, TiTableInfo tableInfo) {
+      Object[] res = new Object[row.fieldCount()];
+      for (int i = 0; i < row.fieldCount(); i++) {
+        DataType colTp = tableInfo.getColumns().get(i).getType();
+        res[i] = row.get(i, colTp);
+      }
+      return res;
+    }
+
+    private String toString(Object[] a) {
+      StringBuilder s = new StringBuilder();
+      for (int i = 0; i < a.length; i++) {
+        Object o = a[i];
+        if (i > 0) {
+          s.append(",");
+        }
+        if (o == null) {
+          s.append("null");
+        } else if (o instanceof byte[]) {
+          s.append(Arrays.toString((byte[]) o));
+        } else {
+          s.append(o.toString());
+        }
+      }
+      return s.toString();
+    }
+
+    private void debug(Object[] a1, Object[] a2) {
+      System.out.println("Expected=[" + toString(a1) + "]\nResult  =[" + toString(a2) + "]");
+    }
+
+    private void testDecode() {
+      Row res = TableCodecV2.decodeRow(this.bytes, this.handle, this.tableInfo);
+      Object[] o = fromRow(res, this.tableInfo);
+      debug(this.value, o);
+      assertTrue(deepEquals(this.value, o));
+    }
   }
 }

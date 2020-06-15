@@ -23,8 +23,9 @@ import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
 import com.pingcap.tispark.handler.CacheInvalidateEventHandler
 import org.apache.spark.scheduler.{SparkListener, SparkListenerJobEnd}
 
-class PDCacheInvalidateListener(accumulator: CacheInvalidateAccumulator,
-                                handler: CacheInvalidateEventHandler)
+class PDCacheInvalidateListener(
+    accumulator: CacheInvalidateAccumulator,
+    handler: CacheInvalidateEventHandler)
     extends SparkListener {
   private final val logger: Logger = Logger.getLogger(getClass.getName)
 
@@ -36,8 +37,7 @@ class PDCacheInvalidateListener(accumulator: CacheInvalidateAccumulator,
           logger.info(
             s"Receiving ${events.size} cache invalidation request(s) from job ${jobEnd.jobId} at driver. " +
               s"This indicates that there's exception(s) thrown in executor node when communicating with " +
-              s"TiKV, checkout executors' log for more information."
-          )
+              s"TiKV, checkout executors' log for more information.")
           events.foreach(handler.handle)
         }
       }

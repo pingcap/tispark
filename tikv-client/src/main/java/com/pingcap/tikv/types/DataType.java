@@ -39,22 +39,6 @@ import java.util.List;
 /** Base Type for encoding and decoding TiDB row information. */
 public abstract class DataType implements Serializable {
 
-  private static final Long MaxInt8 = (1L << 7) - 1;
-  private static final Long MinInt8 = -1L << 7;
-  private static final Long MaxInt16 = (1L << 15) - 1;
-  private static final Long MinInt16 = -1L << 15;
-  private static final Long MaxInt24 = (1L << 23) - 1;
-  private static final Long MinInt24 = -1L << 23;
-  private static final Long MaxInt32 = (1L << 31) - 1;
-  private static final Long MinInt32 = -1L << 31;
-  private static final Long MaxInt64 = (1L << 63) - 1;
-  private static final Long MinInt64 = -1L << 63;
-  private static final Long MaxUint8 = (1L << 8) - 1;
-  private static final Long MaxUint16 = (1L << 16) - 1;
-  private static final Long MaxUint24 = (1L << 24) - 1;
-  private static final Long MaxUint32 = (1L << 32) - 1;
-  private static final Long MaxUint64 = -1L;
-
   // Flag Information for strict mysql type
   public static final int NotNullFlag = 1; /* Field can't be NULL */
   public static final int PriKeyFlag = 2; /* Field is part of a primary key */
@@ -72,6 +56,34 @@ public abstract class DataType implements Serializable {
   public static final int OnUpdateNowFlag = 8192; /* Field is set to NOW on UPDATE */
   public static final int NumFlag = 32768; /* Field is a num (for clients) */
   public static final long COLUMN_VERSION_FLAG = 1;
+  public static final int UNSPECIFIED_LEN = -1;
+  private static final Long MaxInt8 = (1L << 7) - 1;
+  private static final Long MinInt8 = -1L << 7;
+  private static final Long MaxInt16 = (1L << 15) - 1;
+  private static final Long MinInt16 = -1L << 15;
+  private static final Long MaxInt24 = (1L << 23) - 1;
+  private static final Long MinInt24 = -1L << 23;
+  private static final Long MaxInt32 = (1L << 31) - 1;
+  private static final Long MinInt32 = -1L << 31;
+  private static final Long MaxInt64 = (1L << 63) - 1;
+  private static final Long MinInt64 = -1L << 63;
+  private static final Long MaxUint8 = (1L << 8) - 1;
+  private static final Long MaxUint16 = (1L << 16) - 1;
+  private static final Long MaxUint24 = (1L << 24) - 1;
+  private static final Long MaxUint32 = (1L << 32) - 1;
+  private static final Long MaxUint64 = -1L;
+  // MySQL type
+  protected final MySQLType tp;
+  // Not Encode/Decode flag, this is used to strict mysql type
+  // such as not null, timestamp
+  protected final int flag;
+  protected final int decimal;
+  protected final int collation;
+  protected final long length;
+  private final String charset;
+  private final List<String> elems;
+  private final byte[] allNotNullBitMap = initAllNotNullBitMap();
+  private final byte[] readBuffer = new byte[8];
 
   public DataType(MySQLType tp, int prec, int scale) {
     this.tp = tp;
@@ -82,25 +94,6 @@ public abstract class DataType implements Serializable {
     this.charset = "";
     this.collation = Collation.DEF_COLLATION_CODE;
   }
-
-  public enum EncodeType {
-    KEY,
-    VALUE,
-    PROTO
-  }
-
-  public static final int UNSPECIFIED_LEN = -1;
-
-  // MySQL type
-  protected final MySQLType tp;
-  // Not Encode/Decode flag, this is used to strict mysql type
-  // such as not null, timestamp
-  protected final int flag;
-  protected final int decimal;
-  private final String charset;
-  protected final int collation;
-  protected final long length;
-  private final List<String> elems;
 
   protected DataType(TiColumnInfo.InternalTypeHolder holder) {
     this.tp = MySQLType.fromTypeCode(holder.getTp());
@@ -131,6 +124,22 @@ public abstract class DataType implements Serializable {
     this.decimal = decimal;
     this.charset = charset;
     this.collation = collation;
+  }
+
+  public static void encodeMaxValue(CodecDataOutput cdo) {
+    cdo.writeByte(Codec.MAX_FLAG);
+  }
+
+  public static void encodeNull(CodecDataOutput cdo) {
+    cdo.writeByte(Codec.NULL_FLAG);
+  }
+
+  public static void encodeIndex(CodecDataOutput cdo) {
+    cdo.writeByte(Codec.BYTES_FLAG);
+  }
+
+  public static boolean isLengthUnSpecified(long length) {
+    return length == UNSPECIFIED_LEN;
   }
 
   public Long signedLowerBound() throws TypeException {
@@ -227,8 +236,6 @@ public abstract class DataType implements Serializable {
     return nullBitMaps;
   }
 
-  private final byte[] allNotNullBitMap = initAllNotNullBitMap();
-
   private byte[] initAllNotNullBitMap() {
     byte[] allNotNullBitMap = new byte[128];
     Arrays.fill(allNotNullBitMap, (byte) 0xFF);
@@ -242,8 +249,6 @@ public abstract class DataType implements Serializable {
     int ch4 = cdi.readUnsignedByte();
     return ((ch1) + (ch2 << 8) + (ch3 << 16) + (ch4 << 24));
   }
-
-  private final byte[] readBuffer = new byte[8];
 
   private long readLongLittleEndian(CodecDataInput cdi) {
     cdi.readFully(readBuffer, 0, 8);
@@ -299,6 +304,7 @@ public abstract class DataType implements Serializable {
     return new TiChunkColumnVector(
         this, numFixedBytes, numRows, numNulls, nullBitMaps, offsets, buffer);
   }
+
   /**
    * decode value from row which is nothing.
    *
@@ -314,18 +320,6 @@ public abstract class DataType implements Serializable {
 
   public boolean isNextNull(CodecDataInput cdi) {
     return isNullFlag(cdi.peekByte());
-  }
-
-  public static void encodeMaxValue(CodecDataOutput cdo) {
-    cdo.writeByte(Codec.MAX_FLAG);
-  }
-
-  public static void encodeNull(CodecDataOutput cdo) {
-    cdo.writeByte(Codec.NULL_FLAG);
-  }
-
-  public static void encodeIndex(CodecDataOutput cdo) {
-    cdo.writeByte(Codec.BYTES_FLAG);
   }
 
   /**
@@ -580,10 +574,6 @@ public abstract class DataType implements Serializable {
     return (flag & UnsignedFlag) > 0;
   }
 
-  public static boolean isLengthUnSpecified(long length) {
-    return length == UNSPECIFIED_LEN;
-  }
-
   @Override
   public String toString() {
     return String.format("%s:%s", this.getClass().getSimpleName(), getType());
@@ -623,5 +613,11 @@ public abstract class DataType implements Serializable {
   public InternalTypeHolder toTypeHolder() {
     return new InternalTypeHolder(
         getTypeCode(), flag, length, decimal, charset, Collation.translate(collation), elems);
+  }
+
+  public enum EncodeType {
+    KEY,
+    VALUE,
+    PROTO
   }
 }

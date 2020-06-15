@@ -20,8 +20,8 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.TypedKey;
 
 public class IndexRange {
-  private Key accessKey;
-  private Range<TypedKey> range;
+  private final Key accessKey;
+  private final Range<TypedKey> range;
 
   public IndexRange(Key accessKey, Range<TypedKey> range) {
     this.accessKey = accessKey;

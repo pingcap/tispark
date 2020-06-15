@@ -39,25 +39,6 @@ public interface AbstractLockResolverClient {
   /** transaction involves keys exceed this threshold can be treated as `big transaction`. */
   long BIG_TXN_THRESHOLD = 16;
 
-  String getVersion();
-
-  /**
-   * ResolveLocks tries to resolve Locks. The resolving process is in 3 steps: 1) Use the `lockTTL`
-   * to pick up all expired locks. Only locks that are old enough are considered orphan locks and
-   * will be handled later. If all locks are expired then all locks will be resolved so true will be
-   * returned, otherwise caller should sleep a while before retry. 2) For each lock, query the
-   * primary key to get txn(which left the lock)'s commit status. 3) Send `ResolveLock` cmd to the
-   * lock's region to resolve all locks belong to the same transaction.
-   *
-   * @param bo
-   * @param callerStartTS
-   * @param locks
-   * @param forWrite
-   * @return msBeforeTxnExpired: 0 means all locks are resolved
-   */
-  ResolveLockResult resolveLocks(
-      BackOffer bo, long callerStartTS, List<Lock> locks, boolean forWrite);
-
   static Lock extractLockFromKeyErr(Kvrpcpb.KeyError keyError) {
     if (keyError.hasLocked()) {
       return new Lock(keyError.getLocked());
@@ -120,4 +101,23 @@ public interface AbstractLockResolverClient {
           clientBuilder);
     }
   }
+
+  String getVersion();
+
+  /**
+   * ResolveLocks tries to resolve Locks. The resolving process is in 3 steps: 1) Use the `lockTTL`
+   * to pick up all expired locks. Only locks that are old enough are considered orphan locks and
+   * will be handled later. If all locks are expired then all locks will be resolved so true will be
+   * returned, otherwise caller should sleep a while before retry. 2) For each lock, query the
+   * primary key to get txn(which left the lock)'s commit status. 3) Send `ResolveLock` cmd to the
+   * lock's region to resolve all locks belong to the same transaction.
+   *
+   * @param bo
+   * @param callerStartTS
+   * @param locks
+   * @param forWrite
+   * @return msBeforeTxnExpired: 0 means all locks are resolved
+   */
+  ResolveLockResult resolveLocks(
+      BackOffer bo, long callerStartTS, List<Lock> locks, boolean forWrite);
 }

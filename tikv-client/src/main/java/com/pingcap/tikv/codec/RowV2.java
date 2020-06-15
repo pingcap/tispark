@@ -20,22 +20,19 @@ import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import java.util.Arrays;
 
 public class RowV2 {
+  // CodecVer is the constant number that represent the new row format.
+  public static int CODEC_VER = 0x80;
   // small:  colID byte[], offsets int[], optimized for most cases.
   // large:  colID long[], offsets long[].
   boolean large;
   int numNotNullCols;
   int numNullCols;
   byte[] colIDs;
-
   int[] offsets;
   byte[] data;
-
   // for large row
   int[] colIDs32;
   int[] offsets32;
-
-  // CodecVer is the constant number that represent the new row format.
-  public static int CODEC_VER = 0x80;
 
   public RowV2(byte[] rowData) {
     fromBytes(rowData);
@@ -132,18 +129,6 @@ public class RowV2 {
     throw new CodecException("not implemented yet");
   }
 
-  public static class ColIDSearchResult {
-    int idx;
-    boolean isNull;
-    boolean notFound;
-
-    private ColIDSearchResult(int idx, boolean isNull, boolean notFound) {
-      this.idx = idx;
-      this.isNull = isNull;
-      this.notFound = notFound;
-    }
-  }
-
   private int binarySearch(int i, int j, long colID) {
     while (i < j) {
       int h = (int) ((i + (long) j) >> 1);
@@ -202,5 +187,17 @@ public class RowV2 {
 
   public void initOffsets32() {
     this.offsets32 = new int[this.numNotNullCols];
+  }
+
+  public static class ColIDSearchResult {
+    int idx;
+    boolean isNull;
+    boolean notFound;
+
+    private ColIDSearchResult(int idx, boolean isNull, boolean notFound) {
+      this.idx = idx;
+      this.isNull = isNull;
+      this.notFound = notFound;
+    }
   }
 }

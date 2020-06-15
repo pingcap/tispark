@@ -18,7 +18,7 @@ package com.pingcap.tispark.concurrency
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 
-class WriteDDLNotConflictSuite extends ConcurrentcyTest {
+class WriteDDLNotConflictSuite extends ConcurrencyTest {
   test("ddl after GetCommitTS: add column") {
     doTest(s"alter table $dbtable ADD Email varchar(255)")
   }

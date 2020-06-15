@@ -32,8 +32,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
     setCurrentDatabase("default")
     compSparkWithTiDB(
       qSpark = s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table",
-      qTiDB = s"select count(*) from tispark_test.full_data_type_table"
-    )
+      qTiDB = s"select count(*) from tispark_test.full_data_type_table")
     setCurrentDatabase("tispark_test")
     runTest(s"select count(*) from full_data_type_table")
   }
@@ -42,8 +41,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
     setCurrentDatabase("default")
     compSparkWithTiDB(
       qSpark = s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table",
-      qTiDB = s"select count(*) from tispark_test.full_data_type_table"
-    )
+      qTiDB = s"select count(*) from tispark_test.full_data_type_table")
   }
 
   test("test explain") {
@@ -53,15 +51,13 @@ class CatalogTestSuite extends BaseTiSparkTest {
         .sql("explain select id_dt from full_data_type_table1")
         .head
         .getString(0)
-        .contains("AnalysisException")
-    )
+        .contains("AnalysisException"))
     assert(
       !spark
         .sql("explain select id_dt from full_data_type_table")
         .head
         .getString(0)
-        .contains("AnalysisException")
-    )
+        .contains("AnalysisException"))
   }
 
   test("support desc table") {
@@ -93,8 +89,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
         List("tp_bit", "bigint", "true", null),
         List("tp_time", "bigint", "true", null),
         List("tp_enum", "string", "true", null),
-        List("tp_set", "string", "true", null)
-      )
+        List("tp_set", "string", "true", null))
     setCurrentDatabase("tispark_test")
     spark.sql("desc full_data_type_table").explain(true)
     explainAndRunTest("desc full_data_type_table", skipJDBC = true, rTiDB = tidbDescTable)
@@ -118,8 +113,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
     setCurrentDatabase("default")
     spark.sql("drop table if exists salesdata")
     spark.sql(
-      "create table salesdata (salesperson_id int, product_id int) partitioned by (date_of_sale string)"
-    )
+      "create table salesdata (salesperson_id int, product_id int) partitioned by (date_of_sale string)")
     spark.conf.set("hive.exec.dynamic.partition.mode", "nonstrict")
     spark.sql("insert into table salesdata values(0, 1, '10-27-2017')")
     spark.sql("insert into table salesdata values(0, 1, '10-28-2017')")
@@ -128,8 +122,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
       List(
         List("date_of_sale=10-27-2017"),
         List("date_of_sale=10-28-2017"),
-        List("date_of_sale=10-29-2017")
-      )
+        List("date_of_sale=10-29-2017"))
     runTest("show partitions salesdata", skipJDBC = true, rTiDB = partitionsRes)
     spark.sql("drop table if exists salesdata")
   }
@@ -162,19 +155,16 @@ class CatalogTestSuite extends BaseTiSparkTest {
       List("tp_bit"),
       List("tp_time"),
       List("tp_enum"),
-      List("tp_set")
-    )
+      List("tp_set"))
     setCurrentDatabase("tispark_test")
     explainAndRunTest(
       "show columns from full_data_type_table",
       skipJDBC = true,
-      rTiDB = columnNames
-    )
+      rTiDB = columnNames)
     runTest(
       s"show columns from ${dbPrefix}tispark_test.full_data_type_table",
       skipJDBC = true,
-      rTiDB = columnNames
-    )
+      rTiDB = columnNames)
   }
 
   test("test support create table like") {
@@ -193,23 +183,18 @@ class CatalogTestSuite extends BaseTiSparkTest {
     tidbStmt.execute("DROP TABLE IF EXISTS `test3`")
     tidbStmt.execute("DROP TABLE IF EXISTS `test4`")
     tidbStmt.execute(
-      "CREATE TABLE `test1` (`id` int primary key, `c1` int, `c2` int, KEY idx(c1, c2))"
-    )
+      "CREATE TABLE `test1` (`id` int primary key, `c1` int, `c2` int, KEY idx(c1, c2))")
     tidbStmt.execute("CREATE TABLE `test2` (`id` int, `c1` int, `c2` int)")
     tidbStmt.execute("CREATE TABLE `test3` (`id` int, `c1` int, `c2` int, KEY idx(c2))")
-    tidbStmt.execute("CREATE TABLE `test4` (`id` int primary key, `c1` int, `c2` int, KEY idx(c2))")
     tidbStmt.execute(
-      "insert into test1 values(1, 2, 3), /*(1, 3, 2), */(2, 2, 4), (3, 1, 3), (4, 2, 1)"
-    )
+      "CREATE TABLE `test4` (`id` int primary key, `c1` int, `c2` int, KEY idx(c2))")
     tidbStmt.execute(
-      "insert into test2 values(1, 2, 3), (1, 2, 4), (2, 1, 4), (3, 1, 3), (4, 3, 1)"
-    )
+      "insert into test1 values(1, 2, 3), /*(1, 3, 2), */(2, 2, 4), (3, 1, 3), (4, 2, 1)")
     tidbStmt.execute(
-      "insert into test3 values(1, 2, 3), (2, 1, 3), (2, 1, 4), (3, 2, 3), (4, 2, 1)"
-    )
+      "insert into test2 values(1, 2, 3), (1, 2, 4), (2, 1, 4), (3, 1, 3), (4, 3, 1)")
     tidbStmt.execute(
-      "insert into test4 values(1, 2, 3), (2, 3, 1), (3, 3, 2), (4, 1, 3)"
-    )
+      "insert into test3 values(1, 2, 3), (2, 1, 3), (2, 1, 4), (3, 2, 3), (4, 2, 1)")
+    tidbStmt.execute("insert into test4 values(1, 2, 3), (2, 3, 1), (3, 3, 2), (4, 1, 3)")
     refreshConnections(isHiveEnabled = true)
 
     val df =
@@ -348,11 +333,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
 
   test("support desc table column") {
     val expectedDescTableColumn =
-      List(
-        List("col_name", "id"),
-        List("data_type", "bigint"),
-        List("comment", "NULL")
-      )
+      List(List("col_name", "id"), List("data_type", "bigint"), List("comment", "NULL"))
     val expectedDescExtendedTableColumn =
       List(
         List("col_name", "id"),
@@ -364,16 +345,13 @@ class CatalogTestSuite extends BaseTiSparkTest {
         List("distinct_count", "NULL"),
         List("avg_col_len", "NULL"),
         List("max_col_len", "NULL"),
-        List("histogram", "NULL")
-      )
+        List("histogram", "NULL"))
 
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
-    tidbStmt.execute(
-      """CREATE TABLE `t` (
+    tidbStmt.execute("""CREATE TABLE `t` (
         |  `id` bigint(20) DEFAULT NULL
         |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
-      """.stripMargin
-    )
+      """.stripMargin)
 
     setCurrentDatabase("tispark_test")
     // column does not exist
@@ -385,8 +363,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
     explainAndRunTest(
       "desc extended t id",
       skipJDBC = true,
-      rTiDB = expectedDescExtendedTableColumn
-    )
+      rTiDB = expectedDescExtendedTableColumn)
     spark.sql("drop table if exists t")
   }
 

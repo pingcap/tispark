@@ -25,17 +25,15 @@ import java.util.concurrent.Callable;
 import javax.annotation.Nonnull;
 
 public abstract class RetryPolicy<RespT> {
-  BackOffer backOffer = ConcreteBackOffer.newCopNextMaxBackOff();
-
   // handles PD and TiKV's error.
   private final ErrorHandler<RespT> handler;
-
-  private ImmutableSet<Status.Code> unrecoverableStatus =
+  private final ImmutableSet<Status.Code> unrecoverableStatus =
       ImmutableSet.of(
           Status.Code.ALREADY_EXISTS, Status.Code.PERMISSION_DENIED,
           Status.Code.INVALID_ARGUMENT, Status.Code.NOT_FOUND,
           Status.Code.UNIMPLEMENTED, Status.Code.OUT_OF_RANGE,
           Status.Code.UNAUTHENTICATED, Status.Code.CANCELLED);
+  BackOffer backOffer = ConcreteBackOffer.newCopNextMaxBackOff();
 
   RetryPolicy(@Nonnull ErrorHandler<RespT> handler) {
     this.handler = handler;

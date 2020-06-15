@@ -12,12 +12,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.pingcap.tikv.columnar;
 
 import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.MyDecimal;
-import com.pingcap.tikv.types.*;
+import com.pingcap.tikv.types.AbstractDateTimeType;
+import com.pingcap.tikv.types.BitType;
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DateTimeType;
+import com.pingcap.tikv.types.DateType;
+import com.pingcap.tikv.types.EnumType;
+import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.JsonType;
+import com.pingcap.tikv.types.TimeType;
+import com.pingcap.tikv.types.TimestampType;
 import com.pingcap.tikv.util.JsonUtils;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
@@ -27,15 +37,15 @@ import org.joda.time.LocalDate;
 /** An implementation of {@link TiColumnVector}. All data is stored in TiDB chunk format. */
 public class TiChunkColumnVector extends TiColumnVector {
   /** Represents the length of each different data type */
-  private int fixLength;
+  private final int fixLength;
   /** Represents how many nulls in this column vector */
-  private int numOfNulls;
+  private final int numOfNulls;
   /** Can be used to determine data at rowId is null or not */
-  private byte[] nullBitMaps;
+  private final byte[] nullBitMaps;
   /** Can be used to read non-fixed length data type such as string */
-  private long[] offsets;
+  private final long[] offsets;
 
-  private ByteBuffer data;
+  private final ByteBuffer data;
 
   public TiChunkColumnVector(
       DataType dataType,

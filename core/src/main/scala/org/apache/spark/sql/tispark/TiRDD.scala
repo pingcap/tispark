@@ -31,24 +31,24 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-abstract class TiRDD(val dagRequest: TiDAGRequest,
-                     val physicalId: Long,
-                     val tiConf: TiConfiguration,
-                     val tableRef: TiTableReference,
-                     @transient private val session: TiSession,
-                     @transient private val sparkSession: SparkSession)
+abstract class TiRDD(
+    val dagRequest: TiDAGRequest,
+    val physicalId: Long,
+    val tiConf: TiConfiguration,
+    val tableRef: TiTableReference,
+    @transient private val session: TiSession,
+    @transient private val sparkSession: SparkSession)
     extends RDD[InternalRow](sparkSession.sparkContext, Nil) {
+
+  private lazy val partitionPerSplit = tiConf.getPartitionPerSplit
 
   protected def checkTimezone(): Unit = {
     if (!tiConf.getLocalTimeZone.equals(Converter.getLocalTimezone)) {
       throw new TiInternalException(
         "timezone are different! driver: " + tiConf.getLocalTimeZone + " executor:" + Converter.getLocalTimezone +
-          " please set user.timezone in spark.driver.extraJavaOptions and spark.executor.extraJavaOptions"
-      )
+          " please set user.timezone in spark.driver.extraJavaOptions and spark.executor.extraJavaOptions")
     }
   }
-
-  private lazy val partitionPerSplit = tiConf.getPartitionPerSplit
 
   override protected def getPartitions: Array[Partition] = {
     val keyWithRegionTasks = RangeSplitter
@@ -56,7 +56,7 @@ abstract class TiRDD(val dagRequest: TiDAGRequest,
       .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId), dagRequest.getStoreType)
 
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
-    with mutable.MultiMap[String, RegionTask]
+      with mutable.MultiMap[String, RegionTask]
 
     var index = 0
     val result = new ListBuffer[TiPartition]

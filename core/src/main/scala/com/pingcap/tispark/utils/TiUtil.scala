@@ -28,7 +28,7 @@ import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, ColumnarRegionTaskExec}
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
-import org.apache.spark.{sql, SparkConf}
+import org.apache.spark.{SparkConf, sql}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 object TiUtil {
@@ -44,8 +44,7 @@ object TiUtil {
         col.getName,
         TypeMapping.toSparkType(col.getType),
         nullable = !notNull,
-        metadata
-      )
+        metadata)
     }
     new StructType(fields)
   }
@@ -113,13 +112,13 @@ object TiUtil {
     }
 
     if (conf.contains(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB)) {
-      tiConf.setTikvRegionSplitSizeInMB(conf.get(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB).toInt)
+      tiConf.setTikvRegionSplitSizeInMB(
+        conf.get(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB).toInt)
     }
 
     if (conf.contains(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD)) {
       tiConf.setDowngradeThreshold(
-        conf.get(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toInt
-      )
+        conf.get(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toInt)
     }
 
     if (conf.contains(TiConfigConst.PARTITION_PER_SPLIT)) {
@@ -129,13 +128,24 @@ object TiUtil {
     if (conf.contains(TiConfigConst.ISOLATION_READ_ENGINES)) {
       import scala.collection.JavaConversions._
       tiConf.setIsolationReadEngines(
-        getIsolationReadEnginesFromString(
-          conf.get(TiConfigConst.ISOLATION_READ_ENGINES)
-        ).toList
-      )
+        getIsolationReadEnginesFromString(conf.get(TiConfigConst.ISOLATION_READ_ENGINES)).toList)
     }
 
     tiConf
+  }
+
+  private def getIsolationReadEnginesFromString(str: String): List[TiStoreType] = {
+    str
+      .toLowerCase()
+      .split(",")
+      .map {
+        case TiConfigConst.TIKV_STORAGE_ENGINE => TiStoreType.TiKV
+        case TiConfigConst.TIFLASH_STORAGE_ENGINE => TiStoreType.TiFlash
+        case s =>
+          throw new UnsupportedOperationException(
+            s"Unknown isolation engine type: $s, valid types are 'tikv, tiflash'")
+      }
+      .toList
   }
 
   def getChunkBatchSize(sqlContext: SQLContext): Int =
@@ -144,37 +154,22 @@ object TiUtil {
   def getPartitionPerSplit(sqlContext: SQLContext): Int =
     sqlContext.getConf(TiConfigConst.PARTITION_PER_SPLIT, "10").toInt
 
-  private def getIsolationReadEnginesFromString(str: String): List[TiStoreType] = {
-    str
-      .toLowerCase()
-      .split(",")
-      .map {
-        case TiConfigConst.TIKV_STORAGE_ENGINE    => TiStoreType.TiKV
-        case TiConfigConst.TIFLASH_STORAGE_ENGINE => TiStoreType.TiFlash
-        case s =>
-          throw new UnsupportedOperationException(
-            s"Unknown isolation engine type: $s, valid types are 'tikv, tiflash'"
-          )
-      }
-      .toList
-  }
-
   def getIsolationReadEngines(sqlContext: SQLContext): List[TiStoreType] =
     getIsolationReadEnginesFromString(
       sqlContext
-        .getConf(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.DEFAULT_STORAGE_ENGINES)
-    )
+        .getConf(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.DEFAULT_STORAGE_ENGINES))
 
   def registerUDFs(sparkSession: SparkSession): Unit = {
     val timeZoneStr: String = "TimeZone: " + Converter.getLocalTimezone.toString
 
-    sparkSession.udf.register("ti_version", () => {
-      s"${TiSparkVersion.version}\n${TiSparkInfo.info}\n$timeZoneStr"
-    })
+    sparkSession.udf.register(
+      "ti_version",
+      () => {
+        s"${TiSparkVersion.version}\n${TiSparkInfo.info}\n$timeZoneStr"
+      })
     sparkSession.udf.register(
       "time_to_str",
-      (value: Long, frac: Int) => Converter.convertDurationToStr(value, frac)
-    )
+      (value: Long, frac: Int) => Converter.convertDurationToStr(value, frac))
     sparkSession.udf
       .register("str_to_time", (value: String) => Converter.convertStrToDuration(value))
   }
@@ -186,9 +181,10 @@ object TiUtil {
       s" EstimatedCount:${df.format(req.getEstimatedCount)}"
     } else ""
 
-  def rowToInternalRow(row: Row,
-                       outputTypes: Seq[sql.types.DataType],
-                       converters: Seq[Any => Any]): InternalRow = {
+  def rowToInternalRow(
+      row: Row,
+      outputTypes: Seq[sql.types.DataType],
+      converters: Seq[Any => Any]): InternalRow = {
     val mutableRow = new GenericInternalRow(outputTypes.length)
     for (i <- outputTypes.indices) {
       mutableRow(i) = converters(i)(row(i))
@@ -214,8 +210,7 @@ object TiUtil {
     } else {
       throw new UnsupportedOperationException(
         "cannot find ColumnarCoprocessorRDD or " +
-          "ColumnarRegionTaskExec in DataFrame."
-      )
+          "ColumnarRegionTaskExec in DataFrame.")
     }
   }
 }

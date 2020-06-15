@@ -41,9 +41,7 @@ case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowDatabasesC
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val databases =
       // Not leveraging catalog-specific db pattern, at least Hive and Spark behave different than each other.
-      delegate.databasePattern
-        .map(tiCatalog.listDatabases)
-        .getOrElse(tiCatalog.listDatabases())
+      delegate.databasePattern.fold(tiCatalog.listDatabases())(tiCatalog.listDatabases)
     databases.map { d =>
       Row(d)
     }

@@ -38,12 +38,12 @@ public abstract class FastByteComparisons {
         b1, 0, b1.length, b2, 0, b2.length);
   }
 
-  private interface Comparer<T> {
-    int compareTo(T buffer1, int offset1, int length1, T buffer2, int offset2, int length2);
-  }
-
   private static Comparer<byte[]> lexicographicalComparerJavaImpl() {
     return LexicographicalComparerHolder.PureJavaComparer.INSTANCE;
+  }
+
+  private interface Comparer<T> {
+    int compareTo(T buffer1, int offset1, int length1, T buffer2, int offset2, int length2);
   }
 
   /**
@@ -107,26 +107,26 @@ public abstract class FastByteComparisons {
       /** The offset to the first element in a byte array. */
       static final int BYTE_ARRAY_BASE_OFFSET;
 
+      static final boolean littleEndian = ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
+
       static {
         theUnsafe =
             (Unsafe)
                 AccessController.doPrivileged(
-                    new PrivilegedAction<Object>() {
-                      @Override
-                      public Object run() {
-                        try {
-                          Field f = Unsafe.class.getDeclaredField("theUnsafe");
-                          f.setAccessible(true);
-                          return f.get(null);
-                        } catch (NoSuchFieldException e) {
-                          // It doesn't matter what we throw;
-                          // it's swallowed in getBestComparer().
-                          throw new Error();
-                        } catch (IllegalAccessException e) {
-                          throw new Error();
-                        }
-                      }
-                    });
+                    (PrivilegedAction<Object>)
+                        () -> {
+                          try {
+                            Field f = Unsafe.class.getDeclaredField("theUnsafe");
+                            f.setAccessible(true);
+                            return f.get(null);
+                          } catch (NoSuchFieldException e) {
+                            // It doesn't matter what we throw;
+                            // it's swallowed in getBestComparer().
+                            throw new Error();
+                          } catch (IllegalAccessException e) {
+                            throw new Error();
+                          }
+                        });
 
         BYTE_ARRAY_BASE_OFFSET = theUnsafe.arrayBaseOffset(byte[].class);
 
@@ -135,8 +135,6 @@ public abstract class FastByteComparisons {
           throw new AssertionError();
         }
       }
-
-      static final boolean littleEndian = ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
 
       /** Returns true if x1 is less than x2, when both values are treated as unsigned. */
       static boolean lessThanUnsigned(long x1, long x2) {

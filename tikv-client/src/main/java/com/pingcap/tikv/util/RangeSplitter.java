@@ -29,76 +29,25 @@ import com.pingcap.tikv.region.TiStoreType;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Metapb;
 
 public class RangeSplitter {
-  public static class RegionTask implements Serializable {
-    private final TiRegion region;
-    private final Metapb.Store store;
-    private final List<KeyRange> ranges;
-    private final String host;
-
-    public static RegionTask newInstance(
-        TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
-      return new RegionTask(region, store, ranges);
-    }
-
-    RegionTask(TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
-      this.region = region;
-      this.store = store;
-      this.ranges = ranges;
-      String host = null;
-      try {
-        host = PDUtils.addrToUrl(store.getAddress()).getHost();
-      } catch (Exception ignored) {
-      }
-      this.host = host;
-    }
-
-    public TiRegion getRegion() {
-      return region;
-    }
-
-    public Metapb.Store getStore() {
-      return store;
-    }
-
-    public List<KeyRange> getRanges() {
-      return ranges;
-    }
-
-    public String getHost() {
-      return host;
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder();
-      sb.append(String.format("Region [%s]", region));
-      sb.append(" ");
-
-      for (KeyRange range : ranges) {
-        sb.append(
-            String.format(
-                "Range Start: [%s] Range End: [%s]",
-                formatByteString(range.getStart()), formatByteString(range.getEnd())));
-      }
-
-      return sb.toString();
-    }
-  }
-
-  public static RangeSplitter newSplitter(RegionManager mgr) {
-    return new RangeSplitter(mgr);
-  }
+  private final RegionManager regionManager;
 
   private RangeSplitter(RegionManager regionManager) {
     this.regionManager = regionManager;
   }
 
-  private final RegionManager regionManager;
+  public static RangeSplitter newSplitter(RegionManager mgr) {
+    return new RangeSplitter(mgr);
+  }
 
   /**
    * Group by a list of handles by the handles' region, handles will be sorted.
@@ -273,5 +222,61 @@ public class RangeSplitter {
    */
   public List<RegionTask> splitRangeByRegion(List<KeyRange> keyRanges) {
     return splitRangeByRegion(keyRanges, TiStoreType.TiKV);
+  }
+
+  public static class RegionTask implements Serializable {
+    private final TiRegion region;
+    private final Metapb.Store store;
+    private final List<KeyRange> ranges;
+    private final String host;
+
+    RegionTask(TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
+      this.region = region;
+      this.store = store;
+      this.ranges = ranges;
+      String host = null;
+      try {
+        host = PDUtils.addrToUrl(store.getAddress()).getHost();
+      } catch (Exception ignored) {
+      }
+      this.host = host;
+    }
+
+    public static RegionTask newInstance(
+        TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
+      return new RegionTask(region, store, ranges);
+    }
+
+    public TiRegion getRegion() {
+      return region;
+    }
+
+    public Metapb.Store getStore() {
+      return store;
+    }
+
+    public List<KeyRange> getRanges() {
+      return ranges;
+    }
+
+    public String getHost() {
+      return host;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(String.format("Region [%s]", region));
+      sb.append(" ");
+
+      for (KeyRange range : ranges) {
+        sb.append(
+            String.format(
+                "Range Start: [%s] Range End: [%s]",
+                formatByteString(range.getStart()), formatByteString(range.getEnd())));
+      }
+
+      return sb.toString();
+    }
   }
 }

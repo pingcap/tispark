@@ -528,8 +528,7 @@ class ArithmeticTest0Suite extends BaseInitialOnceTest {
     "select tp_mediumint / 2147483647 from full_data_type_table  order by id_dt  limit 10",
     "select tp_mediumint / -2147483648 from full_data_type_table  order by id_dt  limit 10",
     "select tp_mediumint / 32767 from full_data_type_table  order by id_dt  limit 10",
-    "select tp_mediumint / -32768 from full_data_type_table  order by id_dt  limit 10"
-  )
+    "select tp_mediumint / -32768 from full_data_type_table  order by id_dt  limit 10")
 
   allCases foreach { query =>
     {

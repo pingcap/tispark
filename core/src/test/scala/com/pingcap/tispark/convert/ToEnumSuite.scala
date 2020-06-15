@@ -1,3 +1,18 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tispark.convert
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
@@ -31,19 +46,14 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
       StructField("c3", StringType),
       StructField("c4", StringType),
       StructField("c5", StringType),
-      StructField("c6", StringType)
-    )
-  )
+      StructField("c6", StringType)))
 
-  private def createTable(): Unit =
-    jdbcUpdate(s"""create table $dbtable(i INT,
-                  |c1 ENUM('male', 'female', 'both', 'unknown'),
-                  |c2 ENUM('male', 'female', 'both', 'unknown'),
-                  |c3 ENUM('male', 'female', 'both', 'unknown'),
-                  |c4 ENUM('male', 'female', 'both', 'unknown'),
-                  |c5 ENUM('male', 'female', 'both', 'unknown'),
-                  |c6 ENUM('male', 'female', 'both', 'unknown')
-                  |)""".stripMargin)
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 
   test("Test Convert from java.lang.Boolean to ENUM") {
     if (!supportBatchWrite) {
@@ -68,9 +78,7 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
             StructField("c3", BooleanType),
             StructField("c4", BooleanType),
             StructField("c5", BooleanType),
-            StructField("c6", BooleanType)
-          )
-        )
+            StructField("c6", BooleanType)))
 
         val readRow1 = Row(1, null, null, null, null, null, null)
         val readRow2 = Row(2, "male", "male", "male", "male", "male", "male")
@@ -83,7 +91,9 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -117,16 +127,16 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
             StructField("c3", ByteType),
             StructField("c4", ByteType),
             StructField("c5", ByteType),
-            StructField("c6", ByteType)
-          )
-        )
+            StructField("c6", ByteType)))
 
         dropTable()
         createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -160,16 +170,16 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
             StructField("c3", ShortType),
             StructField("c4", ShortType),
             StructField("c5", ShortType),
-            StructField("c6", ShortType)
-          )
-        )
+            StructField("c6", ShortType)))
 
         dropTable()
         createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -203,16 +213,16 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
             StructField("c3", IntegerType),
             StructField("c4", IntegerType),
             StructField("c5", IntegerType),
-            StructField("c6", IntegerType)
-          )
-        )
+            StructField("c6", IntegerType)))
 
         dropTable()
         createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -246,16 +256,16 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
             StructField("c3", LongType),
             StructField("c4", LongType),
             StructField("c5", LongType),
-            StructField("c6", LongType)
-          )
-        )
+            StructField("c6", LongType)))
 
         dropTable()
         createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -289,16 +299,16 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
             StructField("c3", FloatType),
             StructField("c4", FloatType),
             StructField("c5", FloatType),
-            StructField("c6", FloatType)
-          )
-        )
+            StructField("c6", FloatType)))
 
         dropTable()
         createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -332,16 +342,16 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
             StructField("c3", DoubleType),
             StructField("c4", DoubleType),
             StructField("c5", DoubleType),
-            StructField("c6", DoubleType)
-          )
-        )
+            StructField("c6", DoubleType)))
 
         dropTable()
         createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -375,16 +385,16 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
             StructField("c3", StringType),
             StructField("c4", StringType),
             StructField("c5", StringType),
-            StructField("c6", StringType)
-          )
-        )
+            StructField("c6", StringType)))
 
         dropTable()
         createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema)
     }
   }
 
@@ -397,10 +407,13 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
   // scala.collection.Map
   // org.apache.spark.sql.Row
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
+  private def createTable(): Unit =
+    jdbcUpdate(s"""create table $dbtable(i INT,
+                  |c1 ENUM('male', 'female', 'both', 'unknown'),
+                  |c2 ENUM('male', 'female', 'both', 'unknown'),
+                  |c3 ENUM('male', 'female', 'both', 'unknown'),
+                  |c4 ENUM('male', 'female', 'both', 'unknown'),
+                  |c5 ENUM('male', 'female', 'both', 'unknown'),
+                  |c6 ENUM('male', 'female', 'both', 'unknown')
+                  |)""".stripMargin)
 }

@@ -15,15 +15,16 @@
 
 package com.pingcap.tispark.write
 
-import TiBatchWrite.TiRow
+import com.pingcap.tispark.write.TiBatchWrite.TiRow
 
-case class WrappedEncodedRow(row: TiRow,
-                             handle: Long,
-                             encodedKey: SerializableKey,
-                             encodedValue: Array[Byte],
-                             isIndex: Boolean,
-                             indexId: Long,
-                             remove: Boolean)
+case class WrappedEncodedRow(
+    row: TiRow,
+    handle: Long,
+    encodedKey: SerializableKey,
+    encodedValue: Array[Byte],
+    isIndex: Boolean,
+    indexId: Long,
+    remove: Boolean)
     extends Ordered[WrappedEncodedRow] {
   override def compare(that: WrappedEncodedRow): Int = this.handle.toInt - that.handle.toInt
 

@@ -205,8 +205,7 @@ class ArithmeticTest1Suite extends BaseInitialOnceTest {
     "select tp_decimal % -128 from full_data_type_table  order by id_dt  limit 10",
     "select tp_decimal % 0 from full_data_type_table  order by id_dt  limit 10",
     "select tp_decimal % 2017 from full_data_type_table  order by id_dt  limit 10",
-    "select tp_decimal % 2147868.65536 from full_data_type_table  order by id_dt  limit 10"
-  )
+    "select tp_decimal % 2147868.65536 from full_data_type_table  order by id_dt  limit 10")
 
   allCases foreach { query =>
     {

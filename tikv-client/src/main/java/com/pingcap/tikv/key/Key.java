@@ -27,15 +27,13 @@ import java.util.Arrays;
 import javax.annotation.Nonnull;
 
 public class Key implements Comparable<Key> {
-  protected static final byte[] TBL_PREFIX = new byte[] {'t'};
-
-  protected final byte[] value;
-  protected final int infFlag;
-
   public static final Key EMPTY = createEmpty();
   public static final Key NULL = createNull();
   public static final Key MIN = createTypelessMin();
   public static final Key MAX = createTypelessMax();
+  protected static final byte[] TBL_PREFIX = new byte[] {'t'};
+  protected final byte[] value;
+  protected final int infFlag;
 
   private Key(byte[] value, boolean negative) {
     this.value = requireNonNull(value, "value is null");
@@ -110,25 +108,6 @@ public class Key implements Comparable<Key> {
   }
 
   /**
-   * Next key simply append a zero byte to previous key.
-   *
-   * @return next key with a zero byte appended
-   */
-  public Key next() {
-    return toRawKey(Arrays.copyOf(value, value.length + 1));
-  }
-
-  /**
-   * nextPrefix key will be key with next available rid. For example, if the current key is
-   * prefix_rid, after calling this method, the return value should be prefix_rid+1
-   *
-   * @return a new key current rid+1.
-   */
-  public Key nextPrefix() {
-    return toRawKey(prefixNext(value));
-  }
-
-  /**
    * The prefixNext key for bytes domain
    *
    * <p>It first plus one at LSB and if LSB overflows, a zero byte is appended at the end Original
@@ -150,6 +129,25 @@ public class Key implements Comparable<Key> {
     } else {
       return newVal;
     }
+  }
+
+  /**
+   * Next key simply append a zero byte to previous key.
+   *
+   * @return next key with a zero byte appended
+   */
+  public Key next() {
+    return toRawKey(Arrays.copyOf(value, value.length + 1));
+  }
+
+  /**
+   * nextPrefix key will be key with next available rid. For example, if the current key is
+   * prefix_rid, after calling this method, the return value should be prefix_rid+1
+   *
+   * @return a new key current rid+1.
+   */
+  public Key nextPrefix() {
+    return toRawKey(prefixNext(value));
   }
 
   @Override

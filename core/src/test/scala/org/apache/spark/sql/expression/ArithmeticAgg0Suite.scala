@@ -104,8 +104,7 @@ class ArithmeticAgg0Suite extends BaseInitialOnceTest {
     "select max(tp_text) from full_data_type_table",
     "select min(tp_bigint) from full_data_type_table",
     "select min(tp_int) from full_data_type_table",
-    "select min(tp_char) from full_data_type_table"
-  )
+    "select min(tp_char) from full_data_type_table")
 
   allCases foreach { query =>
     {

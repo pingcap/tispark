@@ -28,6 +28,9 @@ import java.util.stream.Collectors;
 
 public class TiBatchWriteUtils {
 
+  private static final Comparator<TiIndexInfo> tiIndexInfoComparator =
+      Comparator.comparing(TiIndexInfo::getId);
+
   public static List<TiRegion> getRegionByIndex(
       TiSession session, TiTableInfo table, TiIndexInfo index) {
     ArrayList<TiRegion> regionList = new ArrayList<>();
@@ -41,9 +44,6 @@ public class TiBatchWriteUtils {
     }
     return regionList;
   }
-
-  private static final Comparator<TiIndexInfo> tiIndexInfoComparator =
-      Comparator.comparing(TiIndexInfo::getId);
 
   public static List<TiRegion> getIndexRegions(TiSession session, TiTableInfo table) {
     return table

@@ -23,8 +23,8 @@ import org.joda.time.DateTime;
 /** Extend joda DateTime to support micro second */
 public class ExtendedDateTime {
 
-  private DateTime dateTime;
-  private int microsOfMillis;
+  private final DateTime dateTime;
+  private final int microsOfMillis;
 
   /**
    * if timestamp = 2019-11-11 11:11:11 123456, then dateTime = 2019-11-11 11:11:11 123
