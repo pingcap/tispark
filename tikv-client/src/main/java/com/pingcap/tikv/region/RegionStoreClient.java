@@ -115,17 +115,44 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     super(conf, region, channelFactory, blockingStub, asyncStub, regionManager);
     this.storeType = storeType;
 
-    this.lockResolverClient =
-        AbstractLockResolverClient.getInstance(
-            store,
-            conf,
-            region,
-            this.blockingStub,
-            this.asyncStub,
-            channelFactory,
-            regionManager,
-            pdClient,
-            clientBuilder);
+    if (this.storeType == TiStoreType.TiKV) {
+      this.lockResolverClient =
+          AbstractLockResolverClient.getInstance(
+              store,
+              conf,
+              region,
+              this.blockingStub,
+              this.asyncStub,
+              channelFactory,
+              regionManager,
+              pdClient,
+              clientBuilder);
+
+    } else {
+      Store tikvStore =
+          regionManager.getRegionStorePairByKey(region.getStartKey(), TiStoreType.TiKV).second;
+
+      String addressStr = tikvStore.getAddress();
+      if (logger.isDebugEnabled()) {
+        logger.debug(String.format("Create region store client on address %s", addressStr));
+      }
+      ManagedChannel channel = channelFactory.getChannel(addressStr);
+
+      TikvBlockingStub tikvBlockingStub = TikvGrpc.newBlockingStub(channel);
+      TikvStub tikvAsyncStub = TikvGrpc.newStub(channel);
+
+      this.lockResolverClient =
+          AbstractLockResolverClient.getInstance(
+              tikvStore,
+              conf,
+              region,
+              tikvBlockingStub,
+              tikvAsyncStub,
+              channelFactory,
+              regionManager,
+              pdClient,
+              clientBuilder);
+    }
   }
 
   public synchronized boolean addResolvedLocks(Long version, List<Long> locks) {
