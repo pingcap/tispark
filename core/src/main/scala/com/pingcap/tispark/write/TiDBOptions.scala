@@ -90,12 +90,17 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   def getTiTableRef(conf: TiConfiguration): TiTableReference =
     TiTableReference(conf.getDBPrefix + database, table)
 
-  def getLockTTLSeconds(tikvSupportUpdateTTL: Boolean): Long =
-    if (isTTLUpdate(tikvSupportUpdateTTL)) {
-      TTLManager.MANAGED_LOCK_TTL / 1000
-    } else {
-      parameters.getOrElse(TIDB_LOCK_TTL_SECONDS, "3600").toLong
+  def getLockTTLSeconds(tikvSupportUpdateTTL: Boolean): Long = {
+    parameters.get(TIDB_LOCK_TTL_SECONDS) match {
+      case Some(v) => v.toLong
+      case None =>
+        if (isTTLUpdate(tikvSupportUpdateTTL)) {
+          TTLManager.MANAGED_LOCK_TTL / 1000
+        } else {
+          3600L
+        }
     }
+  }
 
   def isTTLUpdate(tikvSupportUpdateTTL: Boolean): Boolean = {
     if (tikvSupportUpdateTTL) {
