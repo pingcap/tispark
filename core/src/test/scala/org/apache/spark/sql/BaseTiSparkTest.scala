@@ -22,6 +22,7 @@ import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import com.pingcap.tikv.meta.TiTableInfo
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
+import org.apache.spark.sql.execution.CostMode
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.test.SharedSQLContext
 
@@ -381,7 +382,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
         val dataFrame = spark.sql(sql)
         import org.apache.spark.sql.execution.command.ExplainCommand
         spark.sessionState
-          .executePlan(ExplainCommand(dataFrame.queryExecution.logical))
+          .executePlan(ExplainCommand(dataFrame.queryExecution.logical, CostMode))
           .executedPlan
           .executeCollect()
           .map(_.getString(0))

@@ -51,7 +51,8 @@ public class StringRegExpression implements Expression {
     return new StringRegExpression(ENDS_WITH, left, right, reg);
   }
 
-  public static StringRegExpression like(Expression left, Expression right) {
+  public static StringRegExpression like(Expression left, Expression right, char escapeChar) {
+    // TODO: ???
     return new StringRegExpression(LIKE, left, right, right);
   }
 

@@ -165,4 +165,6 @@ class TiDirectExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
   override def listFunctions(db: String, pattern: String): Seq[String] = ???
 
   override def getTablesByName(db: String, tables: Seq[String]): Seq[CatalogTable] = ???
+
+  override def listViews(db: String, pattern: String): Seq[String] = ???
 }

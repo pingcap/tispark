@@ -85,7 +85,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
   /**
    * WAR to lead Spark to consider this relation being on local files.
    * Otherwise Spark will lookup this relation in his session catalog.
-   * CHECK Spark [[org.apache.spark.sql.catalyst.analysis.Analyzer.ResolveRelations.resolveRelation]] for details.
+   * CHECK Spark [[org.apache.spark.sql.catalyst.analysis.Analyzer.ResolveRelations]] for details.
    */
   private val qualifyTableIdentifier: PartialFunction[LogicalPlan, LogicalPlan] = {
     case r @ UnresolvedRelation(tableIdentifier) if needQualify(tableIdentifier) =>
@@ -104,7 +104,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
       )
     case cv @ CreateViewCommand(_, _, _, _, _, child, _, _, _) =>
       cv.copy(child = child transform qualifyTableIdentifier)
-    case e @ ExplainCommand(plan, _, _, _, _) =>
+    case e @ ExplainCommand(plan, _) =>
       e.copy(logicalPlan = plan transform qualifyTableIdentifier)
     case c @ CacheTableCommand(tableIdentifier, plan, _, _)
         if plan.isEmpty && needQualify(tableIdentifier) =>
@@ -151,4 +151,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
 
   override def parseMultipartIdentifier(sqlText: String): Seq[String] =
     internal.parseMultipartIdentifier(sqlText)
+
+  @scala.throws[ParseException]("Text cannot be parsed to a DataType")
+  override def parseRawDataType(sqlText: String): DataType = ???
 }

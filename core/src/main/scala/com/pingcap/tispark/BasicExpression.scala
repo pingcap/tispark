@@ -127,8 +127,8 @@ object BasicExpression {
       case EndsWith(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(StringRegExpression.endsWith(lhs, rhs))
 
-      case Like(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(StringRegExpression.like(lhs, rhs))
+      case Like(BasicExpression(lhs), BasicExpression(rhs), escapeChar) =>
+        Some(StringRegExpression.like(lhs, rhs, escapeChar))
 
       // TODO: Are all AttributeReference column reference in such context?
       case attr: AttributeReference =>

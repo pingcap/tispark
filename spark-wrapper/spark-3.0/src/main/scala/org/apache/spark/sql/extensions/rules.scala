@@ -17,7 +17,7 @@ package org.apache.spark.sql.extensions
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.UnresolvedV2Relation
-import org.apache.spark.sql.catalyst.plans.logical.{Command, DescribeTable, ShowNamespaces}
+import org.apache.spark.sql.catalyst.plans.logical.{Command, ShowNamespaces}
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.ReflectionUtil
 import com.pingcap.tispark.utils.ReflectionUtil.newSubqueryAlias
@@ -141,20 +141,6 @@ case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSessi
     )
   }
 
-  def createDescribeTableInfo(dt: DescribeTable): DescribeTableInfo = {
-    dt.table match {
-      case u: UnresolvedV2Relation =>
-        val (name, db) = getDBAndTableName(u.tableName)
-        new DescribeTableInfo(TableIdentifier(name, db), Map.empty[String, String], dt.isExtended)
-      case _ =>
-        new DescribeTableInfo(
-          TableIdentifier(dt.table.name, None),
-          Map.empty[String, String],
-          dt.isExtended
-        )
-    }
-  }
-
   def isSupportedCatalog(sd: SetCatalogAndNamespace): Boolean = {
     if (sd.catalogName.isEmpty)
       false
@@ -175,9 +161,6 @@ case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSessi
       TiShowColumnsCommand(tiContext, st)
     case dt: DescribeTableCommand =>
       TiDescribeTablesCommand(tiContext, dt, createDescribeTableInfo(dt))
-    case dt: DescribeTable =>
-      // use NopCommand to avoid failAnalysis
-      TiDescribeTablesCommand(tiContext, NopCommand("empty"), createDescribeTableInfo(dt))
     case ct: CreateTableLikeCommand =>
       TiCreateTableLikeCommand(tiContext, ct)
   }
@@ -215,20 +198,17 @@ case class TiResolutionRuleV2(getOrCreateTiContext: SparkSession => TiContext)(
 
   protected def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
     // todo can remove this branch since the target table of insert into statement should never be a tidb table
-    case i @ InsertIntoStatement(DataSourceV2Relation(table, output, _), _, _, _, _)
+    case i @ InsertIntoStatement(DataSourceV2Relation(table, output, _, _, _), _, _, _, _)
         if table.isInstanceOf[TiDBTable] =>
       val tiTable = table.asInstanceOf[TiDBTable]
       i.copy(table = EliminateSubqueryAliases(resolveTiDBRelation(tiTable, output)))
-    case DataSourceV2Relation(table, output, _) if table.isInstanceOf[TiDBTable] =>
+    case DataSourceV2Relation(table, output, _, _, _) if table.isInstanceOf[TiDBTable] =>
       val tiTable = table.asInstanceOf[TiDBTable]
       resolveTiDBRelation(tiTable, output)
   }
 
   override def apply(plan: LogicalPlan): LogicalPlan =
     plan match {
-      // for some ddls, do not apply the transform
-      case d @ DescribeTable(_, _) =>
-        d
       case _ =>
         plan transformUp resolveTiDBRelations
     }

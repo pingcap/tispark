@@ -24,7 +24,7 @@ import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{NoSuchNamespaceException, NoSuchTableException}
 import org.apache.spark.sql.connector.catalog.{Identifier, NamespaceChange, SupportsNamespaces, Table, TableCapability, TableCatalog, TableChange, V1Table}
-import org.apache.spark.sql.connector.expressions.{LogicalExpressions, Transform}
+import org.apache.spark.sql.connector.expressions.{FieldReference, LogicalExpressions, Transform}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.slf4j.LoggerFactory
@@ -78,11 +78,12 @@ case class TiDBTable(v1Table: CatalogTable) extends Table {
     val partitions = new mutable.ArrayBuffer[Transform]()
 
     v1Table.partitionColumnNames.foreach { col =>
-      partitions += LogicalExpressions.identity(col)
+      partitions += LogicalExpressions.identity(FieldReference(col))
     }
 
     v1Table.bucketSpec.foreach { spec =>
-      partitions += LogicalExpressions.bucket(spec.numBuckets, spec.bucketColumnNames: _*)
+      partitions += LogicalExpressions
+        .bucket(spec.numBuckets, spec.bucketColumnNames.map(FieldReference(_)).toArray)
     }
 
     partitions.toArray
