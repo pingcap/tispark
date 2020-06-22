@@ -34,14 +34,14 @@ object TiAggregationImpl {
         aggregateExpressions
           .map(_.asInstanceOf[AggregateExpression])
           .partition {
-            case AggregateExpression(_: Average, _, _, _) => true
-            case _                                        => false
+            case AggregateExpression(_: Average, _, _, _, _) => true
+            case _                                           => false
           }
 
       // An auxiliary map that maps result attribute IDs of all detected `Average`s to corresponding
       // converted `Sum`s and `Count`s.
       val rewriteMap = averages.map {
-        case a @ AggregateExpression(Average(ref), _, _, _) =>
+        case a @ AggregateExpression(Average(ref), _, _, _, _) =>
           // We need to do a type promotion on Sum(Long) to avoid LongType overflow in Average rewrite
           // scenarios to stay consistent with original spark's Average behaviour
           val sum =

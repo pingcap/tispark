@@ -184,7 +184,7 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <spark.version.compile>3.0.0-preview</spark.version.compile>
+                <spark.version.compile>3.0.0</spark.version.compile>
                 <scala.binary.version>2.12</scala.binary.version>
                 <scala.version>2.12.10</scala.version>
             </properties>
@@ -239,7 +239,7 @@
                 <module>core-test</module>
             </modules>
             <properties>
-                <spark.version.test>3.0.0-preview</spark.version.test>
+                <spark.version.test>3.0.0</spark.version.test>
                 <skipFetchTestData>true</skipFetchTestData>
                 <skipCloneProtoFiles>true</skipCloneProtoFiles>
             </properties>

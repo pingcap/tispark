@@ -62,13 +62,22 @@ trait LeafColumnarExecRDD extends LeafExecNode {
   private[execution] val tiRDDs: List[TiRDD]
 
   private[execution] val internalRDDs: List[RDD[InternalRow]] = {
-    // spark-2.3 & 2.4
-    // tiRDDs.map(rdd => RDDConversions.rowToRowRdd(rdd, output.map(_.dataType)))
-    // spark-3.0
-    tiRDDs.map { rdd =>
-      val converters = RowEncoder(StructType.fromAttributes(output))
-      rdd.mapPartitions { iterator =>
-        iterator.map(converters.toRow)
+    tiRDDs.map(rdd => rowToRowRdd(rdd, output.map(_.dataType)))
+  }
+
+  private def rowToRowRdd(data: RDD[Row], outputTypes: Seq[DataType]): RDD[InternalRow] = {
+    data.mapPartitions { iterator =>
+      val numColumns = outputTypes.length
+      val mutableRow = new GenericInternalRow(numColumns)
+      val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
+      iterator.map { r =>
+        var i = 0
+        while (i < numColumns) {
+          mutableRow(i) = converters(i)(r(i))
+          i += 1
+        }
+
+        mutableRow
       }
     }
   }
@@ -291,8 +300,7 @@ case class ColumnarRegionTaskExec(
       // exceeds the `downgradeThreshold` after handle merge.
       // returns true if the number of handle ranges retrieved exceeds
       // the `downgradeThreshold` after handle merge, false otherwise.
-      def satisfyDowngradeThreshold: Boolean =
-        indexTaskRanges.size() > downgradeThreshold
+      def satisfyDowngradeThreshold: Boolean = indexTaskRanges.size > downgradeThreshold
 
       def isTaskRangeSizeInvalid(task: RegionTask): Boolean =
         task == null ||

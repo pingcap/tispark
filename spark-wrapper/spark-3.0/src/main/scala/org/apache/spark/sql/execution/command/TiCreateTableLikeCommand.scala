@@ -38,14 +38,15 @@ case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableL
     // If the location is specified, we create an external table internally.
     // Otherwise create a managed table.
     val tblType =
-      if (delegate.location.isEmpty) CatalogTableType.MANAGED else CatalogTableType.EXTERNAL
+      if (delegate.fileFormat.locationUri.isEmpty) CatalogTableType.MANAGED
+      else CatalogTableType.EXTERNAL
 
     val newTableDesc =
       CatalogTable(
         identifier = delegate.targetTable,
         tableType = tblType,
         storage = sourceTableDesc.storage
-          .copy(locationUri = delegate.location.map(CatalogUtils.stringToURI)),
+          .copy(locationUri = delegate.fileFormat.locationUri),
         schema = sourceTableDesc.schema,
         provider = newProvider,
         partitionColumnNames = sourceTableDesc.partitionColumnNames,

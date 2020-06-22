@@ -141,8 +141,8 @@ object BasicExpression {
       case EndsWith(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(StringRegExpression.endsWith(lhs, rhs))
 
-      case Like(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(StringRegExpression.like(lhs, rhs))
+      case Like(BasicExpression(lhs), BasicExpression(rhs), escapeChar) =>
+        Some(StringRegExpression.like(lhs, rhs, escapeChar))
 
       // Coprocessor has its own behavior of type promoting and overflow check
       // so we simply remove it from expression and let cop handle it
