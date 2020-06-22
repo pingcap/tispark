@@ -134,7 +134,6 @@ public class RowV2 {
       writeShortArray(cdo, this.offsets);
     }
     cdo.write(this.data);
-    System.out.println("current data: " + Arrays.toString(this.data));
     return cdo.toBytes();
   }
 

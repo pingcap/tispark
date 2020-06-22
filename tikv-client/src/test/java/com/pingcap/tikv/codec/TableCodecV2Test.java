@@ -68,7 +68,7 @@ public class TableCodecV2Test {
             MetaUtils.TableBuilder.newBuilder().name("t").addColumn("c1", BitType.BIT).build(),
             300L,
             new Object[] {null});
-    testCase.testDecode();
+    testCase.test();
   }
 
   @Test
@@ -190,26 +190,15 @@ public class TableCodecV2Test {
                     0x74, 0x65, 0x73, 0x74, 0x20, 0x60, 0x73, 0x27, 0x74, 0x22, 0x72, 0x2e
                   }
                 }));
-    //    // Test Decoding
-    //    for (TestCase testCase : testCases) {
-    //      testCase.testDecode();
-    //    }
-    // Test Encoding
+    // Test Decoding
     for (TestCase testCase : testCases) {
-      testCase.testEncode();
+      testCase.test();
     }
   }
 
   @Test
   public void testHandle() {
     TestCase testCase =
-        TestCase.createNew(
-            new int[] {128, 1, 1, 0, 0, 0, 44, 1, 0, 0, 0, 0, 0, 0},
-            MetaUtils.TableBuilder.newBuilder().name("t").addColumn("c1", BitType.BIT).build(),
-            300L,
-            new Object[] {null});
-    testCase.testDecode();
-    TestCase testCase2 =
         TestCase.createNew(
             new int[] {128, 0, 1, 0, 0, 0, 10, 1, 0, 1},
             MetaUtils.TableBuilder.newBuilder()
@@ -220,7 +209,7 @@ public class TableCodecV2Test {
                 .build(),
             10000L,
             new Object[] {10000L, 1L});
-    testCase2.testDecode();
+    testCase.test();
   }
 
   @Test
@@ -234,7 +223,7 @@ public class TableCodecV2Test {
                 .addColumn("c2", IntegerType.BIGINT)
                 .build(),
             new Object[] {null, 2L});
-    testCase.testDecode();
+    testCase.test();
   }
 
   @Test
@@ -294,7 +283,7 @@ public class TableCodecV2Test {
               new byte[] {49, 48, 48},
               ""
             });
-    testCase.testDecode();
+    testCase.test();
   }
 
   public static class TestCase {
@@ -404,16 +393,36 @@ public class TableCodecV2Test {
     }
 
     private void testEncode() {
-      System.out.println(toString(this.value));
       byte[] bytes =
           TableCodecV2.encodeRow(
               this.tableInfo.getColumns(), this.value, this.tableInfo.isPkHandle());
       debug(this.bytes, bytes);
-      // FIXME: temporate code just for reverse checking...
-      Row res = TableCodecV2.decodeRow(bytes, this.handle, this.tableInfo);
-      Object[] o = fromRow(res, this.tableInfo);
-      debug(this.value, o);
-      assertTrue(equals(this.bytes, bytes));
+      if (this.tableInfo
+          .getColumns()
+          .stream()
+          .noneMatch(
+              x -> {
+                switch (x.getType().getType()) {
+                  case TypeFloat:
+                    // double value may have precision loss
+                    return true;
+                  default:
+                    return false;
+                }
+              })) {
+        assertTrue(equals(this.bytes, bytes));
+      } else {
+        // FIXME: temporary code just for reverse checking...
+        Row res = TableCodecV2.decodeRow(bytes, this.handle, this.tableInfo);
+        Object[] o = fromRow(res, this.tableInfo);
+        debug(this.value, o);
+        assertTrue(deepEquals(this.value, o));
+      }
+    }
+
+    private void test() {
+      testDecode();
+      testEncode();
     }
   }
 }

@@ -22,6 +22,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.Arrays;
@@ -31,6 +32,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
 public class RowEncoderV2 {
+  private static final long SIGN_MASK = 0x8000000000000000L;
   private int numCols;
   private Object[] values;
   private RowV2 row;
@@ -199,6 +201,8 @@ public class RowEncoderV2 {
       case TypeString:
       case TypeVarString:
       case TypeVarchar:
+        cdo.write(((String) value).getBytes(StandardCharsets.UTF_8));
+        break;
       case TypeBlob:
       case TypeTinyBlob:
       case TypeMediumBlob:
@@ -206,15 +210,15 @@ public class RowEncoderV2 {
         cdo.write(((byte[]) value));
         break;
       case TypeNewDecimal:
-        encodeDecimal(cdo, value, (int) tp.getLength(), tp.getDecimal());
+        encodeDecimal(cdo, value);
         break;
       case TypeBit:
         encodeBit(cdo, value);
         break;
-      case TypeDate:
       case TypeTimestamp:
         encodeTimestamp(cdo, value, DateTimeZone.UTC);
         break;
+      case TypeDate:
       case TypeDatetime:
         encodeTimestamp(cdo, value, Converter.getLocalTimezone());
         break;
@@ -254,16 +258,24 @@ public class RowEncoderV2 {
     }
   }
 
-  private void encodeFloat(CodecDataOutput cdo, Object value) {
-    cdo.writeFloat((float) value);
-  }
-
   private void encodeDouble(CodecDataOutput cdo, Object value) {
-    cdo.writeDouble((double) value);
+    long u = Double.doubleToLongBits((double) value);
+    if ((double) value >= 0) {
+      u |= SIGN_MASK;
+    } else {
+      u = ~u;
+    }
+    u = Long.reverseBytes(u);
+    cdo.writeLong(u);
   }
 
   private void encodeBit(CodecDataOutput cdo, Object value) {
-    cdo.write((byte[]) value);
+    long s = 0;
+    for (byte b : (byte[]) value) {
+      s <<= 8;
+      s |= b;
+    }
+    encodeInt(cdo, s);
   }
 
   private void encodeTimestamp(CodecDataOutput cdo, Object value, DateTimeZone tz) {
@@ -284,8 +296,11 @@ public class RowEncoderV2 {
     }
   }
 
-  private void encodeDecimal(CodecDataOutput cdo, Object value, int prec, int frac) {
+  private void encodeDecimal(CodecDataOutput cdo, Object value) {
     MyDecimal dec = new MyDecimal();
+    BigDecimal decimal = (BigDecimal) value;
+    int prec = decimal.precision();
+    int frac = decimal.scale();
     dec.fromString(((BigDecimal) value).toPlainString());
     DecimalCodec.writeDecimal(cdo, dec, prec, frac);
   }
