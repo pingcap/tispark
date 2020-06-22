@@ -17,6 +17,7 @@ package com.pingcap.tikv.codec;
 
 import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.codec.Codec.DecimalCodec;
+import com.pingcap.tikv.codec.Codec.EnumCodec;
 import com.pingcap.tikv.exception.CodecException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.types.Converter;
@@ -184,7 +185,6 @@ public class RowEncoderV2 {
   }
 
   private void encodeValue(CodecDataOutput cdo, Object value, DataType tp) {
-    System.out.println(value + " " + tp);
     switch (tp.getType()) {
       case TypeLonglong:
       case TypeLong:
@@ -306,14 +306,17 @@ public class RowEncoderV2 {
   }
 
   private void encodeEnum(CodecDataOutput cdo, Object value, List<String> elems) {
-    //    encodeInt(cdo, value);
+    int val = EnumCodec.parseEnumName((String) value, elems);
+    encodeInt(cdo, val);
   }
 
-  private void encodeSet(CodecDataOutput cdo, Object value, List<String> sets) {
-    //    encodeInt(cdo, value);
+  private void encodeSet(CodecDataOutput cdo, Object value, List<String> elems) {
+    // TODO: Support encoding set
+    throw new CodecException("Set encoding is not yet supported.");
   }
 
   private void encodeJson(CodecDataOutput cdo, Object value) {
-    //    encodeInt(cdo, value);
+    // TODO: Support encoding JSON
+    throw new CodecException("JSON encoding is not yet supported.");
   }
 }

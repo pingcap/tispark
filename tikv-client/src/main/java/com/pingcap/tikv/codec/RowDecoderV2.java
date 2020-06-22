@@ -16,8 +16,9 @@
 package com.pingcap.tikv.codec;
 
 import com.pingcap.tikv.ExtendedDateTime;
+import com.pingcap.tikv.codec.Codec.EnumCodec;
+import com.pingcap.tikv.codec.Codec.SetCodec;
 import com.pingcap.tikv.exception.CodecException;
-import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.JsonUtils;
@@ -25,7 +26,6 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.joda.time.DateTimeZone;
@@ -33,8 +33,6 @@ import org.joda.time.DateTimeZone;
 public class RowDecoderV2 {
 
   private static final long SIGN_MASK = 0x8000000000000000L;
-  private static final long[] SET_INDEX_VALUE = initSetIndexVal();
-  private static final long[] SET_INDEX_INVERT_VALUE = initSetIndexInvertVal();
 
   public static Object decodeCol(byte[] colData, DataType tp) {
     switch (tp.getType()) {
@@ -166,42 +164,12 @@ public class RowDecoderV2 {
 
   private static String decodeEnum(byte[] val, List<String> elems) {
     int idx = (int) decodeInt(val) - 1;
-    if (idx < 0 || idx >= elems.size()) throw new TypeException("Index is out of range");
-    return elems.get(idx);
-  }
-
-  private static long[] initSetIndexInvertVal() {
-    long[] tmpArr = new long[64];
-    for (int i = 0; i < 64; i++) {
-      // complement of original value.
-      tmpArr[i] = ~SET_INDEX_VALUE[i];
-    }
-    return tmpArr;
-  }
-
-  private static long[] initSetIndexVal() {
-    long[] tmpArr = new long[64];
-    for (int i = 0; i < 64; i++) {
-      tmpArr[i] = 1L << i;
-    }
-    return tmpArr;
+    return EnumCodec.readEnumFromIndex(idx, elems);
   }
 
   private static String decodeSet(byte[] val, List<String> elems) {
     long number = decodeInt(val);
-    List<String> items = new ArrayList<>();
-    int length = elems.size();
-    for (int i = 0; i < length; i++) {
-      long checker = number & SET_INDEX_VALUE[i];
-      if (checker != 0) {
-        items.add(elems.get(i));
-        number &= SET_INDEX_INVERT_VALUE[i];
-      }
-    }
-    if (number != 0) {
-      throw new TypeException(String.format("invalid number %d for Set %s", number, elems));
-    }
-    return String.join(",", items);
+    return SetCodec.readSetFromLong(number, elems);
   }
 
   private static String decodeJson(byte[] val) {

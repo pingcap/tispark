@@ -18,6 +18,7 @@ package com.pingcap.tikv.types;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
+import com.pingcap.tikv.codec.Codec.SetCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
@@ -25,15 +26,11 @@ import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
-import java.util.ArrayList;
-import java.util.List;
 
 public class SetType extends DataType {
   public static final SetType SET = new SetType(MySQLType.TypeSet);
 
   public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeSet};
-  private final long[] setIndexValue = initSetIndexVal();
-  private final long[] setIndexInvertValue = initSetIndexInvertVal();
 
   private SetType(MySQLType tp) {
     super(tp);
@@ -41,23 +38,6 @@ public class SetType extends DataType {
 
   protected SetType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
-  }
-
-  private long[] initSetIndexInvertVal() {
-    long[] tmpArr = new long[64];
-    for (int i = 0; i < 64; i++) {
-      // complement of original value.
-      tmpArr[i] = ~setIndexValue[i];
-    }
-    return tmpArr;
-  }
-
-  private long[] initSetIndexVal() {
-    long[] tmpArr = new long[64];
-    for (int i = 0; i < 64; i++) {
-      tmpArr[i] = 1L << i;
-    }
-    return tmpArr;
   }
 
   /** {@inheritDoc} */
@@ -75,24 +55,7 @@ public class SetType extends DataType {
         throw new TypeException("Invalid IntegerType flag: " + flag);
     }
 
-    List<String> items = new ArrayList<>();
-    int length = this.getElems().size();
-    for (int i = 0; i < length; i++) {
-      // Long.MIN_VALUE is -9223372036854775808 with 1000...000 binary string.
-      // setIndexValue[63] is also Long.MIN_VALUE, hence number & setIndexValue yields
-      // Long.MIN_VALUE which is not 0(other cases will yield 0)
-      long checker = number & setIndexValue[i];
-      if (checker != 0) {
-        items.add(this.getElems().get(i));
-        number &= setIndexInvertValue[i];
-      }
-    }
-
-    if (number != 0) {
-      throw new TypeException(String.format("invalid number %d for Set %s", number, getElems()));
-    }
-
-    return String.join(",", items);
+    return SetCodec.readSetFromLong(number, this.getElems());
   }
 
   @Override
