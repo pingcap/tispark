@@ -114,19 +114,19 @@ After the command is executed, a log file is printed on the screen. Check the lo
 
 Open the [http://spark-master-hostname:8080](http://spark-master-hostname:8080) to view the cluster information (if you do not change the default port number of Spark-Master).
 
-When you start Spark-Slave, you can also use this panel to confirm whether the Slave is joined to the cluster.
+When you start Spark-Worker, you can also use this panel to confirm whether the Worker is joined to the cluster.
 
-#### Step 3: Start a Slave node
+#### Step 3: Start a Worker node
 
-Similarly, start a Spark-Slave node by executing the following command:
+Similarly, start a Spark-Worker node by executing the following command:
 
 ```
 ./sbin/start-slave.sh spark://spark-master-hostname:7077
 ```
 
-After the command returns, also check whether the Slave node is joined to the Spark cluster correctly from the panel.
+After the command returns, also check whether the Worker node is joined to the Spark cluster correctly from the panel.
 
-Repeat the above command on all Slave nodes. After all the Slaves are connected to the Master, you have a Standalone mode Spark cluster.
+Repeat the above command on all Worker nodes. After all the Workers are connected to the Master, you have a Standalone mode Spark cluster.
 
 #### Step 4: Spark SQL shell and JDBC Server
 
