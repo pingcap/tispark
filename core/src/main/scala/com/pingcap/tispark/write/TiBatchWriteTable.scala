@@ -131,7 +131,7 @@ class TiBatchWriteTable(
         val start = getAutoTableIdStart(df.count)
 
         // update colsInDF since we just add one column in df
-        colsInDf = newDf.columns.toList
+        colsInDf = newDf.columns.toList.map(_.toLowerCase())
         // last one is auto increment column
         newDf.rdd.zipWithIndex.map { row =>
           val rowSep = row._1.toSeq.zipWithIndex.map { data =>

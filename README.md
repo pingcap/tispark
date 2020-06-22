@@ -200,13 +200,13 @@ The configurations in the table below can be put together with `spark-defaults.c
 | `spark.tispark.table.scan_concurrency` |  `512` | The maximal number of threads for table scan (shared among tasks inside each JVM) |
 | `spark.tispark.request.command.priority` |  `Low` | The value options are `Low`, `Normal`, `High`. This setting impacts the resource to get in TiKV. `Low` is recommended because the OLTP workload is not disturbed. |
 | `spark.tispark.coprocess.streaming` |  `false` | Whether to use streaming for response fetching (experimental) |
-| `spark.tispark.plan.unsupported_pushdown_exprs` |  `""` | A comma-separated list of expressions. In case you have a very old version of TiKV, you might disable some of the expression push-down if they are not supported.  |
+| `spark.tispark.plan.unsupported_pushdown_exprs` |  `` | A comma-separated list of expressions. In case you have a very old version of TiKV, you might disable some of the expression push-down if they are not supported.  |
 | `spark.tispark.plan.downgrade.index_threshold` | `1000000000` | If the range of index scan on one Region exceeds this limit in the original request, downgrade this Region's request to table scan rather than the planned index scan. By default, the downgrade is disabled. |
 | `spark.tispark.show_rowid` |  `false` | Whether to show the implicit row ID if the ID exists |
-| `spark.tispark.db_prefix` |  `""` | The string that indicates the extra prefix for all databases in TiDB. This string distinguishes the databases in TiDB from the Hive databases with the same name. |
+| `spark.tispark.db_prefix` |  `` | The string that indicates the extra prefix for all databases in TiDB. This string distinguishes the databases in TiDB from the Hive databases with the same name. |
 | `spark.tispark.request.isolation.level` |  `SI` | Isolation level means whether to resolve locks for the underlying TiDB clusters. When you use the "RC", you get the latest version of record smaller than your `tso` and ignore the locks. If you use "SI", you resolve the locks and get the records depending on whether the resolved lock is committed or aborted.  |
 | `spark.tispark.coprocessor.chunk_batch_size` | `1024` | How many rows fetched from Coprocessor |
-| `spark.tispark.isolation_read_engines` | `"tikv,tiflash"` | List of readable engines of TiSpark, comma separated, storage engines not listed will not be read |
+| `spark.tispark.isolation_read_engines` | `tikv,tiflash` | List of readable engines of TiSpark, comma separated, storage engines not listed will not be read |
 
 ## `Log4j` Configuration
 

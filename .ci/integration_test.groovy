@@ -12,7 +12,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def PARALLEL_NUMBER = 18
     def TEST_REGION_SIZE = "normal"
     def TEST_TIFLASH = "false"
-    
+
     // parse tidb branch
     def m1 = ghprbCommentBody =~ /tidb\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m1) {
@@ -64,7 +64,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     if (m8) {
         TEST_TIFLASH = "${m8[0][1]}"
     }
-    
+
     groovy.lang.Closure readfile = { filename ->
         def file = readFile filename
         return file.split("\n") as List
@@ -83,10 +83,25 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
         mvnStr = mvnStr + " -DskipAfterFailureCount=1"
         return mvnStr
     }
-    
+
+    def label = "regression-test-tispark"
+
+    podTemplate(name: label, label: label, instanceCap: 10, idleMinutes: 720, containers: [
+            containerTemplate(name: 'golang', image: 'hub.pingcap.net/jenkins/centos7_golang-1.12:cached',
+                    envVars: [
+                            envVar(key: 'DOCKER_HOST', value: 'tcp://localhost:2375'),
+                    ], alwaysPullImage: true, ttyEnabled: true, command: 'cat'),
+            containerTemplate(name: 'java', image: 'hub.pingcap.net/jenkins/centos7_golang-1.13_java:cached',
+                    resourceRequestCpu: '8000m',
+                    resourceRequestMemory: '16Gi',
+                    envVars: [
+                            envVar(key: 'DOCKER_HOST', value: 'tcp://localhost:2375'),
+                    ], alwaysPullImage: true, ttyEnabled: true, command: 'cat'),
+    ]) {
+
     catchError {
         stage('Prepare') {
-            node ('build_go1120') {
+            node (label) {
                 println "${NODE_NAME}"
                 container("golang") {
                     deleteDir()
@@ -114,14 +129,14 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     }
 
                     stash includes: "bin/**", name: "binaries"
-                    
+
                     dir("/home/jenkins/agent/git/tispark") {
                         if (sh(returnStatus: true, script: '[ -d .git ] && [ -f Makefile ] && git rev-parse --git-dir > /dev/null 2>&1') != 0) {
                             deleteDir()
                         }
                         checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: 'master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'PruneStaleBranch'], [$class: 'CleanBeforeCheckout']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: credentialsId, refspec: '+refs/pull/*:refs/remotes/origin/pr/*', url: 'git@github.com:pingcap/tispark.git']]]
                     }
-    
+
                     dir("go/src/github.com/pingcap/tispark") {
                         deleteDir()
                         sh """
@@ -172,12 +187,12 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         bash tikv-client/scripts/proto.sh
                         """
                     }
-    
+
                     stash includes: "go/src/github.com/pingcap/tispark/**", name: "tispark", useDefaultExcludes: false
                 }
             }
         }
-    
+
         stage('Integration Tests') {
             def tests = [:]
 
@@ -224,7 +239,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
             }
 
             groovy.lang.Closure run_intergration_test = { chunk_suffix, run_test ->
-                node("test_java") {
+                node(label) {
                     println "${NODE_NAME}"
                     container("java") {
                         deleteDir()
@@ -233,7 +248,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if (TEST_TIFLASH != "false") {
                             unstash 'tiflash_binary'
                         }
-    
+
                         try {
 
                             groovy.lang.Closure isv4 = { branch_name ->
@@ -256,7 +271,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             }
 
                             sh """
-                            sudo sysctl -w net.ipv4.ip_local_port_range=\'1000 30000\'
+                            #sudo sysctl -w net.ipv4.ip_local_port_range=\'1000 30000\'
                             killall -9 tidb-server || true
                             killall -9 tikv-server || true
                             killall -9 pd-server || true
@@ -284,7 +299,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                                 """
                                 sh "ps aux | grep 'tiflash'"
                             }
-    
+
                             timeout(120) {
                                 run_test(chunk_suffix)
                             }
@@ -321,13 +336,14 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                 tests["Integration test = $i"] = {run_intergration_test(x, run_tispark_test)}
             }
             tests["Integration tikv-client test"] = {run_intergration_test(0, run_tikvclient_test)}
-    
+
             parallel tests
         }
-    
+
         currentBuild.result = "SUCCESS"
     }
-    
+
+    }
     stage('Summary') {
         def duration = ((System.currentTimeMillis() - currentBuild.startTimeInMillis) / 1000 / 60).setScale(2, BigDecimal.ROUND_HALF_UP)
         def slackmsg = "[#${ghprbPullId}: ${ghprbPullTitle}]" + "\n" +
@@ -336,7 +352,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
         "Integration Common Test Result: `${currentBuild.result}`" + "\n" +
         "Elapsed Time: `${duration} mins` " + "\n" +
         "${env.RUN_DISPLAY_URL}"
-    
+
         if (currentBuild.result != "SUCCESS") {
             slackSend channel: channel, color: 'danger', teamDomain: teamDomain, tokenCredentialId: tokenCredentialId, message: "${slackmsg}"
         }
