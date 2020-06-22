@@ -27,16 +27,8 @@ import java.util.List;
 
 public class TableCodecV1 {
   /** Row layout: colID1, value1, colID2, value2, ..... */
-  public static byte[] encodeRow(
-      List<TiColumnInfo> columnInfos, Object[] values, boolean isPkHandle)
-      throws IllegalAccessException {
-    if (columnInfos.size() != values.length) {
-      throw new IllegalAccessException(
-          String.format(
-              "encodeRow error: data and columnID count not " + "match %d vs %d",
-              columnInfos.size(), values.length));
-    }
-
+  protected static byte[] encodeRow(
+      List<TiColumnInfo> columnInfos, Object[] values, boolean isPkHandle) {
     CodecDataOutput cdo = new CodecDataOutput();
 
     for (int i = 0; i < columnInfos.size(); i++) {
@@ -57,7 +49,7 @@ public class TableCodecV1 {
     return cdo.toBytes();
   }
 
-  public static Row decodeRow(byte[] value, Long handle, TiTableInfo tableInfo) {
+  protected static Row decodeRow(byte[] value, Long handle, TiTableInfo tableInfo) {
     if (handle == null && tableInfo.isPkHandle()) {
       throw new IllegalArgumentException("when pk is handle, handle cannot be null");
     }

@@ -190,9 +190,13 @@ public class TableCodecV2Test {
                     0x74, 0x65, 0x73, 0x74, 0x20, 0x60, 0x73, 0x27, 0x74, 0x22, 0x72, 0x2e
                   }
                 }));
-    // Test Decoding
+    //    // Test Decoding
+    //    for (TestCase testCase : testCases) {
+    //      testCase.testDecode();
+    //    }
+    // Test Encoding
     for (TestCase testCase : testCases) {
-      testCase.testDecode();
+      testCase.testEncode();
     }
   }
 
@@ -387,11 +391,29 @@ public class TableCodecV2Test {
       System.out.println("Expected=[" + toString(a1) + "]\nResult  =[" + toString(a2) + "]");
     }
 
+    private void debug(byte[] a1, byte[] a2) {
+      System.out.println(
+          "Expected=[" + Arrays.toString(a1) + "]\nResult  =[" + Arrays.toString(a2) + "]");
+    }
+
     private void testDecode() {
       Row res = TableCodecV2.decodeRow(this.bytes, this.handle, this.tableInfo);
       Object[] o = fromRow(res, this.tableInfo);
       debug(this.value, o);
       assertTrue(deepEquals(this.value, o));
+    }
+
+    private void testEncode() {
+      System.out.println(toString(this.value));
+      byte[] bytes =
+          TableCodecV2.encodeRow(
+              this.tableInfo.getColumns(), this.value, this.tableInfo.isPkHandle());
+      debug(this.bytes, bytes);
+      // FIXME: temporate code just for reverse checking...
+      Row res = TableCodecV2.decodeRow(bytes, this.handle, this.tableInfo);
+      Object[] o = fromRow(res, this.tableInfo);
+      debug(this.value, o);
+      assertTrue(equals(this.bytes, bytes));
     }
   }
 }

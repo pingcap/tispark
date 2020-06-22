@@ -15,7 +15,6 @@
 
 package com.pingcap.tikv.codec;
 
-import com.pingcap.tikv.exception.CodecException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import java.util.Arrays;
 
@@ -34,38 +33,22 @@ public class RowV2 {
   int[] colIDs32;
   int[] offsets32;
 
-  public RowV2(byte[] rowData) {
+  private RowV2(byte[] rowData) {
     fromBytes(rowData);
   }
 
-  public RowV2(
-      boolean large,
-      int numNotNullCols,
-      int numNullCols,
-      byte[] colIDs,
-      int[] offsets,
-      byte[] data) {
-    this.large = large;
-    this.numNotNullCols = numNotNullCols;
-    this.numNullCols = numNullCols;
-    this.colIDs = colIDs;
-    this.offsets = offsets;
-    this.data = data;
+  public static RowV2 createNew(byte[] rowData) {
+    return new RowV2(rowData);
   }
 
-  public RowV2(
-      boolean large,
-      int numNotNullCols,
-      int numNullCols,
-      int[] colIDs32,
-      int[] offsets32,
-      byte[] data) {
+  public static RowV2 createEmpty() {
+    return new RowV2(false, 0, 0);
+  }
+
+  private RowV2(boolean large, int numNotNullCols, int numNullCols) {
     this.large = large;
     this.numNotNullCols = numNotNullCols;
     this.numNullCols = numNullCols;
-    this.colIDs32 = colIDs32;
-    this.offsets32 = offsets32;
-    this.data = data;
   }
 
   public byte[] getData(int i) {
@@ -125,8 +108,34 @@ public class RowV2 {
     this.data = Arrays.copyOfRange(rowData, cursor, rowData.length);
   }
 
+  private void writeShortArray(CodecDataOutput cdo, int[] arr) {
+    for (int value : arr) {
+      cdo.writeShort(value);
+    }
+  }
+
+  private void writeIntArray(CodecDataOutput cdo, int[] arr) {
+    for (int value : arr) {
+      cdo.writeInt(value);
+    }
+  }
+
   public byte[] toBytes() {
-    throw new CodecException("not implemented yet");
+    CodecDataOutputLittleEndian cdo = new CodecDataOutputLittleEndian();
+    cdo.write(CODEC_VER);
+    cdo.write(this.large ? 1 : 0);
+    cdo.writeShort(this.numNotNullCols);
+    cdo.writeShort(this.numNullCols);
+    if (this.large) {
+      writeIntArray(cdo, this.colIDs32);
+      writeIntArray(cdo, this.offsets32);
+    } else {
+      cdo.write(this.colIDs);
+      writeShortArray(cdo, this.offsets);
+    }
+    cdo.write(this.data);
+    System.out.println("current data: " + Arrays.toString(this.data));
+    return cdo.toBytes();
   }
 
   private int binarySearch(int i, int j, long colID) {

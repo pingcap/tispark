@@ -1,0 +1,304 @@
+/*
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.pingcap.tikv.codec;
+
+import com.pingcap.tikv.ExtendedDateTime;
+import com.pingcap.tikv.codec.Codec.DecimalCodec;
+import com.pingcap.tikv.exception.CodecException;
+import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.types.Converter;
+import com.pingcap.tikv.types.DataType;
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+
+public class RowEncoderV2 {
+  private int numCols;
+  private Object[] values;
+  private RowV2 row;
+
+  public RowEncoderV2() {}
+
+  public byte[] encode(List<TiColumnInfo> columnInfos, List<Object> values) {
+    this.row = RowV2.createEmpty();
+    numCols = columnInfos.size();
+    for (int i = 0; i < numCols; i++) {
+      if (columnInfos.get(i).getId() > 255) {
+        this.row.large = true;
+      }
+      if (values.get(i) == null) {
+        this.row.numNullCols++;
+      } else {
+        this.row.numNotNullCols++;
+      }
+    }
+
+    this.values = new Object[numCols];
+    reformatCols(columnInfos, values);
+    encodeRowCols(columnInfos);
+    return this.row.toBytes();
+  }
+
+  private void reformatCols(List<TiColumnInfo> columnInfos, List<Object> valueList) {
+    int nullIdx = numCols - row.numNullCols;
+    int notNullIdx = 0;
+    if (this.row.large) {
+      row.initColIDs32();
+      row.initOffsets32();
+    } else {
+      row.initColIDs();
+      row.initOffsets();
+    }
+    for (int i = 0; i < numCols; i++) {
+      int colID = (int) columnInfos.get(i).getId();
+      Object value = valueList.get(i);
+      if (value == null) {
+        if (this.row.large) {
+          this.row.colIDs32[nullIdx] = colID;
+        } else {
+          this.row.colIDs[nullIdx] = (byte) colID;
+        }
+        nullIdx++;
+      } else {
+        if (this.row.large) {
+          this.row.colIDs32[notNullIdx] = colID;
+        } else {
+          this.row.colIDs[notNullIdx] = (byte) colID;
+        }
+        valueList.set(notNullIdx, value);
+        notNullIdx++;
+      }
+    }
+    // sort colIDs together with corresponding values
+    int len = this.row.numNotNullCols;
+    if (this.row.large) {
+      int[] temp = Arrays.copyOfRange(this.row.colIDs32, 0, len);
+      Integer[] idx = new Integer[len];
+      for (int i = 0; i < len; i++) {
+        idx[i] = i;
+      }
+      Arrays.sort(idx, Comparator.comparingInt(o -> this.row.colIDs32[o]));
+      for (int i = 0; i < len; i++) {
+        this.row.colIDs32[i] = temp[idx[i]];
+        this.values[i] = valueList.get(idx[i]);
+      }
+      if (this.row.numNullCols > 0) {
+        len = this.row.numNullCols;
+        int start = this.row.numNotNullCols;
+        temp = Arrays.copyOfRange(this.row.colIDs32, start, start + len);
+        idx = new Integer[len];
+        for (int i = 0; i < len; i++) {
+          idx[i] = i;
+        }
+        Arrays.sort(idx, Comparator.comparingInt(o -> this.row.colIDs32[start + o]));
+        for (int i = 0; i < len; i++) {
+          // values should all be null
+          this.row.colIDs32[start + i] = temp[idx[i]];
+        }
+      }
+    } else {
+      byte[] temp = Arrays.copyOfRange(this.row.colIDs, 0, len);
+      Integer[] idx = new Integer[len];
+      for (int i = 0; i < len; i++) {
+        idx[i] = i;
+      }
+      Arrays.sort(idx, Comparator.comparingInt(o -> this.row.colIDs[o]));
+      for (int i = 0; i < len; i++) {
+        this.row.colIDs[i] = temp[idx[i]];
+        this.values[i] = valueList.get(idx[i]);
+      }
+      if (this.row.numNullCols > 0) {
+        len = this.row.numNullCols;
+        int start = this.row.numNotNullCols;
+        temp = Arrays.copyOfRange(this.row.colIDs, start, start + len);
+        idx = new Integer[len];
+        for (int i = 0; i < len; i++) {
+          idx[i] = i;
+        }
+        Arrays.sort(idx, Comparator.comparingInt(o -> this.row.colIDs[start + o]));
+        for (int i = 0; i < len; i++) {
+          // values should all be null
+          this.row.colIDs[start + i] = temp[idx[i]];
+        }
+      }
+    }
+  }
+
+  private TiColumnInfo getColumnInfoByID(List<TiColumnInfo> columnInfos, int id) {
+    for (TiColumnInfo columnInfo : columnInfos) {
+      if (columnInfo.getId() == id) {
+        return columnInfo;
+      }
+    }
+    throw new CodecException("column id " + id + " not found in ColumnInfo");
+  }
+
+  private void encodeRowCols(List<TiColumnInfo> columnInfos) {
+    CodecDataOutputLittleEndian cdo = new CodecDataOutputLittleEndian();
+    for (int i = 0; i < this.row.numNotNullCols; i++) {
+      Object o = this.values[i];
+      if (this.row.large) {
+        encodeValue(cdo, o, getColumnInfoByID(columnInfos, this.row.colIDs32[i]).getType());
+      } else {
+        encodeValue(cdo, o, getColumnInfoByID(columnInfos, this.row.colIDs[i]).getType());
+      }
+      if (cdo.size() > 0xffff && !this.row.large) {
+        // only initialize once
+        this.row.initColIDs32();
+        for (int j = 0; j < numCols; j++) {
+          this.row.colIDs32[j] = this.row.colIDs[j];
+        }
+        this.row.initOffsets32();
+        if (numCols >= 0) {
+          System.arraycopy(this.row.offsets, 0, this.row.offsets32, 0, numCols);
+        }
+        this.row.large = true;
+      }
+      if (this.row.large) {
+        this.row.offsets32[i] = cdo.size();
+      } else {
+        this.row.offsets[i] = cdo.size();
+      }
+    }
+    this.row.data = cdo.toBytes();
+  }
+
+  private void encodeValue(CodecDataOutput cdo, Object value, DataType tp) {
+    System.out.println(value + " " + tp);
+    switch (tp.getType()) {
+      case TypeLonglong:
+      case TypeLong:
+      case TypeInt24:
+      case TypeShort:
+      case TypeTiny:
+        // TODO: encode consider unsigned
+        encodeInt(cdo, (long) value);
+        break;
+      case TypeFloat:
+      case TypeDouble:
+        encodeDouble(cdo, value);
+        break;
+      case TypeString:
+      case TypeVarString:
+      case TypeVarchar:
+      case TypeBlob:
+      case TypeTinyBlob:
+      case TypeMediumBlob:
+      case TypeLongBlob:
+        cdo.write(((byte[]) value));
+        break;
+      case TypeNewDecimal:
+        encodeDecimal(cdo, value, (int) tp.getLength(), tp.getDecimal());
+        break;
+      case TypeBit:
+        encodeBit(cdo, value);
+        break;
+      case TypeDate:
+      case TypeTimestamp:
+        encodeTimestamp(cdo, value, DateTimeZone.UTC);
+        break;
+      case TypeDatetime:
+        encodeTimestamp(cdo, value, Converter.getLocalTimezone());
+        break;
+      case TypeDuration:
+      case TypeYear:
+        encodeInt(cdo, (long) value);
+        break;
+      case TypeEnum:
+        encodeEnum(cdo, value, tp.getElems());
+        break;
+      case TypeSet:
+        encodeSet(cdo, value, tp.getElems());
+        break;
+      case TypeJSON:
+        encodeJson(cdo, value);
+        break;
+      case TypeNull:
+        // ??
+      case TypeDecimal:
+      case TypeGeometry:
+      case TypeNewDate:
+        throw new CodecException("type should not appear in encoding");
+      default:
+        throw new CodecException("invalid data type " + tp.getType().name());
+    }
+  }
+
+  private void encodeInt(CodecDataOutput cdo, long value) {
+    if (value == (byte) value) {
+      cdo.writeByte((byte) value);
+    } else if (value == (short) value) {
+      cdo.writeShort((short) value);
+    } else if (value == (int) value) {
+      cdo.writeInt((int) value);
+    } else {
+      cdo.writeLong(value);
+    }
+  }
+
+  private void encodeFloat(CodecDataOutput cdo, Object value) {
+    cdo.writeFloat((float) value);
+  }
+
+  private void encodeDouble(CodecDataOutput cdo, Object value) {
+    cdo.writeDouble((double) value);
+  }
+
+  private void encodeBit(CodecDataOutput cdo, Object value) {
+    cdo.write((byte[]) value);
+  }
+
+  private void encodeTimestamp(CodecDataOutput cdo, Object value, DateTimeZone tz) {
+    if (value instanceof Timestamp) {
+      Timestamp timestamp = (Timestamp) value;
+      DateTime dateTime = new DateTime(timestamp.getTime());
+      int nanos = timestamp.getNanos();
+      ExtendedDateTime extendedDateTime = new ExtendedDateTime(dateTime, (nanos / 1000) % 1000);
+      long t = Codec.DateTimeCodec.toPackedLong(extendedDateTime, tz);
+      encodeInt(cdo, t);
+    } else if (value instanceof Date) {
+      ExtendedDateTime extendedDateTime =
+          new ExtendedDateTime(new DateTime(((Date) value).getTime()));
+      long t = Codec.DateTimeCodec.toPackedLong(extendedDateTime, tz);
+      encodeInt(cdo, t);
+    } else {
+      throw new CodecException("invalid timestamp type " + value.getClass());
+    }
+  }
+
+  private void encodeDecimal(CodecDataOutput cdo, Object value, int prec, int frac) {
+    MyDecimal dec = new MyDecimal();
+    dec.fromString(((BigDecimal) value).toPlainString());
+    DecimalCodec.writeDecimal(cdo, dec, prec, frac);
+  }
+
+  private void encodeEnum(CodecDataOutput cdo, Object value, List<String> elems) {
+    //    encodeInt(cdo, value);
+  }
+
+  private void encodeSet(CodecDataOutput cdo, Object value, List<String> sets) {
+    //    encodeInt(cdo, value);
+  }
+
+  private void encodeJson(CodecDataOutput cdo, Object value) {
+    //    encodeInt(cdo, value);
+  }
+}

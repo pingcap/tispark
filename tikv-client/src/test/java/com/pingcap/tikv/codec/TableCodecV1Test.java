@@ -29,12 +29,9 @@ import java.util.ArrayList;
 import java.util.List;
 import org.joda.time.DateTime;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 public class TableCodecV1Test {
-  @Rule public ExpectedException expectedEx = ExpectedException.none();
   private Object[] values;
   private final TiTableInfo tblInfo = createTable();
 
@@ -76,38 +73,21 @@ public class TableCodecV1Test {
   }
 
   @Test
-  public void testRowCodecThrowException() {
-    try {
-      TableCodecV1.encodeRow(
-          tblInfo.getColumns(), new Object[] {values[0], values[1]}, tblInfo.isPkHandle());
-      expectedEx.expect(IllegalAccessException.class);
-      expectedEx.expectMessage("encodeRow error: data and columnID count not match 6 vs 2");
-    } catch (IllegalAccessException ignored) {
-    }
-  }
-
-  @Test
   public void testEmptyValues() {
-    try {
-      byte[] bytes = TableCodecV1.encodeRow(new ArrayList<>(), new Object[] {}, false);
-      assertEquals(1, bytes.length);
-      assertEquals(Codec.NULL_FLAG, bytes[0]);
-    } catch (IllegalAccessException ignored) {
-    }
+    byte[] bytes = TableCodecV1.encodeRow(new ArrayList<>(), new Object[] {}, false);
+    assertEquals(1, bytes.length);
+    assertEquals(Codec.NULL_FLAG, bytes[0]);
   }
 
   @Test
   public void testRowCodec() {
     // multiple test was added since encodeRow refuse its cdo
     for (int i = 0; i < 4; i++) {
-      try {
-        byte[] bytes = TableCodecV1.encodeRow(tblInfo.getColumns(), values, tblInfo.isPkHandle());
-        // testing the correctness via decodeRow
-        Row row = TableCodecV1.decodeRow(bytes, 1L, tblInfo);
-        for (int j = 0; j < tblInfo.getColumns().size(); j++) {
-          assertEquals(row.get(j, null), values[j]);
-        }
-      } catch (IllegalAccessException ignored) {
+      byte[] bytes = TableCodecV1.encodeRow(tblInfo.getColumns(), values, tblInfo.isPkHandle());
+      // testing the correctness via decodeRow
+      Row row = TableCodecV1.decodeRow(bytes, 1L, tblInfo);
+      for (int j = 0; j < tblInfo.getColumns().size(); j++) {
+        assertEquals(row.get(j, null), values[j]);
       }
     }
   }

@@ -23,9 +23,20 @@ import java.util.List;
 
 public class TableCodec {
   public static byte[] encodeRow(
-      List<TiColumnInfo> columnInfos, Object[] values, boolean isPkHandle)
+      List<TiColumnInfo> columnInfos,
+      Object[] values,
+      boolean isPkHandle,
+      boolean encodeWithNewRowFormat)
       throws IllegalAccessException {
-    // TODO: check global variable tidb_row_format_version to enable V2 row encoding.
+    if (columnInfos.size() != values.length) {
+      throw new IllegalAccessException(
+          String.format(
+              "encodeRow error: data and columnID count not " + "match %d vs %d",
+              columnInfos.size(), values.length));
+    }
+    if (encodeWithNewRowFormat) {
+      return TableCodecV2.encodeRow(columnInfos, values, isPkHandle);
+    }
     return TableCodecV1.encodeRow(columnInfos, values, isPkHandle);
   }
 

@@ -39,6 +39,8 @@ public class TiDBJDBCClient implements AutoCloseable {
   private static final int DELAY_CLEAN_TABLE_LOCK_DEFAULT = 0;
   private static final String ENABLE_SPLIT_TABLE_KEY = "split-table";
   private static final Boolean ENABLE_SPLIT_TABLE_DEFAULT = false;
+  private static final String TIDB_ROW_FORMAT_VERSION_SQL = "select @@tidb_row_format_version";
+  private static final int TIDB_ROW_FORMAT_VERSION_DEFAULT = 1;
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
   private final Connection connection;
 
@@ -65,6 +67,23 @@ public class TiDBJDBCClient implements AutoCloseable {
     Object enableTableLock =
         configMap.getOrDefault(DELAY_CLEAN_TABLE_LOCK, DELAY_CLEAN_TABLE_LOCK_DEFAULT);
     return (int) enableTableLock;
+  }
+
+  /**
+   * get row format version from tidb
+   *
+   * @return 1 if should not encode and write with new row format.(default) 2 if encode and write
+   *     with new row format.(default on v4.0.0 cluster)
+   * @throws SQLException if a database access error occurs
+   */
+  public int getRowFormatVersion() throws SQLException {
+    List<List<Object>> result = queryTiDBViaJDBC(TIDB_ROW_FORMAT_VERSION_SQL);
+    if (result.isEmpty()) {
+      // default set to 1
+      return 1;
+    } else {
+      return (int) result.get(0).get(0);
+    }
   }
 
   public boolean lockTableWriteLocal(String databaseName, String tableName) throws SQLException {

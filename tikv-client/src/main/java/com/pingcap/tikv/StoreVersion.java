@@ -25,7 +25,7 @@ import org.tikv.kvproto.Metapb;
 
 public class StoreVersion {
 
-  private static final int scale = 10000;
+  private static final int SCALE = 10000;
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
   private int v0 = 9999;
   private int v1 = 9999;
@@ -81,7 +81,7 @@ public class StoreVersion {
   }
 
   private int toIntVersion() {
-    return v0 * scale * scale + v1 * scale + v2;
+    return v0 * SCALE * SCALE + v1 * SCALE + v2;
   }
 
   private boolean greatThan(StoreVersion other) {
