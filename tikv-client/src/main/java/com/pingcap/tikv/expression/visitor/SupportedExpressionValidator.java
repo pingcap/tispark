@@ -16,12 +16,12 @@
 package com.pingcap.tikv.expression.visitor;
 
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.ExpressionBlacklist;
+import com.pingcap.tikv.expression.ExpressionBlocklist;
 
-public class SupportedExpressionValidator extends DefaultVisitor<Boolean, ExpressionBlacklist> {
+public class SupportedExpressionValidator extends DefaultVisitor<Boolean, ExpressionBlocklist> {
   private static final SupportedExpressionValidator validator = new SupportedExpressionValidator();
 
-  public static boolean isSupportedExpression(Expression node, ExpressionBlacklist blacklist) {
+  public static boolean isSupportedExpression(Expression node, ExpressionBlocklist blacklist) {
     if (!node.accept(validator, blacklist)) {
       return false;
     }
@@ -37,7 +37,7 @@ public class SupportedExpressionValidator extends DefaultVisitor<Boolean, Expres
   }
 
   @Override
-  protected Boolean process(Expression node, ExpressionBlacklist blacklist) {
+  protected Boolean process(Expression node, ExpressionBlocklist blacklist) {
     if (blacklist != null && blacklist.isUnsupportedPushDownExpr(getClass())) {
       return false;
     }
