@@ -201,6 +201,8 @@ public class TiSession implements AutoCloseable {
       sessionCachedMap.remove(conf.getPdAddrsString());
     }
 
+    channelFactory.close();
+
     if (tableScanThreadPool != null) {
       tableScanThreadPool.shutdownNow();
     }
