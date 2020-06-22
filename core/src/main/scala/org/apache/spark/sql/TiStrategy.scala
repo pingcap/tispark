@@ -93,10 +93,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private lazy val sqlContext = tiContext.sqlContext
   private lazy val sqlConf: SQLConf = sqlContext.conf
 
-  def typeBlackList: TypeBlacklist = {
-    val blacklistString =
+  def typeBlockList: TypeBlocklist = {
+    val blocklistString =
       sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "")
-    new TypeBlacklist(blacklistString)
+    new TypeBlocklist(blocklistString)
   }
 
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
@@ -164,9 +164,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       }
   }
 
-  private def blacklist: ExpressionBlacklist = {
-    val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
-    new ExpressionBlacklist(blacklistString)
+  private def blocklist: ExpressionBlocklist = {
+    val blocklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
+    new ExpressionBlocklist(blocklistString)
   }
 
   private def allowAggregationPushDown(): Boolean =
@@ -229,12 +229,12 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
         _.getDataType.getType
       }
       .exists {
-        typeBlackList.isUnsupportedType
+        typeBlockList.isUnsupportedType
       }
 
     if (notAllowPushDown) {
       throw new IgnoreUnsupportedTypeException(
-        "Unsupported type found in fields: " + typeBlackList)
+        "Unsupported type found in fields: " + typeBlockList)
     } else {
       if (dagRequest.isDoubleRead) {
         source.dagRequestToRegionTaskExec(dagRequest, output)
@@ -319,7 +319,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def collectLimit(limit: Int, child: LogicalPlan): SparkPlan =
     child match {
       case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _, _))
-          if filters.forall(ExprUtils.isSupportedFilter(_, source, blacklist)) =>
+          if filters.forall(ExprUtils.isSupportedFilter(_, source, blocklist)) =>
         pruneTopNFilterProject(limit, projectList, filters, source, Nil)
       case _ => planLater(child)
     }
@@ -336,7 +336,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     child match {
       case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _, _))
-          if filters.forall(ExprUtils.isSupportedFilter(_, source, blacklist)) =>
+          if filters.forall(ExprUtils.isSupportedFilter(_, source, blocklist)) =>
         val refinedOrders = refineSortOrder(projectList, sortOrder, source)
         if (refinedOrders.isEmpty) {
           execution.TakeOrderedAndProjectExec(limit, sortOrder, project, planLater(child))
@@ -385,7 +385,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       }
     }
     if (refinedSortOrder
-        .exists(order => !ExprUtils.isSupportedOrderBy(order.child, source, blacklist))) {
+        .exists(order => !ExprUtils.isSupportedOrderBy(order.child, source, blocklist))) {
       Option.empty
     } else {
       Some(refinedSortOrder)
@@ -403,7 +403,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     val (pushdownFilters: Seq[Expression], residualFilters: Seq[Expression]) =
       filterPredicates.partition((expression: Expression) =>
-        ExprUtils.isSupportedFilter(expression, source, blacklist))
+        ExprUtils.isSupportedFilter(expression, source, blocklist))
 
     val residualFilter: Option[Expression] =
       residualFilters.reduceLeftOption(catalyst.expressions.And)
@@ -544,9 +544,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       filters: Seq[Expression],
       source: TiDBRelation): Boolean =
     allowAggregationPushDown &&
-      filters.forall(ExprUtils.isSupportedFilter(_, source, blacklist)) &&
-      groupingExpressions.forall(ExprUtils.isSupportedGroupingExpr(_, source, blacklist)) &&
-      aggregateExpressions.forall(ExprUtils.isSupportedAggregate(_, source, blacklist)) &&
+      filters.forall(ExprUtils.isSupportedFilter(_, source, blocklist)) &&
+      groupingExpressions.forall(ExprUtils.isSupportedGroupingExpr(_, source, blocklist)) &&
+      aggregateExpressions.forall(ExprUtils.isSupportedAggregate(_, source, blocklist)) &&
       !aggregateExpressions.exists(_.isDistinct) &&
       // TODO: This is a temporary fix for the issue: https://github.com/pingcap/tispark/issues/1039
       !groupingExpressions.exists(_.isInstanceOf[Alias])
