@@ -48,10 +48,10 @@ import com.pingcap.tikv.types.MySQLType;
 import java.util.HashMap;
 import java.util.Map;
 
-public class TypeBlacklist extends Blacklist {
+public class TypeBlocklist extends Blocklist {
   private static final Map<MySQLType, String> typeToMySQLMap = initialTypeMap();
 
-  public TypeBlacklist(String typesString) {
+  public TypeBlocklist(String typesString) {
     super(typesString);
   }
 
