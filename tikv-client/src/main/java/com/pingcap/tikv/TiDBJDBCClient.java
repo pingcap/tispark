@@ -82,7 +82,14 @@ public class TiDBJDBCClient implements AutoCloseable {
       // default set to 1
       return 1;
     } else {
-      return (int) result.get(0).get(0);
+      Object version = result.get(0).get(0);
+      if (version instanceof String) {
+        return Integer.parseInt((String) version);
+      } else if (version instanceof Number) {
+        return ((Number) version).intValue();
+      } else {
+        return 1;
+      }
     }
   }
 

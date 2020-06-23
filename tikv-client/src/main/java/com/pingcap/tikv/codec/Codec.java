@@ -609,8 +609,7 @@ public class Codec {
     }
 
     static long toPackedLong(LocalDate date) {
-      return Codec.DateCodec.toPackedLong(
-          date.getYear(), date.getMonthOfYear(), date.getDayOfMonth());
+      return DateCodec.toPackedLong(date.getYear(), date.getMonthOfYear(), date.getDayOfMonth());
     }
 
     /**

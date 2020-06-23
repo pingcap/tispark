@@ -73,7 +73,7 @@ public class TableCodecV2Test {
   }
 
   @Test
-  public void testDecode() {
+  public void testColumnDataType() {
     long timezoneOffset = TimeZone.getDefault().getRawOffset();
     List<TestCase> testCases =
         ImmutableList.of(
@@ -100,14 +100,22 @@ public class TableCodecV2Test {
                     .name("t")
                     .addColumn("c1", RealType.FLOAT)
                     .build(),
-                new Object[] {11.99}),
+                new Object[] {11.99f}),
             TestCase.createNew(
                 new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 63, 216, 5, 30, 191, 255, 255, 255},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
                     .addColumn("c1", RealType.FLOAT)
                     .build(),
-                new Object[] {-11.99}),
+                new Object[] {-11.99f}),
+            // test double
+            TestCase.createNew(
+                new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 192, 39, 250, 225, 71, 174, 20, 123},
+                MetaUtils.TableBuilder.newBuilder()
+                    .name("t")
+                    .addColumn("c1", RealType.DOUBLE)
+                    .build(),
+                new Object[] {11.99}),
             // test decimal
             TestCase.createNew(
                 new int[] {128, 0, 1, 0, 0, 0, 1, 5, 0, 6, 4, 139, 38, 172},
@@ -410,27 +418,7 @@ public class TableCodecV2Test {
           TableCodecV2.encodeRow(
               this.tableInfo.getColumns(), this.value, this.tableInfo.isPkHandle());
       debug(this.bytes, bytes);
-      if (this.tableInfo
-          .getColumns()
-          .stream()
-          .noneMatch(
-              x -> {
-                switch (x.getType().getType()) {
-                  case TypeFloat:
-                    // double value may have precision loss
-                    return true;
-                  default:
-                    return false;
-                }
-              })) {
-        assertTrue(equals(this.bytes, bytes));
-      } else {
-        // FIXME: temporary code just for reverse checking...
-        Row res = TableCodecV2.decodeRow(bytes, this.handle, this.tableInfo);
-        Object[] o = fromRow(res, this.tableInfo);
-        debug(this.value, o);
-        assertTrue(deepEquals(this.value, o));
-      }
+      assertTrue(equals(this.bytes, bytes));
     }
 
     private void test() {

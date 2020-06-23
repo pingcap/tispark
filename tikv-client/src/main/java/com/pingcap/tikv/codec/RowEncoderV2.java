@@ -16,9 +16,11 @@
 package com.pingcap.tikv.codec;
 
 import com.pingcap.tikv.ExtendedDateTime;
+import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.Codec.DecimalCodec;
 import com.pingcap.tikv.codec.Codec.EnumCodec;
 import com.pingcap.tikv.exception.CodecException;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
@@ -196,7 +198,13 @@ public class RowEncoderV2 {
         break;
       case TypeFloat:
       case TypeDouble:
-        encodeDouble(cdo, value);
+        if (value instanceof Double) {
+          encodeDouble(cdo, value);
+        } else if (value instanceof Float) {
+          encodeFloat(cdo, value);
+        } else {
+          throw new TypeException("type does not match in encoding, should be float/double");
+        }
         break;
       case TypeString:
       case TypeVarString:
@@ -242,7 +250,7 @@ public class RowEncoderV2 {
       case TypeNewDate:
         throw new CodecException("type should not appear in encoding");
       default:
-        throw new CodecException("invalid data type " + tp.getType().name());
+        throw new CodecException("invalid data type: " + tp.getType().name());
     }
   }
 
@@ -256,6 +264,17 @@ public class RowEncoderV2 {
     } else {
       cdo.writeLong(value);
     }
+  }
+
+  private void encodeFloat(CodecDataOutput cdo, Object value) {
+    long u = Double.doubleToLongBits((float) value);
+    if ((float) value >= 0) {
+      u |= SIGN_MASK;
+    } else {
+      u = ~u;
+    }
+    u = Long.reverseBytes(u);
+    cdo.writeLong(u);
   }
 
   private void encodeDouble(CodecDataOutput cdo, Object value) {
@@ -284,12 +303,12 @@ public class RowEncoderV2 {
       DateTime dateTime = new DateTime(timestamp.getTime());
       int nanos = timestamp.getNanos();
       ExtendedDateTime extendedDateTime = new ExtendedDateTime(dateTime, (nanos / 1000) % 1000);
-      long t = Codec.DateTimeCodec.toPackedLong(extendedDateTime, tz);
+      long t = DateTimeCodec.toPackedLong(extendedDateTime, tz);
       encodeInt(cdo, t);
     } else if (value instanceof Date) {
       ExtendedDateTime extendedDateTime =
           new ExtendedDateTime(new DateTime(((Date) value).getTime()));
-      long t = Codec.DateTimeCodec.toPackedLong(extendedDateTime, tz);
+      long t = DateTimeCodec.toPackedLong(extendedDateTime, tz);
       encodeInt(cdo, t);
     } else {
       throw new CodecException("invalid timestamp type " + value.getClass());

@@ -16,6 +16,8 @@
 package com.pingcap.tikv.codec;
 
 import com.pingcap.tikv.ExtendedDateTime;
+import com.pingcap.tikv.codec.Codec.DateTimeCodec;
+import com.pingcap.tikv.codec.Codec.DecimalCodec;
 import com.pingcap.tikv.codec.Codec.EnumCodec;
 import com.pingcap.tikv.codec.Codec.SetCodec;
 import com.pingcap.tikv.exception.CodecException;
@@ -120,7 +122,7 @@ public class RowDecoderV2 {
   }
 
   private static BigDecimal decodeDecimal(byte[] val) {
-    return Codec.DecimalCodec.readDecimal(new CodecDataInputLittleEndian(val));
+    return DecimalCodec.readDecimal(new CodecDataInputLittleEndian(val));
   }
 
   private static byte[] trimLeadingZeroBytes(byte[] bytes) {
@@ -151,13 +153,13 @@ public class RowDecoderV2 {
 
   private static Timestamp decodeTimestamp(byte[] val, DateTimeZone tz) {
     ExtendedDateTime extendedDateTime =
-        Codec.DateTimeCodec.fromPackedLong(new CodecDataInputLittleEndian(val).readLong(), tz);
+        DateTimeCodec.fromPackedLong(new CodecDataInputLittleEndian(val).readLong(), tz);
     // Even though null is filtered out but data like 0000-00-00 exists
     // according to MySQL JDBC behavior, it can chose the **ROUND** behavior converted to the
     // nearest
     // value which is 0001-01-01.
     if (extendedDateTime == null) {
-      return Codec.DateTimeCodec.createExtendedDateTime(tz, 1, 1, 1, 0, 0, 0, 0).toTimeStamp();
+      return DateTimeCodec.createExtendedDateTime(tz, 1, 1, 1, 0, 0, 0, 0).toTimeStamp();
     }
     return extendedDateTime.toTimeStamp();
   }

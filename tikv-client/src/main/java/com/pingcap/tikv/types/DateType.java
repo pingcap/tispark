@@ -17,7 +17,7 @@
 
 package com.pingcap.tikv.types;
 
-import com.pingcap.tikv.codec.Codec;
+import com.pingcap.tikv.codec.Codec.DateCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
@@ -75,14 +75,14 @@ public class DateType extends AbstractDateTimeType {
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
     Date dt = Converter.convertToDate(value);
-    Codec.DateCodec.writeDateFully(cdo, dt, getTimezone());
+    DateCodec.writeDateFully(cdo, dt, getTimezone());
   }
 
   /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
     Date dt = Converter.convertToDate(value);
-    Codec.DateCodec.writeDateProto(cdo, dt, getTimezone());
+    DateCodec.writeDateProto(cdo, dt, getTimezone());
   }
 
   @Override
