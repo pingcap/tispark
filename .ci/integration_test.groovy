@@ -319,7 +319,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                                     sh "ps aux | grep 'tiflash'"
                                 }
 
-                                timeout(120) {
+                                timeout(360) {
                                     run_test(chunk_suffix)
                                 }
                             } catch (err) {
