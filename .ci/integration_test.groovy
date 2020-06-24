@@ -219,6 +219,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
 
+                        sh "./dev/change-scala-version.sh 2.12"
                         MVN_PROFILE_SCALA_2_12_TEST.each { MVN_TEST_PROFILE ->
                             sh """
                             export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
@@ -227,7 +228,6 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         }
 
                         sh "./dev/change-scala-version.sh 2.11"
-
                         MVN_PROFILE_SCALA_2_11_TEST.each { MVN_TEST_PROFILE ->
                             sh """
                             export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
