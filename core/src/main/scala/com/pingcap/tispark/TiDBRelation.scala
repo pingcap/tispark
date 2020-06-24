@@ -115,7 +115,6 @@ case class TiDBRelation(
     execution.ColumnarRegionTaskExec(
       handlePlan,
       output,
-      TiUtil.getChunkBatchSize(sqlContext),
       dagRequest,
       session.getConf,
       session.getTimestamp,

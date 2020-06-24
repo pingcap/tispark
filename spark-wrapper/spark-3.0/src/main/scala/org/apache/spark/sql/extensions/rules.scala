@@ -50,25 +50,15 @@ class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
 }
 
 case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
-<<<<<<< HEAD:core/src/main/scala/org/apache/spark/sql/extensions/rules.scala
-    sparkSession: SparkSession)
-    extends Rule[LogicalPlan] {
-=======
   sparkSession: SparkSession
 ) extends Rule[LogicalPlan] {
 
   private val tiContext: TiContext = getOrCreateTiContext(sparkSession)
   private lazy val autoLoad = tiContext.autoLoad
->>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233):spark-wrapper/spark-3.0/src/main/scala/org/apache/spark/sql/extensions/rules.scala
   protected lazy val meta: MetaManager = tiContext.meta
-  private lazy val autoLoad = tiContext.autoLoad
   private lazy val tiCatalog = tiContext.tiCatalog
   private lazy val tiSession = tiContext.tiSession
   private lazy val sqlContext = tiContext.sqlContext
-<<<<<<< HEAD
-  protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
-  protected val resolveTiDBRelation: TableIdentifier => LogicalPlan =
-=======
 
   private def getDatabaseFromIdentifier(tableIdentifier: Seq[String]): String = {
     if (tableIdentifier.size == 1) {
@@ -79,7 +69,6 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   }
 
   protected val resolveTiDBRelation: Seq[String] => LogicalPlan =
->>>>>>> support spark-3.0
     tableIdentifier => {
       val dbName = getDatabaseFromIdentifier(tableIdentifier)
       val tableName =
@@ -92,9 +81,11 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
         StatisticsManager.loadStatisticsInfo(table.get)
       }
       val sizeInBytes = StatisticsManager.estimateTableSize(table.get)
-      val tiDBRelation =
-        TiDBRelation(tiSession, TiTableReference(dbName, tableName, sizeInBytes), meta)(
-          sqlContext)
+      val tiDBRelation = TiDBRelation(
+        tiSession,
+        TiTableReference(dbName, tableName, sizeInBytes),
+        meta
+      )(sqlContext)
       // Use SubqueryAlias so that projects and joins can correctly resolve
       // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
       newSubqueryAlias(tableName, LogicalRelation(tiDBRelation))
@@ -103,11 +94,7 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   override def apply(plan: LogicalPlan): LogicalPlan =
     plan transformUp resolveTiDBRelations
 
-<<<<<<< HEAD:core/src/main/scala/org/apache/spark/sql/extensions/rules.scala
-  protected def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
-=======
   private def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
->>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233):spark-wrapper/spark-3.0/src/main/scala/org/apache/spark/sql/extensions/rules.scala
     case i @ InsertIntoStatement(UnresolvedRelation(tableIdentifier), _, _, _, _)
         if tiCatalog
           .catalogOf(if (tableIdentifier.size == 1) None else Some(tableIdentifier.head))
@@ -121,10 +108,6 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   }
 }
 
-<<<<<<< HEAD:core/src/main/scala/org/apache/spark/sql/extensions/rules.scala
-  private def getDatabaseFromIdentifier(tableIdentifier: TableIdentifier): String =
-    tableIdentifier.database.getOrElse(tiCatalog.getCurrentDatabase)
-=======
 class TiDDLRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Rule[LogicalPlan]) {
   override def apply(v1: SparkSession): Rule[LogicalPlan] = {
@@ -134,7 +117,6 @@ class TiDDLRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
       TiDDLRule(getOrCreateTiContext)(v1)
     }
   }
->>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233):spark-wrapper/spark-3.0/src/main/scala/org/apache/spark/sql/extensions/rules.scala
 }
 
 case class NopCommand(name: String) extends Command {}
@@ -142,28 +124,6 @@ case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSessi
     extends Rule[LogicalPlan] {
   protected lazy val tiContext: TiContext = getOrCreateTiContext(sparkSession)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-  override def apply(plan: LogicalPlan): LogicalPlan =
-    plan transformUp {
-      // TODO: support other commands that may concern TiSpark catalog.
-      case sd: ShowDatabasesCommand =>
-        TiShowDatabasesCommand(tiContext, sd)
-      case sd: SetDatabaseCommand =>
-        TiSetDatabaseCommand(tiContext, sd)
-      case st: ShowTablesCommand =>
-        TiShowTablesCommand(tiContext, st)
-      case st: ShowColumnsCommand =>
-        TiShowColumnsCommand(tiContext, st)
-      case dt: DescribeTableCommand =>
-        TiDescribeTablesCommand(tiContext, dt)
-      case dc: DescribeColumnCommand =>
-        TiDescribeColumnCommand(tiContext, dc)
-      case ct: CreateTableLikeCommand =>
-        TiCreateTableLikeCommand(tiContext, ct)
-    }
-=======
-=======
   def getDBAndTableName(ident: Identifier): (String, Option[String]) = {
     ident.namespace() match {
       case Array(db) =>
@@ -189,7 +149,6 @@ case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSessi
     }
   }
 
->>>>>>> Enable catalog test and tpch q15 (#1234)
   override def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
     // TODO: support other commands that may concern TiSpark catalog.
     case sd: ShowNamespaces =>
@@ -205,7 +164,6 @@ case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSessi
     case ct: CreateTableLikeCommand =>
       TiCreateTableLikeCommand(tiContext, ct)
   }
->>>>>>> support spark-3.0
 }
 
 case class TiResolutionRuleV2(getOrCreateTiContext: SparkSession => TiContext)(

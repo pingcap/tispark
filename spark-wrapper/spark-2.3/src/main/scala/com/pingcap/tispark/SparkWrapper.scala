@@ -38,7 +38,6 @@ object SparkWrapper {
       metadata: Metadata): AttributeReference = {
     AttributeReference(name, dataType, nullable, metadata)()
   }
-<<<<<<< HEAD
 
   def callSessionCatalogCreateTable(
       obj: SessionCatalog,
@@ -46,6 +45,4 @@ object SparkWrapper {
       ignoreIfExists: Boolean): Unit = {
     obj.createTable(tableDefinition, ignoreIfExists)
   }
-=======
->>>>>>> support spark-2.3 and scala-2.11 (#1245)
 }

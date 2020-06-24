@@ -146,7 +146,7 @@ object BasicExpression {
 
       // Coprocessor has its own behavior of type promoting and overflow check
       // so we simply remove it from expression and let cop handle it
-      case CheckOverflow(BasicExpression(expr), dec: DecimalType) =>
+      case CheckOverflow(BasicExpression(expr), dec: DecimalType, _) =>
         expr.setDataType(TiConverter.fromSparkType(dec))
         Some(expr)
 

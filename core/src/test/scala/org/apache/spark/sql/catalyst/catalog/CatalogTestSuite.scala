@@ -30,32 +30,19 @@ class CatalogTestSuite extends BaseTiSparkTest {
 
   test("test new catalog") {
     setCurrentDatabase("default")
-<<<<<<< HEAD
-    compSparkWithTiDB(
-      qSpark = s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table",
-      qTiDB = s"select count(*) from tispark_test.full_data_type_table")
-=======
+
     if (catalogPluginMode) {
       runTest(s"select count(*) from tidb_catalog.tispark_test.full_data_type_table")
     } else {
       runTest(s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table")
     }
->>>>>>> catalog plugin based TiSpark (#1246)
-    setCurrentDatabase("tispark_test")
-    runTest(s"select count(*) from full_data_type_table")
   }
 
   test("test db prefix") {
     setCurrentDatabase("default")
-<<<<<<< HEAD
-    compSparkWithTiDB(
-      qSpark = s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table",
-      qTiDB = s"select count(*) from tispark_test.full_data_type_table")
-=======
     if (!catalogPluginMode) {
       explainAndRunTest(s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table")
     }
->>>>>>> catalog plugin based TiSpark (#1246)
   }
 
   test("test explain") {
@@ -173,16 +160,6 @@ class CatalogTestSuite extends BaseTiSparkTest {
       List("tp_enum"),
       List("tp_set"))
     setCurrentDatabase("tispark_test")
-<<<<<<< HEAD
-    explainAndRunTest(
-      "show columns from full_data_type_table",
-      skipJDBC = true,
-      rTiDB = columnNames)
-    runTest(
-      s"show columns from ${dbPrefix}tispark_test.full_data_type_table",
-      skipJDBC = true,
-      rTiDB = columnNames)
-=======
     if (!catalogPluginMode) {
       explainAndRunTest(
         "show columns from full_data_type_table",
@@ -195,18 +172,10 @@ class CatalogTestSuite extends BaseTiSparkTest {
         rTiDB = columnNames
       )
     }
->>>>>>> catalog plugin based TiSpark (#1246)
   }
 
   test("test support create table like") {
     setCurrentDatabase("default")
-<<<<<<< HEAD
-    spark.sql("drop table if exists t")
-    spark.sql(s"create table t like ${dbPrefix}tpch_test.nation")
-    spark.sql("show tables").show
-    checkSparkResultContains("show tables", List("default", "t", "false"))
-    spark.sql("show create table t").show(false)
-=======
     if (!catalogPluginMode) {
       spark.sql("drop table if exists t")
       spark.sql(s"create table t like ${dbPrefix}tpch_test.nation").show
@@ -214,7 +183,6 @@ class CatalogTestSuite extends BaseTiSparkTest {
       checkSparkResultContains("show tables", List("default", "t", "false"))
       spark.sql("show create table t").show(false)
     }
->>>>>>> catalog plugin based TiSpark (#1246)
   }
 
   test("test create table as select") {

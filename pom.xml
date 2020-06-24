@@ -71,8 +71,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-<<<<<<< HEAD
-<<<<<<< HEAD
         <spark.version.compile>2.3.4</spark.version.compile>
         <spark.version.test>2.4.4</spark.version.test>
         <scala.binary.version>2.11</scala.binary.version>
@@ -80,16 +78,6 @@
         <!-- for now, not running scalafmt as part of default verify pipeline -->
         <scalafmt.skip>true</scalafmt.skip>
         <scalatest.version>3.0.8</scalatest.version>
-=======
-        <spark.version.compile>3.0.0-preview</spark.version.compile>
-        <spark.version.test.spark2.4>2.4.4</spark.version.test.spark2.4>
-        <spark.version.test.spark3.0>3.0.0-preview</spark.version.test.spark3.0>
-        <scala.binary.version>2.12</scala.binary.version>
-        <scala.version>2.12.10</scala.version>
-=======
->>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
-        <scalatest.version>3.0.4</scalatest.version>
->>>>>>> support spark-3.0
         <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
         <mysql.connector.version>5.1.44</mysql.connector.version>
         <gpg.keyname>fake gpg keyname</gpg.keyname>
