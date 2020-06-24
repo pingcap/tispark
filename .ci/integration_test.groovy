@@ -219,25 +219,29 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
 
-                        sh "./dev/change-scala-version.sh 2.12"
+                        sh """
+                            export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
+                            mvn clean test ${MVN_PROFILE} -Pspark-3.0-scala-2.12 -Pjenkins-test-spark-3.0 -Dtest=moo ${mvnStr}
+                        """
+
+                        /*sh "./dev/change-scala-version.sh 2.12"
                         MVN_PROFILE_SCALA_2_12_TEST.each { MVN_TEST_PROFILE ->
                             sh """
-                            export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
+                            export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
                             mvn clean test ${MVN_PROFILE} ${MVN_PROFILE_SCALA_2_12} ${MVN_TEST_PROFILE} -Dtest=moo ${mvnStr}
                         """
-                        }
+                        }*/
 
-                        sh "./dev/change-scala-version.sh 2.11"
+                        /*sh "./dev/change-scala-version.sh 2.11"
                         MVN_PROFILE_SCALA_2_11_TEST.each { MVN_TEST_PROFILE ->
                             sh """
-                            export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
+                            export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
                             mvn clean test ${MVN_PROFILE} ${MVN_PROFILE_SCALA_2_11} ${
                                 MVN_TEST_PROFILE
                             } -Dtest=moo ${mvnStr}
-                        """
+                        """*/
                         }
                     }
-                }
 
                 groovy.lang.Closure run_tikvclient_test = { chunk_suffix ->
                     dir("go/src/github.com/pingcap/tispark") {
