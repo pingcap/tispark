@@ -18,11 +18,15 @@ package com.pingcap.tikv.codec;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.pingcap.tikv.ExtendedDateTime;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
+import com.pingcap.tikv.exception.TypeException;
 import gnu.trove.list.array.TIntArrayList;
 import java.math.BigDecimal;
 import java.sql.Date;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.IllegalInstantException;
@@ -605,8 +609,7 @@ public class Codec {
     }
 
     static long toPackedLong(LocalDate date) {
-      return Codec.DateCodec.toPackedLong(
-          date.getYear(), date.getMonthOfYear(), date.getDayOfMonth());
+      return DateCodec.toPackedLong(date.getYear(), date.getMonthOfYear(), date.getDayOfMonth());
     }
 
     /**
@@ -681,6 +684,85 @@ public class Codec {
      */
     public static LocalDate readFromUInt(CodecDataInput cdi) {
       return DateCodec.fromPackedLong(IntegerCodec.readULong(cdi));
+    }
+  }
+
+  public static class EnumCodec {
+
+    public static Integer parseEnumName(String name, List<String> elems)
+        throws ConvertOverflowException {
+      int i = 0;
+      while (i < elems.size()) {
+        if (elems.get(i).equals(name)) {
+          return i + 1;
+        }
+        i = i + 1;
+      }
+
+      // name doesn't exist, maybe an integer?
+      int result;
+      try {
+        result = Integer.parseInt(name);
+      } catch (Exception e) {
+        throw ConvertOverflowException.newEnumException(name);
+      }
+      return parseEnumValue(result, elems);
+    }
+
+    public static Integer parseEnumValue(Integer number, List<String> elems)
+        throws ConvertOverflowException {
+      if (number == 0) {
+        throw ConvertOverflowException.newLowerBoundException(number, 0);
+      }
+
+      if (number > elems.size()) {
+        throw ConvertOverflowException.newUpperBoundException(number, elems.size());
+      }
+
+      return number;
+    }
+
+    public static String readEnumFromIndex(int idx, List<String> elems) {
+      if (idx < 0 || idx >= elems.size()) throw new TypeException("Index is out of range");
+      return elems.get(idx);
+    }
+  }
+
+  public static class SetCodec {
+    private static final long[] SET_INDEX_VALUE = initSetIndexVal();
+    private static final long[] SET_INDEX_INVERT_VALUE = initSetIndexInvertVal();
+
+    private static long[] initSetIndexInvertVal() {
+      long[] tmpArr = new long[64];
+      for (int i = 0; i < 64; i++) {
+        // complement of original value.
+        tmpArr[i] = ~SET_INDEX_VALUE[i];
+      }
+      return tmpArr;
+    }
+
+    private static long[] initSetIndexVal() {
+      long[] tmpArr = new long[64];
+      for (int i = 0; i < 64; i++) {
+        tmpArr[i] = 1L << i;
+      }
+      return tmpArr;
+    }
+
+    public static String readSetFromLong(long number, List<String> elems) {
+      List<String> items = new ArrayList<>();
+      int length = elems.size();
+      for (int i = 0; i < length; i++) {
+        long checker = number & SET_INDEX_VALUE[i];
+        if (checker != 0) {
+          items.add(elems.get(i));
+          number &= SET_INDEX_INVERT_VALUE[i];
+        }
+      }
+      if (number != 0) {
+        throw new TypeException(String.format("invalid number %d for Set %s", number, elems));
+      }
+      return String.join(",", items);
     }
   }
 }
