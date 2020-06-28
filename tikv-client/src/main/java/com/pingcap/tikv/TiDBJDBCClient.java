@@ -80,7 +80,7 @@ public class TiDBJDBCClient implements AutoCloseable {
     List<List<Object>> result = queryTiDBViaJDBC(TIDB_ROW_FORMAT_VERSION_SQL);
     if (result.isEmpty()) {
       // default set to 1
-      return 1;
+      return TIDB_ROW_FORMAT_VERSION_DEFAULT;
     } else {
       Object version = result.get(0).get(0);
       if (version instanceof String) {
@@ -88,7 +88,7 @@ public class TiDBJDBCClient implements AutoCloseable {
       } else if (version instanceof Number) {
         return ((Number) version).intValue();
       } else {
-        return 1;
+        return TIDB_ROW_FORMAT_VERSION_DEFAULT;
       }
     }
   }
