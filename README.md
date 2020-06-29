@@ -199,6 +199,7 @@ The configurations in the table below can be put together with `spark-defaults.c
 | `spark.tispark.index.scan_concurrency` |  `5` | The maximal number of threads for index scan that retrieves row keys (shared among tasks inside each JVM) |
 | `spark.tispark.table.scan_concurrency` |  `512` | The maximal number of threads for table scan (shared among tasks inside each JVM) |
 | `spark.tispark.request.command.priority` |  `Low` | The value options are `Low`, `Normal`, `High`. This setting impacts the resource to get in TiKV. `Low` is recommended because the OLTP workload is not disturbed. |
+| `spark.tispark.coprocess.codec_format` | `chblock` | choose the default codec format for coprocessor, available options are `default`, `chblock`, `chunk` |
 | `spark.tispark.coprocess.streaming` |  `false` | Whether to use streaming for response fetching (experimental) |
 | `spark.tispark.plan.unsupported_pushdown_exprs` |  `` | A comma-separated list of expressions. In case you have a very old version of TiKV, you might disable some of the expression push-down if they are not supported.  |
 | `spark.tispark.plan.downgrade.index_threshold` | `1000000000` | If the range of index scan on one Region exceeds this limit in the original request, downgrade this Region's request to table scan rather than the planned index scan. By default, the downgrade is disabled. |

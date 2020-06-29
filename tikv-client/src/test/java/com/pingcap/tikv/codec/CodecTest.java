@@ -237,7 +237,7 @@ public class CodecTest {
   @Test
   public void writeBytesTest() {
     CodecDataOutput cdo = new CodecDataOutput();
-    Codec.BytesCodec.writeBytes(cdo, "abcdefghijk".getBytes());
+    BytesCodec.writeBytes(cdo, "abcdefghijk".getBytes());
     byte[] result = cdo.toBytes();
     byte[] expected =
         toBytes(
@@ -247,19 +247,19 @@ public class CodecTest {
     assertArrayEquals(expected, result);
 
     cdo.reset();
-    Codec.BytesCodec.writeBytes(cdo, "abcdefghijk".getBytes());
+    BytesCodec.writeBytes(cdo, "abcdefghijk".getBytes());
     result = BytesCodec.readBytes(new CodecDataInput(cdo.toBytes()));
     expected = toBytes(new int[] {97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107});
     assertArrayEquals(expected, result);
 
     cdo.reset();
-    Codec.BytesCodec.writeBytes(cdo, "fYfSp".getBytes());
+    BytesCodec.writeBytes(cdo, "fYfSp".getBytes());
     result = cdo.toBytes();
     expected = toBytes(new int[] {102, 89, 102, 83, 112, 0, 0, 0, 252});
     assertArrayEquals(expected, result);
 
     cdo.reset();
-    Codec.BytesCodec.writeBytesRaw(cdo, "fYfSp".getBytes());
+    BytesCodec.writeBytesRaw(cdo, "fYfSp".getBytes());
     result = cdo.toBytes();
     expected = toBytes(new int[] {102, 89, 102, 83, 112});
     assertArrayEquals(expected, result);

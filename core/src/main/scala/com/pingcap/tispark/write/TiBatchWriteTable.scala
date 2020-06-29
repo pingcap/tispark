@@ -52,6 +52,8 @@ class TiBatchWriteTable(
 
   import com.pingcap.tispark.write.TiBatchWrite._
   @transient private val tiSession = tiContext.tiSession
+  // only fetch row format version once for each batch write process
+  private val enableNewRowFormat: Boolean = tiDBJDBCClient.getRowFormatVersion == 2
   private var tiTableRef: TiTableReference = _
   private var tiDBInfo: TiDBInfo = _
   private var tiTableInfo: TiTableInfo = _
@@ -553,7 +555,11 @@ class TiBatchWriteTable(
       convertedValues.update(i, value)
     }
 
-    TableCodec.encodeRow(tiTableInfo.getColumns, convertedValues, tiTableInfo.isPkHandle)
+    TableCodec.encodeRow(
+      tiTableInfo.getColumns,
+      convertedValues,
+      tiTableInfo.isPkHandle,
+      enableNewRowFormat)
   }
 
   // construct unique index and non-unique index and value to be inserted into TiKV
