@@ -51,6 +51,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class TiKVScanAnalyzer {
@@ -227,7 +229,7 @@ public class TiKVScanAnalyzer {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
-    TiKVScanPlan.Builder planBuilder = TiKVScanPlan.Builder.newBuilder();
+    TiKVScanPlan.Builder planBuilder = TiKVScanPlan.Builder.newBuilder(table.getName());
     ScanSpec result = extractConditions(conditions, table, index);
 
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
@@ -242,6 +244,7 @@ public class TiKVScanAnalyzer {
     if (table.getPartitionInfo() != null) {
       prunedParts = PartitionPruner.prune(table, conditions);
     }
+    planBuilder.setFilters(result.getResidualPredicates()).setPrunedParts(prunedParts);
 
     // table name and columns
     long tableColSize = table.getEstimatedRowSizeInByte() + TABLE_PREFIX_SIZE;
@@ -254,24 +257,25 @@ public class TiKVScanAnalyzer {
         // TiFlash is a columnar storage engine
         long colSize =
             columnList.stream().mapToLong(TiColumnInfo::getSize).sum() + TABLE_PREFIX_SIZE;
-        planBuilder.calculateCostAndEstimateCount(colSize).setStoreType(TiStoreType.TiFlash);
+        return planBuilder
+            .setStoreType(TiStoreType.TiFlash)
+            .calculateCostAndEstimateCount(colSize)
+            .build();
       } else {
-        planBuilder.calculateCostAndEstimateCount(tableColSize);
+        return planBuilder.calculateCostAndEstimateCount(tableColSize).build();
       }
     } else {
       // TiFlash does not support index scan.
       assert (!useTiFlash);
       long indexSize = index.getIndexColumnSize() + TABLE_PREFIX_SIZE + INDEX_PREFIX_SIZE;
-      planBuilder
+      return planBuilder
           .setIndex(index)
           .setDoubleRead(!isCoveringIndex(columnList, index, table.isPkHandle()))
           // table name, index and handle column
           .calculateCostAndEstimateCount(tableStatistics, conditions, irs, indexSize, tableColSize)
-          .setKeyRanges(buildIndexScanKeyRange(table, index, irs, prunedParts));
+          .setKeyRanges(buildIndexScanKeyRange(table, index, irs, prunedParts))
+          .build();
     }
-
-    planBuilder.setFilters(result.getResidualPredicates()).setPrunedParts(prunedParts);
-    return planBuilder.build();
   }
 
   private Pair<Key, Key> buildTableScanKeyRangePerId(long id, IndexRange ir) {
@@ -505,11 +509,15 @@ public class TiKVScanAnalyzer {
       private double estimatedRowCount = -1;
       private List<TiPartitionDef> prunedParts;
       private TiStoreType storeType = TiStoreType.TiKV;
+      private final String tableName;
+      private final Logger logger = LoggerFactory.getLogger(getClass().getName());
 
-      private Builder() {}
+      private Builder(String tableName) {
+        this.tableName = tableName;
+      }
 
-      public static Builder newBuilder() {
-        return new Builder();
+      public static Builder newBuilder(String tableName) {
+        return new Builder(tableName);
       }
 
       public Builder setKeyRanges(Map<Long, List<KeyRange>> keyRanges) {
@@ -568,6 +576,8 @@ public class TiKVScanAnalyzer {
       Builder calculateCostAndEstimateCount(long tableColSize) {
         cost = 100.0;
         cost *= tableColSize * TABLE_SCAN_COST_FACTOR;
+        logger.debug(
+            "[Table:" + tableName + "][TableScan:" + storeType.toString() + "] cost=" + cost);
         return this;
       }
 
@@ -597,6 +607,15 @@ public class TiKVScanAnalyzer {
             cost *= indexSize * INDEX_SCAN_COST_FACTOR;
           }
         }
+        logger.debug(
+            "[Table:"
+                + tableName
+                + "][IndexScan:"
+                + index.getName()
+                + "] cost="
+                + cost
+                + " estimated row count="
+                + estimatedRowCount);
         return this;
       }
     }
