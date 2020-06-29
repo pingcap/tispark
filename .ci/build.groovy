@@ -22,19 +22,17 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                     }
                 }
 
-                stage('Build with scala-2.11') {
-                    dir("go/src/github.com/pingcap/tispark") {
+                stage('Build with spark-2.3-scala-2.11') {
+                    dir("/home/jenkins/agent/git/tispark") {
                         sh """
                         export LC_ALL=en_US.UTF-8
                         export LANG=en_US.UTF-8
                         export LANGUAGE=en_US.UTF-8
                         git checkout -f ${ghprbActualCommit}
-                        ./dev/change-scala-version.sh 2.11
                         mvn clean package -Dmaven.test.skip=true -Pspark-2.3-scala-2.11
                         git diff
-                        git diff --quiet
-                        formatted="\\\$?"
-                        if [[ "\\${formatted}" -eq 1 ]]
+                        formatted="\$?"
+                        if [[ "\${formatted}" -eq 1 ]]
                         then
                            echo "code format error, please run the following commands:"
                            echo "   mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false"
@@ -45,8 +43,8 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                     }
                 }
 
-                stage('Build with scala-2.12') {
-                    dir("go/src/github.com/pingcap/tispark") {
+                stage('Build with spark-3.0-scala-2.12') {
+                    dir("/home/jenkins/agent/git/tispark") {
                         sh """
                         export LC_ALL=en_US.UTF-8
                         export LANG=en_US.UTF-8
@@ -54,10 +52,10 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                         git checkout -f ${ghprbActualCommit}
                         ./dev/change-scala-version.sh 2.12
                         mvn clean package -Dmaven.test.skip=true -Pspark-3.0-scala-2.12
+                        ./dev/change-scala-version.sh 2.11
                         git diff
-                        git diff --quiet
-                        formatted="\\\$?"
-                        if [[ "\\${formatted}" -eq 1 ]]
+                        formatted="\$?"
+                        if [[ "\${formatted}" -eq 1 ]]
                         then
                            echo "code format error, please run the following commands:"
                            echo "   mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false"
