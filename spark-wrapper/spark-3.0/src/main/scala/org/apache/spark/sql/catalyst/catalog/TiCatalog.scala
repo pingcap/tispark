@@ -23,7 +23,16 @@ import com.pingcap.tispark.MetaManager
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{NoSuchNamespaceException, NoSuchTableException}
-import org.apache.spark.sql.connector.catalog.{Identifier, NamespaceChange, SupportsNamespaces, Table, TableCapability, TableCatalog, TableChange, V1Table}
+import org.apache.spark.sql.connector.catalog.{
+  Identifier,
+  NamespaceChange,
+  SupportsNamespaces,
+  Table,
+  TableCapability,
+  TableCatalog,
+  TableChange,
+  V1Table
+}
 import org.apache.spark.sql.connector.expressions.{FieldReference, LogicalExpressions, Transform}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
@@ -100,9 +109,10 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   private var _current_namespace: Option[Array[String]] = None
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
-  def setCurrentNamespace(namespace: Option[Array[String]]): Unit = synchronized {
-    _current_namespace = namespace
-  }
+  def setCurrentNamespace(namespace: Option[Array[String]]): Unit =
+    synchronized {
+      _current_namespace = namespace
+    }
 
   override def initialize(name: String, options: CaseInsensitiveStringMap): Unit = {
     _name = Some(name)
@@ -115,12 +125,13 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
   override def name(): String = _name.get
 
-  override def namespaceExists(namespace: Array[String]): Boolean = namespace match {
-    case Array(db) =>
-      meta.get.getDatabase(db).isDefined
-    case _ =>
-      false
-  }
+  override def namespaceExists(namespace: Array[String]): Boolean =
+    namespace match {
+      case Array(db) =>
+        meta.get.getDatabase(db).isDefined
+      case _ =>
+        false
+    }
 
   override def listNamespaces(): Array[Array[String]] =
     meta.get.getDatabases.map(dbInfo => Array(dbInfo.getName)).toArray
@@ -161,7 +172,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     val dbName =
       currentNS match {
         case Array(db) => db
-        case _         => throw new NoSuchTableException(ident)
+        case _ => throw new NoSuchTableException(ident)
       }
 
     val table = meta.get
@@ -173,8 +184,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
       TableIdentifier(ident.name(), Some(dbName)),
       CatalogTableType.EXTERNAL,
       CatalogStorageFormat.empty,
-      schema
-    )
+      schema)
 
     val ret = TiDBTable(t)
     // add BATCH_READ to just keep compiler happy
@@ -201,10 +211,11 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   override def toString: String = s"TiCatalog($name)"
 
   // Following are unimplemented.
-  override def createTable(ident: Identifier,
-                           schema: StructType,
-                           partitions: Array[Transform],
-                           properties: java.util.Map[String, String]): Table = ???
+  override def createTable(
+      ident: Identifier,
+      schema: StructType,
+      partitions: Array[Transform],
+      properties: java.util.Map[String, String]): Table = ???
 
   override def alterTable(ident: Identifier, changes: TableChange*): Table = ???
 
@@ -214,7 +225,9 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
   override def dropNamespace(namespace: Array[String]): Boolean = ???
 
-  override def createNamespace(namespace: Array[String], metadata: util.Map[String, String]): Unit =
+  override def createNamespace(
+      namespace: Array[String],
+      metadata: util.Map[String, String]): Unit =
     ???
 
   override def alterNamespace(namespace: Array[String], changes: NamespaceChange*): Unit = ???

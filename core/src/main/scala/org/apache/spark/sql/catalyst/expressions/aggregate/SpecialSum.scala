@@ -77,11 +77,9 @@ case class SpecialSum(child: Expression, retType: DataType, initVal: Any)
   override lazy val initialValues: Seq[Expression] = {
     val longVal = initVal match {
       case i: Integer => i.toLong
-      case other      => other
+      case other => other
     }
-    Seq(
-      /* sum = */ Literal.create(longVal, sumDataType)
-    )
+    Seq( /* sum = */ Literal.create(longVal, sumDataType))
   }
 
   override lazy val updateExpressions: Seq[Expression] = {

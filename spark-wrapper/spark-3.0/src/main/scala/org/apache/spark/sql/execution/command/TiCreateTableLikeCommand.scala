@@ -15,7 +15,12 @@
 package org.apache.spark.sql.execution.command
 
 import org.apache.spark.sql.{Row, SparkSession, TiContext}
-import org.apache.spark.sql.catalyst.catalog.{CatalogTable, CatalogTableType, CatalogUtils, TiSessionCatalog}
+import org.apache.spark.sql.catalyst.catalog.{
+  CatalogTable,
+  CatalogTableType,
+  CatalogUtils,
+  TiSessionCatalog
+}
 
 case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableLikeCommand)
     extends RunnableCommand {
@@ -27,8 +32,8 @@ case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableL
     val newProvider = if (sourceTableDesc.tableType == CatalogTableType.VIEW) {
       Some(sparkSession.sessionState.conf.defaultDataSourceName)
     } else if (catalog
-                 .catalogOf(sourceTableDesc.identifier.database)
-                 .exists(_.isInstanceOf[TiSessionCatalog])) {
+        .catalogOf(sourceTableDesc.identifier.database)
+        .exists(_.isInstanceOf[TiSessionCatalog])) {
       // TODO: use tikv datasource
       Some(sparkSession.sessionState.conf.defaultDataSourceName)
     } else {
@@ -50,8 +55,7 @@ case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableL
         schema = sourceTableDesc.schema,
         provider = newProvider,
         partitionColumnNames = sourceTableDesc.partitionColumnNames,
-        bucketSpec = sourceTableDesc.bucketSpec
-      )
+        bucketSpec = sourceTableDesc.bucketSpec)
 
     catalog.createTable(newTableDesc, delegate.ifNotExists)
     Seq.empty[Row]

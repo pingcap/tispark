@@ -10,7 +10,7 @@
     <dependencySets>
         <dependencySet>
             <includes>
-                <include>com.pingcap.tispark:tispark-core-internal_2.12:jar</include>
+                <include>com.pingcap.tispark:tispark-core-internal_2.11:jar</include>
                 <include>com.pingcap.tikv:tikv-client:jar</include>
                 <include>mysql:mysql-connector-java:jar</include>
             </includes>
@@ -23,7 +23,7 @@
             <directory>
                 ${project.parent.basedir}/spark-wrapper/spark-2.3/target/classes/
             </directory>
-            <outputDirectory>resources/spark-wrapper-spark-2.3_2.12</outputDirectory>
+            <outputDirectory>resources/spark-wrapper-spark-2.3_2.11</outputDirectory>
             <includes>
                 <include>**/*</include>
             </includes>
@@ -32,7 +32,7 @@
             <directory>
                 ${project.parent.basedir}/spark-wrapper/spark-2.4/target/classes/
             </directory>
-            <outputDirectory>resources/spark-wrapper-spark-2.4_2.12</outputDirectory>
+            <outputDirectory>resources/spark-wrapper-spark-2.4_2.11</outputDirectory>
             <includes>
                 <include>**/*</include>
             </includes>
@@ -41,7 +41,7 @@
             <directory>
                 ${project.parent.basedir}/spark-wrapper/spark-3.0/target/classes/
             </directory>
-            <outputDirectory>resources/spark-wrapper-spark-3.0_2.12</outputDirectory>
+            <outputDirectory>resources/spark-wrapper-spark-3.0_2.11</outputDirectory>
             <includes>
                 <include>**/*</include>
             </includes>

@@ -14,6 +14,7 @@
  */
 package com.pingcap.tispark
 
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.types.{DataType, Metadata}
@@ -39,10 +40,13 @@ object SparkWrapper {
     AttributeReference(name, dataType, nullable, metadata)()
   }
 
-  def callSessionCatalogCreateTable(
-      obj: SessionCatalog,
-      tableDefinition: CatalogTable,
-      ignoreIfExists: Boolean): Unit = {
-    obj.createTable(tableDefinition, ignoreIfExists)
+  def callExplainCommand(df: DataFrame): String = {
+    import org.apache.spark.sql.execution.command.ExplainCommand
+    df.sparkSession.sessionState
+      .executePlan(ExplainCommand(df.queryExecution.logical))
+      .executedPlan
+      .executeCollect()
+      .map(_.getString(0))
+      .mkString("\n")
   }
 }

@@ -37,8 +37,9 @@ class TiParserFactory(getOrCreateTiContext: SparkSession => TiContext)
   }
 }
 
-case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession,
-                                                                     delegate: ParserInterface)
+case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
+    sparkSession: SparkSession,
+    delegate: ParserInterface)
     extends ParserInterface {
   private lazy val tiContext = getOrCreateTiContext(sparkSession)
   private lazy val internal = new SparkSqlParser(sparkSession.sqlContext.conf)

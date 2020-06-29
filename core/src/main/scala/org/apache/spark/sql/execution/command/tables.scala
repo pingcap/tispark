@@ -19,13 +19,13 @@ import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession, TiContext}
 
 /**
-  * CHECK Spark [[org.apache.spark.sql.execution.command.ShowTablesCommand]]
-  *
+ * CHECK Spark [[org.apache.spark.sql.execution.command.ShowTablesCommand]]
+ *
   * @param tiContext tiContext which contains our catalog info
-  * @param delegate original ShowTablesCommand
-  */
+ * @param delegate original ShowTablesCommand
+ */
 case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand)
-  extends TiCommand(delegate) {
+    extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val db = delegate.databaseName.getOrElse(tiCatalog.getCurrentDatabase)
     // Show the information of tables.
@@ -47,18 +47,19 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
   }
 }
 
-class DescribeTableInfo(val tableName: TableIdentifier,
-                        val partitionSpec: TablePartitionSpec,
-                        val isExtended: Boolean) {}
+class DescribeTableInfo(
+    val tableName: TableIdentifier,
+    val partitionSpec: TablePartitionSpec,
+    val isExtended: Boolean) {}
 
 /**
-  * CHECK Spark [[org.apache.spark.sql.execution.command.ShowColumnsCommand]]
-  *
+ * CHECK Spark [[org.apache.spark.sql.execution.command.ShowColumnsCommand]]
+ *
   * @param tiContext tiContext which contains our catalog info
-  * @param delegate original ShowColumnsCommand
-  */
+ * @param delegate original ShowColumnsCommand
+ */
 case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsCommand)
-  extends TiCommand(delegate) {
+    extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val databaseName = delegate.databaseName
     val tableName = delegate.tableName
@@ -68,8 +69,7 @@ case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsComma
       case None => tableName
       case Some(db) if tableName.database.exists(!resolver(_, db)) =>
         throw new AnalysisException(
-          s"SHOW COLUMNS with conflicting databases: '$db' != '${tableName.database.get}'"
-        )
+          s"SHOW COLUMNS with conflicting databases: '$db' != '${tableName.database.get}'")
       case Some(db) => TableIdentifier(tableName.identifier, Some(db))
     }
     val table = catalog.getTempViewOrPermanentTableMetadata(lookupTable)

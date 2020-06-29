@@ -164,13 +164,11 @@ class CatalogTestSuite extends BaseTiSparkTest {
       explainAndRunTest(
         "show columns from full_data_type_table",
         skipJDBC = true,
-        rTiDB = columnNames
-      )
+        rTiDB = columnNames)
       runTest(
         s"show columns from ${dbPrefix}tispark_test.full_data_type_table",
         skipJDBC = true,
-        rTiDB = columnNames
-      )
+        rTiDB = columnNames)
     }
   }
 

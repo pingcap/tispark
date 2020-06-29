@@ -14,9 +14,10 @@
  */
 package com.pingcap.tispark
 
-import org.apache.spark.sql.catalyst.catalog._
+import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
+import org.apache.spark.sql.execution.ExplainMode
 import org.apache.spark.sql.types.{DataType, Metadata}
 
 object SparkWrapper {
@@ -32,10 +33,21 @@ object SparkWrapper {
     Alias(child, name)()
   }
 
-  def newAttributeReference(name: String,
-                            dataType: DataType,
-                            nullable: Boolean,
-                            metadata: Metadata): AttributeReference = {
+  def newAttributeReference(
+      name: String,
+      dataType: DataType,
+      nullable: Boolean,
+      metadata: Metadata): AttributeReference = {
     AttributeReference(name, dataType, nullable, metadata)()
+  }
+
+  def callExplainCommand(df: DataFrame): String = {
+    import org.apache.spark.sql.execution.command.ExplainCommand
+    df.sparkSession.sessionState
+      .executePlan(ExplainCommand(df.queryExecution.logical, ExplainMode.fromString("simple")))
+      .executedPlan
+      .executeCollect()
+      .map(_.getString(0))
+      .mkString("\n")
   }
 }

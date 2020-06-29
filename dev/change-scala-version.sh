@@ -54,6 +54,10 @@ sed_i() {
 export -f sed_i
 
 BASEDIR=$(dirname $0)/..
+
+cd $BASEDIR
+mvn clean -DskipTests
+
 find "$BASEDIR" -name 'pom.xml' -not -path '*target*' -print \
   -exec bash -c "sed_i 's/\(artifactId.*\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' {}" \;
 
@@ -62,3 +66,6 @@ ASSEMBLY="$BASEDIR/assembly/src/main/assembly/assembly.xml"
 echo "$ASSEMBLY"
 sed_i 's/\(spark-wrapper-spark-.*\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$ASSEMBLY"
 sed_i 's/\(tispark-core-internal.*\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$ASSEMBLY"
+
+# Also update <scala.binary.version> in build.groovy
+sed_i 's/\(mvn mvn-scalafmt\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$BASEDIR/.ci/build.groovy"

@@ -21,9 +21,10 @@ import java.net.{URL, URLClassLoader}
 
 import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{SparkSession, TiContext}
+import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
 import org.apache.spark.sql.catalyst.catalog.{BucketSpec, CatalogStorageFormat, CatalogTable, CatalogTableType, ExternalCatalog, SessionCatalog, TiSessionCatalog}
+import org.apache.spark.sql.catalyst.expressions.BasicExpression.TiExpression
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, NamedExpression, UnsafeRow}
 import org.apache.spark.sql.catalyst.parser.ParserInterface
@@ -35,10 +36,10 @@ import org.slf4j.LoggerFactory
 import scala.reflect.ClassTag
 
 /**
-  * ReflectionUtil is designed to reflect methods which differ across
-  * different Spark versions. Compatibility issues should be solved by
-  * reflections in future.
-  */
+ * ReflectionUtil is designed to reflect methods which differ across
+ * different Spark versions. Compatibility issues should be solved by
+ * reflections in future.
+ */
 object ReflectionUtil {
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -52,6 +53,7 @@ object ReflectionUtil {
   private val TI_RESOLUTION_RULE_FACTORY_CLASS =
     "org.apache.spark.sql.extensions.TiResolutionRuleFactory"
   private val TI_DDL_RULE_FACTORY_CLASS = "org.apache.spark.sql.extensions.TiDDLRuleFactory"
+  private val TI_BASIC_EXPRESSITON_WRAPPER_CLASS = "org.apache.spark.sql.catalyst.expressions.BasicExpressionWrapper"
 
   // In Spark 2.3.0 and 2.3.1 the method declaration is:
   // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
@@ -66,9 +68,8 @@ object ReflectionUtil {
   //
   // Hereby we use reflection to support different Spark versions.
   case class ReflectionMapPartitionWithIndexInternal(
-                                                      rdd: RDD[InternalRow],
-                                                      internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
-                                                    ) {
+      rdd: RDD[InternalRow],
+      internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]) {
     // Spark HDP Release may not compatible with official Release
     // see https://github.com/pingcap/tispark/issues/1006
     def invoke(): RDD[InternalRow] = {
@@ -84,8 +85,7 @@ object ReflectionUtil {
                 case _: Throwable =>
                   throw ScalaReflectionException(
                     s"Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
-                      .format(TiSparkInfo.SPARK_VERSION)
-                  )
+                      .format(TiSparkInfo.SPARK_VERSION))
               }
           }
 
@@ -100,8 +100,7 @@ object ReflectionUtil {
                 case _: Throwable =>
                   throw ScalaReflectionException(
                     s"Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
-                      .format(TiSparkInfo.SPARK_VERSION)
-                  )
+                      .format(TiSparkInfo.SPARK_VERSION))
               }
           }
       }
@@ -112,25 +111,23 @@ object ReflectionUtil {
 
   // Spark-2.3.0 & Spark-2.3.1
   private def reflectMapPartitionsWithIndexInternalV1(
-                                                       rdd: RDD[InternalRow],
-                                                       internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
-                                                     ): (String, Method) = {
+      rdd: RDD[InternalRow],
+      internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow])
+      : (String, Method) = {
     (
       "v1",
       classOf[RDD[InternalRow]].getDeclaredMethod(
         "mapPartitionsWithIndexInternal",
         classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
         classOf[Boolean],
-        classOf[ClassTag[UnsafeRow]]
-      )
-      )
+        classOf[ClassTag[UnsafeRow]]))
   }
 
   // >= Spark-2.3.2
   private def reflectMapPartitionsWithIndexInternalV2(
-                                                       rdd: RDD[InternalRow],
-                                                       internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
-                                                     ): (String, Method) = {
+      rdd: RDD[InternalRow],
+      internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow])
+      : (String, Method) = {
     (
       "v2",
       classOf[RDD[InternalRow]].getDeclaredMethod(
@@ -138,17 +135,15 @@ object ReflectionUtil {
         classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
         classOf[Boolean],
         classOf[Boolean],
-        classOf[ClassTag[UnsafeRow]]
-      )
-      )
+        classOf[ClassTag[UnsafeRow]]))
   }
 
   private def invokeMapPartitionsWithIndexInternal(
-                                                    version: String,
-                                                    method: Method,
-                                                    rdd: RDD[InternalRow],
-                                                    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
-                                                  ): RDD[InternalRow] = {
+      version: String,
+      method: Method,
+      rdd: RDD[InternalRow],
+      internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow])
+      : RDD[InternalRow] = {
     version match {
       case "v1" =>
         // Spark-2.3.0 & Spark-2.3.1
@@ -157,8 +152,7 @@ object ReflectionUtil {
             rdd,
             internalRowToUnsafeRowWithIndex,
             Boolean.box(false),
-            ClassTag.apply(classOf[UnsafeRow])
-          )
+            ClassTag.apply(classOf[UnsafeRow]))
           .asInstanceOf[RDD[InternalRow]]
 
       case _ =>
@@ -169,8 +163,7 @@ object ReflectionUtil {
             internalRowToUnsafeRowWithIndex,
             Boolean.box(false),
             Boolean.box(false),
-            ClassTag.apply(classOf[UnsafeRow])
-          )
+            ClassTag.apply(classOf[UnsafeRow]))
           .asInstanceOf[RDD[InternalRow]]
     }
   }
@@ -182,18 +175,15 @@ object ReflectionUtil {
 
     val sparkWrapperClassURL: URL = if (tisparkClassPath.isDirectory) {
       val classDir = new File(
-        s"${tisparkClassPath.getAbsolutePath}/../../../spark-wrapper/spark-${TiSparkInfo.SPARK_MAJOR_VERSION}/target/classes/"
-      )
+        s"${tisparkClassPath.getAbsolutePath}/../../../spark-wrapper/spark-${TiSparkInfo.SPARK_MAJOR_VERSION}/target/classes/")
       if (!classDir.exists()) {
         throw new Exception(
-          "cannot find spark wrapper classes! please compile the spark-wrapper project first!"
-        )
+          "cannot find spark wrapper classes! please compile the spark-wrapper project first!")
       }
       classDir.toURI.toURL
     } else {
       new URL(
-        s"jar:$tisparkClassUrl!/resources/spark-wrapper-spark-${TiSparkInfo.SPARK_MAJOR_VERSION}/"
-      )
+        s"jar:$tisparkClassUrl!/resources/spark-wrapper-spark-${TiSparkInfo.SPARK_MAJOR_VERSION}/")
     }
     logger.info(s"spark wrapper class url: ${sparkWrapperClassURL.toString}")
 
@@ -232,16 +222,14 @@ object ReflectionUtil {
       .asInstanceOf[TiSessionCatalog]
   }
 
-  def callTiAggregationImplUnapply(
-                                    plan: LogicalPlan
-                                  ): Option[(Seq[NamedExpression], Seq[AggregateExpression], Seq[NamedExpression], LogicalPlan)] = {
+  def callTiAggregationImplUnapply(plan: LogicalPlan): Option[
+    (Seq[NamedExpression], Seq[AggregateExpression], Seq[NamedExpression], LogicalPlan)] = {
     classLoader
       .loadClass(TI_AGGREGATION_IMPL_CLASS)
       .getDeclaredMethod("unapply", classOf[LogicalPlan])
       .invoke(null, plan)
       .asInstanceOf[Option[
-      (Seq[NamedExpression], Seq[AggregateExpression], Seq[NamedExpression], LogicalPlan)
-      ]]
+        (Seq[NamedExpression], Seq[AggregateExpression], Seq[NamedExpression], LogicalPlan)]]
   }
 
   def newSubqueryAlias(identifier: String, child: LogicalPlan): SubqueryAlias = {
@@ -260,10 +248,11 @@ object ReflectionUtil {
       .asInstanceOf[Alias]
   }
 
-  def newAttributeReference(name: String,
-                            dataType: DataType,
-                            nullable: java.lang.Boolean = false,
-                            metadata: Metadata = Metadata.empty): AttributeReference = {
+  def newAttributeReference(
+      name: String,
+      dataType: DataType,
+      nullable: java.lang.Boolean = false,
+      metadata: Metadata = Metadata.empty): AttributeReference = {
     classLoader
       .loadClass(SPARK_WRAPPER_CLASS)
       .getDeclaredMethod(
@@ -271,15 +260,21 @@ object ReflectionUtil {
         classOf[String],
         classOf[DataType],
         classOf[Boolean],
-        classOf[Metadata]
-      )
+        classOf[Metadata])
       .invoke(null, name, dataType, nullable, metadata)
       .asInstanceOf[AttributeReference]
   }
 
-  def newTiParser(
-                   getOrCreateTiContext: SparkSession => TiContext
-                 ): (SparkSession, ParserInterface) => ParserInterface = {
+  def callExplainCommand(df: DataFrame): String = {
+    classLoader
+      .loadClass(SPARK_WRAPPER_CLASS)
+      .getDeclaredMethod("callExplainCommand", classOf[DataFrame])
+      .invoke(null, df)
+      .asInstanceOf[String]
+  }
+
+  def newTiParser(getOrCreateTiContext: SparkSession => TiContext)
+      : (SparkSession, ParserInterface) => ParserInterface = {
     classLoader
       .loadClass(TI_PARSER_FACTORY_CLASS)
       .getDeclaredConstructor(classOf[SparkSession => TiContext])
@@ -288,8 +283,7 @@ object ReflectionUtil {
   }
 
   def newTiResolutionRule(
-                           getOrCreateTiContext: SparkSession => TiContext
-                         ): SparkSession => Rule[LogicalPlan] = {
+      getOrCreateTiContext: SparkSession => TiContext): SparkSession => Rule[LogicalPlan] = {
     classLoader
       .loadClass(TI_RESOLUTION_RULE_FACTORY_CLASS)
       .getDeclaredConstructor(classOf[SparkSession => TiContext])
@@ -298,12 +292,19 @@ object ReflectionUtil {
   }
 
   def newTiDDLRule(
-                    getOrCreateTiContext: SparkSession => TiContext
-                  ): SparkSession => Rule[LogicalPlan] = {
+      getOrCreateTiContext: SparkSession => TiContext): SparkSession => Rule[LogicalPlan] = {
     classLoader
       .loadClass(TI_DDL_RULE_FACTORY_CLASS)
       .getDeclaredConstructor(classOf[SparkSession => TiContext])
       .newInstance(getOrCreateTiContext)
       .asInstanceOf[SparkSession => Rule[LogicalPlan]]
+  }
+
+  def convertToTiExpr(expr: Expression): Option[TiExpression] = {
+    classLoader
+      .loadClass(TI_BASIC_EXPRESSITON_WRAPPER_CLASS)
+      .getDeclaredMethod("convertToTiExpr", classOf[Expression])
+      .invoke(null, expr)
+      .asInstanceOf[Option[TiExpression]]
   }
 }

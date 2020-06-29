@@ -36,13 +36,13 @@ import org.slf4j.Logger
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * This trait manages basic TiSpark, Spark JDBC, TiDB JDBC
-  * tidbConn resource and relevant configurations.
-  *
+ * This trait manages basic TiSpark, Spark JDBC, TiDB JDBC
+ * tidbConn resource and relevant configurations.
+ *
   * `tidb_config.properties` must be provided in test resources folder
-  */
+ */
 trait SharedSQLContext
-  extends SparkFunSuite
+    extends SparkFunSuite
     with Eventually
     with Logging
     with SharedSparkContext {
@@ -135,9 +135,9 @@ trait SharedSQLContext
   }
 
   protected def loadSQLFile(
-                             directory: String,
-                             file: String,
-                             checkTiFlashReplica: Boolean = false): Unit = {
+      directory: String,
+      file: String,
+      checkTiFlashReplica: Boolean = false): Unit = {
     val fullFileName = s"$directory/$file.sql"
     initializeJDBCUrl()
     try {
@@ -177,8 +177,8 @@ trait SharedSQLContext
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
 
   /**
-    * The [[TestSparkSession]] to use for all tests in this suite.
-    */
+   * The [[TestSparkSession]] to use for all tests in this suite.
+   */
   protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
   protected def tidbUser: String = SharedSQLContext.tidbUser
@@ -198,14 +198,14 @@ trait SharedSQLContext
   protected def pdAddresses: String = SharedSQLContext.pdAddresses
 
   /**
-    * Initialize the [[TestSparkSession]].  Generally, this is just called from
-    * beforeAll; however, in test using styles other than FunSuite, there is
-    * often code that relies on the session between test group constructs and
-    * the actual tests, which may need this session.  It is purely a semantic
-    * difference, but semantically, it makes more sense to call
-    * 'initializeSession' between a 'describe' and an 'it' call than it does to
-    * call 'beforeAll'.
-    */
+   * Initialize the [[TestSparkSession]].  Generally, this is just called from
+   * beforeAll; however, in test using styles other than FunSuite, there is
+   * often code that relies on the session between test group constructs and
+   * the actual tests, which may need this session.  It is purely a semantic
+   * difference, but semantically, it makes more sense to call
+   * 'initializeSession' between a 'describe' and an 'it' call than it does to
+   * call 'beforeAll'.
+   */
   protected def initializeSparkSession(): Unit =
     synchronized {
       if (_sparkSession == null) {
@@ -246,8 +246,8 @@ trait SharedSQLContext
   }
 
   /**
-    * Stop the underlying resources, if any.
-    */
+   * Stop the underlying resources, if any.
+   */
   def stop(): Unit = {
     tiContextCache.clear()
 
@@ -345,7 +345,7 @@ trait SharedSQLContext
     } else if ("auto".equals(loadData)) {
       val databases = queryTiDBViaJDBC("show databases").map(a => a.head)
       if (databases.contains("tispark_test") && databases.contains("tpch_test") && databases
-        .contains("resolveLock_test")) {
+          .contains("resolveLock_test")) {
         false
       } else {
         true
@@ -503,8 +503,7 @@ object SharedSQLContext extends Logging {
         prop
           .put(
             "spark.sql.catalog.tidb_catalog",
-            "org.apache.spark.sql.catalyst.catalog.TiCatalog"
-          )
+            "org.apache.spark.sql.catalyst.catalog.TiCatalog")
       }
       if (!prop.containsKey("spark.sql.catalog.tidb_catalog.pd.address")) {
         prop.put("spark.sql.catalog.tidb_catalog.pd.address", pdAddresses)
@@ -538,8 +537,7 @@ object SharedSQLContext extends Logging {
         tidbConf
           .put(
             "spark.sql.catalog.tidb_catalog",
-            "org.apache.spark.sql.catalyst.catalog.TiCatalog"
-          )
+            "org.apache.spark.sql.catalyst.catalog.TiCatalog")
       }
       if (!tidbConf.containsKey("spark.sql.catalog.tidb_catalog.pd.address")) {
         tidbConf.put("spark.sql.catalog.tidb_catalog.pd.address", pdAddresses)

@@ -20,7 +20,12 @@ import org.apache.spark.sql.catalyst.parser._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
 import org.apache.spark.sql.execution.SparkSqlParser
-import org.apache.spark.sql.execution.command.{CacheTableCommand, CreateViewCommand, ExplainCommand, UncacheTableCommand}
+import org.apache.spark.sql.execution.command.{
+  CacheTableCommand,
+  CreateViewCommand,
+  ExplainCommand,
+  UncacheTableCommand
+}
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{SparkSession, TiContext}
 
@@ -31,8 +36,9 @@ class TiParserFactory(getOrCreateTiContext: SparkSession => TiContext)
   }
 }
 
-case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession,
-                                                                     delegate: ParserInterface)
+case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
+    sparkSession: SparkSession,
+    delegate: ParserInterface)
     extends ParserInterface {
   private lazy val tiContext = getOrCreateTiContext(sparkSession)
   private lazy val internal = new SparkSqlParser(sparkSession.sqlContext.conf)
@@ -40,8 +46,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
   private def qualifyTableIdentifierInternal(tableIdentifier: TableIdentifier): TableIdentifier =
     TableIdentifier(
       tableIdentifier.table,
-      Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase))
-    )
+      Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase)))
 
   /**
    * Determines whether a table specified by tableIdentifier is
@@ -69,10 +74,8 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
       // When getting temp view, we leverage legacy catalog.
       i.copy(r.copy(qualifyTableIdentifierInternal(tableIdentifier)))
     case w @ With(_, cteRelations) =>
-      w.copy(
-        cteRelations = cteRelations
-          .map(p => (p._1, p._2.transform(qualifyTableIdentifier).asInstanceOf[SubqueryAlias]))
-      )
+      w.copy(cteRelations = cteRelations
+        .map(p => (p._1, p._2.transform(qualifyTableIdentifier).asInstanceOf[SubqueryAlias])))
     case cv @ CreateViewCommand(_, _, _, _, _, child, _, _, _) =>
       cv.copy(child = child transform qualifyTableIdentifier)
     case e @ ExplainCommand(plan, _, _, _) =>

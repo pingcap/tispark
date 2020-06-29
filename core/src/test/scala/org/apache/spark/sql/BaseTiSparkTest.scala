@@ -21,10 +21,10 @@ import java.sql.Statement
 
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient, Version}
+import com.pingcap.tispark.utils.ReflectionUtil
 import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
-import org.apache.spark.sql.execution.ExplainMode
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.test.SharedSQLContext
 
@@ -133,9 +133,10 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     resList.toList
   }
 
-  protected def createOrReplaceTempView(dbName: String,
-                                        viewName: String,
-                                        postfix: String = "_j"): Unit =
+  protected def createOrReplaceTempView(
+      dbName: String,
+      viewName: String,
+      postfix: String = "_j"): Unit =
     spark.read
       .format("jdbc")
       .option(JDBCOptions.JDBC_URL, jdbcUrl)
@@ -159,8 +160,8 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       }
     } else {
       if (tiCatalog
-            .catalogOf(Some(dbPrefix + dbName))
-            .exists(_.isInstanceOf[TiSessionCatalog])) {
+          .catalogOf(Some(dbPrefix + dbName))
+          .exists(_.isInstanceOf[TiSessionCatalog])) {
         tidbConn.setCatalog(dbName)
         spark.sql(s"use `$dbPrefix$dbName`")
       } else {
@@ -403,13 +404,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     val getSparkPlan: String => String = sql =>
       try {
         val dataFrame = spark.sql(sql)
-        import org.apache.spark.sql.execution.command.ExplainCommand
-        spark.sessionState
-          .executePlan(ExplainCommand(dataFrame.queryExecution.logical, ExplainMode.fromString("simple")))
-          .executedPlan
-          .executeCollect()
-          .map(_.getString(0))
-          .mkString("\n")
+        ReflectionUtil.callExplainCommand(dataFrame)
       } catch {
         case _: Throwable => ""
       }

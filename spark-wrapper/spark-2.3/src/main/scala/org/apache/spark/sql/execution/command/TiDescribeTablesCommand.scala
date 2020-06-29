@@ -38,42 +38,33 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
       "col_name",
       StringType,
       nullable = false,
-      new MetadataBuilder().putString("comment", "name of the column").build()
-    ),
+      new MetadataBuilder().putString("comment", "name of the column").build()),
     newAttributeReference(
       "data_type",
       StringType,
       nullable = false,
-      new MetadataBuilder().putString("comment", "data type of the column").build()
-    ),
+      new MetadataBuilder().putString("comment", "data type of the column").build()),
     newAttributeReference(
       "nullable",
       StringType,
       nullable = false,
-      new MetadataBuilder().putString("comment", "whether the column is nullable").build()
-    ),
+      new MetadataBuilder().putString("comment", "whether the column is nullable").build()),
     newAttributeReference(
       "comment",
       StringType,
       nullable = true,
-      new MetadataBuilder().putString("comment", "comment of the column").build()
-    )
-  )
+      new MetadataBuilder().putString("comment", "comment of the column").build()))
 
   override def run(sparkSession: SparkSession): Seq[Row] =
     tiCatalog
       .catalogOf(delegate.table.database)
-      .getOrElse(
-        throw new NoSuchDatabaseException(
-          delegate.table.database.getOrElse(tiCatalog.getCurrentDatabase)
-        )
-      ) match {
+      .getOrElse(throw new NoSuchDatabaseException(
+        delegate.table.database.getOrElse(tiCatalog.getCurrentDatabase))) match {
       case _: TiSessionCatalog =>
         val result = new ArrayBuffer[Row]
         if (delegate.partitionSpec.nonEmpty) {
           throw new AnalysisException(
-            s"DESC PARTITION is not supported on TiDB table: ${delegate.table.identifier}"
-          )
+            s"DESC PARTITION is not supported on TiDB table: ${delegate.table.identifier}")
         }
         val metadata = tiCatalog.getTableMetadata(delegate.table)
         describeSchema(metadata.schema, result, header = false)
@@ -87,16 +78,15 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
         val schema = tiCatalog.getTableMetadata(delegate.table).schema
         val (delegateResult, extendedResult) =
           delegate.run(sparkSession).zipWithIndex.splitAt(schema.length)
-        delegateResult.map(
-          (r: (Row, Int)) => Row(r._1(0), r._1(1), schema.fields(r._2).nullable.toString, r._1(2))
-        ) ++ extendedResult.map(
-          r => Row(r._1(0), r._1(1), "", r._1(2))
-        )
+        delegateResult.map((r: (Row, Int)) =>
+          Row(r._1(0), r._1(1), schema.fields(r._2).nullable.toString, r._1(2))) ++ extendedResult
+          .map(r => Row(r._1(0), r._1(1), "", r._1(2)))
     }
 
-  private def describeSchema(schema: StructType,
-                             buffer: ArrayBuffer[Row],
-                             header: Boolean): Unit = {
+  private def describeSchema(
+      schema: StructType,
+      buffer: ArrayBuffer[Row],
+      header: Boolean): Unit = {
     if (header) {
       append(buffer, s"# ${output.head.name}", output(1).name, output(2).name)
     }
@@ -106,16 +96,16 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
         column.name,
         column.dataType.simpleString,
         column.getComment().orNull,
-        column.nullable.toString
-      )
+        column.nullable.toString)
     }
   }
 
-  private def append(buffer: ArrayBuffer[Row],
-                     column: String,
-                     dataType: String,
-                     comment: String,
-                     nullable: String = ""): Unit =
+  private def append(
+      buffer: ArrayBuffer[Row],
+      column: String,
+      dataType: String,
+      comment: String,
+      nullable: String = ""): Unit =
     buffer += Row(column, dataType, nullable, comment)
 
   private def describeFormattedTableInfo(table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
