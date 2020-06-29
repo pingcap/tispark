@@ -21,20 +21,20 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                         checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: 'master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'PruneStaleBranch'], [$class: 'CleanBeforeCheckout']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: credentialsId, refspec: '+refs/pull/*:refs/remotes/origin/pr/*', url: 'git@github.com:pingcap/tispark.git']]]
                     }
                 }
-    
-                stage('Format') {
+
+                stage('Build with scala-2.11') {
                     dir("go/src/github.com/pingcap/tispark") {
                         sh """
                         export LC_ALL=en_US.UTF-8
                         export LANG=en_US.UTF-8
                         export LANGUAGE=en_US.UTF-8
-                        cp -R /home/jenkins/agent/git/tispark/. ./
                         git checkout -f ${ghprbActualCommit}
-                        mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false
-                        mvn com.coveo:fmt-maven-plugin:format
+                        ./dev/change-scala-version.sh 2.11
+                        mvn clean package -Dmaven.test.skip=true -Pspark-2.3-scala-2.11
+                        git diff
                         git diff --quiet
-                        formatted="\$?"
-                        if [[ "\${formatted}" -eq 1 ]]
+                        formatted="\\\$?"
+                        if [[ "\\${formatted}" -eq 1 ]]
                         then
                            echo "code format error, please run the following commands:"
                            echo "   mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false"
@@ -45,11 +45,25 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                     }
                 }
 
-                stage('Build') {
+                stage('Build with scala-2.12') {
                     dir("go/src/github.com/pingcap/tispark") {
                         sh """
+                        export LC_ALL=en_US.UTF-8
+                        export LANG=en_US.UTF-8
+                        export LANGUAGE=en_US.UTF-8
                         git checkout -f ${ghprbActualCommit}
-                        mvn clean package -Dmaven.test.skip=true
+                        ./dev/change-scala-version.sh 2.12
+                        mvn clean package -Dmaven.test.skip=true -Pspark-3.0-scala-2.12
+                        git diff
+                        git diff --quiet
+                        formatted="\\\$?"
+                        if [[ "\\${formatted}" -eq 1 ]]
+                        then
+                           echo "code format error, please run the following commands:"
+                           echo "   mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false"
+                           echo "   mvn com.coveo:fmt-maven-plugin:format"
+                           exit 1
+                        fi
                         """
                     }
                 }

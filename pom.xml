@@ -76,7 +76,7 @@
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.12</scala.version>
         <!-- for now, not running scalafmt as part of default verify pipeline -->
-        <scalafmt.skip>true</scalafmt.skip>
+        <scalafmt.skip>false</scalafmt.skip>
         <scalatest.version>3.0.8</scalatest.version>
         <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
         <mysql.connector.version>5.1.44</mysql.connector.version>

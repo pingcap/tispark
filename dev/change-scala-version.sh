@@ -69,3 +69,6 @@ sed_i 's/\(tispark-core-internal.*\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$ASSEM
 
 # Also update <scala.binary.version> in build.groovy
 sed_i 's/\(mvn mvn-scalafmt\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$BASEDIR/.ci/build.groovy"
+
+# Also update <scala.binary.version> in scalafmt
+sed_i 's/\(mvn-scalafmt\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$BASEDIR/dev/scalafmt"
