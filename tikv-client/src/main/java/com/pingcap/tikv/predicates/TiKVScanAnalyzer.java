@@ -35,6 +35,7 @@ import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiDAGRequest;
+import com.pingcap.tikv.meta.TiDAGRequest.IndexScanType;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiPartitionDef;
@@ -259,10 +260,10 @@ public class TiKVScanAnalyzer {
             columnList.stream().mapToLong(TiColumnInfo::getSize).sum() + TABLE_PREFIX_SIZE;
         return planBuilder
             .setStoreType(TiStoreType.TiFlash)
-            .calculateCostAndEstimateCount(colSize)
+            .calculateCostAndEstimateCount(tableStatistics, colSize)
             .build();
       } else {
-        return planBuilder.calculateCostAndEstimateCount(tableColSize).build();
+        return planBuilder.calculateCostAndEstimateCount(tableStatistics, tableColSize).build();
       }
     } else {
       // TiFlash does not support index scan.
@@ -572,12 +573,45 @@ public class TiKVScanAnalyzer {
             storeType);
       }
 
+      private void debug(IndexScanType scanType) {
+        String plan, desc;
+        switch (scanType) {
+          case TABLE_SCAN:
+            plan = "TableScan";
+            desc = storeType.toString();
+            break;
+          case INDEX_SCAN:
+            plan = "IndexScan";
+            desc = index.getName();
+            break;
+          case COVERING_INDEX_SCAN:
+            plan = "CoveringIndexScan";
+            desc = index.getName();
+            break;
+          default:
+            // should not reach
+            plan = "None";
+            desc = "";
+        }
+        logger.debug(
+            "[Table:"
+                + tableName
+                + "]["
+                + plan
+                + ":"
+                + desc
+                + "] cost="
+                + cost
+                + " estimated row count="
+                + estimatedRowCount);
+      }
+
       // TODO: Fine-grained statistics usage
-      Builder calculateCostAndEstimateCount(long tableColSize) {
+      Builder calculateCostAndEstimateCount(TableStatistics tableStatistics, long tableColSize) {
         cost = 100.0;
         cost *= tableColSize * TABLE_SCAN_COST_FACTOR;
-        logger.debug(
-            "[Table:" + tableName + "][TableScan:" + storeType.toString() + "] cost=" + cost);
+        estimatedRowCount = tableStatistics.getCount();
+        debug(IndexScanType.TABLE_SCAN);
         return this;
       }
 
@@ -588,8 +622,11 @@ public class TiKVScanAnalyzer {
           long indexSize,
           long tableColSize) {
         if (tableStatistics != null) {
-          long totalRowCount = tableStatistics.getCount();
+          double totalRowCount = tableStatistics.getCount();
           IndexStatistics indexStatistics = tableStatistics.getIndexHistMap().get(index.getId());
+          if (indexStatistics != null) {
+            totalRowCount = indexStatistics.getHistogram().totalRowCount();
+          }
           if (conditions.isEmpty()) {
             cost = 100.0; // Full index scan cost
             // TODO: Fine-grained statistics usage
@@ -603,19 +640,12 @@ public class TiKVScanAnalyzer {
 
           if (isDoubleRead) {
             cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
+            debug(IndexScanType.INDEX_SCAN);
           } else {
             cost *= indexSize * INDEX_SCAN_COST_FACTOR;
+            debug(IndexScanType.COVERING_INDEX_SCAN);
           }
         }
-        logger.debug(
-            "[Table:"
-                + tableName
-                + "][IndexScan:"
-                + index.getName()
-                + "] cost="
-                + cost
-                + " estimated row count="
-                + estimatedRowCount);
         return this;
       }
     }
