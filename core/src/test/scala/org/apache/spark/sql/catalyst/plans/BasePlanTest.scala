@@ -38,29 +38,27 @@ class BasePlanTest extends BaseTiSparkTest {
 
   def explain[T](df: Dataset[T]): Unit = df.explain
 
-  def extractDAGRequests[T](df: Dataset[T]): List[TiDAGRequest] = {
-    toPlan(df).collect { extractDAGRequest }.toList
-  }
+  def extractDAGRequests[T](df: Dataset[T]): Seq[TiDAGRequest] =
+    toPlan(df).collect { extractDAGRequest }
 
-  def toCoprocessorRDDs[T](df: Dataset[T]): List[ColumnarCoprocessorRDD] =
-    toPlan(df).collect { extractCoprocessorRDD }.toList
+  def extractTiSparkPlans[T](df: Dataset[T]): Seq[SparkPlan] =
+    toPlan(df).collect { extractTiSparkPlan }
 
-  def toRegionTaskExecs[T](df: Dataset[T]): List[ColumnarRegionTaskExec] =
+  def extractCoprocessorRDDs[T](df: Dataset[T]): Seq[ColumnarCoprocessorRDD] =
+    toPlan(df).collect { extractCoprocessorRDD }
+
+  def extractRegionTaskExecs[T](df: Dataset[T]): List[ColumnarRegionTaskExec] =
     toPlan(df).collect { extractRegionTaskExec }.toList
 
-  def checkIndex[T](df: Dataset[T], index: String): Boolean = {
-    extractTiSparkPlans(df).exists(checkIndex(_, index))
-  }
-
-  private def checkIndex(plan: SparkPlan, index: String): Boolean =
-    plan match {
-      case p: ColumnarCoprocessorRDD => checkIndex(p, index)
-      case _ => false
+  def checkIndex[T](df: Dataset[T], index: String): Unit = {
+    if (!extractCoprocessorRDDs(df).exists(checkIndexName(_, index))) {
+      df.explain
+      fail(s"index not match, expected index $index")
     }
-
-  private def checkIndex(coprocessorRDD: ColumnarCoprocessorRDD, index: String): Boolean = {
-    extractIndexInfo(coprocessorRDD).getName.equalsIgnoreCase(index)
   }
+
+  private def checkIndexName(coprocessorRDD: ColumnarCoprocessorRDD, index: String): Boolean =
+    extractIndexInfo(coprocessorRDD).getName.equalsIgnoreCase(index)
 
   private def extractIndexInfo(coprocessorRDD: ColumnarCoprocessorRDD): TiIndexInfo =
     coprocessorRDD.dagRequest.getIndexInfo
@@ -123,11 +121,6 @@ class BasePlanTest extends BaseTiSparkTest {
 
   def getEstimatedRowCount[T](df: Dataset[T], tableName: String): Double =
     extractTiSparkPlans(df).collect { extractDAGRequest }.head.getEstimatedCount
-
-  def extractTiSparkPlans[T](df: Dataset[T]): Seq[SparkPlan] =
-    toPlan(df).collect {
-      extractTiSparkPlan
-    }
 
   def toPlan[T](df: Dataset[T]): SparkPlan = df.queryExecution.executedPlan
 

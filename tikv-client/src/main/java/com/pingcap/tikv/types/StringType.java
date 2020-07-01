@@ -41,6 +41,11 @@ public class StringType extends BytesType {
   }
 
   @Override
+  public boolean isPushDownSupported() {
+    return true;
+  }
+
+  @Override
   protected Object doConvertToTiDBType(Object value) throws ConvertNotSupportException {
     return convertToString(value);
   }
