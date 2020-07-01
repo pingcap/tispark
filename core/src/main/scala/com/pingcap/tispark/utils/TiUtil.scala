@@ -173,6 +173,14 @@ object TiUtil {
       .register("str_to_time", (value: String) => Converter.convertStrToDuration(value))
   }
 
+  def injectClassLoader(): Unit = {
+    val currentClassLoader = Thread.currentThread().getContextClassLoader
+    val targetClassLoader = ReflectionUtil.classLoader
+    if(currentClassLoader != targetClassLoader) {
+      Thread.currentThread().setContextClassLoader(targetClassLoader)
+    }
+  }
+
   def getReqEstCountStr(req: TiDAGRequest): String =
     if (req.getEstimatedCount > 0) {
       import java.text.DecimalFormat

@@ -15,6 +15,7 @@
 
 package org.apache.spark.sql.execution
 
+import com.pingcap.tispark.utils.ReflectionUtil
 import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
 
@@ -26,7 +27,6 @@ import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.ReflectionUtil.ReflectionMapPartitionWithIndexInternal
-import com.pingcap.tispark.utils.TiUtil
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
@@ -43,53 +43,29 @@ import org.tikv.kvproto.Coprocessor.KeyRange
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-trait LeafColumnarExecRDD extends LeafExecNode {
-  override val outputPartitioning: Partitioning = UnknownPartitioning(0)
-  private[execution] def tiRDDs: List[TiRDD]
+trait ColumnarCoprocessorRDD extends LeafExecNode {
+  def tiRDDs: List[TiRDD]
 
-  override def simpleString: String = verboseString
-
-  override def verboseString: String =
-    if (tiRDDs.lengthCompare(1) > 0) {
-      val b = new mutable.StringBuilder()
-      b.append(s"TiSpark $nodeName on partition table:\n")
-      tiRDDs.zipWithIndex.map {
-        case (_, i) => b.append(s"partition p$i")
-      }
-      b.append(s"with dag request: $dagRequest")
-      b.toString()
-    } else {
-      s"${dagRequest.getStoreType.name()} $nodeName{$dagRequest}" +
-        s"${TiUtil.getReqEstCountStr(dagRequest)}"
-    }
+  def fetchHandle: Boolean
 
   def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
-}
 
-case class ColumnarCoprocessorRDD(
-                                   output: Seq[Attribute],
-                                   tiRDDs: List[TiRDD],
-                                   fetchHandle: Boolean)
-  extends LeafColumnarExecRDD
-    with ColumnarBatchScan {
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
+
   override val nodeName: String = if (fetchHandle) {
     "FetchHandleRDD"
   } else {
     "CoprocessorRDD"
   }
+
   private[execution] val internalRDDs: List[RDD[InternalRow]] = tiRDDs
+}
 
-  override def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
-
-  override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(sparkContext.union(internalRDDs))
-
-  override protected def doExecute(): RDD[InternalRow] = {
-    if (!fetchHandle) {
-      WholeStageCodegenExec(this)(codegenStageId = 0).execute()
-    } else {
-      sparkContext.union(internalRDDs)
-    }
+object ColumnarCoprocessorRDD {
+  def apply(output: Seq[Attribute],
+            tiRDDs: List[TiRDD],
+            fetchHandle: Boolean): ColumnarCoprocessorRDD = {
+    ReflectionUtil.newColumnarCoprocessorRDDImpl(output, tiRDDs, fetchHandle)
   }
 }
 
@@ -103,17 +79,12 @@ case class ColumnarCoprocessorRDD(
   * Refer to code in [[com.pingcap.tispark.TiDBRelation]] and [[ColumnarCoprocessorRDD]] for further details.
   *
   */
-case class ColumnarRegionTaskExec(
-                                   child: SparkPlan,
-                                   output: Seq[Attribute],
-                                   chunkBatchSize: Int,
-                                   dagRequest: TiDAGRequest,
-                                   tiConf: TiConfiguration,
-                                   ts: TiTimestamp,
-                                   @transient private val session: TiSession,
-                                   @transient private val sparkSession: SparkSession)
-  extends UnaryExecNode
-    with ColumnarBatchScan {
+trait ColumnarRegionTaskExec extends UnaryExecNode {
+  def dagRequest: TiDAGRequest
+
+  def tiConf: TiConfiguration
+
+  def chunkBatchSize: Int
 
   override lazy val metrics: Map[String, SQLMetric] = Map(
     "scanTime" -> SQLMetrics.createTimingMetric(sparkContext, "scan time"),
@@ -128,22 +99,18 @@ case class ColumnarRegionTaskExec(
       .createMetric(sparkContext, "number of index ranges scanned"),
     "numDowngradeRangesScanned" -> SQLMetrics
       .createMetric(sparkContext, "number of downgrade ranges scanned"))
+
   override val nodeName: String = "RegionTaskExec"
+
+
   // FIXME: https://github.com/pingcap/tispark/issues/731
   // enable downgrade sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
-  private val downgradeThreshold = 1000000000
+  protected val downgradeThreshold = 1000000000
   // cache invalidation call back function
   // used for driver to update PD cache
-  private val callBackFunc: CacheInvalidateListener = CacheInvalidateListener.getInstance()
+  protected val callBackFunc: CacheInvalidateListener = CacheInvalidateListener.getInstance()
 
-  override def simpleString: String = verboseString
-
-  override def verboseString: String =
-    s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
-
-  override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(inputRDD())
-
-  private def inputRDD(): RDD[InternalRow] = {
+  protected def inputRDD(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
     val numHandles = longMetric("numHandles")
     val numIndexScanTasks = longMetric("numIndexScanTasks")
@@ -379,7 +346,22 @@ case class ColumnarRegionTaskExec(
     }
   }
 
+
   override protected def doExecute(): RDD[InternalRow] = {
     WholeStageCodegenExec(this)(codegenStageId = 0).execute()
+  }
+}
+
+object ColumnarRegionTaskExec {
+  def apply(
+             child: SparkPlan,
+             output: Seq[Attribute],
+             chunkBatchSize: Int,
+             dagRequest: TiDAGRequest,
+             tiConf: TiConfiguration,
+             ts: TiTimestamp,
+             session: TiSession,
+             sparkSession: SparkSession): ColumnarRegionTaskExec = {
+    ReflectionUtil.newColumnarRegionTaskExecImpl(child, output, chunkBatchSize, dagRequest, tiConf, ts, session, sparkSession)
   }
 }

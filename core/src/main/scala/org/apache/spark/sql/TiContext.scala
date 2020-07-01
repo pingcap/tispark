@@ -61,6 +61,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   })
 
   TiUtil.registerUDFs(sparkSession)
+  TiUtil.injectClassLoader()
   StatisticsManager.initStatisticsManager(tiSession)
   CacheInvalidateListener
     .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
