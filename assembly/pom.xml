@@ -22,7 +22,7 @@
         </dependency>
         <dependency>
             <groupId>com.pingcap.tikv</groupId>
-            <artifactId>tikv-client</artifactId>
+            <artifactId>tikv-client_2.11</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>

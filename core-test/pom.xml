@@ -52,7 +52,7 @@
         </dependency>
         <dependency>
             <groupId>com.pingcap.tikv</groupId>
-            <artifactId>tikv-client</artifactId>
+            <artifactId>tikv-client_2.11</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
@@ -124,7 +124,7 @@
             <artifactId>mysql-connector-java</artifactId>
             <version>${mysql.connector.version}</version>
         </dependency>
-      <!--for using tidb datanucleus's adapter-->
+        <!--for using tidb datanucleus's adapter-->
         <dependency>
             <groupId>com.pingcap.tidb</groupId>
             <artifactId>tidb-datanucleus-adapter</artifactId>

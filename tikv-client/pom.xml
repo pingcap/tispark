@@ -10,7 +10,7 @@
     </parent>
 
     <groupId>com.pingcap.tikv</groupId>
-    <artifactId>tikv-client</artifactId>
+    <artifactId>tikv-client_2.11</artifactId>
     <packaging>jar</packaging>
     <name>TiSpark Project TiKV Java Client</name>
 

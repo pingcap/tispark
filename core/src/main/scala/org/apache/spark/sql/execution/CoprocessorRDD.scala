@@ -69,6 +69,12 @@ case class ColumnarCoprocessorRDD(
   override protected def doExecute(): RDD[InternalRow] = {
     sparkContext.union(internalRDDs)
   }
+
+  override val supportsColumnar: Boolean = true
+
+  protected override def doExecuteColumnar(): RDD[ColumnarBatch] = {
+    sparkContext.union(internalRDDs.map(rdd => rdd.asInstanceOf[RDD[ColumnarBatch]]))
+  }
 }
 
 /**
@@ -117,6 +123,12 @@ case class ColumnarRegionTaskExec(
   override protected def doExecute(): RDD[InternalRow] = {
     throw new UnsupportedOperationException(
       "ColumnarRegionTaskExec does not support row-wise execution")
+  }
+
+  override val supportsColumnar: Boolean = true
+
+  override protected def doExecuteColumnar(): RDD[ColumnarBatch] = {
+    inputRDD().asInstanceOf[RDD[ColumnarBatch]]
   }
 
   def fetchTableResultsFromHandles(

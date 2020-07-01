@@ -66,9 +66,7 @@ ASSEMBLY="$BASEDIR/assembly/src/main/assembly/assembly.xml"
 echo "$ASSEMBLY"
 sed_i 's/\(spark-wrapper-spark-.*\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$ASSEMBLY"
 sed_i 's/\(tispark-core-internal.*\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$ASSEMBLY"
-
-# Also update <scala.binary.version> in build.groovy
-sed_i 's/\(mvn mvn-scalafmt\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$BASEDIR/.ci/build.groovy"
+sed_i 's/\(tikv-client\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$ASSEMBLY"
 
 # Also update <scala.binary.version> in scalafmt
 sed_i 's/\(mvn-scalafmt\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$BASEDIR/dev/scalafmt"
