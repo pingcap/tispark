@@ -610,7 +610,9 @@ public class TiKVScanAnalyzer {
       Builder calculateCostAndEstimateCount(TableStatistics tableStatistics, long tableColSize) {
         cost = 100.0;
         cost *= tableColSize * TABLE_SCAN_COST_FACTOR;
-        estimatedRowCount = tableStatistics.getCount();
+        if (tableStatistics != null) {
+          estimatedRowCount = tableStatistics.getCount();
+        }
         debug(IndexScanType.TABLE_SCAN);
         return this;
       }
