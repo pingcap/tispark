@@ -32,11 +32,9 @@ class InTest0Suite extends BaseInitialOnceTest {
     "select tp_timestamp from full_data_type_table_idx  where tp_timestamp in ('2017-11-02 16:48:01') order by id_dt ",
     "select tp_real from full_data_type_table_idx  where tp_real in (4.44,0.5194052764001038) order by id_dt ")
 
-  allCases foreach { query =>
-    {
-      test(query) {
-        runTest(query)
-      }
+  test("Test index In") {
+    allCases.foreach { query =>
+      runTest(query)
     }
   }
 

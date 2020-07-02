@@ -34,8 +34,8 @@ class ComplexGroupBySuite extends BaseInitialOnceTest {
     "select tp_int + tp_float from full_data_type_table group by (tp_int + tp_float)",
     "select tp_int + tp_float - tp_double / 5 + tp_bigint / tp_int from full_data_type_table group by (tp_int + tp_float - tp_double / 5 + tp_bigint / tp_int)")
 
-  allCases foreach { query =>
-    test(query) {
+  test("Test - Complex GroupBy") {
+    allCases.foreach { query =>
       runTest(query)
     }
   }
