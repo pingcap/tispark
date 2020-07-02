@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.spark.sql.extensions
 
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
@@ -42,24 +43,6 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
     extends ParserInterface {
   private lazy val tiContext = getOrCreateTiContext(sparkSession)
   private lazy val internal = new SparkSqlParser(sparkSession.sqlContext.conf)
-
-  private def qualifyTableIdentifierInternal(tableIdentifier: TableIdentifier): TableIdentifier =
-    TableIdentifier(
-      tableIdentifier.table,
-      Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase)))
-
-  /**
-   * Determines whether a table specified by tableIdentifier is
-   * needs to be qualified. This is used for TiSpark to transform
-   * plans and decides whether a relation should be resolved or parsed.
-   *
-   * @param tableIdentifier tableIdentifier
-   * @return whether it needs qualifying
-   */
-  private def needQualify(tableIdentifier: TableIdentifier) =
-    tableIdentifier.database.isEmpty && tiContext.sessionCatalog
-      .getTempView(tableIdentifier.table)
-      .isEmpty
 
   /**
    * WAR to lead Spark to consider this relation being on local files.
@@ -112,4 +95,22 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
 
   override def parseDataType(sqlText: String): DataType =
     internal.parseDataType(sqlText)
+
+  private def qualifyTableIdentifierInternal(tableIdentifier: TableIdentifier): TableIdentifier =
+    TableIdentifier(
+      tableIdentifier.table,
+      Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase)))
+
+  /**
+   * Determines whether a table specified by tableIdentifier is
+   * needs to be qualified. This is used for TiSpark to transform
+   * plans and decides whether a relation should be resolved or parsed.
+   *
+    * @param tableIdentifier tableIdentifier
+   * @return whether it needs qualifying
+   */
+  private def needQualify(tableIdentifier: TableIdentifier) =
+    tableIdentifier.database.isEmpty && tiContext.sessionCatalog
+      .getTempView(tableIdentifier.table)
+      .isEmpty
 }

@@ -25,10 +25,11 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.tispark.TiRDD
 import scala.collection.mutable
 
-case class ColumnarCoprocessorRDDImpl(output: Seq[Attribute],
-                                      override val tiRDDs: List[TiRDD],
-                                      fetchHandle: Boolean)
-  extends ColumnarCoprocessorRDD
+case class ColumnarCoprocessorRDDImpl(
+    output: Seq[Attribute],
+    override val tiRDDs: List[TiRDD],
+    fetchHandle: Boolean)
+    extends ColumnarCoprocessorRDD
     with ColumnarBatchScan {
   override def inputRDDs(): Seq[RDD[InternalRow]] = {
     Seq(sparkContext.union(internalRDDs))
@@ -60,15 +61,15 @@ case class ColumnarCoprocessorRDDImpl(output: Seq[Attribute],
 }
 
 case class ColumnarRegionTaskExecImpl(
-                                   child: SparkPlan,
-                                   output: Seq[Attribute],
-                                   chunkBatchSize: Int,
-                                   dagRequest: TiDAGRequest,
-                                   tiConf: TiConfiguration,
-                                   ts: TiTimestamp,
-                                   @transient private val session: TiSession,
-                                   @transient private val sparkSession: SparkSession)
-  extends ColumnarRegionTaskExec
+    child: SparkPlan,
+    output: Seq[Attribute],
+    chunkBatchSize: Int,
+    dagRequest: TiDAGRequest,
+    tiConf: TiConfiguration,
+    ts: TiTimestamp,
+    @transient private val session: TiSession,
+    @transient private val sparkSession: SparkSession)
+    extends ColumnarRegionTaskExec
     with ColumnarBatchScan {
 
   override def simpleString: String = verboseString

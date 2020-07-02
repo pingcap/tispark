@@ -33,7 +33,7 @@ import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-object ExprUtils {
+object TiExprUtils {
   type TiDataType = com.pingcap.tikv.types.DataType
   type TiExpression = com.pingcap.tikv.expression.Expression
 

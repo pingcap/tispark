@@ -22,6 +22,14 @@ object TiSparkInfo {
 
   val IS_SCALA_2_12: Boolean = SCALA_VERSION.startsWith("2.12")
 
+  val SCALA_MAJOR_VERSION: String = {
+    if (IS_SCALA_2_11) {
+      "2.11"
+    } else {
+      "2.12"
+    }
+  }
+
   val SUPPORTED_SPARK_VERSION: List[String] = {
     if (IS_SCALA_2_11) {
       "2.4" :: "2.3" :: Nil

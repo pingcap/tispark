@@ -58,8 +58,12 @@ BASEDIR=$(dirname $0)/..
 cd $BASEDIR
 mvn clean -DskipTests
 
-find "$BASEDIR" -name 'pom.xml' -not -path '*target*' -print \
+find "$BASEDIR" -name 'pom.xml' -not -path '*assembly*' -print \
   -exec bash -c "sed_i 's/\(artifactId.*\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' {}" \;
+
+# Also update <scala.binary.version> in assembly/pom.xml
+sed_i 's/\(tispark-parent\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$BASEDIR/assembly/pom.xml"
+sed_i 's/\(tispark-assembly\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$BASEDIR/assembly/pom.xml"
 
 # Also update <scala.binary.version> in assembly.xml
 ASSEMBLY="$BASEDIR/assembly/src/main/assembly/assembly.xml"

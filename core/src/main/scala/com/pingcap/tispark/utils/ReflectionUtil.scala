@@ -25,10 +25,25 @@ import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
-import org.apache.spark.sql.catalyst.catalog.{BucketSpec, CatalogStorageFormat, CatalogTable, CatalogTableType, ExternalCatalog, SessionCatalog, TiSessionCatalog}
+import org.apache.spark.sql.catalyst.catalog.{
+  BucketSpec,
+  CatalogStorageFormat,
+  CatalogTable,
+  CatalogTableType,
+  ExternalCatalog,
+  SessionCatalog,
+  TiSessionCatalog
+}
 import org.apache.spark.sql.catalyst.expressions.BasicExpression.TiExpression
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, Expression, NamedExpression, UnsafeRow}
+import org.apache.spark.sql.catalyst.expressions.{
+  Alias,
+  Attribute,
+  AttributeReference,
+  Expression,
+  NamedExpression,
+  UnsafeRow
+}
 import org.apache.spark.sql.catalyst.parser.ParserInterface
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.catalyst.rules.Rule
@@ -57,9 +72,12 @@ object ReflectionUtil {
   private val TI_RESOLUTION_RULE_FACTORY_CLASS =
     "org.apache.spark.sql.extensions.TiResolutionRuleFactory"
   private val TI_DDL_RULE_FACTORY_CLASS = "org.apache.spark.sql.extensions.TiDDLRuleFactory"
-  private val TI_BASIC_EXPRESSITON_WRAPPER_CLASS = "org.apache.spark.sql.catalyst.expressions.BasicExpressionWrapper"
-  private val TI_COPROCESSOR_RDD_IMPL_CLASS = "org.apache.spark.sql.execution.ColumnarCoprocessorRDDImpl"
-  private val TI_COLUMNAR_REGION_TASK_EXEC_IMPL_CLASS = "org.apache.spark.sql.execution.ColumnarRegionTaskExecImpl"
+  private val TI_BASIC_EXPRESSITON_WRAPPER_CLASS =
+    "org.apache.spark.sql.catalyst.expressions.BasicExpressionWrapper"
+  private val TI_COPROCESSOR_RDD_IMPL_CLASS =
+    "org.apache.spark.sql.execution.ColumnarCoprocessorRDDImpl"
+  private val TI_COLUMNAR_REGION_TASK_EXEC_IMPL_CLASS =
+    "org.apache.spark.sql.execution.ColumnarRegionTaskExecImpl"
 
   // In Spark 2.3.0 and 2.3.1 the method declaration is:
   // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
@@ -189,7 +207,7 @@ object ReflectionUtil {
       classDir.toURI.toURL
     } else {
       new URL(
-        s"jar:$tisparkClassUrl!/resources/spark-wrapper-spark-${TiSparkInfo.SPARK_MAJOR_VERSION}/")
+        s"jar:$tisparkClassUrl!/resources/spark-wrapper-spark-${TiSparkInfo.SPARK_MAJOR_VERSION}_${TiSparkInfo.SCALA_MAJOR_VERSION}/")
     }
     logger.info(s"spark wrapper class url: ${sparkWrapperClassURL.toString}")
 
@@ -225,7 +243,7 @@ object ReflectionUtil {
       .loadClass(TI_COMPOSITE_SESSION_CATALOG_CLASS)
       .getDeclaredConstructor(classOf[TiContext])
       .newInstance(tiContext)
-      o.asInstanceOf[TiSessionCatalog]
+    o.asInstanceOf[TiSessionCatalog]
   }
 
   def callTiAggregationImplUnapply(plan: LogicalPlan): Option[
@@ -314,9 +332,10 @@ object ReflectionUtil {
       .asInstanceOf[Option[TiExpression]]
   }
 
-  def newColumnarCoprocessorRDDImpl(output: Seq[Attribute],
-                                    tiRDDs: List[TiRDD],
-                                    fetchHandle: java.lang.Boolean): ColumnarCoprocessorRDD = {
+  def newColumnarCoprocessorRDDImpl(
+      output: Seq[Attribute],
+      tiRDDs: List[TiRDD],
+      fetchHandle: java.lang.Boolean): ColumnarCoprocessorRDD = {
     classLoader
       .loadClass(TI_COPROCESSOR_RDD_IMPL_CLASS)
       .getDeclaredConstructor(classOf[Seq[Attribute]], classOf[List[TiRDD]], classOf[Boolean])
@@ -325,17 +344,25 @@ object ReflectionUtil {
   }
 
   def newColumnarRegionTaskExecImpl(
-                                     child: SparkPlan,
-                                     output: Seq[Attribute],
-                                     chunkBatchSize: java.lang.Integer,
-                                     dagRequest: TiDAGRequest,
-                                     tiConf: TiConfiguration,
-                                     ts: TiTimestamp,
-                                     session: TiSession,
-                                     sparkSession: SparkSession): ColumnarRegionTaskExec = {
+      child: SparkPlan,
+      output: Seq[Attribute],
+      chunkBatchSize: java.lang.Integer,
+      dagRequest: TiDAGRequest,
+      tiConf: TiConfiguration,
+      ts: TiTimestamp,
+      session: TiSession,
+      sparkSession: SparkSession): ColumnarRegionTaskExec = {
     classLoader
       .loadClass(TI_COLUMNAR_REGION_TASK_EXEC_IMPL_CLASS)
-      .getDeclaredConstructor(classOf[SparkPlan], classOf[Seq[Attribute]], classOf[Int], classOf[TiDAGRequest], classOf[TiConfiguration], classOf[TiTimestamp], classOf[TiSession], classOf[SparkSession])
+      .getDeclaredConstructor(
+        classOf[SparkPlan],
+        classOf[Seq[Attribute]],
+        classOf[Int],
+        classOf[TiDAGRequest],
+        classOf[TiConfiguration],
+        classOf[TiTimestamp],
+        classOf[TiSession],
+        classOf[SparkSession])
       .newInstance(child, output, chunkBatchSize, dagRequest, tiConf, ts, session, sparkSession)
       .asInstanceOf[ColumnarRegionTaskExec]
   }

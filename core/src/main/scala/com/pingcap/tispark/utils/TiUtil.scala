@@ -176,7 +176,7 @@ object TiUtil {
   def injectClassLoader(): Unit = {
     val currentClassLoader = Thread.currentThread().getContextClassLoader
     val targetClassLoader = ReflectionUtil.classLoader
-    if(currentClassLoader != targetClassLoader) {
+    if (currentClassLoader != targetClassLoader) {
       Thread.currentThread().setContextClassLoader(targetClassLoader)
     }
   }

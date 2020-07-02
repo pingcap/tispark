@@ -26,10 +26,11 @@ import org.apache.spark.sql.tispark.TiRDD
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import scala.collection.mutable
 
-case class ColumnarCoprocessorRDDImpl(output: Seq[Attribute],
-                                      override val tiRDDs: List[TiRDD],
-                                      fetchHandle: Boolean)
-  extends ColumnarCoprocessorRDD {
+case class ColumnarCoprocessorRDDImpl(
+    output: Seq[Attribute],
+    override val tiRDDs: List[TiRDD],
+    fetchHandle: Boolean)
+    extends ColumnarCoprocessorRDD {
   override protected def doExecute(): RDD[InternalRow] = {
     sparkContext.union(internalRDDs)
   }
@@ -58,15 +59,15 @@ case class ColumnarCoprocessorRDDImpl(output: Seq[Attribute],
 }
 
 case class ColumnarRegionTaskExecImpl(
-                                   child: SparkPlan,
-                                   output: Seq[Attribute],
-                                   chunkBatchSize: Int,
-                                   dagRequest: TiDAGRequest,
-                                   tiConf: TiConfiguration,
-                                   ts: TiTimestamp,
-                                   @transient private val session: TiSession,
-                                   @transient private val sparkSession: SparkSession)
-  extends ColumnarRegionTaskExec {
+    child: SparkPlan,
+    output: Seq[Attribute],
+    chunkBatchSize: Int,
+    dagRequest: TiDAGRequest,
+    tiConf: TiConfiguration,
+    ts: TiTimestamp,
+    @transient private val session: TiSession,
+    @transient private val sparkSession: SparkSession)
+    extends ColumnarRegionTaskExec {
 
   override val supportsColumnar: Boolean = true
 

@@ -22,7 +22,7 @@ import com.pingcap.tispark.utils.ReflectionUtil
 import scala.reflect.ClassTag
 
 private[spark] class JavaDeserializationStream(in: InputStream, loader: ClassLoader)
-  extends DeserializationStream {
+    extends DeserializationStream {
 
   private val objIn = new ObjectInputStream(in) {
     override def resolveClass(desc: ObjectStreamClass): Class[_] = {
@@ -33,7 +33,7 @@ private[spark] class JavaDeserializationStream(in: InputStream, loader: ClassLoa
           try {
             Class.forName(desc.getName, false, ReflectionUtil.classLoader)
           } catch {
-            case _: Throwable =>  throw e
+            case _: Throwable => throw e
           }
       }
     }
@@ -64,6 +64,5 @@ private object JavaDeserializationStream {
     "long" -> classOf[Long],
     "float" -> classOf[Float],
     "double" -> classOf[Double],
-    "void" -> classOf[Void]
-  )
+    "void" -> classOf[Void])
 }
