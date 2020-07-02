@@ -29,11 +29,12 @@ import com.pingcap.tikv.types.RealType;
 import com.pingcap.tikv.types.SetType;
 import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.types.TimeType;
-import java.util.logging.Logger;
 import org.apache.spark.sql.types.DataTypes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TypeMapping {
-  private static final Logger logger = Logger.getLogger(TypeMapping.class.getName());
+  private static final Logger logger = LoggerFactory.getLogger(TypeMapping.class.getName());
   private static final int MAX_PRECISION = 38;
 
   private static boolean isStringType(DataType type) {
@@ -55,7 +56,7 @@ public class TypeMapping {
     if (type instanceof DecimalType) {
       int len = (int) type.getLength();
       if (len > MAX_PRECISION) {
-        logger.warning(
+        logger.warn(
             "Decimal precision exceeding MAX_PRECISION="
                 + MAX_PRECISION
                 + ", "
