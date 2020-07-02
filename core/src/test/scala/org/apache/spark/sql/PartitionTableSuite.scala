@@ -16,9 +16,9 @@
 package org.apache.spark.sql
 
 import com.pingcap.tikv.meta.TiDAGRequest
-import com.pingcap.tispark.utils.TiUtil
+import org.apache.spark.sql.catalyst.plans.BasePlanTest
 
-class PartitionTableSuite extends BaseTiSparkTest {
+class PartitionTableSuite extends BasePlanTest {
   override def afterAll(): Unit =
     try {
       tidbStmt.execute("drop table if exists pt")
@@ -176,7 +176,7 @@ class PartitionTableSuite extends BaseTiSparkTest {
 
   private def extractDAGReq(df: DataFrame): TiDAGRequest = {
     enablePartitionForTiDB()
-    TiUtil.extractDAGReq(df)
+    extractDAGRequests(df).head
   }
 
   test("part pruning on date column") {
