@@ -168,10 +168,14 @@ class TiBatchWrite(
     if (useTableLock) {
       tiBatchWriteTables.foreach(_.lockTable())
     } else {
-      if (tiContext.tiConf.isWriteWithoutLockTable) {
-        logger.warn("write without lock table enabled! only for test!")
-      } else {
-        throw new TiBatchWriteException("current tidb does not support LockTable or is disabled!")
+      val isTiDBV4 = StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient)
+      if (!isTiDBV4) {
+        if (tiContext.tiConf.isWriteWithoutLockTable) {
+          logger.warn("write tidb-2.x or 3.x without lock table enabled! only for test!")
+        } else {
+          throw new TiBatchWriteException(
+            "current tidb does not support LockTable or is disabled!")
+        }
       }
     }
 

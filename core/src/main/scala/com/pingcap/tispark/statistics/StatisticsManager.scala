@@ -140,7 +140,11 @@ object StatisticsManager {
         new TableStatistics(tblId)
       }
 
-      loadStatsFromStorage(tblId, tblStatistic, table, loadAll, neededColIds)
+      try {
+        loadStatsFromStorage(tblId, tblStatistic, table, loadAll, neededColIds)
+      } catch {
+        case _: Throwable => // ignored
+      }
     }
 
   private def loadStatsFromStorage(
