@@ -40,11 +40,9 @@ class Distinct0Suite extends BaseInitialOnceTest {
     "select  distinct(tp_smallint)  from full_data_type_table  order by tp_smallint ",
     "select  distinct(tp_double)  from full_data_type_table  order by tp_double ")
 
-  allCases foreach { query =>
-    {
-      test(query) {
-        runTest(query)
-      }
+  test("Test - Distinct") {
+    allCases.foreach { query =>
+      runTest(query)
     }
   }
 

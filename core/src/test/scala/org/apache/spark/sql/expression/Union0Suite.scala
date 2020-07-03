@@ -32,11 +32,9 @@ class Union0Suite extends BaseInitialOnceTest {
     "(select tp_double from full_data_type_table where tp_double < 0) union (select tp_double from full_data_type_table where tp_double > 0) order by tp_double",
     "(select tp_tinyint from full_data_type_table where tp_tinyint < 0) union (select tp_tinyint from full_data_type_table where tp_tinyint > 0) order by tp_tinyint")
 
-  allCases foreach { query =>
-    {
-      test(query) {
-        runTest(query)
-      }
+  test("Test - Union") {
+    allCases.foreach { query =>
+      runTest(query)
     }
   }
 

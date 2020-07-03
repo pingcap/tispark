@@ -64,11 +64,9 @@ class FirstLast0Suite extends BaseInitialOnceTest {
     "select first(tp_real) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
     "select last(tp_mediumtext) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ")
 
-  allCases foreach { query =>
-    {
-      test(query) {
-        runTest(query)
-      }
+  test("Test - First/Last") {
+    allCases.foreach { query =>
+      runTest(query)
     }
   }
 

@@ -31,11 +31,9 @@ class Between0Suite extends BaseInitialOnceTest {
     "select tp_real from full_data_type_table  where tp_real between 4.44 and 0.5194052764001038",
     "select tp_real from full_data_type_table  where tp_real between 0.5194052764001038 and 4.44")
 
-  allCases foreach { query =>
-    {
-      test(query) {
-        runTest(query)
-      }
+  test("Test - Between") {
+    allCases.foreach { query =>
+      runTest(query)
     }
   }
 
