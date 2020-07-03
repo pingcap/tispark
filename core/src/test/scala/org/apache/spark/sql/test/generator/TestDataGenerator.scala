@@ -426,8 +426,8 @@ class TestDataGenerator extends SparkFunSuite {
         Key(List(DefaultColumn(3), DefaultColumn(5)))))
     val answer =
       """CREATE TABLE `tispark_test`.`test_table` (
-        |  `col_int0` int not null,
-        |  `col_int1` int default null,
+        |  `col_int0` int(11) not null,
+        |  `col_int1` int(11) default null,
         |  `col_double` double not null default 0.2,
         |  `col_varchar` varchar(50) default null,
         |  `col_decimal` decimal(20,3) default null,
