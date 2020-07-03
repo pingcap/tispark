@@ -72,6 +72,50 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       tableNames = tableNames.sorted.reverse
     }
 
+  protected def createOrReplaceTempView(
+                                         dbName: String,
+                                         viewName: String,
+                                         postfix: String = "_j"): Unit =
+    spark.read
+      .format("jdbc")
+      .option(JDBCOptions.JDBC_URL, jdbcUrl)
+      .option(JDBCOptions.JDBC_TABLE_NAME, s"`$dbName`.`$viewName`")
+      .option(JDBCOptions.JDBC_DRIVER_CLASS, "com.mysql.jdbc.Driver")
+      .load()
+      .createOrReplaceTempView(s"`$viewName$postfix`")
+
+  protected def setCurrentDatabase(dbName: String): Unit =
+    if (catalogPluginMode) {
+      if (dbName != "default") {
+        tidbConn.setCatalog(dbName)
+        initializeStatement()
+        spark.sql(s"use tidb_catalog.`$dbName`")
+      } else {
+        try {
+          spark.sql(s"use spark_catalog.`$dbName`")
+          logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
+        } catch {
+          case e: NoSuchDatabaseException => fail(e)
+        }
+      }
+    } else {
+      if (tiCatalog
+        .catalogOf(Some(dbPrefix + dbName))
+        .exists(_.isInstanceOf[TiSessionCatalog])) {
+        tidbConn.setCatalog(dbName)
+        initializeStatement()
+        spark.sql(s"use `$dbPrefix$dbName`")
+      } else {
+        // should be an existing database in hive/meta_store
+        try {
+          spark.sql(s"use `$dbName`")
+          logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
+        } catch {
+          case e: NoSuchDatabaseException => fail(e)
+        }
+      }
+    }
+
   private def tiCatalog = ti.tiCatalog
 
   def beforeAllWithoutLoadData(): Unit = {
@@ -132,48 +176,6 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     }
     resList.toList
   }
-
-  protected def createOrReplaceTempView(
-      dbName: String,
-      viewName: String,
-      postfix: String = "_j"): Unit =
-    spark.read
-      .format("jdbc")
-      .option(JDBCOptions.JDBC_URL, jdbcUrl)
-      .option(JDBCOptions.JDBC_TABLE_NAME, s"`$dbName`.`$viewName`")
-      .option(JDBCOptions.JDBC_DRIVER_CLASS, "com.mysql.jdbc.Driver")
-      .load()
-      .createOrReplaceTempView(s"`$viewName$postfix`")
-
-  protected def setCurrentDatabase(dbName: String): Unit =
-    if (catalogPluginMode) {
-      if (dbName != "default") {
-        tidbConn.setCatalog(dbName)
-        spark.sql(s"use tidb_catalog.`$dbName`")
-      } else {
-        try {
-          spark.sql(s"use spark_catalog.`$dbName`")
-          logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
-        } catch {
-          case e: NoSuchDatabaseException => fail(e)
-        }
-      }
-    } else {
-      if (tiCatalog
-          .catalogOf(Some(dbPrefix + dbName))
-          .exists(_.isInstanceOf[TiSessionCatalog])) {
-        tidbConn.setCatalog(dbName)
-        spark.sql(s"use `$dbPrefix$dbName`")
-      } else {
-        // should be an existing database in hive/meta_store
-        try {
-          spark.sql(s"use `$dbName`")
-          logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
-        } catch {
-          case e: NoSuchDatabaseException => fail(e)
-        }
-      }
-    }
 
   protected def refreshConnections(
       testTables: TestTables,
