@@ -33,11 +33,9 @@ class OtherTestSuite extends BaseInitialOnceTest {
     "select tp_date from full_data_type_table where tp_date like '%12%' order by id_dt",
     "select tp_timestamp from full_data_type_table where tp_timestamp like '%00%' order by id_dt")
 
-  cases foreach { query =>
-    {
-      test(query) {
-        runTest(query)
-      }
+  test("Test - Other") {
+    cases.foreach { query =>
+      runTest(query)
     }
   }
 }

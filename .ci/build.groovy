@@ -52,6 +52,7 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                         git checkout -f ${ghprbActualCommit}
                         ./dev/change-scala-version.sh 2.12
                         mvn clean package -Dmaven.test.skip=true -Pspark-3.0-scala-2.12
+                        """
                     }
                 }
             }

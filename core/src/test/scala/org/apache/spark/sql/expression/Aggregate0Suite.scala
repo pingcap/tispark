@@ -48,11 +48,9 @@ class Aggregate0Suite extends BaseInitialOnceTest {
     "select 999 + tp_int+sum(tp_int), tp_int + 999 + 1 from full_data_type_table  group by tp_int + 999 order by 1,2",
     "select tp_int + 999+1 from full_data_type_table group by tp_int + 999 order by 1")
 
-  allCases foreach { query =>
-    {
-      test(query) {
-        runTest(query)
-      }
+  test("Test - Aggregate") {
+    allCases.foreach { query =>
+      runTest(query)
     }
   }
 
