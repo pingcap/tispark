@@ -36,14 +36,11 @@ class LikeTestSuite extends BaseInitialOnceTest {
     "select * from full_data_type_table_idx where tp_varchar LIKE 'a%f'",
     "select * from full_data_type_table_idx where tp_varchar LIKE 'ÿ%'")
 
-  tableScanCases foreach { query =>
-    test(query) {
+  test("Test - Like") {
+    tableScanCases.foreach { query =>
       explainAndRunTest(query)
     }
-  }
-
-  indexScanCases foreach { query =>
-    test(query) {
+    indexScanCases.foreach { query =>
       explainAndRunTest(query)
     }
   }
