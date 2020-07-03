@@ -87,20 +87,6 @@ trait ColumnarRegionTaskExec extends UnaryExecNode {
 
   def chunkBatchSize: Int
 
-  override lazy val metrics: Map[String, SQLMetric] = Map(
-    "scanTime" -> SQLMetrics.createTimingMetric(sparkContext, "scan time"),
-    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"),
-    "numHandles" -> SQLMetrics
-      .createMetric(sparkContext, "number of handles used in double scan"),
-    "numDowngradedTasks" -> SQLMetrics.createMetric(sparkContext, "number of downgraded tasks"),
-    "numIndexScanTasks" -> SQLMetrics
-      .createMetric(sparkContext, "number of index double read tasks"),
-    "numRegions" -> SQLMetrics.createMetric(sparkContext, "number of regions"),
-    "numIndexRangesScanned" -> SQLMetrics
-      .createMetric(sparkContext, "number of index ranges scanned"),
-    "numDowngradeRangesScanned" -> SQLMetrics
-      .createMetric(sparkContext, "number of downgrade ranges scanned"))
-
   override val nodeName: String = "RegionTaskExec"
 
   // FIXME: https://github.com/pingcap/tispark/issues/731

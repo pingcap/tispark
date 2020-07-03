@@ -22,7 +22,9 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
 import org.apache.spark.sql.tispark.TiRDD
+
 import scala.collection.mutable
 
 case class ColumnarCoprocessorRDDImpl(
@@ -71,6 +73,20 @@ case class ColumnarRegionTaskExecImpl(
     @transient private val sparkSession: SparkSession)
     extends ColumnarRegionTaskExec
     with ColumnarBatchScan {
+
+  override lazy val metrics: Map[String, SQLMetric] = Map(
+    "scanTime" -> SQLMetrics.createTimingMetric(sparkContext, "scan time"),
+    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"),
+    "numHandles" -> SQLMetrics
+      .createMetric(sparkContext, "number of handles used in double scan"),
+    "numDowngradedTasks" -> SQLMetrics.createMetric(sparkContext, "number of downgraded tasks"),
+    "numIndexScanTasks" -> SQLMetrics
+      .createMetric(sparkContext, "number of index double read tasks"),
+    "numRegions" -> SQLMetrics.createMetric(sparkContext, "number of regions"),
+    "numIndexRangesScanned" -> SQLMetrics
+      .createMetric(sparkContext, "number of index ranges scanned"),
+    "numDowngradeRangesScanned" -> SQLMetrics
+      .createMetric(sparkContext, "number of downgrade ranges scanned"))
 
   override def simpleString: String = verboseString
 
