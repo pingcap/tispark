@@ -76,4 +76,4 @@ sed_i 's/\(tikv-client\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$ASSEMBLY"
 
 # Also update <scala.binary.version> in scalafmt
 sed_i 's/\(mvn-scalafmt\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$BASEDIR/dev/scalafmt"
-chmod 100755 dev/scalafmt
+chmod a+x dev/scalafmt
