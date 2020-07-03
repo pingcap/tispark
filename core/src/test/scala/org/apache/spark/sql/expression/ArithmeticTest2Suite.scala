@@ -41,11 +41,9 @@ class ArithmeticTest2Suite extends BaseInitialOnceTest {
   private val addCases = divideCases map { _.replace("/", "+") }
   private val allCases = addCases ++ minusCases ++ multiCases ++ divideCases
 
-  allCases foreach { query =>
-    {
-      test(query) {
-        runTest(query)
-      }
+  test("Test - Arithmetic Test2") {
+    allCases.foreach { query =>
+      runTest(query)
     }
   }
 }

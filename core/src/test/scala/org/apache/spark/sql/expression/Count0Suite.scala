@@ -49,11 +49,9 @@ class Count0Suite extends BaseInitialOnceTest {
     _.replace(")", "))").replace("count", "count(distinct")
   } ++ countCases
 
-  allCases foreach { query =>
-    {
-      test(query) {
-        runTest(query)
-      }
+  test("Test - Count") {
+    allCases.foreach { query =>
+      runTest(query)
     }
   }
 
