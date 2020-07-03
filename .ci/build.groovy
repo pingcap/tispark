@@ -52,17 +52,6 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                         git checkout -f ${ghprbActualCommit}
                         ./dev/change-scala-version.sh 2.12
                         mvn clean package -Dmaven.test.skip=true -Pspark-3.0-scala-2.12
-                        ./dev/change-scala-version.sh 2.11
-                        git diff
-                        formatted="\$?"
-                        if [[ "\${formatted}" -eq 1 ]]
-                        then
-                           echo "code format error, please run the following commands:"
-                           echo "   mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false"
-                           echo "   mvn com.coveo:fmt-maven-plugin:format"
-                           exit 1
-                        fi
-                        """
                     }
                 }
             }

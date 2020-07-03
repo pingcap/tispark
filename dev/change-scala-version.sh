@@ -64,6 +64,8 @@ find "$BASEDIR" -name 'pom.xml' -not -path '*assembly*' -print \
 # Also update <scala.binary.version> in assembly/pom.xml
 sed_i 's/\(tispark-parent\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$BASEDIR/assembly/pom.xml"
 sed_i 's/\(tispark-assembly\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$BASEDIR/assembly/pom.xml"
+sed_i 's/\(tispark-core-internal\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$BASEDIR/assembly/pom.xml"
+sed_i 's/\(tikv-client\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$BASEDIR/assembly/pom.xml"
 
 # Also update <scala.binary.version> in assembly.xml
 ASSEMBLY="$BASEDIR/assembly/src/main/assembly/assembly.xml"
@@ -74,3 +76,4 @@ sed_i 's/\(tikv-client\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$ASSEMBLY"
 
 # Also update <scala.binary.version> in scalafmt
 sed_i 's/\(mvn-scalafmt\)_'$FROM_VERSION'/\1_'$TO_VERSION'/g' "$BASEDIR/dev/scalafmt"
+chmod 100755 dev/scalafmt
