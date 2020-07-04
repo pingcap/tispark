@@ -146,7 +146,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
           int count = 0;
           // hasNext will create an dataInput which is our datasource.
           // TODO(Zhexuan Yang) we need control memory limit in case of out of memory error
-          for (; count < numOfRows && hasNext(); ) {
+          while (count < numOfRows && hasNext()) {
             for (int i = 0; i < dataTypes.length; i++) {
               childColumnVectors.get(i).add(dataTypes[i].decodeChunkColumn(dataInput));
             }

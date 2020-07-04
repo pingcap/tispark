@@ -25,7 +25,6 @@ import com.pingcap.tikv.types._
 import com.pingcap.tispark.{TiConfigConst, _}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
-import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, ColumnarRegionTaskExec}
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{SparkConf, sql}
@@ -191,26 +190,5 @@ object TiUtil {
     }
 
     mutableRow
-  }
-
-  def extractDAGReq(df: DataFrame): TiDAGRequest = {
-    val executedPlan = df.queryExecution.executedPlan
-    val copRDD = executedPlan.find(e => e.isInstanceOf[ColumnarCoprocessorRDD])
-    val regionTaskExec = executedPlan.find(e => e.isInstanceOf[ColumnarRegionTaskExec])
-    if (copRDD.isDefined) {
-      copRDD.get
-        .asInstanceOf[ColumnarCoprocessorRDD]
-        .tiRDDs
-        .head
-        .dagRequest
-    } else if (regionTaskExec.isDefined) {
-      regionTaskExec.get
-        .asInstanceOf[ColumnarRegionTaskExec]
-        .dagRequest
-    } else {
-      throw new UnsupportedOperationException(
-        "cannot find ColumnarCoprocessorRDD or " +
-          "ColumnarRegionTaskExec in DataFrame.")
-    }
   }
 }

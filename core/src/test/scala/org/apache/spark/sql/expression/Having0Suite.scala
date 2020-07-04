@@ -24,11 +24,9 @@ class Having0Suite extends BaseInitialOnceTest {
     "select tp_int%1000 a, count(*) from full_data_type_table group by (tp_int%1000) having sum(tp_int%1000) > 100 order by a",
     "select tp_bigint%1000 a, count(*) from full_data_type_table group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100 order by a")
 
-  allCases foreach { query =>
-    {
-      test(query) {
-        runTest(query)
-      }
+  test("Test - Having") {
+    allCases.foreach { query =>
+      runTest(query)
     }
   }
 

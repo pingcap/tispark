@@ -35,11 +35,9 @@ class Join0Suite extends BaseInitialOnceTest {
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_date = b.tp_date",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_timestamp = b.tp_timestamp")
 
-  allCases foreach { query =>
-    {
-      test(query) {
-        runTest(query)
-      }
+  test("Test index - Join") {
+    allCases.foreach { query =>
+      runTest(query)
     }
   }
 
