@@ -46,6 +46,8 @@ class TiFlashSuite extends BaseTiSparkTest {
 
     tidbStmt.execute("ALTER TABLE t SET TIFLASH REPLICA 1")
 
+    assert(checkLoadTiFlashWithRetry("t", Some("tispark_test")))
+
     tidbStmt.execute("insert into t values(1, 'v1')")
 
     // ttl will not be updated, which means ttl will not expired
@@ -74,6 +76,8 @@ class TiFlashSuite extends BaseTiSparkTest {
     tidbStmt.execute("create table t(i int, s varchar(128))")
 
     tidbStmt.execute("ALTER TABLE t SET TIFLASH REPLICA 1")
+
+    assert(checkLoadTiFlashWithRetry("t", Some("tispark_test")))
 
     tidbStmt.execute("insert into t values(1, 'v1')")
 

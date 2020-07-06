@@ -491,11 +491,9 @@ class CoveringIndex0Suite extends BaseInitialOnceTest {
     "select id_dt from full_data_type_table_idx where tp_int is null and tp_tinyint < 100 order by id_dt",
     "select id_dt from full_data_type_table_idx where tp_int = 4355836469450447576 is null and tp_tinyint < 100 order by id_dt")
 
-  allCases foreach { query =>
-    {
-      test(query) {
-        runTest(query)
-      }
+  test("Test index - Covering Index") {
+    allCases.foreach { query =>
+      runTest(query)
     }
   }
 

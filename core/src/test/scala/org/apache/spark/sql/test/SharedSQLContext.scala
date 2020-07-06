@@ -96,9 +96,19 @@ trait SharedSQLContext
 
   protected def loadData: String = SharedSQLContext.loadData
 
-  private def checkLoadTiFlashWithRetry(tableName: String): Boolean = {
-    val check = queryTiDBViaJDBC(
-      s"select TABLE_SCHEMA from INFORMATION_SCHEMA.TABLES where TABLE_NAME = '$tableName'")
+  protected def checkLoadTiFlashWithRetry(
+      tableName: String,
+      database: Option[String] = None): Boolean = {
+    val check =
+      database match {
+        case Some(db) =>
+          queryTiDBViaJDBC(
+            s"select TABLE_SCHEMA from INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = '$db' && TABLE_NAME = '$tableName'")
+        case None =>
+          queryTiDBViaJDBC(
+            s"select TABLE_SCHEMA from INFORMATION_SCHEMA.TABLES where TABLE_NAME = '$tableName'")
+      }
+
     if (check.isEmpty) {
       throw new RuntimeException(
         s"$tableName not found in TiDB after load. Load SQL file failed.")
@@ -107,8 +117,15 @@ trait SharedSQLContext
     for (_ <- 0 until 60) {
       // check every 5 secs
       Thread.sleep(5000)
-      val available = queryTiDBViaJDBC(
-        s"select AVAILABLE from INFORMATION_SCHEMA.TIFLASH_REPLICA where TABLE_NAME = '$tableName'")
+      val available = database match {
+        case Some(db) =>
+          queryTiDBViaJDBC(
+            s"select AVAILABLE from INFORMATION_SCHEMA.TIFLASH_REPLICA where TABLE_SCHEMA = '$db' && TABLE_NAME = '$tableName'")
+        case None =>
+          queryTiDBViaJDBC(
+            s"select AVAILABLE from INFORMATION_SCHEMA.TIFLASH_REPLICA where TABLE_NAME = '$tableName'")
+      }
+
       if (available.nonEmpty && available.head.head.toString == "true") {
         return true
       }

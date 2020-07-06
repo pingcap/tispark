@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
+import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.columnar.TiChunkColumnVector;
@@ -417,7 +418,7 @@ public abstract class DataType implements Serializable {
       } else {
         bytes = Converter.convertToBytes(value, prefixLength);
       }
-      Codec.BytesCodec.writeBytesFully(cdo, bytes);
+      BytesCodec.writeBytesFully(cdo, bytes);
     } else {
       throw new TypeException("Data type can not encode with prefix");
     }

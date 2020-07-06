@@ -1,6 +1,12 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.0-rc.1] 2020-06-22
+### Fixes
+- Fix column name case bug [#1487](https://github.com/pingcap/tispark/pull/1487)
+- Fix resolve current lock npe bug [#1485](https://github.com/pingcap/tispark/pull/1485)
+- Fix resolve lock bug with tiflash [#1483](https://github.com/pingcap/tispark/pull/1483)
+
 ## [TiSpark 2.3.0-rc] 2020-06-05
 ### New Features
 - Support working with TiDB-3.1 and TiDB-4.0

@@ -17,6 +17,7 @@ package com.pingcap.tikv.types;
 
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
+import com.pingcap.tikv.codec.Codec.EnumCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -50,43 +51,12 @@ public class EnumType extends DataType {
     Integer result;
 
     if (value instanceof String) {
-      result = parseEnumName((String) value);
+      result = EnumCodec.parseEnumName((String) value, this.getElems());
     } else {
       Long l = Converter.safeConvertToUnsigned(value, this.unsignedUpperBound());
-      result = parseEnumValue(l.intValue());
+      result = EnumCodec.parseEnumValue(l.intValue(), this.getElems());
     }
     return result;
-  }
-
-  private Integer parseEnumName(String name) throws ConvertOverflowException {
-    int i = 0;
-    while (i < this.getElems().size()) {
-      if (this.getElems().get(i).equals(name)) {
-        return i + 1;
-      }
-      i = i + 1;
-    }
-
-    // name doesn't exist, maybe an integer?
-    int result;
-    try {
-      result = Integer.parseInt(name);
-    } catch (Exception e) {
-      throw ConvertOverflowException.newEnumException(name);
-    }
-    return parseEnumValue(result);
-  }
-
-  private Integer parseEnumValue(Integer number) throws ConvertOverflowException {
-    if (number == 0) {
-      throw ConvertOverflowException.newLowerBoundException(number, 0);
-    }
-
-    if (number > this.getElems().size()) {
-      throw ConvertOverflowException.newUpperBoundException(number, this.getElems().size());
-    }
-
-    return number;
   }
 
   /** {@inheritDoc} */
@@ -105,9 +75,7 @@ public class EnumType extends DataType {
       default:
         throw new TypeException("Invalid EnumType(IntegerType) flag: " + flag);
     }
-    if (idx < 0 || idx >= this.getElems().size())
-      throw new TypeException("Index is out of range, better " + "take a look at tidb side.");
-    return this.getElems().get(idx);
+    return EnumCodec.readEnumFromIndex(idx, this.getElems());
   }
 
   /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */

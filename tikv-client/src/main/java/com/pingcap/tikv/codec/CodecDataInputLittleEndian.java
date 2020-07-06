@@ -30,36 +30,6 @@ public class CodecDataInputLittleEndian extends CodecDataInput {
   }
 
   @Override
-  public void readFully(@Nonnull byte[] b) {
-    super.readFully(b);
-  }
-
-  @Override
-  public void readFully(@Nonnull byte[] b, int off, int len) {
-    super.readFully(b, off, len);
-  }
-
-  @Override
-  public int skipBytes(int n) {
-    return super.skipBytes(n);
-  }
-
-  @Override
-  public boolean readBoolean() {
-    return super.readBoolean();
-  }
-
-  @Override
-  public byte readByte() {
-    return super.readByte();
-  }
-
-  @Override
-  public int readUnsignedByte() {
-    return super.readUnsignedByte();
-  }
-
-  @Override
   public short readShort() {
     int ch1 = readUnsignedByte();
     int ch2 = readUnsignedByte();

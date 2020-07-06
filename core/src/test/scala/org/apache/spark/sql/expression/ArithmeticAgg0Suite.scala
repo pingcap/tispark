@@ -106,11 +106,9 @@ class ArithmeticAgg0Suite extends BaseInitialOnceTest {
     "select min(tp_int) from full_data_type_table",
     "select min(tp_char) from full_data_type_table")
 
-  allCases foreach { query =>
-    {
-      test(query) {
-        runTest(query)
-      }
+  test("Test - ArithmeticAgg") {
+    allCases.foreach { query =>
+      runTest(query)
     }
   }
 

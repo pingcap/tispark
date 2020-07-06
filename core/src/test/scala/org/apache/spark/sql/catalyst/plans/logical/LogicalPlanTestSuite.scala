@@ -16,14 +16,13 @@
 package org.apache.spark.sql.catalyst.plans.logical
 
 import com.pingcap.tikv.meta.TiTimestamp
-import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 
 class LogicalPlanTestSuite extends BasePlanTest {
   test("fix Residual Filter containing wrong info") {
     val df = spark
       .sql("select * from full_data_type_table where tp_mediumint > 0 order by tp_int")
-    if (TiUtil.extractDAGReq(df).toString.contains("Residual Filters")) {
+    if (extractDAGRequests(df).head.toString.contains("Residual Filters")) {
       fail("Residual Filters should not appear")
     }
   }
@@ -95,8 +94,31 @@ class LogicalPlanTestSuite extends BasePlanTest {
     extractDAGRequests(df).map(_.getStartTs).foreach { checkTimestamp }
   }
 
+  // https://github.com/pingcap/tispark/issues/1498
+  test("test index scan failed to push down varchar") {
+    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute(
+      """
+        |CREATE TABLE `t` (
+        |  `id` int(11) NOT NULL PRIMARY KEY,
+        |  `artical_id` varchar(255) DEFAULT NULL,
+        |  `c` bigint(20) UNSIGNED DEFAULT NULL,
+        |  `last_modify_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        |  KEY `artical_id`(`artical_id`)
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+      """.stripMargin)
+    tidbStmt.execute(
+      "insert into t values(1, 'abc', 18446744073709551615, '2020-06-06 00:00:00'), (2, 'abcdefg', 18446744073709551614, '2020-06-26 00:00:00'), (3, 'acdgga', 5, '2020-06-25 00:00:00'), (4, 'abcdefgh', 18446744073709551614, '2020-06-12 00:00:00'), (5, 'aaabcd', 10, '2020-06-16 00:00:00')")
+    tidbStmt.execute("analyze table t")
+    val df = spark.sql(
+      "select artical_id from t where artical_id = 'abcdefg' and last_modify_time > '2020-06-22 00:00:00'")
+    checkIsIndexScan(df, "t")
+    checkIndex(df, "artical_id")
+  }
+
   override def afterAll(): Unit =
     try {
+      tidbStmt.execute("drop table if exists t")
       tidbStmt.execute("drop table if exists test1")
       tidbStmt.execute("drop table if exists test2")
       tidbStmt.execute("drop table if exists test3")
