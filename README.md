@@ -26,7 +26,7 @@ If you are using maven (recommended), add the following code to your `pom.xml`:
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-assembly</artifactId>
-      <version>2.3.0-rc</version>
+      <version>2.3.0</version>
     </dependency>
 </dependencies>
 ```
