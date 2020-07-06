@@ -217,14 +217,14 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         sh "./dev/change-scala-version.sh 2.11"
                         sh """
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
-                        mvn clean package -DskipTests -Pspark-2.3-scala-2.11
+                        mvn clean package -DskipTests -Pspark-2.3-scala-2.11 -Pjenkins-test-spark-2.3
                         mvn test ${MVN_PROFILE} -Pspark-2.3-scala-2.11 -Pjenkins-test-spark-2.3 -Dtest=moo ${mvnStr}
                         """
 
                         sh "./dev/change-scala-version.sh 2.12"
                         sh """
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
-                        mvn clean package -DskipTests -Pspark-3.0-scala-2.12
+                        mvn clean package -DskipTests -Pspark-3.0-scala-2.12 -Pjenkins-test-spark-3.0
                         mvn test ${MVN_PROFILE} -Pspark-3.0-scala-2.12 -Pjenkins-test-spark-3.0 -Dtest=moo ${mvnStr}
                         """
                     }
