@@ -12,6 +12,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TEST_REGION_SIZE = "normal"
     def TEST_TIFLASH = "false"
     def MVN_PROFILE = ""
+    def SCALA = "2.11"
 
     // parse tidb branch
     def m1 = ghprbCommentBody =~ /tidb\s*=\s*([^\s\\]+)(\s|\\|$)/
@@ -63,6 +64,12 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def m8 = ghprbCommentBody =~ /test-flash\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m8) {
         TEST_TIFLASH = "${m8[0][1]}"
+    }
+
+    // parse scala version
+    def m9 = ghprbCommentBody =~ /scala\s*=\s*([^\s\\]+)(\s|\\|$)/
+    if (m9) {
+        SCALA = "${m9[0][1]}"
     }
 
     groovy.lang.Closure readfile = { filename ->
@@ -214,19 +221,21 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                         """
 
-                        sh "./dev/change-scala-version.sh 2.11"
-                        sh """
-                        export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
-                        mvn clean package -DskipTests -Pspark-2.3-scala-2.11 -Pjenkins-test-spark-2.3
-                        mvn test ${MVN_PROFILE} -Pspark-2.3-scala-2.11 -Pjenkins-test-spark-2.3 -Dtest=moo ${mvnStr}
-                        """
-
-                        sh "./dev/change-scala-version.sh 2.12"
-                        sh """
-                        export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
-                        mvn clean package -DskipTests -Pspark-3.0-scala-2.12 -Pjenkins-test-spark-3.0
-                        mvn test ${MVN_PROFILE} -Pspark-3.0-scala-2.12 -Pjenkins-test-spark-3.0 -Dtest=moo ${mvnStr}
-                        """
+                        if (SCALA == "2.11") {
+                            sh "./dev/change-scala-version.sh 2.11"
+                            sh """
+                            export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
+                            mvn clean package -DskipTests -Pspark-2.3-scala-2.11 -Pjenkins-test-spark-2.3
+                            mvn test ${MVN_PROFILE} -Pspark-2.3-scala-2.11 -Pjenkins-test-spark-2.3 -Dtest=moo ${mvnStr}
+                            """
+                        } else {
+                            sh "./dev/change-scala-version.sh 2.12"
+                            sh """
+                            export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
+                            mvn clean package -DskipTests -Pspark-3.0-scala-2.12 -Pjenkins-test-spark-3.0
+                            mvn test ${MVN_PROFILE} -Pspark-3.0-scala-2.12 -Pjenkins-test-spark-3.0 -Dtest=moo ${mvnStr}
+                            """
+                        }
                     }
                 }
 
