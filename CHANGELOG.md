@@ -1,6 +1,16 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.0] 2020-07-06
+### New Features
+- Support working with TiDB-3.1 and TiDB-4.0
+- Support working with TiFlash
+- Support directly writing data to TiKV
+### Fixes
+- Support new row format encoding [#1492](https://github.com/pingcap/tispark/pull/1492)
+- Fix test: add TiFlash replica avaiable check [#1495](https://github.com/pingcap/tispark/pull/1495)
+- Fix string type pushdown [#1500](https://github.com/pingcap/tispark/pull/1500)
+
 ## [TiSpark 2.3.0-rc.1] 2020-06-22
 ### Fixes
 - Fix column name case bug [#1487](https://github.com/pingcap/tispark/pull/1487)
