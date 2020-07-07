@@ -71,7 +71,7 @@ object ExprUtils {
       case f @ Sum(BasicExpression(arg)) =>
         addingSumAggToDAgReq(meta, dagRequest, f, arg)
 
-      case f @ PromotedSum(BasicExpression(arg)) =>
+      case f @ SpecialSum(BasicExpression(arg), _, _) =>
         addingSumAggToDAgReq(meta, dagRequest, f, arg)
 
       case f @ Count(args) if args.lengthCompare(1) == 0 =>
@@ -170,8 +170,8 @@ object ExprUtils {
       tiDBRelation: TiDBRelation,
       blocklist: ExpressionBlocklist): Boolean =
     aggExpr.aggregateFunction match {
-      case Average(_) | Sum(_) | SumNotNullable(_) | PromotedSum(_) | Count(_) | Min(_) | Max(
-            _) =>
+      case Average(_) | Sum(_) | SpecialSum(_, _, _) | SumNotNullable(_) | PromotedSum(_) | Count(
+            _) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
             .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))
