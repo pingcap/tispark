@@ -190,7 +190,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         cp .ci/log4j-ci.properties core/src/test/resources/log4j.properties
                         bash core/scripts/version.sh
                         bash core/scripts/fetch-test-data.sh
-                        mv core/src/test core-test/src/
+                        #mv core/src/test core-test/src/
                         bash tikv-client/scripts/proto.sh
                         """
                         }
@@ -222,18 +222,18 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         """
 
                         if (SCALA == "2.11") {
-                            sh "./dev/change-scala-version.sh 2.11"
                             sh """
+                            ./dev/change-scala-version.sh 2.11
                             export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
-                            mvn clean package -DskipTests -Pspark-2.3-scala-2.11 -Pjenkins-test-spark-2.3
-                            mvn test ${MVN_PROFILE} -Pspark-2.3-scala-2.11 -Pjenkins-test-spark-2.3 -Dtest=moo ${mvnStr}
+                            mvn clean package -DskipTests -Pspark-2.3-scala-2.11
+                            mvn test ${MVN_PROFILE} -Pspark-2.3-scala-2.11 -Dtest=moo ${mvnStr}
                             """
                         } else {
-                            sh "./dev/change-scala-version.sh 2.12"
                             sh """
+                            ./dev/change-scala-version.sh 2.12
                             export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
-                            mvn clean package -DskipTests -Pspark-3.0-scala-2.12 -Pjenkins-test-spark-3.0
-                            mvn test ${MVN_PROFILE} -Pspark-3.0-scala-2.12 -Pjenkins-test-spark-3.0 -Dtest=moo ${mvnStr}
+                            mvn clean package -DskipTests -Pspark-3.0-scala-2.12
+                            mvn test ${MVN_PROFILE} -Pspark-3.0-scala-2.12 -Dtest=moo ${mvnStr}
                             """
                         }
                     }
