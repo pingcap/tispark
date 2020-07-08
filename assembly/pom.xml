@@ -32,55 +32,18 @@
         </dependency>
     </dependencies>
 
+    <!--
     <profiles>
         <profile>
             <id>spark-3.0-scala-2.12</id>
             <dependencies>
                 <dependency>
                     <groupId>com.pingcap.tispark</groupId>
-                    <artifactId>spark-wrapper-spark-2.4_2.12</artifactId>
-                    <version>${project.parent.version}</version>
-                </dependency>
-                <dependency>
-                    <groupId>com.pingcap.tispark</groupId>
                     <artifactId>spark-wrapper-spark-3.0_2.12</artifactId>
                     <version>${project.parent.version}</version>
                 </dependency>
             </dependencies>
         </profile>
-
-        <profile>
-            <id>spark-2.4-scala-2.12</id>
-            <dependencies>
-                <dependency>
-                    <groupId>com.pingcap.tispark</groupId>
-                    <artifactId>spark-wrapper-spark-2.4_2.12</artifactId>
-                    <version>${project.parent.version}</version>
-                </dependency>
-                <dependency>
-                    <groupId>com.pingcap.tispark</groupId>
-                    <artifactId>spark-wrapper-spark-3.0_2.12</artifactId>
-                    <version>${project.parent.version}</version>
-                </dependency>
-            </dependencies>
-        </profile>
-
-        <profile>
-            <id>spark-2.4-scala-2.11</id>
-            <dependencies>
-                <dependency>
-                    <groupId>com.pingcap.tispark</groupId>
-                    <artifactId>spark-wrapper-spark-2.3_2.11</artifactId>
-                    <version>${project.parent.version}</version>
-                </dependency>
-                <dependency>
-                    <groupId>com.pingcap.tispark</groupId>
-                    <artifactId>spark-wrapper-spark-2.4_2.11</artifactId>
-                    <version>${project.parent.version}</version>
-                </dependency>
-            </dependencies>
-        </profile>
-
         <profile>
             <id>spark-2.3-scala-2.11</id>
             <dependencies>
@@ -97,6 +60,7 @@
             </dependencies>
         </profile>
     </profiles>
+    -->
 
     <build>
        <plugins>

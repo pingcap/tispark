@@ -174,37 +174,9 @@
                 <scala.version>2.12.10</scala.version>
             </properties>
             <modules>
-                <module>spark-wrapper/spark-2.4</module>
                 <module>spark-wrapper/spark-3.0</module>
             </modules>
         </profile>
-
-        <profile>
-            <id>spark-2.4-scala-2.12</id>
-            <properties>
-                <spark.version.compile>2.4.4</spark.version.compile>
-                <scala.binary.version>2.12</scala.binary.version>
-                <scala.version>2.12.10</scala.version>
-            </properties>
-            <modules>
-                <module>spark-wrapper/spark-2.4</module>
-                <module>spark-wrapper/spark-3.0</module>
-            </modules>
-        </profile>
-
-        <profile>
-            <id>spark-2.4-scala-2.11</id>
-            <properties>
-                <spark.version.compile>2.4.4</spark.version.compile>
-                <scala.binary.version>2.11</scala.binary.version>
-                <scala.version>2.11.12</scala.version>
-            </properties>
-            <modules>
-                <module>spark-wrapper/spark-2.3</module>
-                <module>spark-wrapper/spark-2.4</module>
-            </modules>
-        </profile>
-
         <profile>
             <id>spark-2.3-scala-2.11</id>
             <activation>

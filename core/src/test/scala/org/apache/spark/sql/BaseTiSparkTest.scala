@@ -293,7 +293,9 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           checkLimit = checkLimit)
       }
     } catch {
-      case e: Throwable => fail(e)
+      case e: Throwable =>
+        e.printStackTrace()
+        fail(e)
     }
 
   /** Run test with sql `qSpark` for TiSpark and TiDB, `qJDBC` for Spark-JDBC. Throw fail exception when
