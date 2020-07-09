@@ -34,6 +34,7 @@ object PromotedSum {
     val retType = child.dataType match {
       case DecimalType.Fixed(precision, scale) =>
         DecimalType.bounded(precision + 10, scale)
+      case _: IntegralType => DecimalType.BigIntDecimal
       case _ => DoubleType
     }
 
@@ -47,16 +48,9 @@ object PromotedSum {
     }
 }
 
-object SumNotNullable {
+object CountSum {
   def apply(child: Expression): SpecialSum = {
-    val retType = child.dataType match {
-      case DecimalType.Fixed(precision, scale) =>
-        DecimalType.bounded(precision + 10, scale)
-      case _: IntegralType => LongType
-      case _ => DoubleType
-    }
-
-    SpecialSum(child, retType, 0)
+    SpecialSum(child, LongType, 0)
   }
 
   def unapply(s: SpecialSum): Option[Expression] =

@@ -494,8 +494,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
         case e: Sum => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
         case e: SpecialSum => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
         case e: First => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case _: Count =>
-          aggExpr.copy(aggregateFunction = SumNotNullable(partialResultRef))
+        case _: Count => aggExpr.copy(aggregateFunction = CountSum(partialResultRef))
         case _: Average => throw new IllegalStateException("All AVGs should have been rewritten.")
         case _ => aggExpr
       }

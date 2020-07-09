@@ -94,8 +94,7 @@ object TiAggregationImpl {
             val resultDataType = sum.resultAttribute.dataType
             val castedSum = resultDataType match {
               case LongType => Cast(sum.resultAttribute, DecimalType.BigIntDecimal)
-              case FloatType => Cast(sum.resultAttribute, DoubleType)
-              case DoubleType => Cast(sum.resultAttribute, DoubleType)
+              case FloatType | DoubleType => Cast(sum.resultAttribute, DoubleType)
               case d: DecimalType => Cast(sum.resultAttribute, d)
             }
             (ref: Expression) -> Alias(castedSum, ref.name)(exprId = ref.exprId)
