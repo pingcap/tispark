@@ -61,7 +61,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
         .contains("AnalysisException"))
   }
 
-  test("support desc table") {
+  ignore("support desc table") {
     val tidbDescTable =
       List(
         List("id_dt", "bigint", "false", null),
@@ -338,7 +338,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
     spark.sql("drop table if exists testLogic3")
   }
 
-  test("support desc table column") {
+  ignore("support desc table column") {
     val expectedDescTableColumn =
       List(List("col_name", "id"), List("data_type", "bigint"), List("comment", "NULL"))
     val expectedDescExtendedTableColumn =
