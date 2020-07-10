@@ -2,4 +2,4 @@
 
 echo $MAVEN_HOME
 
-mvn mvn-scalafmt_2.12:format -Dscalafmt.skip=false
+mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false
