@@ -221,14 +221,16 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                         """
 
-                        if (SCALA == "2.11") {
+                        if (SCALA == "2.11" || SCALA == "both") {
                             sh """
                             ./dev/change-scala-version.sh 2.11
                             export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
                             mvn clean package -DskipTests -Pspark-2.3-scala-2.11
                             mvn test ${MVN_PROFILE} -Pspark-2.3-scala-2.11 -Dtest=moo ${mvnStr}
                             """
-                        } else {
+                        }
+
+                        if (SCALA == "2.12" || SCALA == "both") {
                             sh """
                             ./dev/change-scala-version.sh 2.12
                             export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
