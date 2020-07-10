@@ -130,7 +130,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
     spark.sql("drop table if exists salesdata")
   }
 
-  test("test support show columns") {
+  ignore("test support show columns") {
     val columnNames = List(
       List("id_dt"),
       List("tp_varchar"),
