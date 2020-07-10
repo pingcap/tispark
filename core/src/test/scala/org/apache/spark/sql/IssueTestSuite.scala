@@ -425,7 +425,7 @@ class IssueTestSuite extends BaseTiSparkTest {
       "select b from table_group_by_bigint where c=18446744073709551614 group by b")
   }
 
-  test("test large amount of tables") {
+  ignore("test large amount of tables") {
     tidbStmt.execute("DROP DATABASE IF EXISTS large_amount_tables")
     tidbStmt.execute("CREATE DATABASE large_amount_tables")
 
@@ -438,6 +438,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute(sqls)
     sql(s"use ${dbPrefix}large_amount_tables")
     val df = sql("show tables")
+    df.show(false)
     assert(df.count() >= size)
   }
 
