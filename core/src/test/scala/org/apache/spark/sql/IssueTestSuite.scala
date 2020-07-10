@@ -318,7 +318,7 @@ class IssueTestSuite extends BaseTiSparkTest {
   }
 
   // https://github.com/pingcap/tispark/issues/262
-  test("NPE when decoding datetime,date,timestamp") {
+  ignore("NPE when decoding datetime,date,timestamp") {
     if (enableTiFlashTest) {
       cancel("ignored in tiflash test")
     }
