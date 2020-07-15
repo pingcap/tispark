@@ -74,22 +74,25 @@ public class TiDBJDBCClient implements AutoCloseable {
    *
    * @return 1 if should not encode and write with new row format.(default) 2 if encode and write
    *     with new row format.(default on v4.0.0 cluster)
-   * @throws SQLException if a database access error occurs
    */
-  public int getRowFormatVersion() throws SQLException {
-    List<List<Object>> result = queryTiDBViaJDBC(TIDB_ROW_FORMAT_VERSION_SQL);
-    if (result.isEmpty()) {
-      // default set to 1
-      return TIDB_ROW_FORMAT_VERSION_DEFAULT;
-    } else {
-      Object version = result.get(0).get(0);
-      if (version instanceof String) {
-        return Integer.parseInt((String) version);
-      } else if (version instanceof Number) {
-        return ((Number) version).intValue();
-      } else {
+  public int getRowFormatVersion() {
+    try {
+      List<List<Object>> result = queryTiDBViaJDBC(TIDB_ROW_FORMAT_VERSION_SQL);
+      if (result.isEmpty()) {
+        // default set to 1
         return TIDB_ROW_FORMAT_VERSION_DEFAULT;
+      } else {
+        Object version = result.get(0).get(0);
+        if (version instanceof String) {
+          return Integer.parseInt((String) version);
+        } else if (version instanceof Number) {
+          return ((Number) version).intValue();
+        } else {
+          return TIDB_ROW_FORMAT_VERSION_DEFAULT;
+        }
       }
+    } catch (Exception ignored) {
+      return TIDB_ROW_FORMAT_VERSION_DEFAULT;
     }
   }
 
