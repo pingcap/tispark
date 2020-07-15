@@ -61,8 +61,7 @@ object TiAggregationImpl {
         val sumsRewriteMap = sums.map {
           case s @ AggregateExpression(Sum(ref), _, _, _) =>
             // need cast long type to decimal type
-            val sum =
-              if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
+            val sum = PromotedSum(ref)
             s.resultAttribute -> s.copy(aggregateFunction = sum, resultId = newExprId)
         }.toMap
 
@@ -72,8 +71,7 @@ object TiAggregationImpl {
           case a @ AggregateExpression(Average(ref), _, _, _) =>
             // We need to do a type promotion on Sum(Long) to avoid LongType overflow in Average rewrite
             // scenarios to stay consistent with original spark's Average behaviour
-            val sum =
-              if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
+            val sum = PromotedSum(ref)
             a.resultAttribute -> Seq(
               a.copy(aggregateFunction = sum, resultId = newExprId),
               a.copy(aggregateFunction = Count(ref), resultId = newExprId))
@@ -81,12 +79,7 @@ object TiAggregationImpl {
 
         val sumRewrite = sumsRewriteMap.map {
           case (ref, sum) =>
-            val resultDataType = sum.resultAttribute.dataType
-            val castedSum = resultDataType match {
-              case LongType => Cast(sum.resultAttribute, DecimalType.BigIntDecimal)
-              case FloatType | DoubleType => Cast(sum.resultAttribute, DoubleType)
-              case d: DecimalType => Cast(sum.resultAttribute, d)
-            }
+            val castedSum = Cast(sum.resultAttribute, ref.dataType)
             (ref: Expression) -> Alias(castedSum, ref.name)(exprId = ref.exprId)
         }
 
@@ -99,19 +92,13 @@ object TiAggregationImpl {
         }
 
         val rewrittenResultExpressions = resultExpressions
-          .map {
-            _ transform sumRewrite
-          }
-          .map {
-            _ transform avgRewrite
-          }
+          .map { _ transform sumRewrite }
+          .map { _ transform avgRewrite }
           .map { case e: NamedExpression => e }
 
         val rewrittenAggregateExpressions = {
           val extraSumsAndCounts = avgRewriteMap.values
-            .reduceOption {
-              _ ++ _
-            } getOrElse Nil
+            .reduceOption { _ ++ _ } getOrElse Nil
           val rewriteSums = sumsRewriteMap.values
           (sumAndAvgEliminated ++ extraSumsAndCounts ++ rewriteSums).distinct
         }
