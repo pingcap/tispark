@@ -58,7 +58,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
     parameters.getOrElse(TIDB_SKIP_COMMIT_SECONDARY_KEY, "false").toBoolean
   val regionSplitNum: Int = parameters.getOrElse(TIDB_REGION_SPLIT_NUM, "0").toInt
   val enableRegionSplit: Boolean =
-    parameters.getOrElse(TIDB_ENABLE_REGION_SPLIT, "false").toBoolean
+    parameters.getOrElse(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
   val writeConcurrency: Int = parameters.getOrElse(TIDB_WRITE_CONCURRENCY, "0").toInt
   // ttlMode = { "FIXED", "UPDATE", "DEFAULT" }
   val ttlMode: String = parameters.getOrElse(TIDB_TTL_MODE, "DEFAULT").toUpperCase()
