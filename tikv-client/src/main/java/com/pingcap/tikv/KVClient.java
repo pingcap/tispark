@@ -201,7 +201,7 @@ public class KVClient implements AutoCloseable {
             } catch (final TiKVException e) {
               // TODO: any elegant way to re-split the ranges if fails?
               singleBatchBackOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
-              logger.warn("ReSplitting ranges for BatchPutRequest");
+              logger.warn("ReSplitting ranges for BatchGetRequest");
               // recursive calls
               return batchGet(singleBatchBackOffer, batch.keys, version);
             }
