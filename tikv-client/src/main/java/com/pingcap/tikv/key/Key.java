@@ -179,7 +179,7 @@ public class Key implements Comparable<Key> {
 
   @Override
   public int hashCode() {
-    return Arrays.hashCode(value) * infFlag;
+    return Arrays.hashCode(value);
   }
 
   public byte[] getBytes() {

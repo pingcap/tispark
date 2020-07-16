@@ -496,7 +496,8 @@ class TiBatchWriteTable(
       rdd: RDD[EncodedKVPair]): RDD[(SerializableKey, Array[Byte])] = {
     val regions = getRegions
     assert(regions.size() > 0)
-    val tiRegionPartitioner = new TiRegionPartitioner(regions, options.writeConcurrency)
+    val tiRegionPartitioner =
+      new TiRegionPartitioner(regions, options.writeConcurrency, options.taskNumPerRegion)
 
     rdd
       .map(obj => (obj.encodedKey, obj.encodedValue))
