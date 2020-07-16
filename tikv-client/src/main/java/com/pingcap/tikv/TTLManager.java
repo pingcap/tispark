@@ -43,7 +43,7 @@ import org.tikv.kvproto.Metapb;
  */
 public class TTLManager {
   /** 20 seconds */
-  public static final int MANAGED_LOCK_TTL = 20000;
+  public static final int MANAGED_LOCK_TTL = 200000;
 
   private static final Logger LOG = LoggerFactory.getLogger(TTLManager.class);
   /** status */
@@ -52,9 +52,9 @@ public class TTLManager {
   private static final int STATE_RUNNING = 1;
   private static final int STATE_CLOSED = 2;
   /** 10 seconds */
-  private static final int SCHEDULER_PERIOD = MANAGED_LOCK_TTL / 2;
+  private static final int SCHEDULER_PERIOD = MANAGED_LOCK_TTL / 20;
   /** 5 seconds */
-  private static final int SCHEDULER_INITIAL_DELAY = MANAGED_LOCK_TTL / 4;
+  private static final int SCHEDULER_INITIAL_DELAY = MANAGED_LOCK_TTL / 40;
 
   private final long startTS;
   private final ByteString primaryLock;
