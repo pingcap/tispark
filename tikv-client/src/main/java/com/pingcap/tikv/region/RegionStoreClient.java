@@ -408,6 +408,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
                   .setLockTtl(ttl)
                   .setSkipConstraintCheck(skipConstraintCheck)
                   .setMinCommitTs(startTs)
+                  .setTxnSize(16)
                   .build();
       KVErrorHandler<PrewriteResponse> handler =
           new KVErrorHandler<>(
