@@ -157,6 +157,19 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
   }
 
+  public void splitIndexRegion(String dbName, String tblName, String idxName, String valueList)
+      throws SQLException {
+    try (Statement tidbStmt = connection.createStatement()) {
+      String sql =
+          String.format(
+              "split table `%s`.`%s` index %s by %s", dbName, tblName, idxName, valueList);
+      logger.info("split index region: " + sql);
+      tidbStmt.execute(sql);
+    } catch (SQLException e) {
+      logger.warn("failed to split index region", e);
+      throw e;
+    }
+  }
   /**
    * split index region by calling tidb jdbc command `SPLIT TABLE`, e.g. SPLIT TABLE t INDEX idx
    * BETWEEN ("2010-01-01 00:00:00") AND ("2020-01-01 00:00:00") REGIONS 16;
