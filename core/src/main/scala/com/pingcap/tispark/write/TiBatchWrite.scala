@@ -315,16 +315,6 @@ class TiBatchWrite(
     } else {
       logger.info("skipping commit secondary key")
     }
-
-    // hack: use tispark to resolve locks
-    tiBatchWriteTables.foreach { tiBatchWriteTable =>
-      val db = tiConf.getDBPrefix + tiBatchWriteTable.options.database
-      val table = tiBatchWriteTable.options.table
-      val sql = s"select count(*) from `$db`.`$table`"
-      logger.info("hack: use tispark to resolve locks")
-      logger.info(sql)
-      tiContext.sparkSession.sql(sql).show()
-    }
   }
 
   private def getUseTableLock: Boolean = {
