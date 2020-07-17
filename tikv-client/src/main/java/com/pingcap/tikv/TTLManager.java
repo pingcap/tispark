@@ -42,8 +42,8 @@ import org.tikv.kvproto.Metapb;
  * https://github.com/pingcap/tidb/blob/master/store/tikv/2pc.go
  */
 public class TTLManager {
-  /** 60 seconds */
-  public static final int MANAGED_LOCK_TTL = 120000;
+  /** 20 seconds */
+  public static final int MANAGED_LOCK_TTL = 20000;
 
   private static final Logger LOG = LoggerFactory.getLogger(TTLManager.class);
   /** status */
@@ -52,9 +52,9 @@ public class TTLManager {
   private static final int STATE_RUNNING = 1;
   private static final int STATE_CLOSED = 2;
   /** 10 seconds */
-  private static final int SCHEDULER_PERIOD = 10000;
+  private static final int SCHEDULER_PERIOD = MANAGED_LOCK_TTL / 2;
   /** 5 seconds */
-  private static final int SCHEDULER_INITIAL_DELAY = 5000;
+  private static final int SCHEDULER_INITIAL_DELAY = MANAGED_LOCK_TTL / 4;
 
   private final long startTS;
   private final ByteString primaryLock;
