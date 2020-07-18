@@ -72,6 +72,8 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val sleepAfterGetCommitTS: Long = getOrDefault(TIDB_SLEEP_AFTER_GET_COMMIT_TS, "0").toLong
   val isTest: Boolean = getOrDefault(TIDB_IS_TEST, "false").toBoolean
   val taskNumPerRegion: Int = getOrDefault(TIDB_TASK_NUM_PER_REGION, "5").toInt
+  val shuffleKeyToSameRegion: Boolean =
+    getOrDefault(TIDB_SHUFFLE_KEY_TO_SAME_REGION, "true").toBoolean
   // ------------------------------------------------------------
   // Calculated parameters
   // ------------------------------------------------------------
@@ -164,6 +166,7 @@ object TiDBOptions {
   val TIDB_USE_TABLE_LOCK: String = newOption("useTableLock")
   val TIDB_MULTI_TABLES: String = newOption("multiTables")
   val TIDB_TASK_NUM_PER_REGION: String = newOption("taskNumPerRegion")
+  val TIDB_SHUFFLE_KEY_TO_SAME_REGION: String = newOption("shuffleKeyToSameRegion")
   // ------------------------------------------------------------
   // parameters only for test
   // ------------------------------------------------------------
