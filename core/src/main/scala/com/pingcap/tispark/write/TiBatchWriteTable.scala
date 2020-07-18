@@ -235,7 +235,11 @@ class TiBatchWriteTable(
     val encodedKVPairRDD =
       encodedTiRowRDD.map(row => EncodedKVPair(row.encodedKey, row.encodedValue))
     // shuffle data in same task which belong to same region
-    val shuffledRDD = shuffleKeyToSameRegion(encodedKVPairRDD).cache()
+    val shuffledRDD = if (options.shuffleKeyToSameRegion) {
+      shuffleKeyToSameRegion(encodedKVPairRDD)
+    } else {
+      doNotshuffleKeyToSameRegion(encodedKVPairRDD)
+    }
     shuffledRDD
   }
 
@@ -503,6 +507,13 @@ class TiBatchWriteTable(
       .map(obj => (obj.encodedKey, obj.encodedValue))
       // remove duplicate rows if key equals (should not happen, cause already deduplicated)
       .reduceByKey(tiRegionPartitioner, (a: Array[Byte], _: Array[Byte]) => a)
+  }
+
+  @throws(classOf[NoSuchTableException])
+  private def doNotshuffleKeyToSameRegion(
+      rdd: RDD[EncodedKVPair]): RDD[(SerializableKey, Array[Byte])] = {
+    rdd
+      .map(obj => (obj.encodedKey, obj.encodedValue))
   }
 
   private def getRegions: util.List[TiRegion] = {
