@@ -32,6 +32,8 @@ import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
@@ -66,8 +68,9 @@ public class Snapshot {
   }
 
   public ByteString get(ByteString key) {
-    return new KVClient(session.getConf(), session.getRegionStoreClientBuilder())
-        .get(key, timestamp.getVersion());
+    try (KVClient client = new KVClient(session.getConf(), session.getRegionStoreClientBuilder())) {
+      return client.get(key, timestamp.getVersion());
+    }
   }
 
   public List<BytePairWrapper> batchGet(List<byte[]> keys) {
@@ -75,16 +78,15 @@ public class Snapshot {
     for (byte[] key : keys) {
       list.add(ByteString.copyFrom(key));
     }
-
-    List<KvPair> kvPairList =
-        new KVClient(session.getConf(), session.getRegionStoreClientBuilder())
-            .batchGet(list, timestamp.getVersion());
-    return kvPairList
-        .stream()
-        .map(
-            kvPair ->
-                new BytePairWrapper(kvPair.getKey().toByteArray(), kvPair.getValue().toByteArray()))
-        .collect(Collectors.toList());
+    try (KVClient client = new KVClient(session.getConf(), session.getRegionStoreClientBuilder())) {
+      List<KvPair> kvPairList = client.batchGet(list, timestamp.getVersion());
+      return kvPairList
+          .stream()
+          .map(
+              kvPair ->
+                  new BytePairWrapper(kvPair.getKey().toByteArray(), kvPair.getValue().toByteArray()))
+          .collect(Collectors.toList());
+    }
   }
 
   public Iterator<TiChunk> tableReadChunk(
