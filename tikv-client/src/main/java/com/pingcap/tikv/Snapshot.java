@@ -32,8 +32,6 @@ import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
@@ -84,7 +82,8 @@ public class Snapshot {
           .stream()
           .map(
               kvPair ->
-                  new BytePairWrapper(kvPair.getKey().toByteArray(), kvPair.getValue().toByteArray()))
+                  new BytePairWrapper(
+                      kvPair.getKey().toByteArray(), kvPair.getValue().toByteArray()))
           .collect(Collectors.toList());
     }
   }
