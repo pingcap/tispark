@@ -264,10 +264,11 @@ public class TwoPhaseCommitter {
     GroupKeyResult groupResult = this.groupKeysByRegion(keys, size);
     List<BatchKeys> batchKeyList = new LinkedList<>();
     Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
-    for (Pair<TiRegion, Metapb.Store> pair : groupKeyMap.keySet()) {
-      TiRegion tiRegion = pair.first;
-      Metapb.Store store = pair.second;
-      this.appendBatchBySize(batchKeyList, tiRegion, store, groupKeyMap.get(pair), true, mutations);
+
+    for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry : groupKeyMap.entrySet()) {
+      TiRegion tiRegion = entry.getKey().first;
+      Metapb.Store store = entry.getKey().second;
+      this.appendBatchBySize(batchKeyList, tiRegion, store, entry.getValue(), true, mutations);
     }
 
     // For prewrite, stop sending other requests after receiving first error.
@@ -374,6 +375,9 @@ public class TwoPhaseCommitter {
       Map<ByteString, Kvrpcpb.Mutation> mutations) {
     int start;
     int end;
+    if (keys == null) {
+      return;
+    }
     int len = keys.size();
     for (start = 0; start < len; start = end) {
       int size = 0;
@@ -467,10 +471,10 @@ public class TwoPhaseCommitter {
     List<BatchKeys> batchKeyList = new LinkedList<>();
     Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
 
-    for (Pair<TiRegion, Metapb.Store> pair : groupKeyMap.keySet()) {
-      TiRegion tiRegion = pair.first;
-      Metapb.Store store = pair.second;
-      this.appendBatchBySize(batchKeyList, tiRegion, store, groupKeyMap.get(pair), false, null);
+    for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry : groupKeyMap.entrySet()) {
+      TiRegion tiRegion = entry.getKey().first;
+      Metapb.Store store = entry.getKey().second;
+      this.appendBatchBySize(batchKeyList, tiRegion, store, entry.getValue(), false, null);
     }
 
     // For prewrite, stop sending other requests after receiving first error.
