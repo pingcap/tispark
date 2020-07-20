@@ -512,8 +512,9 @@ class TiBatchWriteTable(
   @throws(classOf[NoSuchTableException])
   private def doNotshuffleKeyToSameRegion(
       rdd: RDD[EncodedKVPair]): RDD[(SerializableKey, Array[Byte])] = {
+    val regions = getRegions
     rdd
-      .map(obj => (obj.encodedKey, obj.encodedValue))
+      .map(obj => (obj.encodedKey, obj.encodedValue)).repartition(regions.size() * options.taskNumPerRegion)
   }
 
   private def getRegions: util.List[TiRegion] = {

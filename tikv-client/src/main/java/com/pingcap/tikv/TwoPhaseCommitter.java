@@ -188,7 +188,8 @@ public class TwoPhaseCommitter {
    * @param pairs
    * @return
    */
-  public void prewriteSecondaryKeys(byte[] primaryKey, Iterator<BytePairWrapper> pairs, int maxBackOfferMS)
+  public void prewriteSecondaryKeys(
+      byte[] primaryKey, Iterator<BytePairWrapper> pairs, int maxBackOfferMS)
       throws TiBatchWriteException {
     Iterator<Pair<ByteString, ByteString>> byteStringKeys =
         new Iterator<Pair<ByteString, ByteString>>() {
