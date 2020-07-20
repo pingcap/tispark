@@ -188,7 +188,7 @@ public class TwoPhaseCommitter {
    * @param pairs
    * @return
    */
-  public void prewriteSecondaryKeys(byte[] primaryKey, Iterator<BytePairWrapper> pairs)
+  public void prewriteSecondaryKeys(byte[] primaryKey, Iterator<BytePairWrapper> pairs, int maxBackOfferMS)
       throws TiBatchWriteException {
     Iterator<Pair<ByteString, ByteString>> byteStringKeys =
         new Iterator<Pair<ByteString, ByteString>>() {
@@ -206,11 +206,11 @@ public class TwoPhaseCommitter {
           }
         };
 
-    doPrewriteSecondaryKeys(ByteString.copyFrom(primaryKey), byteStringKeys);
+    doPrewriteSecondaryKeys(ByteString.copyFrom(primaryKey), byteStringKeys, maxBackOfferMS);
   }
 
   private void doPrewriteSecondaryKeys(
-      ByteString primaryKey, Iterator<Pair<ByteString, ByteString>> pairs)
+      ByteString primaryKey, Iterator<Pair<ByteString, ByteString>> pairs, int maxBackOfferMS)
       throws TiBatchWriteException {
     int totalSize = 0;
     while (pairs.hasNext()) {
@@ -224,7 +224,7 @@ public class TwoPhaseCommitter {
         size++;
       }
 
-      BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF);
+      BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(maxBackOfferMS);
       doPrewriteSecondaryKeysInBatchesWithRetry(
           backOffer, primaryKey, keyBytes, valueBytes, size, 0);
       totalSize = totalSize + size;
