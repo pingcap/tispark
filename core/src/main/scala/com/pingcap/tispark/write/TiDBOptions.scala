@@ -74,6 +74,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val taskNumPerRegion: Int = getOrDefault(TIDB_TASK_NUM_PER_REGION, "5").toInt
   val shuffleKeyToSameRegion: Boolean =
     getOrDefault(TIDB_SHUFFLE_KEY_TO_SAME_REGION, "true").toBoolean
+  val prewriteBackOfferMS: Int = getOrDefault(TIDB_PREWRITE_BACKOFFER_MS, "240000").toInt
   // ------------------------------------------------------------
   // Calculated parameters
   // ------------------------------------------------------------
@@ -167,6 +168,7 @@ object TiDBOptions {
   val TIDB_MULTI_TABLES: String = newOption("multiTables")
   val TIDB_TASK_NUM_PER_REGION: String = newOption("taskNumPerRegion")
   val TIDB_SHUFFLE_KEY_TO_SAME_REGION: String = newOption("shuffleKeyToSameRegion")
+  val TIDB_PREWRITE_BACKOFFER_MS: String = newOption("prewriteBackOfferMS")
   // ------------------------------------------------------------
   // parameters only for test
   // ------------------------------------------------------------
