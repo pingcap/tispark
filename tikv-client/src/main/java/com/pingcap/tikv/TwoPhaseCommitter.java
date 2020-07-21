@@ -515,7 +515,7 @@ public class TwoPhaseCommitter {
         ByteString key = keys[index];
         Pair<TiRegion, Metapb.Store> pair = this.regionManager.getRegionStorePairByKey(key);
         if (pair != null) {
-          groups.computeIfAbsent(pair, e -> new LinkedList<>()).add(key);
+          groups.computeIfAbsent(pair, e -> new ArrayList<>()).add(key);
         }
       }
     } catch (Exception e) {
