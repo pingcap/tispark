@@ -71,7 +71,14 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
     getOrDefault(TIDB_SLEEP_AFTER_PREWRITE_SECONDARY_KEY, "0").toLong
   val sleepAfterGetCommitTS: Long = getOrDefault(TIDB_SLEEP_AFTER_GET_COMMIT_TS, "0").toLong
   val isTest: Boolean = getOrDefault(TIDB_IS_TEST, "false").toBoolean
-  val taskNumPerRegion: Int = getOrDefault(TIDB_TASK_NUM_PER_REGION, "5").toInt
+  val taskNumPerRegion: Int =  {
+    val num = getOrDefault(TIDB_TASK_NUM_PER_REGION, "5").toInt
+    if(num <= 0) {
+      5
+    } else {
+      num
+    }
+  }
   val shuffleKeyToSameRegion: Boolean =
     getOrDefault(TIDB_SHUFFLE_KEY_TO_SAME_REGION, "true").toBoolean
   val prewriteBackOfferMS: Int = getOrDefault(TIDB_PREWRITE_BACKOFFER_MS, "240000").toInt
