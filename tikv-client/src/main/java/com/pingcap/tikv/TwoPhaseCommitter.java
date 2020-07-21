@@ -454,13 +454,13 @@ public class TwoPhaseCommitter {
       totalSize = totalSize + size;
 
       BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF);
-      doCommitSecondaryKeys(backOffer, keyBytes, size, commitTs);
+      doCommitSecondaryKeysWithRetry(backOffer, keyBytes, size, commitTs);
     }
 
     LOG.debug("commit secondary key successfully, total size={}", totalSize);
   }
 
-  private void doCommitSecondaryKeys(
+  private void doCommitSecondaryKeysWithRetry(
       BackOffer backOffer, ByteString[] keys, int size, long commitTs)
       throws TiBatchWriteException {
     if (keys == null || keys.length == 0 || size <= 0) {
@@ -469,7 +469,7 @@ public class TwoPhaseCommitter {
 
     // groups keys by region
     GroupKeyResult groupResult = this.groupKeysByRegion(keys, size);
-    List<BatchKeys> batchKeyList = new LinkedList<>();
+    List<BatchKeys> batchKeyList = new ArrayList<>();
     Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
 
     for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry : groupKeyMap.entrySet()) {
@@ -478,13 +478,12 @@ public class TwoPhaseCommitter {
       this.appendBatchBySize(batchKeyList, tiRegion, store, entry.getValue(), false, null);
     }
 
-    // For prewrite, stop sending other requests after receiving first error.
     for (BatchKeys batchKeys : batchKeyList) {
-      doCommitSecondaryKeySingleBatch(backOffer, batchKeys, commitTs);
+      doCommitSecondaryKeySingleBatchWithRetry(backOffer, batchKeys, commitTs);
     }
   }
 
-  private void doCommitSecondaryKeySingleBatch(
+  private void doCommitSecondaryKeySingleBatchWithRetry(
       BackOffer backOffer, BatchKeys batchKeys, long commitTs) throws TiBatchWriteException {
     List<ByteString> keysCommit = batchKeys.getKeys();
     ByteString[] keys = new ByteString[keysCommit.size()];
@@ -493,7 +492,9 @@ public class TwoPhaseCommitter {
     ClientRPCResult commitResult =
         this.kvClient.commit(
             backOffer, keys, this.startTs, commitTs, batchKeys.getRegion(), batchKeys.getStore());
-    if (!commitResult.isSuccess()) {
+    if (commitResult.isRetry()) {
+      doCommitSecondaryKeysWithRetry(backOffer, keys, keysCommit.size(), commitTs);
+    } else if (!commitResult.isSuccess()) {
       String error =
           String.format("Txn commit secondary key error, regionId=%s", batchKeys.getRegion());
       LOG.warn(error);

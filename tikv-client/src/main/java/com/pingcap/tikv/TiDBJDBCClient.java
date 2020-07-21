@@ -192,7 +192,7 @@ public class TiDBJDBCClient implements AutoCloseable {
     try (Statement tidbStmt = connection.createStatement()) {
       String sql =
           String.format(
-              "split table `%s`.`%s` index %s between (\"%s\") and (\"%s\") regions %d",
+              "split table `%s`.`%s` index `%s` between (\"%s\") and (\"%s\") regions %d",
               dbName, tblName, idxName, minIndexVal, maxIndexVal, regionNum);
       logger.info("split index region: " + sql);
       tidbStmt.execute(sql);

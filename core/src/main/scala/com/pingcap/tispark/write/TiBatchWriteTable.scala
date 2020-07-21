@@ -524,7 +524,8 @@ class TiBatchWriteTable(
       rdd: RDD[EncodedKVPair]): RDD[(SerializableKey, Array[Byte])] = {
     val regions = getRegions
     rdd
-      .map(obj => (obj.encodedKey, obj.encodedValue)).repartition(regions.size() * options.taskNumPerRegion)
+      .map(obj => (obj.encodedKey, obj.encodedValue))
+      .repartition(regions.size() * options.taskNumPerRegion)
   }
 
   private def getRegions: util.List[TiRegion] = {
@@ -744,8 +745,8 @@ class TiBatchWriteTable(
         }
 
         val rdd = wrappedEncodedRdd.filter(_.indexId == index.getId).filter { t =>
-            val value = t.row.get(colOffset, dataType)
-            value != null && value.toString != null
+          val value = t.row.get(colOffset, dataType)
+          value != null && value.toString != null
         }
         val regionSplitNum = if (options.regionSplitNum != 0) {
           options.regionSplitNum
@@ -758,34 +759,30 @@ class TiBatchWriteTable(
           val count = rdd.count()
           logger.info(
             s"index region split, regionSplitNum=$regionSplitNum, indexName=${index.getName}")
-          if (count > (regionSplitNum  * 1000 + 1) * 10) {
+          if (count > (regionSplitNum * 1000 + 1) * 10) {
             logger.info("split by sample data")
             val sampleData = rdd.takeSample(false, (regionSplitNum * 1000 + 1).toInt)
             val sortedSampleData = sampleData.sorted(ordering)
             val buf = new StringBuilder
-            for ( i <- 1 until regionSplitNum.toInt) {
+            for (i <- 1 until regionSplitNum.toInt) {
               val indexValue = sortedSampleData(i * 1000).row.get(colOffset, dataType).toString
               buf.append(" (")
               buf.append("\"")
               buf.append(indexValue)
               buf.append("\"")
               buf.append(")")
-              if (i != regionSplitNum -1) {
+              if (i != regionSplitNum - 1) {
                 buf.append(",")
               }
             }
             try {
               tiDBJDBCClient
-                .splitIndexRegion(
-                  options.database,
-                  options.table,
-                  index.getName,
-                  buf.toString())
+                .splitIndexRegion(options.database, options.table, index.getName, buf.toString())
             } catch {
               case e: SQLException =>
                 //if (options.isTest) {
-                  throw e
-               // }
+                throw e
+              // }
             }
           } else {
             logger.info("split by min/max data")

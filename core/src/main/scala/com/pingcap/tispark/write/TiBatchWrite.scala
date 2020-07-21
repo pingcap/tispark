@@ -241,8 +241,10 @@ class TiBatchWrite(
         new BytePairWrapper(keyValue._1.bytes, keyValue._2)
       }.asJava
 
-
-      ti2PCClientOnExecutor.prewriteSecondaryKeys(primaryKey.bytes, pairs, options.prewriteBackOfferMS)
+      ti2PCClientOnExecutor.prewriteSecondaryKeys(
+        primaryKey.bytes,
+        pairs,
+        options.prewriteBackOfferMS)
 
       try {
         ti2PCClientOnExecutor.close()
