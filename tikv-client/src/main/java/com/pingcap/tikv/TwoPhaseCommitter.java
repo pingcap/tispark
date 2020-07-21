@@ -64,6 +64,7 @@ public class TwoPhaseCommitter {
   private final long startTs;
   /** unit is millisecond */
   private final long lockTTL;
+  private final boolean retryCommitSecondaryKeys;
 
   private final TxnKVClient kvClient;
   private final RegionManager regionManager;
@@ -73,6 +74,7 @@ public class TwoPhaseCommitter {
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = DEFAULT_BATCH_WRITE_LOCK_TTL;
+    this.retryCommitSecondaryKeys = conf.getRetryCommitSecondaryKey();
   }
 
   public TwoPhaseCommitter(TiConfiguration conf, long startTime, long lockTTL) {
@@ -80,6 +82,7 @@ public class TwoPhaseCommitter {
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = lockTTL;
+    this.retryCommitSecondaryKeys = conf.getRetryCommitSecondaryKey();
   }
 
   public void close() throws Exception {}
@@ -492,7 +495,7 @@ public class TwoPhaseCommitter {
     ClientRPCResult commitResult =
         this.kvClient.commit(
             backOffer, keys, this.startTs, commitTs, batchKeys.getRegion(), batchKeys.getStore());
-    if (commitResult.isRetry()) {
+    if (retryCommitSecondaryKeys && commitResult.isRetry()) {
       doCommitSecondaryKeysWithRetry(backOffer, keys, keysCommit.size(), commitTs);
     } else if (!commitResult.isSuccess()) {
       String error =
