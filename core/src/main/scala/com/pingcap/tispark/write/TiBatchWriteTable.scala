@@ -292,6 +292,10 @@ class TiBatchWriteTable(
       .getStart
   }
 
+  private def isNullUniqueIndexValue(value: Array[Byte]): Boolean = {
+    value.length == 1 && value(0) == '0'
+  }
+
   private def generateDataToBeRemovedRddV1(
       rdd: RDD[WrappedRow],
       startTs: TiTimestamp): RDD[WrappedRow] = {
@@ -303,7 +307,7 @@ class TiBatchWriteTable(
           //  check handle key
           if (handleCol != null) {
             val oldValue = snapshot.get(buildRowKey(wrappedRow.row, wrappedRow.handle).bytes)
-            if (oldValue.nonEmpty) {
+            if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
               val oldRow = TableCodec.decodeRow(oldValue, wrappedRow.handle, tiTableInfo)
               rowBuf += WrappedRow(oldRow, wrappedRow.handle)
             }
@@ -434,13 +438,15 @@ class TiBatchWriteTable(
               val oldValuePair = oldValueList.get(i)
               val oldValue = oldValuePair.getValue
               val key = oldValuePair.getKey
-              val oldHandle = TableCodec.decodeHandle(oldValue)
-              val tiRow = rowMap.get(key)
+              if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
+                val oldHandle = TableCodec.decodeHandle(oldValue)
+                val tiRow = rowMap.get(key)
 
-              oldIndicesBatch.add(buildRowKey(tiRow, oldHandle).bytes)
-              oldIndicesMap.put(
-                new SerializableKey(buildRowKey(tiRow, oldHandle).bytes),
-                oldHandle)
+                oldIndicesBatch.add(buildRowKey(tiRow, oldHandle).bytes)
+                oldIndicesMap.put(
+                  new SerializableKey(buildRowKey(tiRow, oldHandle).bytes),
+                  oldHandle)
+              }
             }
           }
 
