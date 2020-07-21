@@ -30,9 +30,13 @@ class TiRegionPartitioner(
     val serializableKey = key.asInstanceOf[SerializableKey]
     val rawKey = Key.toRawKey(serializableKey.bytes)
 
-    val regionNumber = binarySearch(rawKey)
-    val offset = Math.abs(rawKey.hashCode()) % taskNumPerRegion
-    (regionNumber * taskNumPerRegion + offset) % numPartitions
+    if (writeConcurrency <= 0) {
+      val regionNumber = binarySearch(rawKey)
+      val offset = Math.abs(rawKey.hashCode()) % taskNumPerRegion
+      (regionNumber * taskNumPerRegion + offset) % numPartitions
+    } else {
+      binarySearch(rawKey) % numPartitions
+    }
   }
 
   def binarySearch(key: Key): Int = {
