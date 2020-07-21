@@ -64,6 +64,7 @@ public class TwoPhaseCommitter {
   private final long startTs;
   /** unit is millisecond */
   private final long lockTTL;
+
   private final boolean retryCommitSecondaryKeys;
 
   private final TxnKVClient kvClient;
