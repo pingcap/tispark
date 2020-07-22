@@ -278,15 +278,11 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       ResolveLockResult resolveLockResult =
           lockResolverClient.resolveLocks(backOffer, version, locks, forWrite);
       addResolvedLocks(version, resolveLockResult.getResolvedLocks());
-      long msBeforeExpired = resolveLockResult.getMsBeforeTxnExpired();
-      if (msBeforeExpired > 0) {
-        // resolveLocks already retried, just throw error to upper logic.
-        throw new TiKVException("locks not resolved, retry");
-      }
-
-      // FIXME: we should retry
+      // resolveLocks already retried, just throw error to upper logic.
+      throw new TiKVException("locks not resolved, retry");
+    } else {
+      return resp.getPairsList();
     }
-    return resp.getPairsList();
   }
 
   public List<KvPair> scan(
