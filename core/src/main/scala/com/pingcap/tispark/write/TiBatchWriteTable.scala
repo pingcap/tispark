@@ -318,8 +318,7 @@ class TiBatchWriteTable(
             // if handle is appended, it must not exists in old table
             if (!keyInfo._2) {
               val oldValue = snapshot.get(keyInfo._1.bytes)
-              // todo should remove this, oldValue must be non-empty
-              if (oldValue.nonEmpty) {
+              if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
                 val oldHandle = TableCodec.decodeHandle(oldValue)
                 val oldRowValue = snapshot.get(buildRowKey(wrappedRow.row, oldHandle).bytes)
                 val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
