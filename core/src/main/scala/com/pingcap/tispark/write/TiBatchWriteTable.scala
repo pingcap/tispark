@@ -504,7 +504,7 @@ class TiBatchWriteTable(
       {
         mutableRdd = mutableRdd
           .map { wrappedRow =>
-            val indexKey = buildUniqueIndexKey(wrappedRow.row,wrappedRow.handle, index)._1
+            val indexKey = buildUniqueIndexKey(wrappedRow.row, wrappedRow.handle, index)._1
             (indexKey, wrappedRow)
           }
           .groupByKey()
@@ -629,7 +629,8 @@ class TiBatchWriteTable(
       handle: Long,
       index: TiIndexInfo,
       remove: Boolean): (SerializableKey, Array[Byte]) = {
-    val keys = IndexKey.encodeIndexDataValues(row, index.getIndexColumns, handle, false, tiTableInfo).keys
+    val keys =
+      IndexKey.encodeIndexDataValues(row, index.getIndexColumns, handle, false, tiTableInfo).keys
     val cdo = new CodecDataOutput()
     cdo.write(IndexKey.toIndexKey(locatePhysicalTable(row), index.getId, keys: _*).getBytes)
     IntegerType.BIGINT.encode(cdo, EncodeType.KEY, handle)
@@ -647,9 +648,17 @@ class TiBatchWriteTable(
     new SerializableKey(RowKey.toRowKey(locatePhysicalTable(row), handle).getBytes)
   }
 
-  private def buildUniqueIndexKey(row: TiRow, handle: Long, index: TiIndexInfo): (SerializableKey, Boolean) = {
+  private def buildUniqueIndexKey(
+      row: TiRow,
+      handle: Long,
+      index: TiIndexInfo): (SerializableKey, Boolean) = {
     // NULL is only allowed in unique key, primary key does not allow NULL value
-    val encodeResult = IndexKey.encodeIndexDataValues(row, index.getIndexColumns, handle, index.isUnique && !index.isPrimary, tiTableInfo)
+    val encodeResult = IndexKey.encodeIndexDataValues(
+      row,
+      index.getIndexColumns,
+      handle,
+      index.isUnique && !index.isPrimary,
+      tiTableInfo)
     val keys = encodeResult.keys
     val indexKey =
       IndexKey.toIndexKey(locatePhysicalTable(row), index.getId, keys: _*)
