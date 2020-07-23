@@ -26,6 +26,7 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import java.sql.Timestamp;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDateTime;
@@ -83,6 +84,11 @@ public class TimestampType extends AbstractDateTimeType {
   @Override
   protected Long decodeNotNull(int flag, CodecDataInput cdi) {
     return decodeDateTime(flag, cdi);
+  }
+
+  @Override
+  protected Timestamp decodeNotNullForBatchWrite(int flag, CodecDataInput cdi) {
+    return decodeDateTimeForBatchWrite(flag, cdi);
   }
 
   @Override
