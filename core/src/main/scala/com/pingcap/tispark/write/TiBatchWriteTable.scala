@@ -427,8 +427,10 @@ class TiBatchWriteTable(
               val key = oldValuePair.getKey
               val handle = handleMap.get(key)
 
-              val oldRow = TableCodec.decodeRow(oldValue, handle, tiTableInfo)
-              rowBuf += WrappedRow(oldRow, handle)
+              if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
+                val oldRow = TableCodec.decodeRow(oldValue, handle, tiTableInfo)
+                rowBuf += WrappedRow(oldRow, handle)
+              }
             }
           }
 
@@ -455,8 +457,10 @@ class TiBatchWriteTable(
             val oldRowKey = oldIndicesRowPair.getKey
             val oldRowValue = oldIndicesRowPair.getValue
             val oldHandle = decodeHandle(oldRowKey)
-            val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
-            rowBuf += WrappedRow(oldRow, oldHandle)
+            if (oldRowValue.nonEmpty && !isNullUniqueIndexValue(oldRowValue)) {
+              val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
+              rowBuf += WrappedRow(oldRow, oldHandle)
+            }
           }
         }
       }
