@@ -23,6 +23,7 @@ import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.IntegerType;
 import java.util.List;
 
 public class IndexKey extends Key {
@@ -39,13 +40,40 @@ public class IndexKey extends Key {
     this.dataKeys = dataKeys;
   }
 
+  public static class EncodeIndexDataResult {
+    public EncodeIndexDataResult(Key[] keys, boolean appendHandle) {
+      this.keys = keys;
+      this.appendHandle = appendHandle;
+    }
+
+    public Key[] keys;
+    public boolean appendHandle;
+  }
+
   public static IndexKey toIndexKey(long tableId, long indexId, Key... dataKeys) {
     return new IndexKey(tableId, indexId, dataKeys);
   }
 
-  public static Key[] encodeIndexDataValues(
-      Row row, List<TiIndexColumn> indexColumns, TiTableInfo tableInfo) {
-    Key[] keys = new Key[indexColumns.size()];
+  public static EncodeIndexDataResult encodeIndexDataValues(
+      Row row,
+      List<TiIndexColumn> indexColumns,
+      long handle,
+      boolean appendHandleIfContainsNull,
+      TiTableInfo tableInfo) {
+    // when appendHandleIfContainsNull is true, append handle column if any of the index column is
+    // NULL
+    boolean appendHandle = false;
+    if (appendHandleIfContainsNull) {
+      for (int i = 0; i < indexColumns.size(); i++) {
+        TiIndexColumn col = indexColumns.get(i);
+        DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
+        if (row.get(col.getOffset(), colTp) == null) {
+          appendHandle = true;
+          break;
+        }
+      }
+    }
+    Key[] keys = new Key[indexColumns.size() + (appendHandle ? 1 : 0)];
     for (int i = 0; i < indexColumns.size(); i++) {
       TiIndexColumn col = indexColumns.get(i);
       DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
@@ -53,7 +81,12 @@ public class IndexKey extends Key {
       Key key = TypedKey.toTypedKey(row.get(col.getOffset(), colTp), colTp, (int) col.getLength());
       keys[i] = key;
     }
-    return keys;
+    if (appendHandle) {
+      Key key = TypedKey.toTypedKey(handle, IntegerType.BIGINT);
+      keys[keys.length - 1] = key;
+    }
+
+    return new EncodeIndexDataResult(keys, appendHandle);
   }
 
   private static byte[] encode(long tableId, long indexId, Key[] dataKeys) {

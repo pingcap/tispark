@@ -292,6 +292,10 @@ class TiBatchWriteTable(
       .getStart
   }
 
+  private def isNullUniqueIndexValue(value: Array[Byte]): Boolean = {
+    value.length == 1 && value(0) == '0'
+  }
+
   private def generateDataToBeRemovedRddV1(
       rdd: RDD[WrappedRow],
       startTs: TiTimestamp): RDD[WrappedRow] = {
@@ -303,19 +307,23 @@ class TiBatchWriteTable(
           //  check handle key
           if (handleCol != null) {
             val oldValue = snapshot.get(buildRowKey(wrappedRow.row, wrappedRow.handle).bytes)
-            if (oldValue.nonEmpty) {
+            if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
               val oldRow = TableCodec.decodeRow(oldValue, wrappedRow.handle, tiTableInfo)
               rowBuf += WrappedRow(oldRow, wrappedRow.handle)
             }
           }
 
           uniqueIndices.foreach { index =>
-            val oldValue = snapshot.get(buildUniqueIndexKey(wrappedRow.row, index).bytes)
-            if (oldValue.nonEmpty) {
-              val oldHandle = TableCodec.decodeHandle(oldValue)
-              val oldRowValue = snapshot.get(buildRowKey(wrappedRow.row, oldHandle).bytes)
-              val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
-              rowBuf += WrappedRow(oldRow, oldHandle)
+            val keyInfo = buildUniqueIndexKey(wrappedRow.row, wrappedRow.handle, index)
+            // if handle is appended, it must not exists in old table
+            if (!keyInfo._2) {
+              val oldValue = snapshot.get(keyInfo._1.bytes)
+              if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
+                val oldHandle = TableCodec.decodeHandle(oldValue)
+                val oldRowValue = snapshot.get(buildRowKey(wrappedRow.row, oldHandle).bytes)
+                val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
+                rowBuf += WrappedRow(oldRow, oldHandle)
+              }
             }
           }
           rowBuf
@@ -381,16 +389,21 @@ class TiBatchWriteTable(
           (list, map)
         }
 
-        def genNextIndexBatch(
+        def genNextUniqueIndexBatch(
             batch: List[WrappedRow],
             index: TiIndexInfo): (util.List[Array[Byte]], util.Map[ByteString, TiRow]) = {
           val list = new util.ArrayList[Array[Byte]]()
           val map = new util.HashMap[ByteString, TiRow]()
           batch.foreach { wrappedRow =>
-            val bytes = buildUniqueIndexKey(wrappedRow.row, index).bytes
-            val key = ByteString.copyFrom(bytes)
-            list.add(bytes)
-            map.put(key, wrappedRow.row)
+            val encodeResult = buildUniqueIndexKey(wrappedRow.row, wrappedRow.handle, index)
+            if (!encodeResult._2) {
+              // only add the key if handle is not appended, since if handle is appened,
+              // the value must be a new value
+              val bytes = encodeResult._1.bytes
+              val key = ByteString.copyFrom(bytes)
+              list.add(bytes)
+              map.put(key, wrappedRow.row)
+            }
           }
           (list, map)
         }
@@ -414,23 +427,27 @@ class TiBatchWriteTable(
               val key = oldValuePair.getKey
               val handle = handleMap.get(key)
 
-              val oldRow = TableCodec.decodeRow(oldValue, handle, tiTableInfo)
-              rowBuf += WrappedRow(oldRow, handle)
+              if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
+                val oldRow = TableCodec.decodeRow(oldValue, handle, tiTableInfo)
+                rowBuf += WrappedRow(oldRow, handle)
+              }
             }
           }
 
           val oldIndicesBatch: util.List[Array[Byte]] = new util.ArrayList[Array[Byte]]()
           uniqueIndices.foreach { index =>
-            val (batchIndices, rowMap) = genNextIndexBatch(batch, index)
+            val (batchIndices, rowMap) = genNextUniqueIndexBatch(batch, index)
             val oldValueList = snapshot.batchGet(batchIndices)
             (0 until oldValueList.size()).foreach { i =>
               val oldValuePair = oldValueList.get(i)
               val oldValue = oldValuePair.getValue
               val key = oldValuePair.getKey
-              val oldHandle = TableCodec.decodeHandle(oldValue)
-              val tiRow = rowMap.get(key)
+              if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
+                val oldHandle = TableCodec.decodeHandle(oldValue)
+                val tiRow = rowMap.get(key)
 
-              oldIndicesBatch.add(buildRowKey(tiRow, oldHandle).bytes)
+                oldIndicesBatch.add(buildRowKey(tiRow, oldHandle).bytes)
+              }
             }
           }
 
@@ -440,8 +457,10 @@ class TiBatchWriteTable(
             val oldRowKey = oldIndicesRowPair.getKey
             val oldRowValue = oldIndicesRowPair.getValue
             val oldHandle = decodeHandle(oldRowKey)
-            val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
-            rowBuf += WrappedRow(oldRow, oldHandle)
+            if (oldRowValue.nonEmpty && !isNullUniqueIndexValue(oldRowValue)) {
+              val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
+              rowBuf += WrappedRow(oldRow, oldHandle)
+            }
           }
         }
       }
@@ -485,7 +504,7 @@ class TiBatchWriteTable(
       {
         mutableRdd = mutableRdd
           .map { wrappedRow =>
-            val indexKey = buildUniqueIndexKey(wrappedRow.row, index)
+            val indexKey = buildUniqueIndexKey(wrappedRow.row, wrappedRow.handle, index)._1
             (indexKey, wrappedRow)
           }
           .groupByKey()
@@ -586,13 +605,20 @@ class TiBatchWriteTable(
       handle: Long,
       index: TiIndexInfo,
       remove: Boolean): (SerializableKey, Array[Byte]) = {
-    val indexKey = buildUniqueIndexKey(row, index)
+    val encodeResult = buildUniqueIndexKey(row, handle, index)
+    val indexKey = encodeResult._1
     val value = if (remove) {
       new Array[Byte](0)
     } else {
-      val cdo = new CodecDataOutput()
-      cdo.writeLong(handle)
-      cdo.toBytes
+      if (encodeResult._2) {
+        val value = new Array[Byte](1)
+        value(0) = '0'
+        value
+      } else {
+        val cdo = new CodecDataOutput()
+        cdo.writeLong(handle)
+        cdo.toBytes
+      }
     }
 
     (indexKey, value)
@@ -603,7 +629,8 @@ class TiBatchWriteTable(
       handle: Long,
       index: TiIndexInfo,
       remove: Boolean): (SerializableKey, Array[Byte]) = {
-    val keys = IndexKey.encodeIndexDataValues(row, index.getIndexColumns, tiTableInfo)
+    val keys =
+      IndexKey.encodeIndexDataValues(row, index.getIndexColumns, handle, false, tiTableInfo).keys
     val cdo = new CodecDataOutput()
     cdo.write(IndexKey.toIndexKey(locatePhysicalTable(row), index.getId, keys: _*).getBytes)
     IntegerType.BIGINT.encode(cdo, EncodeType.KEY, handle)
@@ -621,12 +648,21 @@ class TiBatchWriteTable(
     new SerializableKey(RowKey.toRowKey(locatePhysicalTable(row), handle).getBytes)
   }
 
-  private def buildUniqueIndexKey(row: TiRow, index: TiIndexInfo): SerializableKey = {
-    val keys =
-      IndexKey.encodeIndexDataValues(row, index.getIndexColumns, tiTableInfo)
+  private def buildUniqueIndexKey(
+      row: TiRow,
+      handle: Long,
+      index: TiIndexInfo): (SerializableKey, Boolean) = {
+    // NULL is only allowed in unique key, primary key does not allow NULL value
+    val encodeResult = IndexKey.encodeIndexDataValues(
+      row,
+      index.getIndexColumns,
+      handle,
+      index.isUnique && !index.isPrimary,
+      tiTableInfo)
+    val keys = encodeResult.keys
     val indexKey =
       IndexKey.toIndexKey(locatePhysicalTable(row), index.getId, keys: _*)
-    new SerializableKey(indexKey.getBytes)
+    (new SerializableKey(indexKey.getBytes), encodeResult.appendHandle)
   }
 
   private def generateRowKey(
@@ -762,9 +798,9 @@ class TiBatchWriteTable(
                 .splitIndexRegion(options.database, options.table, index.getName, buf.toString())
             } catch {
               case e: SQLException =>
-                //if (options.isTest) {
+                if (options.isTest) {
                 throw e
-              // }
+               }
             }
           } else {
             logger.info("split by min/max data")
