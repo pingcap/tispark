@@ -69,6 +69,22 @@ public abstract class AbstractDateTimeType extends DataType {
     return ts.getTime() / 1000 * 1000000 + ts.getNanos() / 1000;
   }
 
+  Timestamp decodeDateTimeForBatchWrite(int flag, CodecDataInput cdi) {
+    ExtendedDateTime extendedDateTime;
+    if (flag == Codec.UVARINT_FLAG) {
+      extendedDateTime = DateTimeCodec.readFromUVarInt(cdi, getTimezone());
+    } else if (flag == Codec.UINT_FLAG) {
+      extendedDateTime = DateTimeCodec.readFromUInt(cdi, getTimezone());
+    } else {
+      throw new InvalidCodecFormatException(
+          "Invalid Flag type for " + getClass().getSimpleName() + ": " + flag);
+    }
+    if (extendedDateTime == null) {
+      return DateTimeCodec.createExtendedDateTime(getTimezone(), 1, 1, 1, 0, 0, 0, 0).toTimeStamp();
+    }
+    return extendedDateTime.toTimeStamp();
+  }
+
   /** Decode Date from packed long value */
   LocalDate decodeDate(int flag, CodecDataInput cdi) {
     LocalDate date;
