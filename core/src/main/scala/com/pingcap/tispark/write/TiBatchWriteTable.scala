@@ -798,9 +798,9 @@ class TiBatchWriteTable(
                 .splitIndexRegion(options.database, options.table, index.getName, buf.toString())
             } catch {
               case e: SQLException =>
-                //if (options.isTest) {
+                if (options.isTest) {
                 throw e
-              // }
+               }
             }
           } else {
             logger.info("split by min/max data")
