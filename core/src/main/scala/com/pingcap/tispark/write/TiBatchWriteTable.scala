@@ -395,6 +395,10 @@ class TiBatchWriteTable(
           (list, map)
         }
 
+        def decodeHandle(row: Array[Byte]): Long = {
+          RowKey.decode(row).getHandle
+        }
+
         def processNextBatch(): Unit = {
           rowBuf = mutable.ListBuffer.empty[WrappedRow]
           rowBufIndex = 0
@@ -416,7 +420,6 @@ class TiBatchWriteTable(
           }
 
           val oldIndicesBatch: util.List[Array[Byte]] = new util.ArrayList[Array[Byte]]()
-          val oldIndicesMap: mutable.HashMap[SerializableKey, Long] = new mutable.HashMap()
           uniqueIndices.foreach { index =>
             val (batchIndices, rowMap) = genNextIndexBatch(batch, index)
             val oldValueList = snapshot.batchGet(batchIndices)
@@ -428,9 +431,6 @@ class TiBatchWriteTable(
               val tiRow = rowMap.get(key)
 
               oldIndicesBatch.add(buildRowKey(tiRow, oldHandle).bytes)
-              oldIndicesMap.put(
-                new SerializableKey(buildRowKey(tiRow, oldHandle).bytes),
-                oldHandle)
             }
           }
 
@@ -439,7 +439,7 @@ class TiBatchWriteTable(
             val oldIndicesRowPair = oldIndicesRowPairs.get(i)
             val oldRowKey = oldIndicesRowPair.getKey
             val oldRowValue = oldIndicesRowPair.getValue
-            val oldHandle = oldIndicesMap(new SerializableKey(oldRowKey))
+            val oldHandle = decodeHandle(oldRowKey)
             val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
             rowBuf += WrappedRow(oldRow, oldHandle)
           }
