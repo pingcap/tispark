@@ -67,10 +67,8 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
       tidbWrite(List(row1, row2, row3, row4, row5), schema, options)
 
       try {
-        assert(
-          spark.sql(s"select count(c) from $table").collect() === spark
-            .sql(s"select count(a) from $table")
-            .collect())
+        assert(spark.sql(s"select count(c) from $table").collect().head.get(0) === 5)
+        assert(spark.sql(s"select count(a) from $table").collect().head.get(0) === 5)
       } finally {
         spark.sql(s"select count(c) from $table").show(false)
         spark.sql(s"select count(c) from $table").explain
@@ -83,7 +81,7 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
 
   override def afterAll(): Unit =
     try {
-      // dropTable()
+      dropTable()
     } finally {
       super.afterAll()
     }
