@@ -27,7 +27,8 @@ import com.pingcap.tikv.meta._
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType.EncodeType
-import com.pingcap.tikv.types.IntegerType
+import com.pingcap.tikv.types.{IntegerType, RealType}
+import com.pingcap.tikv.util.FastByteComparisons
 import com.pingcap.tikv.{TiBatchWriteUtils, TiConfiguration, TiDBJDBCClient, TiSession}
 import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.utils.TiUtil
@@ -754,11 +755,33 @@ class TiBatchWriteTable(
         val colOffset = tiColumn.getOffset
         val dataType = tiColumn.getType
 
-        val ordering = new Ordering[WrappedEncodedRow] {
+        val ordering: Ordering[WrappedEncodedRow] = new Ordering[WrappedEncodedRow] {
           override def compare(x: WrappedEncodedRow, y: WrappedEncodedRow): Int = {
             val xIndex = x.row.get(colOffset, dataType)
             val yIndex = y.row.get(colOffset, dataType)
-            xIndex.toString.compare(yIndex.toString)
+            xIndex match {
+              case _: java.lang.Integer =>
+                xIndex
+                  .asInstanceOf[java.lang.Integer]
+                  .compareTo(yIndex.asInstanceOf[java.lang.Integer])
+              case _: java.lang.Long =>
+                xIndex
+                  .asInstanceOf[java.lang.Long]
+                  .compareTo(yIndex.asInstanceOf[java.lang.Long])
+              case _: java.lang.Double =>
+                xIndex
+                  .asInstanceOf[java.lang.Double]
+                  .compareTo(yIndex.asInstanceOf[java.lang.Double])
+              case _: java.lang.Float =>
+                xIndex
+                  .asInstanceOf[java.lang.Float]
+                  .compareTo(yIndex.asInstanceOf[java.lang.Float])
+              case _: Array[Byte] =>
+                FastByteComparisons.compareTo(
+                  xIndex.asInstanceOf[Array[Byte]],
+                  yIndex.asInstanceOf[Array[Byte]])
+              case _ => xIndex.toString.compareTo(yIndex.toString)
+            }
           }
         }
 
@@ -797,10 +820,7 @@ class TiBatchWriteTable(
               tiDBJDBCClient
                 .splitIndexRegion(options.database, options.table, index.getName, buf.toString())
             } catch {
-              case e: SQLException =>
-                if (options.isTest) {
-                throw e
-               }
+              case e: SQLException => throw e
             }
           } else {
             logger.info("split by min/max data")
