@@ -70,20 +70,32 @@ public class TwoPhaseCommitter {
   private final TxnKVClient kvClient;
   private final RegionManager regionManager;
 
+  private final long txnCommitBatchSize;
+  private final int writeBufferSize;
+
   public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
     this.kvClient = TiSession.getInstance(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = DEFAULT_BATCH_WRITE_LOCK_TTL;
     this.retryCommitSecondaryKeys = conf.getRetryCommitSecondaryKey();
+    this.txnCommitBatchSize = TXN_COMMIT_BATCH_SIZE;
+    this.writeBufferSize = WRITE_BUFFER_SIZE;
   }
 
-  public TwoPhaseCommitter(TiConfiguration conf, long startTime, long lockTTL) {
+  public TwoPhaseCommitter(
+      TiConfiguration conf,
+      long startTime,
+      long lockTTL,
+      long txnCommitBatchSize,
+      int writeBufferSize) {
     this.kvClient = TiSession.getInstance(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = lockTTL;
     this.retryCommitSecondaryKeys = conf.getRetryCommitSecondaryKey();
+    this.txnCommitBatchSize = txnCommitBatchSize;
+    this.writeBufferSize = writeBufferSize;
   }
 
   public void close() throws Exception {}
@@ -219,10 +231,10 @@ public class TwoPhaseCommitter {
       throws TiBatchWriteException {
     int totalSize = 0;
     while (pairs.hasNext()) {
-      ByteString[] keyBytes = new ByteString[WRITE_BUFFER_SIZE];
-      ByteString[] valueBytes = new ByteString[WRITE_BUFFER_SIZE];
+      ByteString[] keyBytes = new ByteString[writeBufferSize];
+      ByteString[] valueBytes = new ByteString[writeBufferSize];
       int size = 0;
-      while (size < WRITE_BUFFER_SIZE && pairs.hasNext()) {
+      while (size < writeBufferSize && pairs.hasNext()) {
         Pair<ByteString, ByteString> pair = pairs.next();
         keyBytes[size] = pair.first;
         valueBytes[size] = pair.second;
@@ -386,7 +398,7 @@ public class TwoPhaseCommitter {
     int len = keys.size();
     for (start = 0; start < len; start = end) {
       int size = 0;
-      for (end = start; end < len && size < TXN_COMMIT_BATCH_SIZE; end++) {
+      for (end = start; end < len && size < txnCommitBatchSize; end++) {
         if (sizeIncludeValue) {
           size += this.keyValueSize(keys.get(end), mutations);
         } else {
@@ -445,9 +457,9 @@ public class TwoPhaseCommitter {
 
     int totalSize = 0;
     while (keys.hasNext()) {
-      ByteString[] keyBytes = new ByteString[WRITE_BUFFER_SIZE];
+      ByteString[] keyBytes = new ByteString[writeBufferSize];
       int size = 0;
-      for (int i = 0; i < WRITE_BUFFER_SIZE; i++) {
+      for (int i = 0; i < writeBufferSize; i++) {
         if (keys.hasNext()) {
           keyBytes[size] = keys.next();
           size++;
