@@ -144,16 +144,20 @@ public class TiDBJDBCClient implements AutoCloseable {
    */
   public void splitTableRegion(
       String dbName, String tblName, long minVal, long maxVal, long regionNum) throws SQLException {
-    try (Statement tidbStmt = connection.createStatement()) {
-      String sql =
-          String.format(
-              "split table `%s`.`%s` between (%d) and (%d) regions %d",
-              dbName, tblName, minVal, maxVal, regionNum);
-      logger.info("split table region: " + sql);
-      tidbStmt.execute(sql);
-    } catch (SQLException e) {
-      logger.warn("failed to split table region", e);
-      throw e;
+    if (minVal < maxVal) {
+      try (Statement tidbStmt = connection.createStatement()) {
+        String sql =
+            String.format(
+                "split table `%s`.`%s` between (%d) and (%d) regions %d",
+                dbName, tblName, minVal, maxVal, regionNum);
+        logger.info("split table region: " + sql);
+        tidbStmt.execute(sql);
+      } catch (SQLException e) {
+        logger.warn("failed to split table region", e);
+        throw e;
+      }
+    } else {
+      logger.warn("try to split table region with minVal >= maxVal, skipped");
     }
   }
 
@@ -189,16 +193,20 @@ public class TiDBJDBCClient implements AutoCloseable {
       String maxIndexVal,
       long regionNum)
       throws SQLException {
-    try (Statement tidbStmt = connection.createStatement()) {
-      String sql =
-          String.format(
-              "split table `%s`.`%s` index `%s` between (\"%s\") and (\"%s\") regions %d",
-              dbName, tblName, idxName, minIndexVal, maxIndexVal, regionNum);
-      logger.info("split index region: " + sql);
-      tidbStmt.execute(sql);
-    } catch (SQLException e) {
-      logger.warn("failed to split index region", e);
-      throw e;
+    if (!minIndexVal.equals(maxIndexVal)) {
+      try (Statement tidbStmt = connection.createStatement()) {
+        String sql =
+            String.format(
+                "split table `%s`.`%s` index `%s` between (\"%s\") and (\"%s\") regions %d",
+                dbName, tblName, idxName, minIndexVal, maxIndexVal, regionNum);
+        logger.info("split index region: " + sql);
+        tidbStmt.execute(sql);
+      } catch (SQLException e) {
+        logger.warn("failed to split index region", e);
+        throw e;
+      }
+    } else {
+      logger.warn("try to split index region with minVal = maxVal, skipped");
     }
   }
 
