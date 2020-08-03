@@ -302,7 +302,7 @@ class TiBatchWriteTable(
       startTs: TiTimestamp): RDD[WrappedRow] = {
     rdd
       .mapPartitions { wrappedRows =>
-        val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs)
+        val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs.getPrevious)
         wrappedRows.map { wrappedRow =>
           val rowBuf = mutable.ListBuffer.empty[WrappedRow]
           //  check handle key
@@ -337,7 +337,7 @@ class TiBatchWriteTable(
       rdd: RDD[WrappedRow],
       startTs: TiTimestamp): RDD[WrappedRow] = {
     rdd.mapPartitions { wrappedRows =>
-      val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs)
+      val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs.getPrevious)
       var rowBuf = mutable.ListBuffer.empty[WrappedRow]
       var rowBufIndex = 0
 
