@@ -745,6 +745,13 @@ class TiBatchWriteTable(
     maxHandle - minHandle > regionSplitNum * 1000
   }
 
+  private def toString(value: Any): String = {
+    value match {
+      case a: Array[Byte] => java.util.Arrays.toString(a)
+      case _ => value.toString
+    }
+  }
+
   private def splitIndexRegion(wrappedEncodedRdd: RDD[WrappedEncodedRow]): Unit = {
     if (options.enableRegionSplit && isEnableSplitRegion) {
       val indices = tiTableInfo.getIndices.asScala
@@ -806,7 +813,7 @@ class TiBatchWriteTable(
             val sortedSampleData = sampleData.sorted(ordering)
             val buf = new StringBuilder
             for (i <- 1 until regionSplitNum.toInt) {
-              val indexValue = sortedSampleData(i * 1000).row.get(colOffset, dataType).toString
+              val indexValue = toString(sortedSampleData(i * 1000).row.get(colOffset, dataType))
               buf.append(" (")
               buf.append("\"")
               buf.append(indexValue)
@@ -824,8 +831,8 @@ class TiBatchWriteTable(
             }
           } else {
             logger.info("split by min/max data")
-            val minIndexValue = rdd.min()(ordering).row.get(colOffset, dataType).toString
-            val maxIndexValue = rdd.max()(ordering).row.get(colOffset, dataType).toString
+            val minIndexValue = toString(rdd.min()(ordering).row.get(colOffset, dataType))
+            val maxIndexValue = toString(rdd.max()(ordering).row.get(colOffset, dataType))
             try {
               tiDBJDBCClient
                 .splitIndexRegion(
