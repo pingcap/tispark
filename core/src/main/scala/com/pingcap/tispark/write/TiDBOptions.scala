@@ -81,7 +81,13 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   }
   val shuffleKeyToSameRegion: Boolean =
     getOrDefault(TIDB_SHUFFLE_KEY_TO_SAME_REGION, "true").toBoolean
+  val writeTaskNumber: Int = getOrDefault(TIDB_WRITE_TASK_NUMBER, "0").toInt
   val prewriteBackOfferMS: Int = getOrDefault(TIDB_PREWRITE_BACKOFFER_MS, "240000").toInt
+  // 728 * 1024
+  val txnCommitBatchSize: Long = getOrDefault(TIDB_TXN_COMMIT_BATCH_SIZE, "786432").toLong
+  // 32 * 1024
+  val writeBufferSize: Int = getOrDefault(TIDB_WRITE_BUFFER_SIZE, "32768").toInt
+
   // ------------------------------------------------------------
   // Calculated parameters
   // ------------------------------------------------------------
@@ -176,7 +182,10 @@ object TiDBOptions {
   val TIDB_MULTI_TABLES: String = newOption("multiTables")
   val TIDB_TASK_NUM_PER_REGION: String = newOption("taskNumPerRegion")
   val TIDB_SHUFFLE_KEY_TO_SAME_REGION: String = newOption("shuffleKeyToSameRegion")
+  val TIDB_WRITE_TASK_NUMBER: String = newOption("writeTaskNumber")
   val TIDB_PREWRITE_BACKOFFER_MS: String = newOption("prewriteBackOfferMS")
+  val TIDB_TXN_COMMIT_BATCH_SIZE: String = newOption("txnCommitBatchSize")
+  val TIDB_WRITE_BUFFER_SIZE: String = newOption("writeBufferSize")
   // ------------------------------------------------------------
   // parameters only for test
   // ------------------------------------------------------------

@@ -212,7 +212,13 @@ class TiBatchWrite(
     }
 
     // driver primary pre-write
-    val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs, lockTTLSeconds * 1000)
+    val ti2PCClient =
+      new TwoPhaseCommitter(
+        tiConf,
+        startTs,
+        lockTTLSeconds * 1000,
+        options.txnCommitBatchSize,
+        options.writeBufferSize)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     logger.info("start to prewritePrimaryKey")
@@ -235,7 +241,12 @@ class TiBatchWrite(
     logger.info("start to prewriteSecondaryKeys")
     secondaryKeysRDD.foreachPartition { iterator =>
       val ti2PCClientOnExecutor =
-        new TwoPhaseCommitter(tiConf, startTs, lockTTLSeconds * 1000)
+        new TwoPhaseCommitter(
+          tiConf,
+          startTs,
+          lockTTLSeconds * 1000,
+          options.txnCommitBatchSize,
+          options.writeBufferSize)
 
       val pairs = iterator.map { keyValue =>
         new BytePairWrapper(keyValue._1.bytes, keyValue._2)
@@ -300,7 +311,12 @@ class TiBatchWrite(
     if (!options.skipCommitSecondaryKey) {
       logger.info("start to commitSecondaryKeys")
       secondaryKeysRDD.foreachPartition { iterator =>
-        val ti2PCClientOnExecutor = new TwoPhaseCommitter(tiConf, startTs)
+        val ti2PCClientOnExecutor = new TwoPhaseCommitter(
+          tiConf,
+          startTs,
+          lockTTLSeconds * 1000,
+          options.txnCommitBatchSize,
+          options.writeBufferSize)
 
         val keys = iterator.map { keyValue =>
           new ByteWrapper(keyValue._1.bytes)

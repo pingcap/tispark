@@ -533,9 +533,16 @@ class TiBatchWriteTable(
   private def doNotshuffleKeyToSameRegion(
       rdd: RDD[EncodedKVPair]): RDD[(SerializableKey, Array[Byte])] = {
     val regions = getRegions
-    rdd
-      .map(obj => (obj.encodedKey, obj.encodedValue))
-      .repartition(regions.size() * options.taskNumPerRegion)
+
+    if (options.writeTaskNumber > 0) {
+      rdd
+        .map(obj => (obj.encodedKey, obj.encodedValue))
+        .repartition(options.writeTaskNumber)
+    } else {
+      rdd
+        .map(obj => (obj.encodedKey, obj.encodedValue))
+        .repartition(regions.size() * options.taskNumPerRegion)
+    }
   }
 
   private def getRegions: util.List[TiRegion] = {
