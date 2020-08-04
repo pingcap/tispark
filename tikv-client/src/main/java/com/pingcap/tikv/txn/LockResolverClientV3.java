@@ -189,15 +189,15 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
         continue;
       }
 
+      if (resp.hasRegionError()) {
+        bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
+        continue;
+      }
+
       if (resp.hasError()) {
         logger.error(
             String.format("unexpected resolveLock err: %s, lock: %s", resp.getError(), lock));
         throw new KeyException(resp.getError());
-      }
-
-      if (resp.hasRegionError()) {
-        bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
-        continue;
       }
 
       if (cleanWholeRegion) {
@@ -258,6 +258,15 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
       CleanupResponse resp =
           primaryKeyRegionStoreClient.callWithRetry(
               bo, TikvGrpc.getKvCleanupMethod(), factory, handler);
+
+      if (resp == null) {
+        logger.error("getKvCleanupMethod failed without a cause");
+        regionManager.onRequestFail(primaryKeyRegion);
+        bo.doBackOff(
+            BoRegionMiss,
+            new TiClientInternalException("getKvCleanupMethod failed without a cause"));
+        continue;
+      }
 
       if (resp.hasRegionError()) {
         bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
