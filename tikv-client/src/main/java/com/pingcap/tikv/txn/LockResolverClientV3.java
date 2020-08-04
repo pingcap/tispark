@@ -24,6 +24,7 @@ import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
+import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.region.AbstractRegionStoreClient;
 import com.pingcap.tikv.region.RegionManager;
@@ -178,6 +179,15 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
               false);
       Kvrpcpb.ResolveLockResponse resp =
           callWithRetry(bo, TikvGrpc.getKvResolveLockMethod(), factory, handler);
+
+      if (resp == null) {
+        logger.error("getKvResolveLockMethod failed without a cause");
+        regionManager.onRequestFail(region);
+        bo.doBackOff(
+            BoRegionMiss,
+            new TiClientInternalException("getKvResolveLockMethod failed without a cause"));
+        continue;
+      }
 
       if (resp.hasError()) {
         logger.error(
