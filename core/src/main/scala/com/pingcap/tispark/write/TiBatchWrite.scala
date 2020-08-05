@@ -265,18 +265,18 @@ class TiBatchWrite(
     }
     logger.info("prewriteSecondaryKeys success")
 
-    // for test
-    if (options.sleepAfterPrewriteSecondaryKey > 0) {
-      logger.info(s"sleep ${options.sleepAfterPrewriteSecondaryKey} ms for test")
-      Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
-    }
-
     // driver primary commit
     val commitTs = tiSession.getTimestamp.getVersion
     // check commitTS
     if (commitTs <= startTs) {
       throw new TiBatchWriteException(
         s"invalid transaction tso with startTs=$startTs, commitTs=$commitTs")
+    }
+
+    // for test
+    if (options.sleepAfterPrewriteSecondaryKey > 0) {
+      logger.info(s"sleep ${options.sleepAfterPrewriteSecondaryKey} ms for test")
+      Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
     }
 
     // check schema change

@@ -37,7 +37,7 @@ class ConcurrencyTest extends BaseDataSourceTest("test_concurrency_write_read") 
   protected val schema: StructType = StructType(
     List(StructField("i", IntegerType), StructField("s", StringType)))
 
-  protected val sleepBeforeQuery = 10000
+  protected val sleepBeforeQuery = 30000
   protected val sleepAfterPrewriteSecondaryKey = 240000
 
   override def beforeAll(): Unit = {

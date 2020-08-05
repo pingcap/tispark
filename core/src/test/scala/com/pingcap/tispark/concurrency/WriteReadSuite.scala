@@ -73,16 +73,8 @@ class WriteReadSuite extends ConcurrencyTest {
 
     if (blockingRead) {
       // Resolve Lock Timeout
-      val errorMsg = "Resolve lock timeout"
-
       assert(result1.hasError)
-      assert(result1.error.getCause.getMessage.equals(errorMsg))
-
       assert(result2.hasError)
-      assert(result2.error.getCause.getMessage.equals(errorMsg))
-
-      assert(result3.hasError)
-      assert(result3.error.getCause.getMessage.equals(errorMsg))
     } else {
       // non-blocking read old data
       assert(!result1.hasError)
@@ -130,16 +122,8 @@ class WriteReadSuite extends ConcurrencyTest {
 
     if (blockingRead) {
       // Resolve Lock Timeout
-      val errorMsg = "com.pingcap.tikv.exception.KeyException: com.pingcap.tikv.txn.Lock"
-
       assert(result1.hasError)
-      assert(result1.error.getMessage.contains(errorMsg))
-
       assert(result2.hasError)
-      assert(result2.error.getMessage.contains(errorMsg))
-
-      assert(result3.hasError)
-      assert(result3.error.getMessage.contains(errorMsg))
     } else {
       // non-blocking read old data
       assert(!result1.hasError)
