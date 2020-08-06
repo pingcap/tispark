@@ -19,6 +19,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiBatchWriteException;
+import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
@@ -37,6 +38,12 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
@@ -72,6 +79,7 @@ public class TwoPhaseCommitter {
 
   private final long txnCommitBatchSize;
   private final int writeBufferSize;
+  private final ExecutorService executorService;
 
   public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
     this.kvClient = TiSession.getInstance(conf).createTxnClient();
@@ -81,6 +89,7 @@ public class TwoPhaseCommitter {
     this.retryCommitSecondaryKeys = conf.getRetryCommitSecondaryKey();
     this.txnCommitBatchSize = TXN_COMMIT_BATCH_SIZE;
     this.writeBufferSize = WRITE_BUFFER_SIZE;
+    this.executorService = Executors.newFixedThreadPool(conf.getPrewriteConcurrency());
   }
 
   public TwoPhaseCommitter(
@@ -96,9 +105,14 @@ public class TwoPhaseCommitter {
     this.retryCommitSecondaryKeys = conf.getRetryCommitSecondaryKey();
     this.txnCommitBatchSize = txnCommitBatchSize;
     this.writeBufferSize = writeBufferSize;
+    this.executorService = Executors.newFixedThreadPool(conf.getPrewriteConcurrency());
   }
 
-  public void close() throws Exception {}
+  public void close() throws Exception {
+    if (executorService != null) {
+      executorService.shutdownNow();
+    }
+  }
 
   /**
    * 2pc - prewrite primary key
@@ -229,22 +243,43 @@ public class TwoPhaseCommitter {
   private void doPrewriteSecondaryKeys(
       ByteString primaryKey, Iterator<Pair<ByteString, ByteString>> pairs, int maxBackOfferMS)
       throws TiBatchWriteException {
-    int totalSize = 0;
+    int totalSize = 0, cnt = 0;
+    ByteString[] keyBytes = new ByteString[WRITE_BUFFER_SIZE];
+    ByteString[] valueBytes = new ByteString[WRITE_BUFFER_SIZE];
+    Pair<ByteString, ByteString> pair;
+    ExecutorCompletionService<Void> completionService =
+        new ExecutorCompletionService<>(executorService);
     while (pairs.hasNext()) {
-      ByteString[] keyBytes = new ByteString[writeBufferSize];
-      ByteString[] valueBytes = new ByteString[writeBufferSize];
       int size = 0;
       while (size < writeBufferSize && pairs.hasNext()) {
-        Pair<ByteString, ByteString> pair = pairs.next();
+        pair = pairs.next();
         keyBytes[size] = pair.first;
         valueBytes[size] = pair.second;
         size++;
       }
-
+      int curSize = size;
+      cnt++;
       BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(maxBackOfferMS);
-      doPrewriteSecondaryKeysInBatchesWithRetry(
-          backOffer, primaryKey, keyBytes, valueBytes, size, 0);
+      completionService.submit(
+          () -> {
+            doPrewriteSecondaryKeysInBatchesWithRetry(
+                backOffer, primaryKey, keyBytes, valueBytes, curSize, 0);
+            return null;
+          });
+
       totalSize = totalSize + size;
+    }
+    try {
+      for (int i = 0; i < cnt; i++) {
+        completionService.take().get(BackOffer.PREWRITE_MAX_BACKOFF, TimeUnit.SECONDS);
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new TiKVException("Current thread interrupted.", e);
+    } catch (TimeoutException e) {
+      throw new TiKVException("TimeOut Exceeded for current operation. ", e);
+    } catch (ExecutionException e) {
+      throw new TiKVException("Execution exception met.", e);
     }
   }
 

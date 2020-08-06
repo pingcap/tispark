@@ -135,6 +135,10 @@ object TiUtil {
         getIsolationReadEnginesFromString(conf.get(TiConfigConst.ISOLATION_READ_ENGINES)).toList)
     }
 
+    if (conf.contains(TiConfigConst.PREWRITE_CONCURRENCY)) {
+      tiConf.setPrewriteConcurrency(conf.get(TiConfigConst.PREWRITE_CONCURRENCY).toInt)
+    }
+
     tiConf
   }
 

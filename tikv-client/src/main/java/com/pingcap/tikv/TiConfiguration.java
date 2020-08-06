@@ -57,6 +57,7 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_RETRY_COMMIT_SECONDARY_KEY = true;
   private static final List<TiStoreType> DEF_ISOLATION_READ_ENGINES =
       ImmutableList.of(TiStoreType.TiKV, TiStoreType.TiFlash);
+  private static final int DEF_PREWRITE_CONCURRENCY = 20;
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
@@ -82,6 +83,8 @@ public class TiConfiguration implements Serializable {
   private boolean retryCommitSecondaryKey = DEF_RETRY_COMMIT_SECONDARY_KEY;
 
   private List<TiStoreType> isolationReadEngines = DEF_ISOLATION_READ_ENGINES;
+
+  private int prewriteConcurrency = DEF_PREWRITE_CONCURRENCY;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
@@ -300,5 +303,13 @@ public class TiConfiguration implements Serializable {
 
   public void setIsolationReadEngines(List<TiStoreType> isolationReadEngines) {
     this.isolationReadEngines = isolationReadEngines;
+  }
+
+  public int getPrewriteConcurrency() {
+    return prewriteConcurrency;
+  }
+
+  public void setPrewriteConcurrency(int prewriteConcurrency) {
+    this.prewriteConcurrency = prewriteConcurrency;
   }
 }
