@@ -64,7 +64,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // ttlMode = { "FIXED", "UPDATE", "DEFAULT" }
   val ttlMode: String = getOrDefault(TIDB_TTL_MODE, "DEFAULT").toUpperCase()
   val useSnapshotBatchGet: Boolean = getOrDefault(TIDB_USE_SNAPSHOT_BATCH_GET, "true").toBoolean
-  val snapshotBatchGetSize: Int = getOrDefault(TIDB_SNAPSHOT_BATCH_GET_SIZE, "20480").toInt
+  val snapshotBatchGetSize: Int = getOrDefault(TIDB_SNAPSHOT_BATCH_GET_SIZE, "2048").toInt
   val sleepAfterPrewritePrimaryKey: Long =
     getOrDefault(TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY, "0").toLong
   val sleepAfterPrewriteSecondaryKey: Long =
