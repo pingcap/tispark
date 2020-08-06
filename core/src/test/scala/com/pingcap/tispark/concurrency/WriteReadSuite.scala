@@ -17,27 +17,27 @@ package com.pingcap.tispark.concurrency
 
 class WriteReadSuite extends ConcurrencyTest {
 
-  test("read conflict using jdbc") {
+  ignore("read conflict using jdbc") {
     doTestJDBC(s"create table $dbtable(i int, s varchar(128))")
   }
 
-  test("read conflict using jdbc: primary key") {
+  ignore("read conflict using jdbc: primary key") {
     doTestJDBC(s"create table $dbtable(i int, s varchar(128), PRIMARY KEY(i))")
   }
 
-  test("read conflict using jdbc: unique key") {
+  ignore("read conflict using jdbc: unique key") {
     doTestJDBC(s"create table $dbtable(i int, s varchar(128), UNIQUE KEY(i))")
   }
 
-  test("read conflict using tispark") {
+  ignore("read conflict using tispark") {
     doTestTiSpark(s"create table $dbtable(i int, s varchar(128))")
   }
 
-  test("read conflict using tispark: primary key") {
+  ignore("read conflict using tispark: primary key") {
     doTestTiSpark(s"create table $dbtable(i int, s varchar(128), PRIMARY KEY(i))")
   }
 
-  test("read conflict using tispark: unique key") {
+  ignore("read conflict using tispark: unique key") {
     doTestTiSpark(s"create table $dbtable(i int, s varchar(128), UNIQUE KEY(i))")
   }
 
