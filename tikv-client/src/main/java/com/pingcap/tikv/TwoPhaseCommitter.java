@@ -244,13 +244,13 @@ public class TwoPhaseCommitter {
       ByteString primaryKey, Iterator<Pair<ByteString, ByteString>> pairs, int maxBackOfferMS)
       throws TiBatchWriteException {
     int totalSize = 0, cnt = 0;
-    ByteString[] keyBytes = new ByteString[WRITE_BUFFER_SIZE];
-    ByteString[] valueBytes = new ByteString[WRITE_BUFFER_SIZE];
     Pair<ByteString, ByteString> pair;
     ExecutorCompletionService<Void> completionService =
         new ExecutorCompletionService<>(executorService);
     while (pairs.hasNext()) {
       int size = 0;
+      ByteString[] keyBytes = new ByteString[writeBufferSize];
+      ByteString[] valueBytes = new ByteString[writeBufferSize];
       while (size < writeBufferSize && pairs.hasNext()) {
         pair = pairs.next();
         keyBytes[size] = pair.first;
