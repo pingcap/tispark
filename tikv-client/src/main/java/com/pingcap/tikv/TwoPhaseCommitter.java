@@ -79,6 +79,7 @@ public class TwoPhaseCommitter {
 
   private final long txnCommitBatchSize;
   private final int writeBufferSize;
+  private final int prewriteConcurrency;
   private final ExecutorService executorService;
 
   public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
@@ -89,7 +90,8 @@ public class TwoPhaseCommitter {
     this.retryCommitSecondaryKeys = conf.getRetryCommitSecondaryKey();
     this.txnCommitBatchSize = TXN_COMMIT_BATCH_SIZE;
     this.writeBufferSize = WRITE_BUFFER_SIZE;
-    this.executorService = Executors.newFixedThreadPool(conf.getPrewriteConcurrency());
+    this.prewriteConcurrency = conf.getPrewriteConcurrency();
+    this.executorService = Executors.newFixedThreadPool(prewriteConcurrency);
   }
 
   public TwoPhaseCommitter(
@@ -105,7 +107,8 @@ public class TwoPhaseCommitter {
     this.retryCommitSecondaryKeys = conf.getRetryCommitSecondaryKey();
     this.txnCommitBatchSize = txnCommitBatchSize;
     this.writeBufferSize = writeBufferSize;
-    this.executorService = Executors.newFixedThreadPool(conf.getPrewriteConcurrency());
+    this.prewriteConcurrency = conf.getPrewriteConcurrency();
+    this.executorService = Executors.newFixedThreadPool(prewriteConcurrency);
   }
 
   public void close() throws Exception {
@@ -242,37 +245,43 @@ public class TwoPhaseCommitter {
 
   private void doPrewriteSecondaryKeys(
       ByteString primaryKey, Iterator<Pair<ByteString, ByteString>> pairs, int maxBackOfferMS)
-      throws TiBatchWriteException {
-    int totalSize = 0, cnt = 0;
-    Pair<ByteString, ByteString> pair;
-    ExecutorCompletionService<Void> completionService =
-        new ExecutorCompletionService<>(executorService);
-    while (pairs.hasNext()) {
-      int size = 0;
-      ByteString[] keyBytes = new ByteString[writeBufferSize];
-      ByteString[] valueBytes = new ByteString[writeBufferSize];
-      while (size < writeBufferSize && pairs.hasNext()) {
-        pair = pairs.next();
-        keyBytes[size] = pair.first;
-        valueBytes[size] = pair.second;
-        size++;
-      }
-      int curSize = size;
-      cnt++;
-      BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(maxBackOfferMS);
-      completionService.submit(
-          () -> {
-            doPrewriteSecondaryKeysInBatchesWithRetry(
-                backOffer, primaryKey, keyBytes, valueBytes, curSize, 0);
-            return null;
-          });
-
-      totalSize = totalSize + size;
-    }
+      throws TiKVException {
     try {
-      for (int i = 0; i < cnt; i++) {
+      int totalSize = 0, cnt = 0;
+      Pair<ByteString, ByteString> pair;
+      ExecutorCompletionService<Void> completionService =
+          new ExecutorCompletionService<>(executorService);
+      while (pairs.hasNext()) {
+        int size = 0;
+        ByteString[] keyBytes = new ByteString[writeBufferSize];
+        ByteString[] valueBytes = new ByteString[writeBufferSize];
+        while (size < writeBufferSize && pairs.hasNext()) {
+          pair = pairs.next();
+          keyBytes[size] = pair.first;
+          valueBytes[size] = pair.second;
+          size++;
+        }
+        int curSize = size;
+        cnt++;
+        if (cnt >= prewriteConcurrency) {
+          // consume one task if reaches task limit
+          completionService.take().get(BackOffer.PREWRITE_MAX_BACKOFF, TimeUnit.SECONDS);
+        }
+        BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(maxBackOfferMS);
+        completionService.submit(
+            () -> {
+              doPrewriteSecondaryKeysInBatchesWithRetry(
+                  backOffer, primaryKey, keyBytes, valueBytes, curSize, 0);
+              return null;
+            });
+
+        totalSize = totalSize + size;
+      }
+
+      for (int i = 0; i < Math.min(prewriteConcurrency, cnt); i++) {
         completionService.take().get(BackOffer.PREWRITE_MAX_BACKOFF, TimeUnit.SECONDS);
       }
+
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new TiKVException("Current thread interrupted.", e);
