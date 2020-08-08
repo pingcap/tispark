@@ -21,13 +21,17 @@ import java.util
 import com.google.protobuf.ByteString
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
-import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tikv.exception.{
+  ConvertOverflowException,
+  TiBatchWriteException,
+  TiDBConvertException
+}
 import com.pingcap.tikv.key.{IndexKey, RowKey}
 import com.pingcap.tikv.meta._
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType.EncodeType
-import com.pingcap.tikv.types.{IntegerType, RealType}
+import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.FastByteComparisons
 import com.pingcap.tikv.{TiBatchWriteUtils, TiConfiguration, TiDBJDBCClient, TiSession}
 import com.pingcap.tispark.TiTableReference
@@ -570,10 +574,19 @@ class TiBatchWriteTable(
     val tiRow = ObjectRowImpl.create(fieldCount)
     for (i <- 0 until fieldCount) {
       // TODO: add tiDataType back
-      tiRow.set(
-        colsMapInTiDB(colsInDf(i)).getOffset,
-        null,
-        colsMapInTiDB(colsInDf(i)).getType.convertToTiDBType(sparkRow(i)))
+      try {
+        tiRow.set(
+          colsMapInTiDB(colsInDf(i)).getOffset,
+          null,
+          colsMapInTiDB(colsInDf(i)).getType.convertToTiDBType(sparkRow(i)))
+      } catch {
+        case e: ConvertOverflowException =>
+          throw new ConvertOverflowException(
+            e.getMessage,
+            new TiDBConvertException(colsMapInTiDB(colsInDf(i)).getName, e))
+        case e: Throwable =>
+          throw new TiDBConvertException(colsMapInTiDB(colsInDf(i)).getName, e)
+      }
     }
     tiRow
   }
