@@ -15,6 +15,7 @@
 
 package com.pingcap.tispark.overflow
 
+import com.pingcap.tikv.exception.TiDBConvertException
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
@@ -365,8 +366,8 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     val row = Row("18446744073709551616")
     val schema = StructType(List(StructField("c1", StringType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[java.lang.NumberFormatException]
-    val tidbErrorMsg = "Too large for unsigned long: 18446744073709551616"
+    val tidbErrorClass = classOf[TiDBConvertException]
+    val tidbErrorMsg = null
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
@@ -387,8 +388,8 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     val row = Row("-1")
     val schema = StructType(List(StructField("c1", StringType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[java.lang.NumberFormatException]
-    val tidbErrorMsg = "-1"
+    val tidbErrorClass = classOf[TiDBConvertException]
+    val tidbErrorMsg = null
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
