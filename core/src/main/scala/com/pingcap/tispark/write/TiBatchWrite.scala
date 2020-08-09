@@ -218,7 +218,8 @@ class TiBatchWrite(
         startTs,
         lockTTLSeconds * 1000,
         options.txnCommitBatchSize,
-        options.writeBufferSize)
+        options.writeBufferSize,
+        options.writeThreadPerTask)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     logger.info("start to prewritePrimaryKey")
@@ -246,7 +247,8 @@ class TiBatchWrite(
           startTs,
           lockTTLSeconds * 1000,
           options.txnCommitBatchSize,
-          options.writeBufferSize)
+          options.writeBufferSize,
+          options.writeThreadPerTask)
 
       val pairs = iterator.map { keyValue =>
         new BytePairWrapper(keyValue._1.bytes, keyValue._2)
@@ -297,6 +299,11 @@ class TiBatchWrite(
 
     logger.info("start to commitPrimaryKey")
     ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
+    try {
+      ti2PCClient.close()
+    } catch {
+      case _: Throwable =>
+    }
     logger.info("commitPrimaryKey success")
 
     // stop primary key ttl update
@@ -316,7 +323,8 @@ class TiBatchWrite(
           startTs,
           lockTTLSeconds * 1000,
           options.txnCommitBatchSize,
-          options.writeBufferSize)
+          options.writeBufferSize,
+          options.writeThreadPerTask)
 
         val keys = iterator.map { keyValue =>
           new ByteWrapper(keyValue._1.bytes)
@@ -328,6 +336,12 @@ class TiBatchWrite(
           case e: TiBatchWriteException =>
             // ignored
             logger.warn(s"commit secondary key error", e)
+        }
+
+        try {
+          ti2PCClientOnExecutor.close()
+        } catch {
+          case _: Throwable =>
         }
       }
       logger.info("commitSecondaryKeys finish")

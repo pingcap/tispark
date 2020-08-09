@@ -48,7 +48,7 @@ class TiRegionPartitioner(
     while (l < r) {
       val mid = l + (r - l) / 2
       val region = regions.get(mid)
-      if (Key.toRawKey(region.getEndKey).compareTo(key) <= 0) {
+      if (region.getRowEndKey.compareTo(key) <= 0) {
         l = mid + 1
       } else {
         r = mid
