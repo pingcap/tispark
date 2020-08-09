@@ -87,6 +87,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val txnCommitBatchSize: Long = getOrDefault(TIDB_TXN_COMMIT_BATCH_SIZE, "786432").toLong
   // 32 * 1024
   val writeBufferSize: Int = getOrDefault(TIDB_WRITE_BUFFER_SIZE, "32768").toInt
+  val writeThreadPerTask: Int = getOrDefault(TIDB_WRITE_THREAD_PER_TASK, "1").toInt
 
   // ------------------------------------------------------------
   // Calculated parameters
@@ -186,6 +187,7 @@ object TiDBOptions {
   val TIDB_PREWRITE_BACKOFFER_MS: String = newOption("prewriteBackOfferMS")
   val TIDB_TXN_COMMIT_BATCH_SIZE: String = newOption("txnCommitBatchSize")
   val TIDB_WRITE_BUFFER_SIZE: String = newOption("writeBufferSize")
+  val TIDB_WRITE_THREAD_PER_TASK: String = newOption("writeThreadPerTask")
   // ------------------------------------------------------------
   // parameters only for test
   // ------------------------------------------------------------
