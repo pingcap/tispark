@@ -494,27 +494,44 @@ public class TwoPhaseCommitter {
 
   private void doCommitSecondaryKeys(Iterator<ByteString> keys, long commitTs)
       throws TiBatchWriteException {
-    LOG.info("start commit secondary key");
-
-    int totalSize = 0;
-    while (keys.hasNext()) {
-      ByteString[] keyBytes = new ByteString[writeBufferSize];
-      int size = 0;
-      for (int i = 0; i < writeBufferSize; i++) {
-        if (keys.hasNext()) {
+    try {
+      int taskBufferSize = writeThreadPerTask * 2;
+      int totalSize = 0, cnt = 0;
+      ExecutorCompletionService<Void> completionService =
+          new ExecutorCompletionService<>(executorService);
+      while (keys.hasNext()) {
+        int size = 0;
+        ByteString[] keyBytes = new ByteString[writeBufferSize];
+        while (size < writeBufferSize && keys.hasNext()) {
           keyBytes[size] = keys.next();
           size++;
-        } else {
-          break;
         }
+        int curSize = size;
+        cnt++;
+        if (cnt > taskBufferSize) {
+          // consume one task if reaches task limit
+          completionService.take().get();
+        }
+        BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF);
+        completionService.submit(
+            () -> {
+              doCommitSecondaryKeysWithRetry(backOffer, keyBytes, curSize, commitTs);
+              return null;
+            });
+
+        totalSize = totalSize + size;
       }
-      totalSize = totalSize + size;
 
-      BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF);
-      doCommitSecondaryKeysWithRetry(backOffer, keyBytes, size, commitTs);
+      for (int i = 0; i < Math.min(taskBufferSize, cnt); i++) {
+        completionService.take().get();
+      }
+
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new TiBatchWriteException("Current thread interrupted.", e);
+    } catch (ExecutionException e) {
+      throw new TiBatchWriteException("Execution exception met.", e);
     }
-
-    LOG.info("commit secondary key successfully, total size={}", totalSize);
   }
 
   private void doCommitSecondaryKeysWithRetry(
