@@ -61,7 +61,7 @@ public class TwoPhaseCommitter {
   /** unit is millisecond */
   private static final long DEFAULT_BATCH_WRITE_LOCK_TTL = 3600000;
 
-  private static final long MAX_RETRY_TIMES = 10;
+  private static final long MAX_RETRY_TIMES = 3;
 
   private static final Logger LOG = LoggerFactory.getLogger(TwoPhaseCommitter.class);
   /** start timestamp of transaction which get from PD */
@@ -333,21 +333,21 @@ public class TwoPhaseCommitter {
     for (BatchKeys batchKeys : batchKeyList) {
       TiRegion oldRegion = batchKeys.getRegion();
       TiRegion currentRegion = this.regionManager.getRegionById(backOffer, oldRegion.getId());
-      // if (oldRegion.equals(currentRegion)) {
-      //   doPrewriteSecondaryKeySingleBatchWithRetry(backOffer, primaryKey, batchKeys, mutations);
-      // } else {
-      if (level > MAX_RETRY_TIMES) {
-        throw new TiBatchWriteException(
+      if (oldRegion.equals(currentRegion)) {
+        doPrewriteSecondaryKeySingleBatchWithRetry(backOffer, primaryKey, batchKeys, mutations);
+      } else {
+        if (level > MAX_RETRY_TIMES) {
+          throw new TiBatchWriteException(
+              String.format(
+                  "> max retry number %s, oldRegion=%s, currentRegion=%s",
+                  MAX_RETRY_TIMES, oldRegion, currentRegion));
+        }
+        LOG.info(
             String.format(
-                "> max retry number %s, oldRegion=%s, currentRegion=%s",
-                MAX_RETRY_TIMES, oldRegion, currentRegion));
+                "oldRegion=%s != currentRegion=%s, will re-fetch region info and retry",
+                oldRegion, currentRegion));
+        retryPrewriteBatch(backOffer, primaryKey, batchKeys, mutations, level <= 0 ? 1 : level + 1);
       }
-      LOG.info(
-          String.format(
-              "oldRegion=%s != currentRegion=%s, will re-fetch region info and retry",
-              oldRegion, currentRegion));
-      retryPrewriteBatch(backOffer, primaryKey, batchKeys, mutations, level <= 0 ? 1 : level + 1);
-      // }
     }
   }
 
