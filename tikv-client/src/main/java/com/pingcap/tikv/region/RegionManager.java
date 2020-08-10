@@ -28,6 +28,7 @@ import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
@@ -67,8 +68,12 @@ public class RegionManager {
     return cache.getRegionByKey(key);
   }
 
+  public TiRegion getRegionById(BackOffer backOffer, long regionId) {
+    return cache.getRegionById(backOffer, regionId);
+  }
+
   public TiRegion getRegionById(long regionId) {
-    return cache.getRegionById(regionId);
+    return cache.getRegionById(ConcreteBackOffer.newGetBackOff(), regionId);
   }
 
   public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key) {
@@ -206,13 +211,13 @@ public class RegionManager {
       return true;
     }
 
-    private synchronized TiRegion getRegionById(long regionId) {
+    private synchronized TiRegion getRegionById(BackOffer backOffer, long regionId) {
       TiRegion region = regionCache.get(regionId);
       if (logger.isDebugEnabled()) {
         logger.debug(String.format("getRegionByKey ID[%s] -> Region[%s]", regionId, region));
       }
       if (region == null) {
-        region = pdClient.getRegionByID(ConcreteBackOffer.newGetBackOff(), regionId);
+        region = pdClient.getRegionByID(backOffer, regionId);
         if (!putRegion(region)) {
           throw new TiClientInternalException("Invalid Region: " + region.toString());
         }
