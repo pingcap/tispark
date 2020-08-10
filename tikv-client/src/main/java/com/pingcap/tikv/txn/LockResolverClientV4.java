@@ -300,11 +300,13 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
 
     while (true) {
       TiRegion primaryKeyRegion = regionManager.getRegionByKey(primary);
+      // new RegionStoreClient for PrimaryKey
+      RegionStoreClient primaryKeyRegionStoreClient = clientBuilder.build(primary);
       KVErrorHandler<Kvrpcpb.CheckTxnStatusResponse> handler =
           new KVErrorHandler<>(
               regionManager,
-              this,
-              this,
+              primaryKeyRegionStoreClient,
+              primaryKeyRegionStoreClient.lockResolverClient,
               primaryKeyRegion,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
               resp -> resp.hasError() ? resp.getError() : null,
@@ -312,8 +314,6 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
               callerStartTS,
               false);
 
-      // new RegionStoreClient for PrimaryKey
-      RegionStoreClient primaryKeyRegionStoreClient = clientBuilder.build(primary);
       Kvrpcpb.CheckTxnStatusResponse resp =
           primaryKeyRegionStoreClient.callWithRetry(
               bo, TikvGrpc.getKvCheckTxnStatusMethod(), factory, handler);
