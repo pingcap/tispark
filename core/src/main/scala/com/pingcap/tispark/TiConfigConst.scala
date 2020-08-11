@@ -45,6 +45,7 @@ object TiConfigConst {
   val ISOLATION_READ_ENGINES: String = "spark.tispark.isolation_read_engines"
   val RETRY_COMMIT_SECONDARY_KEY: String = "spark.tispark.write.retry_commit_secondary_key"
   val PARTITION_PER_SPLIT: String = "spark.tispark.partition_per_split"
+  val KV_CLIENT_CONCURRENCY: String = "spark.tispark.kv_client_concurrency"
 
   val SNAPSHOT_ISOLATION_LEVEL: String = "SI"
   val READ_COMMITTED_ISOLATION_LEVEL: String = "RC"

@@ -135,6 +135,10 @@ object TiUtil {
         getIsolationReadEnginesFromString(conf.get(TiConfigConst.ISOLATION_READ_ENGINES)).toList)
     }
 
+    if (conf.contains(TiConfigConst.KV_CLIENT_CONCURRENCY)) {
+      tiConf.setKvClientConcurrency(conf.get(TiConfigConst.KV_CLIENT_CONCURRENCY).toInt)
+    }
+
     tiConf
   }
 
