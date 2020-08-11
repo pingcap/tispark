@@ -149,7 +149,10 @@ public class TiSession implements AutoCloseable {
           indexScanThreadPool =
               Executors.newFixedThreadPool(
                   conf.getIndexScanConcurrency(),
-                  new ThreadFactoryBuilder().setDaemon(true).build());
+                  new ThreadFactoryBuilder()
+                      .setNameFormat("index-scan-pool-%d")
+                      .setDaemon(true)
+                      .build());
         }
         res = indexScanThreadPool;
       }
@@ -172,7 +175,10 @@ public class TiSession implements AutoCloseable {
               // the thread competition.
               Executors.newFixedThreadPool(
                   conf.getTableScanConcurrency() / conf.getPartitionPerSplit(),
-                  new ThreadFactoryBuilder().setDaemon(true).build());
+                  new ThreadFactoryBuilder()
+                      .setNameFormat("table-scan-pool-%d")
+                      .setDaemon(true)
+                      .build());
         }
         res = tableScanThreadPool;
       }

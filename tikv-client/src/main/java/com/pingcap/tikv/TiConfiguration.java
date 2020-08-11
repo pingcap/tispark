@@ -54,7 +54,7 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
   private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
   private static final int DEF_PARTITION_PER_SPLIT = 10;
-  private static final boolean DEF_RETRY_COMMIT_SECONDARY_KEY = true;
+  private static final int DEF_KV_CLIENT_CONCURRENCY = 10;
   private static final List<TiStoreType> DEF_ISOLATION_READ_ENGINES =
       ImmutableList.of(TiStoreType.TiKV, TiStoreType.TiFlash);
 
@@ -79,7 +79,8 @@ public class TiConfiguration implements Serializable {
   private boolean writeWithoutLockTable = DEF_WRITE_WITHOUT_LOCK_TABLE;
   private int tikvRegionSplitSizeInMB = DEF_TIKV_REGION_SPLIT_SIZE_IN_MB;
   private int partitionPerSplit = DEF_PARTITION_PER_SPLIT;
-  private boolean retryCommitSecondaryKey = DEF_RETRY_COMMIT_SECONDARY_KEY;
+
+  private int kvClientConcurrency = DEF_KV_CLIENT_CONCURRENCY;
 
   private List<TiStoreType> isolationReadEngines = DEF_ISOLATION_READ_ENGINES;
 
@@ -286,19 +287,19 @@ public class TiConfiguration implements Serializable {
     this.partitionPerSplit = partitionPerSplit;
   }
 
-  public boolean getRetryCommitSecondaryKey() {
-    return retryCommitSecondaryKey;
-  }
-
-  public void setRetryCommitSecondaryKey(boolean retryCommitSecondaryKey) {
-    this.retryCommitSecondaryKey = retryCommitSecondaryKey;
-  }
-
   public List<TiStoreType> getIsolationReadEngines() {
     return isolationReadEngines;
   }
 
   public void setIsolationReadEngines(List<TiStoreType> isolationReadEngines) {
     this.isolationReadEngines = isolationReadEngines;
+  }
+
+  public int getKvClientConcurrency() {
+    return kvClientConcurrency;
+  }
+
+  public void setKvClientConcurrency(int kvClientConcurrency) {
+    this.kvClientConcurrency = kvClientConcurrency;
   }
 }

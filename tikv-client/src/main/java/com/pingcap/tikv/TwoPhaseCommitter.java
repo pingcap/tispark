@@ -15,6 +15,7 @@
 
 package com.pingcap.tikv;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
@@ -84,11 +85,11 @@ public class TwoPhaseCommitter {
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = DEFAULT_BATCH_WRITE_LOCK_TTL;
-    this.retryCommitSecondaryKeys = conf.getRetryCommitSecondaryKey();
+    this.retryCommitSecondaryKeys = true;
     this.txnCommitBatchSize = TXN_COMMIT_BATCH_SIZE;
     this.writeBufferSize = WRITE_BUFFER_SIZE;
     this.writeThreadPerTask = 1;
-    this.executorService = Executors.newFixedThreadPool(writeThreadPerTask);
+    this.executorService = createExecutorService();
   }
 
   public TwoPhaseCommitter(
@@ -97,16 +98,23 @@ public class TwoPhaseCommitter {
       long lockTTL,
       long txnCommitBatchSize,
       int writeBufferSize,
-      int writeThreadPerTask) {
+      int writeThreadPerTask,
+      boolean retryCommitSecondaryKeys) {
     this.kvClient = TiSession.getInstance(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = lockTTL;
-    this.retryCommitSecondaryKeys = conf.getRetryCommitSecondaryKey();
+    this.retryCommitSecondaryKeys = retryCommitSecondaryKeys;
     this.txnCommitBatchSize = txnCommitBatchSize;
     this.writeBufferSize = writeBufferSize;
     this.writeThreadPerTask = writeThreadPerTask;
-    this.executorService = Executors.newFixedThreadPool(writeThreadPerTask);
+    this.executorService = createExecutorService();
+  }
+
+  private ExecutorService createExecutorService() {
+    return Executors.newFixedThreadPool(
+        writeThreadPerTask,
+        new ThreadFactoryBuilder().setNameFormat("2pc-pool-%d").setDaemon(true).build());
   }
 
   public void close() throws Exception {
