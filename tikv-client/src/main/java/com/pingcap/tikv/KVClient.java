@@ -17,6 +17,7 @@
 
 package com.pingcap.tikv;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiKVException;
@@ -58,9 +59,10 @@ public class KVClient implements AutoCloseable {
     Objects.requireNonNull(clientBuilder, "clientBuilder is null");
     this.conf = conf;
     this.clientBuilder = clientBuilder;
-    // TODO: ExecutorService executors =
-    // Executors.newFixedThreadPool(conf.getKVClientConcurrency());
-    executorService = Executors.newFixedThreadPool(20);
+    executorService =
+        Executors.newFixedThreadPool(
+            conf.getKvClientConcurrency(),
+            new ThreadFactoryBuilder().setNameFormat("kvclient-pool-%d").setDaemon(true).build());
   }
 
   @Override

@@ -120,11 +120,6 @@ object TiUtil {
         conf.get(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toInt)
     }
 
-    if (conf.contains(TiConfigConst.RETRY_COMMIT_SECONDARY_KEY)) {
-      tiConf.setRetryCommitSecondaryKey(
-        conf.get(TiConfigConst.RETRY_COMMIT_SECONDARY_KEY).toBoolean)
-    }
-
     if (conf.contains(TiConfigConst.PARTITION_PER_SPLIT)) {
       tiConf.setPartitionPerSplit(conf.get(TiConfigConst.PARTITION_PER_SPLIT).toInt)
     }
@@ -133,6 +128,10 @@ object TiUtil {
       import scala.collection.JavaConversions._
       tiConf.setIsolationReadEngines(
         getIsolationReadEnginesFromString(conf.get(TiConfigConst.ISOLATION_READ_ENGINES)).toList)
+    }
+
+    if (conf.contains(TiConfigConst.KV_CLIENT_CONCURRENCY)) {
+      tiConf.setKvClientConcurrency(conf.get(TiConfigConst.KV_CLIENT_CONCURRENCY).toInt)
     }
 
     tiConf
