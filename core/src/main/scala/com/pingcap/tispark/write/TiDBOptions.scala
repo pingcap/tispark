@@ -85,6 +85,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
     getOrDefault(TIDB_SHUFFLE_KEY_TO_SAME_REGION, "true").toBoolean
   val writeTaskNumber: Int = getOrDefault(TIDB_WRITE_TASK_NUMBER, "0").toInt
   val prewriteBackOfferMS: Int = getOrDefault(TIDB_PREWRITE_BACKOFFER_MS, "240000").toInt
+  val commitBackOfferMS: Int = getOrDefault(TIDB_COMMIT_BACKOFFER_MS, "60000").toInt
   // 728 * 1024
   val txnCommitBatchSize: Long = getOrDefault(TIDB_TXN_COMMIT_BATCH_SIZE, "786432").toLong
   // 32 * 1024
@@ -190,6 +191,7 @@ object TiDBOptions {
   val TIDB_SHUFFLE_KEY_TO_SAME_REGION: String = newOption("shuffleKeyToSameRegion")
   val TIDB_WRITE_TASK_NUMBER: String = newOption("writeTaskNumber")
   val TIDB_PREWRITE_BACKOFFER_MS: String = newOption("prewriteBackOfferMS")
+  val TIDB_COMMIT_BACKOFFER_MS: String = newOption("commitBackOfferMS")
   val TIDB_TXN_COMMIT_BATCH_SIZE: String = newOption("txnCommitBatchSize")
   val TIDB_WRITE_BUFFER_SIZE: String = newOption("writeBufferSize")
   val TIDB_WRITE_THREAD_PER_TASK: String = newOption("writeThreadPerTask")

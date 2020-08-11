@@ -334,7 +334,7 @@ class TiBatchWrite(
         }.asJava
 
         try {
-          ti2PCClientOnExecutor.commitSecondaryKeys(keys, commitTs)
+          ti2PCClientOnExecutor.commitSecondaryKeys(keys, commitTs, options.commitBackOfferMS)
         } catch {
           case e: TiBatchWriteException =>
             // ignored
