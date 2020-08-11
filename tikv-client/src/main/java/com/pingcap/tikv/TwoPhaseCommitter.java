@@ -340,7 +340,7 @@ public class TwoPhaseCommitter {
     // For prewrite, stop sending other requests after receiving first error.
     for (BatchKeys batchKeys : batchKeyList) {
       TiRegion oldRegion = batchKeys.getRegion();
-      TiRegion currentRegion = this.regionManager.getRegionById(backOffer, oldRegion.getId());
+      TiRegion currentRegion = this.regionManager.getRegionByKey(oldRegion.getStartKey());
       if (oldRegion.equals(currentRegion)) {
         doPrewriteSecondaryKeySingleBatchWithRetry(backOffer, primaryKey, batchKeys, mutations);
       } else {

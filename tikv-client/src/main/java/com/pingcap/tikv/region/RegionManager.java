@@ -68,10 +68,13 @@ public class RegionManager {
     return cache.getRegionByKey(key);
   }
 
-  public TiRegion getRegionById(BackOffer backOffer, long regionId) {
-    return cache.getRegionById(backOffer, regionId);
-  }
-
+  @Deprecated
+  // Do not use GetRegionByID when retrying request.
+  //
+  //   A,B |_______|_____|
+  //   A   |_____________|
+  // Consider region A, B. After merge of (A, B) -> A, region ID B does not exist.
+  // This request is unrecoverable.
   public TiRegion getRegionById(long regionId) {
     return cache.getRegionById(ConcreteBackOffer.newGetBackOff(), regionId);
   }
