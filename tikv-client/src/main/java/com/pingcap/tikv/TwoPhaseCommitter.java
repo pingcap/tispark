@@ -385,7 +385,10 @@ public class TwoPhaseCommitter {
       BatchKeys batchKeys,
       Map<ByteString, Kvrpcpb.Mutation> mutations)
       throws TiBatchWriteException {
-    LOG.info("start prewrite secondary key, size={}", batchKeys.getKeys().size());
+    LOG.info(
+        "start prewrite secondary key, row={}, size={}KB",
+        batchKeys.getKeys().size(),
+        batchKeys.getSizeInKB());
 
     List<ByteString> keyList = batchKeys.getKeys();
     int batchSize = keyList.size();
@@ -429,7 +432,10 @@ public class TwoPhaseCommitter {
         throw new TiBatchWriteException(errorMsg, e);
       }
     }
-    LOG.info("prewrite secondary key successfully, size={}", batchKeys.getKeys().size());
+    LOG.info(
+        "prewrite secondary key successfully, row={}, size={}KB",
+        batchKeys.getKeys().size(),
+        batchKeys.getSizeInKB());
   }
 
   private void appendBatchBySize(
@@ -446,15 +452,15 @@ public class TwoPhaseCommitter {
     }
     int len = keys.size();
     for (start = 0; start < len; start = end) {
-      int size = 0;
-      for (end = start; end < len && size < txnCommitBatchSize; end++) {
+      int sizeInBytes = 0;
+      for (end = start; end < len && sizeInBytes < txnCommitBatchSize; end++) {
         if (sizeIncludeValue) {
-          size += this.keyValueSize(keys.get(end), mutations);
+          sizeInBytes += this.keyValueSize(keys.get(end), mutations);
         } else {
-          size += this.keySize(keys.get(end));
+          sizeInBytes += this.keySize(keys.get(end));
         }
       }
-      BatchKeys batchKeys = new BatchKeys(tiRegion, store, keys.subList(start, end));
+      BatchKeys batchKeys = new BatchKeys(tiRegion, store, keys.subList(start, end), sizeInBytes);
       batchKeyList.add(batchKeys);
     }
   }
@@ -582,7 +588,10 @@ public class TwoPhaseCommitter {
       LOG.warn(error);
       throw new TiBatchWriteException("commit secondary key error", commitResult.getException());
     }
-    LOG.info("commit {} rows successfully", batchKeys.getKeys().size());
+    LOG.info(
+        "commit {} rows successfully, size={}KB",
+        batchKeys.getKeys().size(),
+        batchKeys.getSizeInKB());
   }
 
   private GroupKeyResult groupKeysByRegion(ByteString[] keys, int size)
