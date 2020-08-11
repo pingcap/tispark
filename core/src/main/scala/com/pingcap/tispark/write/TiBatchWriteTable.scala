@@ -18,7 +18,6 @@ package com.pingcap.tispark.write
 import java.sql.SQLException
 import java.util
 
-import com.google.protobuf.ByteString
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
 import com.pingcap.tikv.exception.{
@@ -33,9 +32,16 @@ import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType.EncodeType
 import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.FastByteComparisons
-import com.pingcap.tikv.{TiBatchWriteUtils, TiConfiguration, TiDBJDBCClient, TiSession}
+import com.pingcap.tikv.{
+  BytePairWrapper,
+  TiBatchWriteUtils,
+  TiConfiguration,
+  TiDBJDBCClient,
+  TiSession
+}
 import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.utils.TiUtil
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions._
@@ -65,7 +71,7 @@ class TiBatchWriteTable(
   private var tableColSize: Int = _
   private var colsMapInTiDB: Map[String, TiColumnInfo] = _
   private var colsInDf: List[String] = _
-  private var uniqueIndices: List[TiIndexInfo] = _
+  private var uniqueIndices: Seq[TiIndexInfo] = _
   private var handleCol: TiColumnInfo = _
   private var tableLocked: Boolean = false
 
@@ -79,7 +85,7 @@ class TiBatchWriteTable(
 
   colsMapInTiDB = tiTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
   colsInDf = df.columns.toList.map(_.toLowerCase())
-  uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique).toList
+  uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique)
   handleCol = tiTableInfo.getPKIsHandleColumn
   tableColSize = tiTableInfo.getColumns.size()
 
@@ -88,7 +94,7 @@ class TiBatchWriteTable(
   }
 
   def isDFEmpty: Boolean = {
-    if (TiUtil.isDataFrameEmpty(df)) {
+    if (TiUtil.isDataFrameEmpty(df.select(df.columns.head))) {
       logger.warn(s"the dataframe write to $tiTableRef is empty!")
       true
     } else {
@@ -105,6 +111,8 @@ class TiBatchWriteTable(
   }
 
   def preCalculate(startTimeStamp: TiTimestamp): RDD[(SerializableKey, Array[Byte])] = {
+    val sc = tiContext.sparkSession.sparkContext
+    val count = df.count
     // auto increment
     val rdd = if (tiTableInfo.hasAutoIncrementColumn) {
       val isProvidedID = tableColSize == colsInDf.length
@@ -118,22 +126,21 @@ class TiBatchWriteTable(
             "Column size is matched but cannot find auto increment column by name")
         }
 
-        val colOffset =
-          colsInDf.zipWithIndex.find(col => autoIncrementColName.equals(col._1)).get._2
-        val hasNullValue = df
-          .filter(row => row.get(colOffset) == null)
-          .count() > 0
+        val hasNullValue = !df
+          .select(autoIncrementColName)
+          .filter(row => row.get(0) == null)
+          .rdd
+          .isEmpty()
         if (hasNullValue) {
           throw new TiBatchWriteException(
-            "cannot allocate id on the condition of having null value " +
-              "and valid value on auto increment column")
+            "cannot allocate id on the condition of having null value and valid value on auto increment column")
         }
         df.rdd
       } else {
         // if auto increment column is not provided, we need allocate id for it.
         // adding an auto increment column to df
         val newDf = df.withColumn(autoIncrementColName, lit(null).cast("long"))
-        val start = getAutoTableIdStart(df.count)
+        val start = getAutoTableIdStart(count)
 
         // update colsInDF since we just add one column in df
         colsInDf = newDf.columns.toList.map(_.toLowerCase())
@@ -173,7 +180,7 @@ class TiBatchWriteTable(
           WrappedRow(row, extractHandleId(row))
         }
       } else {
-        val start = getAutoTableIdStart(tiRowRdd.count)
+        val start = getAutoTableIdStart(count)
         tiRowRdd.zipWithIndex.map { data =>
           WrappedRow(data._1, data._2 + start)
         }
@@ -190,60 +197,51 @@ class TiBatchWriteTable(
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
       }
 
-      val wrappedEncodedRdd = generateKV(distinctWrappedRowRdd, remove = false)
-      splitTableRegion(wrappedEncodedRdd.filter(r => !r.isIndex))
-      splitIndexRegion(wrappedEncodedRdd.filter(r => r.isIndex))
+      val wrappedEncodedRecordRdd = generateRecordKV(distinctWrappedRowRdd, remove = false)
+      val wrappedEncodedIndexRdds = generateIndexKVs(distinctWrappedRowRdd, remove = false)
+      val wrappedEncodedIndexRdd = sc.union(wrappedEncodedIndexRdds.values.toSeq)
 
-      val mergedRDD = wrappedEncodedRdd ++ generateKV(deletion, remove = true)
-      mergedRDD
+      splitTableRegion(wrappedEncodedRecordRdd)
+      splitIndexRegion(wrappedEncodedIndexRdds, count)
+
+      val g1 = (wrappedEncodedRecordRdd ++ generateRecordKV(deletion, remove = true))
         .map(wrappedEncodedRow => (wrappedEncodedRow.encodedKey, wrappedEncodedRow))
-        .groupByKey()
-        .map {
-          case (key, iterable) =>
-            // if rdd contains same key, it means we need first delete the old value and insert the new value associated the
-            // key. We can merge the two operation into one update operation.
-            // Note: the deletion operation's value of kv pair is empty.
-            iterable.find(value => value.encodedValue.nonEmpty) match {
-              case Some(wrappedEncodedRow) =>
-                WrappedEncodedRow(
-                  wrappedEncodedRow.row,
-                  wrappedEncodedRow.handle,
-                  wrappedEncodedRow.encodedKey,
-                  wrappedEncodedRow.encodedValue,
-                  isIndex = wrappedEncodedRow.isIndex,
-                  wrappedEncodedRow.indexId,
-                  remove = false)
-              case None =>
-                WrappedEncodedRow(
-                  iterable.head.row,
-                  iterable.head.handle,
-                  key,
-                  new Array[Byte](0),
-                  isIndex = iterable.head.isIndex,
-                  iterable.head.indexId,
-                  remove = true)
-            }
+        .reduceByKey { (r1, r2) =>
+          // if rdd contains same key, it means we need first delete the old value and insert the new value associated the
+          // key. We can merge the two operation into one update operation.
+          // Note: the deletion operation's value of kv pair is empty.
+          if (r1.encodedValue.isEmpty) r2 else r1
         }
+        .map(_._2)
+      val g2 = (wrappedEncodedIndexRdd ++ generateIndexKV(sc, deletion, remove = true))
+        .map(wrappedEncodedRow => (wrappedEncodedRow.encodedKey, wrappedEncodedRow))
+        .reduceByKey { (r1, r2) =>
+          if (r1.encodedValue.isEmpty) r2 else r1
+        }
+        .map(_._2)
+
+      g1 ++ g2
     } else {
-      val start = getAutoTableIdStart(tiRowRdd.count)
+      val start = getAutoTableIdStart(count)
       val wrappedRowRdd = tiRowRdd.zipWithIndex.map { row =>
         WrappedRow(row._1, row._2 + start)
       }
 
-      val wrappedEncodedRdd = generateKV(wrappedRowRdd, remove = false)
-      splitTableRegion(wrappedEncodedRdd.filter(r => !r.isIndex))
-      splitIndexRegion(wrappedEncodedRdd.filter(r => r.isIndex))
+      val wrappedEncodedRecordRdd = generateRecordKV(wrappedRowRdd, remove = false)
+      val wrappedEncodedIndexRdds = generateIndexKVs(wrappedRowRdd, remove = false)
+      val wrappedEncodedIndexRdd = sc.union(wrappedEncodedIndexRdds.values.toSeq)
 
-      wrappedEncodedRdd
+      splitTableRegion(wrappedEncodedRecordRdd)
+      splitIndexRegion(wrappedEncodedIndexRdds, count)
+
+      wrappedEncodedRecordRdd ++ wrappedEncodedIndexRdd
     }
 
-    val encodedKVPairRDD =
-      encodedTiRowRDD.map(row => EncodedKVPair(row.encodedKey, row.encodedValue))
     // shuffle data in same task which belong to same region
     val shuffledRDD = if (options.shuffleKeyToSameRegion) {
-      shuffleKeyToSameRegion(encodedKVPairRDD)
+      shuffleKeyToSameRegion(encodedTiRowRDD)
     } else {
-      doNotshuffleKeyToSameRegion(encodedKVPairRDD)
+      doNotshuffleKeyToSameRegion(encodedTiRowRDD)
     }
     shuffledRDD
   }
@@ -343,16 +341,16 @@ class TiBatchWriteTable(
     rdd.mapPartitions { wrappedRows =>
       val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs.getPrevious)
       var rowBuf = mutable.ListBuffer.empty[WrappedRow]
-      var rowBufIndex = 0
+      var rowBufIterator = rowBuf.iterator
 
       new Iterator[WrappedRow] {
         override def hasNext: Boolean = {
           while (true) {
-            if (!wrappedRows.hasNext && !(rowBufIndex < rowBuf.size)) {
+            if (!wrappedRows.hasNext && !rowBufIterator.hasNext) {
               return false
             }
 
-            if (rowBufIndex < rowBuf.size) {
+            if (rowBufIterator.hasNext) {
               return true
             }
 
@@ -364,8 +362,7 @@ class TiBatchWriteTable(
 
         override def next(): WrappedRow = {
           if (hasNext) {
-            rowBufIndex = rowBufIndex + 1
-            rowBuf(rowBufIndex - 1)
+            rowBufIterator.next
           } else {
             null
           }
@@ -382,74 +379,75 @@ class TiBatchWriteTable(
         }
 
         def genNextHandleBatch(
-            batch: List[WrappedRow]): (util.List[Array[Byte]], util.Map[ByteString, Long]) = {
+            batch: List[WrappedRow]): (util.List[Array[Byte]], util.List[Long]) = {
           val list = new util.ArrayList[Array[Byte]]()
-          val map = new util.HashMap[ByteString, Long]()
+          val handles = new util.ArrayList[Long]()
           batch.foreach { wrappedRow =>
             val bytes = buildRowKey(wrappedRow.row, wrappedRow.handle).bytes
-            val key = ByteString.copyFrom(bytes)
             list.add(bytes)
-            map.put(key, wrappedRow.handle)
+            handles.add(wrappedRow.handle)
           }
-          (list, map)
+          (list, handles)
         }
 
         def genNextUniqueIndexBatch(
             batch: List[WrappedRow],
-            index: TiIndexInfo): (util.List[Array[Byte]], util.Map[ByteString, TiRow]) = {
-          val list = new util.ArrayList[Array[Byte]]()
-          val map = new util.HashMap[ByteString, TiRow]()
+            index: TiIndexInfo): (util.List[Array[Byte]], util.List[TiRow]) = {
+          val keyList = new util.ArrayList[Array[Byte]]()
+          val rowList = new util.ArrayList[TiRow]()
           batch.foreach { wrappedRow =>
             val encodeResult = buildUniqueIndexKey(wrappedRow.row, wrappedRow.handle, index)
             if (!encodeResult._2) {
               // only add the key if handle is not appended, since if handle is appened,
               // the value must be a new value
               val bytes = encodeResult._1.bytes
-              val key = ByteString.copyFrom(bytes)
-              list.add(bytes)
-              map.put(key, wrappedRow.row)
+              keyList.add(bytes)
+              rowList.add(wrappedRow.row)
             }
           }
-          (list, map)
+          (keyList, rowList)
         }
 
         def decodeHandle(row: Array[Byte]): Long = {
           RowKey.decode(row).getHandle
         }
 
+        def processHandleDelete(
+            oldValueList: java.util.List[BytePairWrapper],
+            handleList: java.util.List[Long]): Unit = {
+          for (i <- 0 until oldValueList.size) {
+            val oldValuePair = oldValueList.get(i)
+            val oldValue = oldValuePair.getValue
+            val handle = handleList.get(i)
+
+            if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
+              val oldRow = TableCodec.decodeRow(oldValue, handle, tiTableInfo)
+              rowBuf += WrappedRow(oldRow, handle)
+            }
+          }
+        }
+
         def processNextBatch(): Unit = {
           rowBuf = mutable.ListBuffer.empty[WrappedRow]
-          rowBufIndex = 0
 
           val batch = getNextBatch(wrappedRows)
 
           if (handleCol != null) {
-            val (batchHandle, handleMap) = genNextHandleBatch(batch)
+            val (batchHandle, handleList) = genNextHandleBatch(batch)
             val oldValueList = snapshot.batchGet(options.batchGetBackOfferMS, batchHandle)
-            (0 until oldValueList.size()).foreach { i =>
-              val oldValuePair = oldValueList.get(i)
-              val oldValue = oldValuePair.getValue
-              val key = oldValuePair.getKey
-              val handle = handleMap.get(key)
-
-              if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
-                val oldRow = TableCodec.decodeRow(oldValue, handle, tiTableInfo)
-                rowBuf += WrappedRow(oldRow, handle)
-              }
-            }
+            processHandleDelete(oldValueList, handleList)
           }
 
           val oldIndicesBatch: util.List[Array[Byte]] = new util.ArrayList[Array[Byte]]()
           uniqueIndices.foreach { index =>
-            val (batchIndices, rowMap) = genNextUniqueIndexBatch(batch, index)
+            val (batchIndices, rowList) = genNextUniqueIndexBatch(batch, index)
             val oldValueList = snapshot.batchGet(options.batchGetBackOfferMS, batchIndices)
-            (0 until oldValueList.size()).foreach { i =>
+            for (i <- 0 until oldValueList.size) {
               val oldValuePair = oldValueList.get(i)
               val oldValue = oldValuePair.getValue
-              val key = oldValuePair.getKey
               if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
                 val oldHandle = TableCodec.decodeHandle(oldValue)
-                val tiRow = rowMap.get(key)
+                val tiRow = rowList.get(i)
 
                 oldIndicesBatch.add(buildRowKey(tiRow, oldHandle).bytes)
               }
@@ -457,23 +455,24 @@ class TiBatchWriteTable(
           }
 
           val oldIndicesRowPairs = snapshot.batchGet(options.batchGetBackOfferMS, oldIndicesBatch)
-          (0 until oldIndicesRowPairs.size()).foreach { i =>
-            val oldIndicesRowPair = oldIndicesRowPairs.get(i)
+          oldIndicesRowPairs.asScala.foreach { oldIndicesRowPair =>
             val oldRowKey = oldIndicesRowPair.getKey
             val oldRowValue = oldIndicesRowPair.getValue
-            val oldHandle = decodeHandle(oldRowKey)
             if (oldRowValue.nonEmpty && !isNullUniqueIndexValue(oldRowValue)) {
+              val oldHandle = decodeHandle(oldRowKey)
               val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
               rowBuf += WrappedRow(oldRow, oldHandle)
             }
           }
+
+          rowBufIterator = rowBuf.iterator
         }
       }
     }
   }
 
   private def checkValueNotNull(rdd: RDD[TiRow]): Unit = {
-    val nullRowCount = rdd
+    val nullRows = !rdd
       .filter { row =>
         colsMapInTiDB.exists {
           case (_, v) =>
@@ -484,11 +483,11 @@ class TiBatchWriteTable(
             }
         }
       }
-      .count()
+      .isEmpty()
 
-    if (nullRowCount > 0) {
+    if (nullRows) {
       throw new TiBatchWriteException(
-        s"Insert null value to not null column! $nullRowCount rows contain illegal null values!")
+        s"Insert null value to not null column! rows contain illegal null values!")
     }
   }
 
@@ -502,8 +501,8 @@ class TiBatchWriteTable(
           val rowKey = buildRowKey(wrappedRow.row, wrappedRow.handle)
           (rowKey, wrappedRow)
         }
-        .groupByKey()
-        .map(_._2.head)
+        .reduceByKey((r1, _) => r1)
+        .map(_._2)
     }
     uniqueIndices.foreach { index =>
       {
@@ -512,8 +511,8 @@ class TiBatchWriteTable(
             val indexKey = buildUniqueIndexKey(wrappedRow.row, wrappedRow.handle, index)._1
             (indexKey, wrappedRow)
           }
-          .groupByKey()
-          .map(_._2.head)
+          .reduceByKey((r1, _) => r1)
+          .map(_._2)
       }
     }
     mutableRdd
@@ -521,7 +520,7 @@ class TiBatchWriteTable(
 
   @throws(classOf[NoSuchTableException])
   private def shuffleKeyToSameRegion(
-      rdd: RDD[EncodedKVPair]): RDD[(SerializableKey, Array[Byte])] = {
+      rdd: RDD[WrappedEncodedRow]): RDD[(SerializableKey, Array[Byte])] = {
     val regions = getRegions
     assert(regions.size() > 0)
     val tiRegionPartitioner =
@@ -529,23 +528,18 @@ class TiBatchWriteTable(
 
     rdd
       .map(obj => (obj.encodedKey, obj.encodedValue))
-      // remove duplicate rows if key equals (should not happen, cause already deduplicated)
-      .reduceByKey(tiRegionPartitioner, (a: Array[Byte], _: Array[Byte]) => a)
+      .partitionBy(tiRegionPartitioner)
   }
 
   @throws(classOf[NoSuchTableException])
   private def doNotshuffleKeyToSameRegion(
-      rdd: RDD[EncodedKVPair]): RDD[(SerializableKey, Array[Byte])] = {
-    val regions = getRegions
-
+      rdd: RDD[WrappedEncodedRow]): RDD[(SerializableKey, Array[Byte])] = {
     if (options.writeTaskNumber > 0) {
       rdd
         .map(obj => (obj.encodedKey, obj.encodedValue))
         .repartition(options.writeTaskNumber)
     } else {
-      rdd
-        .map(obj => (obj.encodedKey, obj.encodedValue))
-        .repartition(regions.size() * options.taskNumPerRegion)
+      rdd.map(obj => (obj.encodedKey, obj.encodedValue))
     }
   }
 
@@ -699,13 +693,73 @@ class TiBatchWriteTable(
     }
   }
 
-  private def generateKV(rdd: RDD[WrappedRow], remove: Boolean): RDD[WrappedEncodedRow] = {
+  private def calcSize(rdd: RDD[WrappedEncodedRow]): Long = {
+    rdd.aggregate(0L)(
+      (prev, r) => prev + r.encodedKey.bytes.length + r.encodedValue.length,
+      (r1, r2) => r1 + r2)
+  }
+
+  private def calcRecordMinMax(rdd: RDD[WrappedEncodedRow]): (Long, Long) = {
+    rdd.aggregate((Long.MaxValue, Long.MinValue))(
+      (prev, r) => (Math.min(prev._1, r.handle), Math.max(prev._2, r.handle)),
+      (r1, r2) => (Math.min(r1._1, r2._1), Math.max(r1._2, r2._2)))
+  }
+
+  private def calcIndexMinMax(rdd: RDD[WrappedEncodedRow], index: TiIndexInfo): (Any, Any) = {
+    val colName = index.getIndexColumns.get(0).getName
+    val tiColumn = tiTableInfo.getColumn(colName)
+    val colOffset = tiColumn.getOffset
+    val dataType = tiColumn.getType
+
+    def compare(x: Any, y: Any): Int = {
+      x match {
+        case _: java.lang.Integer =>
+          x.asInstanceOf[java.lang.Integer]
+            .compareTo(y.asInstanceOf[java.lang.Integer])
+        case _: java.lang.Long =>
+          x.asInstanceOf[java.lang.Long]
+            .compareTo(y.asInstanceOf[java.lang.Long])
+        case _: java.lang.Double =>
+          x.asInstanceOf[java.lang.Double]
+            .compareTo(y.asInstanceOf[java.lang.Double])
+        case _: java.lang.Float =>
+          x.asInstanceOf[java.lang.Float]
+            .compareTo(y.asInstanceOf[java.lang.Float])
+        case _: Array[Byte] =>
+          FastByteComparisons.compareTo(x.asInstanceOf[Array[Byte]], y.asInstanceOf[Array[Byte]])
+        case _ => x.toString.compareTo(y.toString)
+      }
+      x.toString.compare(y.toString)
+    }
+
+    def min(x: Any, y: Any): Any = {
+      if (x == null) y
+      else if (y == null) x
+      else if (compare(x, y) < 0) x
+      else y
+    }
+
+    def max(x: Any, y: Any): Any = {
+      if (x == null) y
+      else if (y == null) x
+      else if (compare(x, y) > 0) x
+      else y
+    }
+
+    rdd.aggregate((null: Any, null: Any))(
+      (prev, r) => {
+        val v = r.row.get(colOffset, dataType)
+        (min(prev._1, v), max(prev._2, v))
+      },
+      (r1, r2) => (min(r1._1, r2._1), max(r1._2, r2._2)))
+  }
+
+  private def generateRecordKV(rdd: RDD[WrappedRow], remove: Boolean): RDD[WrappedEncodedRow] = {
     rdd
       .map { row =>
         {
-          val kvBuf = mutable.ListBuffer.empty[WrappedEncodedRow]
           val (encodedKey, encodedValue) = generateRowKey(row.row, row.handle, remove)
-          kvBuf += WrappedEncodedRow(
+          WrappedEncodedRow(
             row.row,
             row.handle,
             encodedKey,
@@ -713,35 +767,62 @@ class TiBatchWriteTable(
             isIndex = false,
             -1,
             remove)
-          tiTableInfo.getIndices.asScala.foreach { index =>
-            if (index.isUnique) {
-              val (encodedKey, encodedValue) =
-                generateUniqueIndexKey(row.row, row.handle, index, remove)
-              kvBuf += WrappedEncodedRow(
-                row.row,
-                row.handle,
-                encodedKey,
-                encodedValue,
-                isIndex = true,
-                index.getId,
-                remove)
-            } else {
-              val (encodedKey, encodedValue) =
-                generateSecondaryIndexKey(row.row, row.handle, index, remove)
-              kvBuf += WrappedEncodedRow(
-                row.row,
-                row.handle,
-                encodedKey,
-                encodedValue,
-                isIndex = true,
-                index.getId,
-                remove)
-            }
-          }
-          kvBuf
         }
       }
-      .flatMap(identity)
+  }
+
+  private def generateIndexRDD(
+      rdd: RDD[WrappedRow],
+      index: TiIndexInfo,
+      remove: Boolean): RDD[WrappedEncodedRow] = {
+    if (index.isUnique) {
+      rdd.map { row =>
+        val (encodedKey, encodedValue) =
+          generateUniqueIndexKey(row.row, row.handle, index, remove)
+        WrappedEncodedRow(
+          row.row,
+          row.handle,
+          encodedKey,
+          encodedValue,
+          isIndex = true,
+          index.getId,
+          remove)
+      }
+    } else {
+      rdd.map { row =>
+        val (encodedKey, encodedValue) =
+          generateSecondaryIndexKey(row.row, row.handle, index, remove)
+        WrappedEncodedRow(
+          row.row,
+          row.handle,
+          encodedKey,
+          encodedValue,
+          isIndex = true,
+          index.getId,
+          remove)
+      }
+    }
+  }
+
+  private def generateIndexKVs(
+      rdd: RDD[WrappedRow],
+      remove: Boolean): Map[Long, RDD[WrappedEncodedRow]] = {
+    tiTableInfo.getIndices.asScala
+      .map(index => (index.getId, generateIndexRDD(rdd, index, remove)))
+      .toMap
+  }
+
+  private def unionAll(
+      sc: SparkContext,
+      rdds: Map[Long, RDD[WrappedEncodedRow]]): RDD[WrappedEncodedRow] = {
+    rdds.values.foldLeft(sc.emptyRDD[WrappedEncodedRow])(_ ++ _)
+  }
+
+  private def generateIndexKV(
+      sc: SparkContext,
+      rdd: RDD[WrappedRow],
+      remove: Boolean): RDD[WrappedEncodedRow] = {
+    unionAll(sc, generateIndexKVs(rdd, remove))
   }
 
   // TODO: support physical table later. Need use partition info and row value to
@@ -750,12 +831,9 @@ class TiBatchWriteTable(
     tiTableInfo.getId
   }
 
-  private def estimateRegionSplitNum(wrappedEncodedRdd: RDD[WrappedEncodedRow]): Long = {
-    val totalSize =
-      wrappedEncodedRdd.map(r => r.encodedKey.bytes.length + r.encodedValue.length).sum()
-
+  private def estimateRegionSplitNum(totalSize: Long): Long = {
     //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
-    Math.ceil(totalSize / (tiContext.tiConf.getTikvRegionSplitSizeInMB * 1024 * 1024)).toLong
+    Math.ceil(totalSize / (tiContext.tiConf.getTikvRegionSplitSizeInMB * 1024.0 * 1024)).toLong
   }
 
   private def checkTidbRegionSplitContidion(
@@ -772,7 +850,9 @@ class TiBatchWriteTable(
     }
   }
 
-  private def splitIndexRegion(wrappedEncodedRdd: RDD[WrappedEncodedRow]): Unit = {
+  private def splitIndexRegion(
+      wrappedEncodedRdd: Map[Long, RDD[WrappedEncodedRow]],
+      count: Long): Unit = {
     if (options.enableRegionSplit && isEnableSplitRegion) {
       val indices = tiTableInfo.getIndices.asScala
 
@@ -812,19 +892,20 @@ class TiBatchWriteTable(
           }
         }
 
-        val rdd = wrappedEncodedRdd.filter(_.indexId == index.getId).filter { t =>
-          val value = t.row.get(colOffset, dataType)
-          value != null && value.toString != null
-        }
+        val rdd = wrappedEncodedRdd(index.getId)
+
         val regionSplitNum = if (options.regionSplitNum != 0) {
           options.regionSplitNum
         } else {
-          estimateRegionSplitNum(rdd) * 4
+          val indexSize = calcSize(rdd)
+          logger.info(s"count=$count index=$indexSize")
+          val splitNum = estimateRegionSplitNum(indexSize)
+          logger.info(s"index region split num=$splitNum")
+          splitNum
         }
 
         // region split
         if (regionSplitNum > 1) {
-          val count = rdd.count()
           logger.info(
             s"index region split, regionSplitNum=$regionSplitNum, indexName=${index.getName}")
           if (count > (regionSplitNum * 1000 + 1) * 10) {
@@ -851,16 +932,16 @@ class TiBatchWriteTable(
             }
           } else {
             logger.info("split by min/max data")
-            val minIndexValue = toString(rdd.min()(ordering).row.get(colOffset, dataType))
-            val maxIndexValue = toString(rdd.max()(ordering).row.get(colOffset, dataType))
+            val (minIndexValue, maxIndexValue) = calcIndexMinMax(rdd, index)
+            logger.info(s"index min=$minIndexValue max=$maxIndexValue")
             try {
               tiDBJDBCClient
                 .splitIndexRegion(
                   options.database,
                   options.table,
                   index.getName,
-                  minIndexValue,
-                  maxIndexValue,
+                  minIndexValue.toString,
+                  maxIndexValue.toString,
                   regionSplitNum)
             } catch {
               case e: SQLException =>
@@ -898,15 +979,19 @@ class TiBatchWriteTable(
             }
         }
       } else {
+
         val regionSplitNum = if (options.regionSplitNum != 0) {
           options.regionSplitNum
         } else {
-          estimateRegionSplitNum(wrappedRowRdd)
+          val recordSize = calcSize(wrappedRowRdd)
+          val splitNum = estimateRegionSplitNum(recordSize)
+          logger.info(s"record region split num=$splitNum")
+          splitNum
         }
         // region split
         if (regionSplitNum > 1) {
-          val minHandle = wrappedRowRdd.min().handle
-          val maxHandle = wrappedRowRdd.max().handle
+          val (minHandle, maxHandle) = calcRecordMinMax(wrappedRowRdd)
+          logger.info(s"record min=$minHandle max=$maxHandle")
           if (checkTidbRegionSplitContidion(minHandle, maxHandle, regionSplitNum)) {
             logger.info(s"table region split is enabled, regionSplitNum=$regionSplitNum")
             try {

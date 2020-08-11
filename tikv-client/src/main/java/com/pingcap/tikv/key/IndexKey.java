@@ -64,8 +64,7 @@ public class IndexKey extends Key {
     // NULL
     boolean appendHandle = false;
     if (appendHandleIfContainsNull) {
-      for (int i = 0; i < indexColumns.size(); i++) {
-        TiIndexColumn col = indexColumns.get(i);
+      for (TiIndexColumn col : indexColumns) {
         DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
         if (row.get(col.getOffset(), colTp) == null) {
           appendHandle = true;

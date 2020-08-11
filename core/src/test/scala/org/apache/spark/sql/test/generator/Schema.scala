@@ -34,7 +34,7 @@ case class Schema(
     tableName: String,
     columnNames: List[String],
     columnDesc: Map[String, (ReflectedDataType, (Integer, Integer), String)],
-    indexColumns: Map[String, (List[(String, Integer)], Boolean)]) {
+    indexColumns: Map[String, (List[(String, Integer)], Boolean, Boolean)]) {
 
   // validations
   assert(columnDesc.size == columnNames.size, "columnDesc size not equal to column name size")
@@ -46,7 +46,8 @@ case class Schema(
       idx._2._1.map { x =>
         IndexColumnInfo(x._1, x._2)
       },
-      idx._2._2)
+      idx._2._2,
+      idx._2._3)
   }.toList
 
   assert(indexInfo.count(_.isPrimary) <= 1, "more than one primary key exist in schema")
@@ -58,10 +59,17 @@ case class Schema(
     pkIndexInfo.head.indexColumns.map(_.column).mkString(",")
   }
 
+  val uniqueIndexInfo: List[IndexInfo] = indexInfo.filter(_.isUnique)
+  val uniqueColumnNames: List[String] = uniqueIndexInfo.map { indexInfo =>
+    indexInfo.indexColumns.map(_.column).mkString(",")
+  }
+
   val columnInfo: List[ColumnInfo] = columnNames.map { col =>
     val x = columnDesc(col)
     if (col == pkColumnName) {
       ColumnInfo(col, x._1, x._2, x._3 + " primary key")
+    } else if (uniqueColumnNames.contains(col)) {
+      ColumnInfo(col, x._1, x._2, x._3 + " unique key")
     } else {
       ColumnInfo(col, x._1, x._2, x._3)
     }

@@ -190,7 +190,11 @@ class TiBatchWrite(
     // pre calculate
     val shuffledRDD: RDD[(SerializableKey, Array[Byte])] = {
       val rddList = tiBatchWriteTables.map(_.preCalculate(startTimeStamp))
-      tiContext.sparkSession.sparkContext.union(rddList)
+      if (rddList.lengthCompare(1) == 0) {
+        rddList.head
+      } else {
+        tiContext.sparkSession.sparkContext.union(rddList)
+      }
     }
 
     // take one row as primary key

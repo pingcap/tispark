@@ -64,12 +64,14 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
       val row3 = Row(30, "3", java.sql.Timestamp.valueOf("2001-12-29 23:27:14"))
       val row4 = Row(40, "4", java.sql.Timestamp.valueOf("2001-12-29 23:18:46"))
       val row5 = Row(50, "5", java.sql.Timestamp.valueOf("2001-12-29 23:21:45"))
-      tidbWrite(List(row1, row2, row3, row4, row5), schema, options)
+      val row6 = Row(50, "5", java.sql.Timestamp.valueOf("2001-12-29 23:21:45"))
+      tidbWrite(List(row1, row2, row3, row4, row5, row6), schema, options)
 
       try {
         assert(spark.sql(s"select count(c) from $table").collect().head.get(0) === 5)
         assert(spark.sql(s"select count(a) from $table").collect().head.get(0) === 5)
       } finally {
+        spark.sql(s"select * from $table").show(false)
         spark.sql(s"select count(c) from $table").show(false)
         spark.sql(s"select count(c) from $table").explain
         spark.sql(s"select count(a) from $table").show(false)
