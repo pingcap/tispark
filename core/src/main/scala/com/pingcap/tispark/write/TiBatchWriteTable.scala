@@ -425,7 +425,7 @@ class TiBatchWriteTable(
 
           if (handleCol != null) {
             val (batchHandle, handleMap) = genNextHandleBatch(batch)
-            val oldValueList = snapshot.batchGet(batchHandle)
+            val oldValueList = snapshot.batchGet(options.batchGetBackOfferMS, batchHandle)
             (0 until oldValueList.size()).foreach { i =>
               val oldValuePair = oldValueList.get(i)
               val oldValue = oldValuePair.getValue
@@ -442,7 +442,7 @@ class TiBatchWriteTable(
           val oldIndicesBatch: util.List[Array[Byte]] = new util.ArrayList[Array[Byte]]()
           uniqueIndices.foreach { index =>
             val (batchIndices, rowMap) = genNextUniqueIndexBatch(batch, index)
-            val oldValueList = snapshot.batchGet(batchIndices)
+            val oldValueList = snapshot.batchGet(options.batchGetBackOfferMS, batchIndices)
             (0 until oldValueList.size()).foreach { i =>
               val oldValuePair = oldValueList.get(i)
               val oldValue = oldValuePair.getValue
@@ -456,7 +456,7 @@ class TiBatchWriteTable(
             }
           }
 
-          val oldIndicesRowPairs = snapshot.batchGet(oldIndicesBatch)
+          val oldIndicesRowPairs = snapshot.batchGet(options.batchGetBackOfferMS, oldIndicesBatch)
           (0 until oldIndicesRowPairs.size()).foreach { i =>
             val oldIndicesRowPair = oldIndicesRowPairs.get(i)
             val oldRowKey = oldIndicesRowPair.getKey

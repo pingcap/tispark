@@ -27,6 +27,7 @@ import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
 import com.pingcap.tikv.operation.iterator.IndexScanIterator;
 import com.pingcap.tikv.row.Row;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.ArrayList;
@@ -71,13 +72,15 @@ public class Snapshot {
     }
   }
 
-  public List<BytePairWrapper> batchGet(List<byte[]> keys) {
+  public List<BytePairWrapper> batchGet(int backOffer, List<byte[]> keys) {
     List<ByteString> list = new ArrayList<>();
     for (byte[] key : keys) {
       list.add(ByteString.copyFrom(key));
     }
     try (KVClient client = new KVClient(session.getConf(), session.getRegionStoreClientBuilder())) {
-      List<KvPair> kvPairList = client.batchGet(list, timestamp.getVersion());
+      List<KvPair> kvPairList =
+          client.batchGet(
+              ConcreteBackOffer.newCustomBackOff(backOffer), list, timestamp.getVersion());
       return kvPairList
           .stream()
           .map(
