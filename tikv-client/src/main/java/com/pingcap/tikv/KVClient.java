@@ -29,18 +29,14 @@ import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,25 +89,15 @@ public class KVClient implements AutoCloseable {
   /**
    * Get a set of key-value pair by keys from TiKV
    *
-   * @param keys keys
+   * @param backOffer
+   * @param keys
+   * @param version
+   * @return
+   * @throws GrpcException
    */
-  public List<KvPair> batchGet(List<ByteString> keys, long version) throws GrpcException {
-    return batchGet(ConcreteBackOffer.newBatchGetMaxBackOff(), keys, version);
-  }
-
-  private List<KvPair> batchGet(BackOffer backOffer, List<ByteString> keys, long version) {
-    Set<ByteString> set = new HashSet<>(keys);
-    return batchGet(backOffer, set, version);
-  }
-
-  private List<KvPair> batchGet(BackOffer backOffer, Set<ByteString> keys, long version) {
-    Map<TiRegion, List<ByteString>> groupKeys = groupKeysByRegion(keys);
-    List<Batch> batches = new ArrayList<>();
-
-    for (Map.Entry<TiRegion, List<ByteString>> entry : groupKeys.entrySet()) {
-      appendBatches(batches, entry.getKey(), entry.getValue(), BATCH_GET_SIZE);
-    }
-    return sendBatchGet(backOffer, batches, version);
+  public List<KvPair> batchGet(BackOffer backOffer, List<ByteString> keys, long version)
+      throws GrpcException {
+    return doSendBatchGet(backOffer, keys, version);
   }
 
   /**
@@ -149,26 +135,101 @@ public class KVClient implements AutoCloseable {
     return scan(startKey, version, Integer.MAX_VALUE);
   }
 
+  private List<KvPair> doSendBatchGet(BackOffer backOffer, List<ByteString> keys, long version) {
+    ExecutorCompletionService<List<KvPair>> completionService =
+        new ExecutorCompletionService<>(executorService);
+
+    Map<TiRegion, List<ByteString>> groupKeys = groupKeysByRegion(keys);
+    List<Batch> batches = new ArrayList<>();
+
+    for (Map.Entry<TiRegion, List<ByteString>> entry : groupKeys.entrySet()) {
+      appendBatches(batches, entry.getKey(), entry.getValue(), BATCH_GET_SIZE);
+    }
+
+    for (Batch batch : batches) {
+      BackOffer singleBatchBackOffer = ConcreteBackOffer.create(backOffer);
+      completionService.submit(
+          () -> doSendBatchGetInBatchesWithRetry(singleBatchBackOffer, batch, version));
+    }
+
+    try {
+      List<KvPair> result = new ArrayList<>();
+      for (int i = 0; i < batches.size(); i++) {
+        result.addAll(completionService.take().get());
+      }
+      return result;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new TiKVException("Current thread interrupted.", e);
+    } catch (ExecutionException e) {
+      throw new TiKVException("Execution exception met.", e);
+    }
+  }
+
+  private List<KvPair> doSendBatchGetInBatchesWithRetry(
+      BackOffer backOffer, Batch batch, long version) {
+    TiRegion oldRegion = batch.region;
+    TiRegion currentRegion =
+        clientBuilder.getRegionManager().getRegionById(backOffer, oldRegion.getId());
+
+    if (oldRegion.equals(currentRegion)) {
+      RegionStoreClient client = clientBuilder.build(batch.region);
+      try {
+        return client.batchGet(backOffer, batch.keys, version);
+      } catch (final TiKVException e) {
+        backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
+        clientBuilder.getRegionManager().invalidateRegion(batch.region.getId());
+        logger.warn("ReSplitting ranges for BatchGetRequest", e);
+
+        // retry
+        return doSendBatchGetWithRefetchRegion(backOffer, batch, version);
+      }
+    } else {
+      return doSendBatchGetWithRefetchRegion(backOffer, batch, version);
+    }
+  }
+
+  private List<KvPair> doSendBatchGetWithRefetchRegion(
+      BackOffer backOffer, Batch batch, long version) {
+    Map<TiRegion, List<ByteString>> groupKeys = groupKeysByRegion(batch.keys);
+    List<Batch> retryBatches = new ArrayList<>();
+
+    for (Map.Entry<TiRegion, List<ByteString>> entry : groupKeys.entrySet()) {
+      appendBatches(retryBatches, entry.getKey(), entry.getValue(), BATCH_GET_SIZE);
+    }
+
+    ArrayList<KvPair> results = new ArrayList<>();
+    for (Batch retryBatch : retryBatches) {
+      // recursive calls
+      List<KvPair> batchResult = doSendBatchGetInBatchesWithRetry(backOffer, retryBatch, version);
+      results.addAll(batchResult);
+    }
+    return results;
+  }
+
   /**
    * Append batch to list and split them according to batch limit
    *
    * @param batches a grouped batch
    * @param region region
    * @param keys keys
-   * @param limit batch max limit
+   * @param batchGetMaxSizeInByte batch max limit
    */
   private void appendBatches(
-      List<Batch> batches, TiRegion region, List<ByteString> keys, int limit) {
-    List<ByteString> tmpKeys = new ArrayList<>();
-    for (int i = 0; i < keys.size(); i++) {
-      if (i >= limit) {
-        batches.add(new Batch(region, tmpKeys));
-        tmpKeys.clear();
-      }
-      tmpKeys.add(keys.get(i));
+      List<Batch> batches, TiRegion region, List<ByteString> keys, int batchGetMaxSizeInByte) {
+    int start;
+    int end;
+    if (keys == null) {
+      return;
     }
-    if (!tmpKeys.isEmpty()) {
-      batches.add(new Batch(region, tmpKeys));
+    int len = keys.size();
+    for (start = 0; start < len; start = end) {
+      int size = 0;
+      for (end = start; end < len && size < batchGetMaxSizeInByte; end++) {
+        size += keys.get(end).size();
+      }
+      Batch batch = new Batch(region, keys.subList(start, end));
+      batches.add(batch);
     }
   }
 
@@ -178,53 +239,9 @@ public class KVClient implements AutoCloseable {
    * @param keys keys
    * @return a mapping of keys and their region
    */
-  private Map<TiRegion, List<ByteString>> groupKeysByRegion(Set<ByteString> keys) {
+  private Map<TiRegion, List<ByteString>> groupKeysByRegion(List<ByteString> keys) {
     return keys.stream()
         .collect(Collectors.groupingBy(clientBuilder.getRegionManager()::getRegionByKey));
-  }
-
-  /**
-   * Send batchPut request concurrently
-   *
-   * @param backOffer current backOffer
-   * @param batches list of batch to send
-   */
-  private List<KvPair> sendBatchGet(BackOffer backOffer, List<Batch> batches, long version) {
-    ExecutorCompletionService<List<KvPair>> completionService =
-        new ExecutorCompletionService<>(executorService);
-    for (Batch batch : batches) {
-      completionService.submit(
-          () -> {
-            RegionStoreClient client = clientBuilder.build(batch.region);
-            BackOffer singleBatchBackOffer = ConcreteBackOffer.create(backOffer);
-            List<ByteString> keys = batch.keys;
-            try {
-              return client.batchGet(singleBatchBackOffer, keys, version);
-            } catch (final TiKVException e) {
-              // TODO: any elegant way to re-split the ranges if fails?
-              singleBatchBackOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
-              clientBuilder.getRegionManager().invalidateRegion(batch.region.getId());
-              logger.warn("ReSplitting ranges for BatchGetRequest");
-              // recursive calls
-              return batchGet(singleBatchBackOffer, batch.keys, version);
-            }
-          });
-    }
-    try {
-      List<KvPair> result = new ArrayList<>();
-      for (int i = 0; i < batches.size(); i++) {
-        result.addAll(
-            completionService.take().get(BackOffer.BATCH_GET_MAX_BACKOFF, TimeUnit.SECONDS));
-      }
-      return result;
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new TiKVException("Current thread interrupted.", e);
-    } catch (TimeoutException e) {
-      throw new TiKVException("TimeOut Exceeded for current operation. ", e);
-    } catch (ExecutionException e) {
-      throw new TiKVException("Execution exception met.", e);
-    }
   }
 
   private Iterator<Kvrpcpb.KvPair> scanIterator(
