@@ -486,7 +486,7 @@ public class TwoPhaseCommitter {
    * @param commitTs
    * @return
    */
-  public void commitSecondaryKeys(Iterator<ByteWrapper> keys, long commitTs)
+  public void commitSecondaryKeys(Iterator<ByteWrapper> keys, long commitTs, int commitBackOfferMS)
       throws TiBatchWriteException {
 
     Iterator<ByteString> byteStringKeys =
@@ -503,10 +503,11 @@ public class TwoPhaseCommitter {
           }
         };
 
-    doCommitSecondaryKeys(byteStringKeys, commitTs);
+    doCommitSecondaryKeys(byteStringKeys, commitTs, commitBackOfferMS);
   }
 
-  private void doCommitSecondaryKeys(Iterator<ByteString> keys, long commitTs)
+  private void doCommitSecondaryKeys(
+      Iterator<ByteString> keys, long commitTs, int commitBackOfferMS)
       throws TiBatchWriteException {
     try {
       int taskBufferSize = writeThreadPerTask * 2;
@@ -526,7 +527,7 @@ public class TwoPhaseCommitter {
           // consume one task if reaches task limit
           completionService.take().get();
         }
-        BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF);
+        BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(commitBackOfferMS);
         completionService.submit(
             () -> {
               doCommitSecondaryKeysWithRetry(backOffer, keyBytes, curSize, commitTs);
