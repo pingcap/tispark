@@ -170,7 +170,7 @@ public class KVClient implements AutoCloseable {
       BackOffer backOffer, Batch batch, long version) {
     TiRegion oldRegion = batch.region;
     TiRegion currentRegion =
-        clientBuilder.getRegionManager().getRegionById(backOffer, oldRegion.getId());
+        clientBuilder.getRegionManager().getRegionByKey(oldRegion.getStartKey());
 
     if (oldRegion.equals(currentRegion)) {
       RegionStoreClient client = clientBuilder.build(batch.region);
