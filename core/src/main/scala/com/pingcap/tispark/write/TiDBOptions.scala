@@ -88,6 +88,8 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // 32 * 1024
   val writeBufferSize: Int = getOrDefault(TIDB_WRITE_BUFFER_SIZE, "32768").toInt
   val writeThreadPerTask: Int = getOrDefault(TIDB_WRITE_THREAD_PER_TASK, "1").toInt
+  val retryCommitSecondaryKey: Boolean =
+    getOrDefault(TIDB_RETRY_COMMIT_SECONDARY_KEY, "true").toBoolean
 
   // ------------------------------------------------------------
   // Calculated parameters
@@ -188,6 +190,7 @@ object TiDBOptions {
   val TIDB_TXN_COMMIT_BATCH_SIZE: String = newOption("txnCommitBatchSize")
   val TIDB_WRITE_BUFFER_SIZE: String = newOption("writeBufferSize")
   val TIDB_WRITE_THREAD_PER_TASK: String = newOption("writeThreadPerTask")
+  val TIDB_RETRY_COMMIT_SECONDARY_KEY: String = newOption("retryCommitSecondaryKey")
   // ------------------------------------------------------------
   // parameters only for test
   // ------------------------------------------------------------
