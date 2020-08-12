@@ -54,6 +54,7 @@ public class TiTableInfo implements Serializable {
   private final TiFlashReplicaInfo tiflashReplicaInfo;
   private final long version;
   private final long updateTimestamp;
+  private final TiSequenceInfo sequenceInfo;
 
   @JsonCreator
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -74,21 +75,31 @@ public class TiTableInfo implements Serializable {
       @JsonProperty("view") TiViewInfo viewInfo,
       @JsonProperty("tiflash_replica") TiFlashReplicaInfo tiFlashReplicaInfo,
       @JsonProperty("version") long version,
-      @JsonProperty("update_timestamp") long updateTimestamp) {
+      @JsonProperty("update_timestamp") long updateTimestamp,
+      @JsonProperty("sequence") TiSequenceInfo sequenceInfo) {
     this.id = id;
     this.name = name.getL();
     this.charset = charset;
     this.collate = collate;
-    this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
-    this.columnsMap = new HashMap<>();
-    for (TiColumnInfo col : this.columns) {
-      this.columnsMap.put(col.getName(), col);
+    if (sequenceInfo == null) {
+      this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
+      this.columnsMap = new HashMap<>();
+      for (TiColumnInfo col : this.columns) {
+        this.columnsMap.put(col.getName(), col);
+      }
+      this.rowSize = columns.stream().mapToLong(TiColumnInfo::getSize).sum();
+    } else {
+      this.columns = null;
+      this.columnsMap = null;
+      // 9 is the rowSize for type bigint
+      this.rowSize = 9;
     }
     // TODO: Use more precise predication according to types
-    this.rowSize = columns.stream().mapToLong(TiColumnInfo::getSize).sum();
     this.pkIsHandle = pkIsHandle;
     this.indices = indices != null ? ImmutableList.copyOf(indices) : ImmutableList.of();
-    this.indices.forEach(x -> x.calculateIndexSize(columns));
+    if (this.columns != null) {
+      this.indices.forEach(x -> x.calculateIndexSize(columns));
+    }
     this.comment = comment;
     this.autoIncId = autoIncId;
     this.maxColumnId = maxColumnId;
@@ -99,12 +110,15 @@ public class TiTableInfo implements Serializable {
     this.tiflashReplicaInfo = tiFlashReplicaInfo;
     this.version = version;
     this.updateTimestamp = updateTimestamp;
+    this.sequenceInfo = sequenceInfo;
 
     TiColumnInfo primaryKey = null;
-    for (TiColumnInfo col : this.columns) {
-      if (col.isPrimaryKey()) {
-        primaryKey = col;
-        break;
+    if (sequenceInfo == null) {
+      for (TiColumnInfo col : this.columns) {
+        if (col.isPrimaryKey()) {
+          primaryKey = col;
+          break;
+        }
       }
     }
     primaryKeyColumn = primaryKey;
@@ -112,6 +126,10 @@ public class TiTableInfo implements Serializable {
 
   public boolean isView() {
     return this.viewInfo != null;
+  }
+
+  public boolean isSequence() {
+    return this.sequenceInfo != null;
   }
 
   // auto increment column must be a primary key column
@@ -276,7 +294,8 @@ public class TiTableInfo implements Serializable {
           null,
           getTiflashReplicaInfo(),
           version,
-          updateTimestamp);
+          updateTimestamp,
+          null);
     } else {
       return this;
     }

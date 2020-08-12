@@ -166,15 +166,8 @@ public class TiSession implements AutoCloseable {
       synchronized (this) {
         if (tableScanThreadPool == null) {
           tableScanThreadPool =
-              // partitionPerSplit is added to batch region task in single CoprocessorIterator.
-              // When partitionPerSplit is larger than 1, original table scan concurrency setting
-              // may lead to high context switch in thread pool which causes performance regression.
-
-              // To address this problem, we take a division of original table scan concurrency and
-              // partitionPerSplit to create thread pool. In this way, we can decrease
-              // the thread competition.
               Executors.newFixedThreadPool(
-                  conf.getTableScanConcurrency() / conf.getPartitionPerSplit(),
+                  conf.getTableScanConcurrency(),
                   new ThreadFactoryBuilder()
                       .setNameFormat("table-scan-pool-%d")
                       .setDaemon(true)

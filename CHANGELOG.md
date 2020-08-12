@@ -1,6 +1,10 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.1] 2020-07-08
+### Fixes
+- Ignore get version sql exception [#1516](https://github.com/pingcap/tispark/pull/1516)
+
 ## [TiSpark 2.3.0] 2020-07-06
 ### New Features
 - Support working with TiDB-3.1 and TiDB-4.0
