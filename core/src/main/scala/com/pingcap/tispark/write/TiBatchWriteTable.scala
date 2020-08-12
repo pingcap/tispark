@@ -910,11 +910,12 @@ class TiBatchWriteTable(
             s"index region split, regionSplitNum=$regionSplitNum, indexName=${index.getName}")
           if (count > (regionSplitNum * 1000 + 1) * 10) {
             logger.info("split by sample data")
-            val sampleData = rdd.takeSample(false, (regionSplitNum * 1000 + 1).toInt)
+            val frac = options.sampleSplitFrac
+            val sampleData = rdd.takeSample(false, (regionSplitNum * frac + 1).toInt)
             val sortedSampleData = sampleData.sorted(ordering)
             val buf = new StringBuilder
             for (i <- 1 until regionSplitNum.toInt) {
-              val indexValue = toString(sortedSampleData(i * 1000).row.get(colOffset, dataType))
+              val indexValue = toString(sortedSampleData(i * frac).row.get(colOffset, dataType))
               buf.append(" (")
               buf.append("\"")
               buf.append(indexValue)
