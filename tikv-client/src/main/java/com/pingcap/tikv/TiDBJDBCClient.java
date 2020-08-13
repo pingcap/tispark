@@ -40,13 +40,21 @@ public class TiDBJDBCClient implements AutoCloseable {
   private static final String ENABLE_SPLIT_TABLE_KEY = "split-table";
   private static final Boolean ENABLE_SPLIT_TABLE_DEFAULT = false;
   private static final String TIDB_ROW_FORMAT_VERSION_SQL = "select @@tidb_row_format_version";
-  private static final String TIDB_SET_WAIT_SPLIT_REGION_FINISH = "set @@tidb_wait_split_region_finish=%d;";
+  private static final String TIDB_SET_WAIT_SPLIT_REGION_FINISH =
+      "set @@tidb_wait_split_region_finish=%d;";
   private static final int TIDB_ROW_FORMAT_VERSION_DEFAULT = 1;
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
   private final Connection connection;
+  private final int waitSplitRegionFinish;
 
   public TiDBJDBCClient(Connection connection) {
     this.connection = connection;
+    this.waitSplitRegionFinish = 1;
+  }
+
+  public TiDBJDBCClient(Connection connection, int waitSplitRegionFinish) {
+    this.connection = connection;
+    this.waitSplitRegionFinish = waitSplitRegionFinish;
   }
 
   public boolean isEnableTableLock() throws IOException, SQLException {
@@ -97,8 +105,8 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
   }
 
-  public void setTiDBWriteSplitRegionFinish(int flag) throws SQLException {
-    queryTiDBViaJDBC(String.format(TIDB_SET_WAIT_SPLIT_REGION_FINISH, flag));
+  private void setTiDBWriteSplitRegionFinish() throws SQLException {
+    queryTiDBViaJDBC(String.format(TIDB_SET_WAIT_SPLIT_REGION_FINISH, waitSplitRegionFinish));
   }
 
   public boolean lockTableWriteLocal(String databaseName, String tableName) throws SQLException {
@@ -149,6 +157,9 @@ public class TiDBJDBCClient implements AutoCloseable {
    */
   public void splitTableRegion(
       String dbName, String tblName, long minVal, long maxVal, long regionNum) throws SQLException {
+
+    setTiDBWriteSplitRegionFinish();
+
     if (minVal < maxVal) {
       try (Statement tidbStmt = connection.createStatement()) {
         String sql =
@@ -168,6 +179,9 @@ public class TiDBJDBCClient implements AutoCloseable {
 
   public void splitIndexRegion(String dbName, String tblName, String idxName, String valueList)
       throws SQLException {
+
+    setTiDBWriteSplitRegionFinish();
+
     try (Statement tidbStmt = connection.createStatement()) {
       String sql =
           String.format(
@@ -198,6 +212,9 @@ public class TiDBJDBCClient implements AutoCloseable {
       String maxIndexVal,
       long regionNum)
       throws SQLException {
+
+    setTiDBWriteSplitRegionFinish();
+
     if (!minIndexVal.equals(maxIndexVal)) {
       try (Statement tidbStmt = connection.createStatement()) {
         String sql =
