@@ -84,9 +84,15 @@ case class ColumnarCoprocessorRDD(
 
   override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(sparkContext.union(internalRDDs))
 
+  override protected def supportsBatch: Boolean = false
+
   override protected def doExecute(): RDD[InternalRow] = {
     if (!fetchHandle) {
-      WholeStageCodegenExec(this)(codegenStageId = 0).execute()
+      if(supportsBatch) {
+        WholeStageCodegenExec(this)(codegenStageId = 0).execute()
+      } else {
+        sparkContext.union(internalRDDs)
+      }
     } else {
       sparkContext.union(internalRDDs)
     }
@@ -378,7 +384,13 @@ case class ColumnarRegionTaskExec(
     }
   }
 
+  override protected def supportsBatch: Boolean = false
+
   override protected def doExecute(): RDD[InternalRow] = {
-    WholeStageCodegenExec(this)(codegenStageId = 0).execute()
+    if(supportsBatch) {
+      WholeStageCodegenExec(this)(codegenStageId = 0).execute()
+    } else {
+      child.execute()
+    }
   }
 }
