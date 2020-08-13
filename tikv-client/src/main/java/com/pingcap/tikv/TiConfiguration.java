@@ -85,8 +85,6 @@ public class TiConfiguration implements Serializable {
 
   private List<TiStoreType> isolationReadEngines = DEF_ISOLATION_READ_ENGINES;
 
-  private int prewriteConcurrency = DEF_PREWRITE_CONCURRENCY;
-
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
     TiConfiguration conf = new TiConfiguration();

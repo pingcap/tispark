@@ -46,6 +46,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{TiContext, _}
+import org.apache.spark.storage.StorageLevel
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -193,6 +194,9 @@ class TiBatchWriteTable(
       } else {
         generateDataToBeRemovedRddV1(distinctWrappedRowRdd, startTimeStamp)
       }
+
+      deletion.persist(StorageLevel.DISK_ONLY)
+
       if (!options.replace && !deletion.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
       }
@@ -729,7 +733,6 @@ class TiBatchWriteTable(
           FastByteComparisons.compareTo(x.asInstanceOf[Array[Byte]], y.asInstanceOf[Array[Byte]])
         case _ => x.toString.compareTo(y.toString)
       }
-      x.toString.compare(y.toString)
     }
 
     def min(x: Any, y: Any): Any = {
