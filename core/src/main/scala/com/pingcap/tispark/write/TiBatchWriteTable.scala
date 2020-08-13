@@ -203,7 +203,16 @@ class TiBatchWriteTable(
 
       val wrappedEncodedRecordRdd = generateRecordKV(distinctWrappedRowRdd, remove = false)
       val wrappedEncodedIndexRdds = generateIndexKVs(distinctWrappedRowRdd, remove = false)
-      val wrappedEncodedIndexRdd = sc.union(wrappedEncodedIndexRdds.values.toSeq)
+      val wrappedEncodedIndexRdd: RDD[WrappedEncodedRow] = {
+        val list = wrappedEncodedIndexRdds.values.toSeq
+        if(list.isEmpty) {
+          sc.emptyRDD[WrappedEncodedRow]
+        } else if(list.size == 1) {
+          list.head
+        } else {
+          sc.union(list)
+        }
+      }
 
       splitTableRegion(wrappedEncodedRecordRdd)
       splitIndexRegion(wrappedEncodedIndexRdds, count)
