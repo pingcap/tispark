@@ -40,6 +40,7 @@ public class TiDBJDBCClient implements AutoCloseable {
   private static final String ENABLE_SPLIT_TABLE_KEY = "split-table";
   private static final Boolean ENABLE_SPLIT_TABLE_DEFAULT = false;
   private static final String TIDB_ROW_FORMAT_VERSION_SQL = "select @@tidb_row_format_version";
+  private static final String TIDB_SET_WAIT_SPLIT_REGION_FINISH = "set @@tidb_wait_split_region_finish=%d;";
   private static final int TIDB_ROW_FORMAT_VERSION_DEFAULT = 1;
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
   private final Connection connection;
@@ -94,6 +95,10 @@ public class TiDBJDBCClient implements AutoCloseable {
     } catch (Exception ignored) {
       return TIDB_ROW_FORMAT_VERSION_DEFAULT;
     }
+  }
+
+  public void setTiDBWriteSplitRegionFinish(int flag) throws SQLException {
+    queryTiDBViaJDBC(String.format(TIDB_SET_WAIT_SPLIT_REGION_FINISH, flag));
   }
 
   public boolean lockTableWriteLocal(String databaseName, String tableName) throws SQLException {

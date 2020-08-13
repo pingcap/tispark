@@ -207,7 +207,7 @@ class TiBatchWriteTable(
         val list = wrappedEncodedIndexRdds.values.toSeq
         if (list.isEmpty) {
           sc.emptyRDD[WrappedEncodedRow]
-        } else if (list.size == 1) {
+        } else if (list.lengthCompare(1) == 0) {
           list.head
         } else {
           sc.union(list)
@@ -866,6 +866,7 @@ class TiBatchWriteTable(
       wrappedEncodedRdd: Map[Long, RDD[WrappedEncodedRow]],
       count: Long): Unit = {
     if (options.enableRegionSplit && isEnableSplitRegion) {
+      tiDBJDBCClient.setTiDBWriteSplitRegionFinish(options.writeSplitRegionFinish)
       val indices = tiTableInfo.getIndices.asScala
 
       indices.foreach { index =>

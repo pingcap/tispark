@@ -60,6 +60,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
     getOrDefault(TIDB_SKIP_COMMIT_SECONDARY_KEY, "false").toBoolean
   val regionSplitNum: Int = getOrDefault(TIDB_REGION_SPLIT_NUM, "0").toInt
   val sampleSplitFrac: Int = getOrDefault(TIDB_SAMPLE_SPLIT_FRAC, "1000").toInt
+  val writeSplitRegionFinish: Int = getOrDefault(TIDB_WRITE_SPLIT_REGION_FINISH, "1").toInt
   val enableRegionSplit: Boolean = getOrDefault(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
   val writeConcurrency: Int = getOrDefault(TIDB_WRITE_CONCURRENCY, "0").toInt
   // ttlMode = { "FIXED", "UPDATE", "DEFAULT" }
@@ -182,6 +183,7 @@ object TiDBOptions {
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
   val TIDB_REGION_SPLIT_NUM: String = newOption("regionSplitNum")
   val TIDB_SAMPLE_SPLIT_FRAC: String = newOption("sampleSplitFrac")
+  val TIDB_WRITE_SPLIT_REGION_FINISH: String = newOption("writeSplitRegionFinish")
   val TIDB_WRITE_CONCURRENCY: String = newOption("writeConcurrency")
   val TIDB_TTL_MODE: String = newOption("ttlMode")
   val TIDB_USE_SNAPSHOT_BATCH_GET: String = newOption("useSnapshotBatchGet")
