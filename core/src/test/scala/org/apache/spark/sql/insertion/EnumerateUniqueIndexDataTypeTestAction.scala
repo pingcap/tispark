@@ -26,7 +26,7 @@ trait EnumerateUniqueIndexDataTypeTestAction extends BaseEnumerateDataTypesTestS
   override def genIndex(dataTypes: List[ReflectedDataType], r: Random): List[List[Index]] = {
     val size = dataTypes.length
     // the first step is generate all possible keys
-    val keyList = scala.collection.mutable.ListBuffer.empty[List[Key]]
+    val keyList = scala.collection.mutable.ListBuffer.empty[List[UniqueKey]]
     for (i <- 1 until 3) {
       val combination = new Combinations(size, i)
       //(i, size)
@@ -44,7 +44,7 @@ trait EnumerateUniqueIndexDataTypeTestAction extends BaseEnumerateDataTypesTestS
           }
         }
 
-        keyList += Key(indexColumnList.toList) :: Nil
+        keyList += UniqueKey(indexColumnList.toList) :: Nil
       }
     }
 

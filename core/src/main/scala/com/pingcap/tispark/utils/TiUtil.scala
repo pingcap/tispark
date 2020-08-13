@@ -49,7 +49,7 @@ object TiUtil {
   }
 
   def isDataFrameEmpty(df: DataFrame): Boolean = {
-    df.limit(1).count() == 0
+    df.rdd.isEmpty()
   }
 
   def sparkConfToTiConf(conf: SparkConf): TiConfiguration = {
