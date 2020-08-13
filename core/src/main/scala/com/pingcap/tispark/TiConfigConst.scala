@@ -41,7 +41,6 @@ object TiConfigConst {
   val WRITE_ALLOW_SPARK_SQL: String = "spark.tispark.write.allow_spark_sql"
   val WRITE_ENABLE: String = "spark.tispark.write.enable"
   val WRITE_WITHOUT_LOCK_TABLE: String = "spark.tispark.write.without_lock_table"
-  val PREWRITE_CONCURRENCY: String = "spark.tispark.write.prewrite_concurrency"
   val TIKV_REGION_SPLIT_SIZE_IN_MB: String = "spark.tispark.tikv.region_split_size_in_mb"
   val ISOLATION_READ_ENGINES: String = "spark.tispark.isolation_read_engines"
   val PARTITION_PER_SPLIT: String = "spark.tispark.partition_per_split"
