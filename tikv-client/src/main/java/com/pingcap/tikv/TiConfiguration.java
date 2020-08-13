@@ -57,7 +57,6 @@ public class TiConfiguration implements Serializable {
   private static final int DEF_KV_CLIENT_CONCURRENCY = 10;
   private static final List<TiStoreType> DEF_ISOLATION_READ_ENGINES =
       ImmutableList.of(TiStoreType.TiKV, TiStoreType.TiFlash);
-  private static final int DEF_PREWRITE_CONCURRENCY = 20;
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
