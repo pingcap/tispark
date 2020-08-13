@@ -910,7 +910,7 @@ class TiBatchWriteTable(
           options.regionSplitNum
         } else {
           val indexSize = calcSize(rdd)
-          logger.info(s"count=$count index=$indexSize")
+          logger.info(s"count=$count indexSize=$indexSize")
           val splitNum = estimateRegionSplitNum(indexSize)
           logger.info(s"index region split num=$splitNum")
           splitNum
