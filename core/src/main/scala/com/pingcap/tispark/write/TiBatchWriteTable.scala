@@ -205,9 +205,9 @@ class TiBatchWriteTable(
       val wrappedEncodedIndexRdds = generateIndexKVs(distinctWrappedRowRdd, remove = false)
       val wrappedEncodedIndexRdd: RDD[WrappedEncodedRow] = {
         val list = wrappedEncodedIndexRdds.values.toSeq
-        if(list.isEmpty) {
+        if (list.isEmpty) {
           sc.emptyRDD[WrappedEncodedRow]
-        } else if(list.size == 1) {
+        } else if (list.size == 1) {
           list.head
         } else {
           sc.union(list)
