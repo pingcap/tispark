@@ -198,6 +198,7 @@ class TiBatchWrite(
         tiContext.sparkSession.sparkContext.union(rddList)
       }
     }
+    logger.warn(s"write kv data count=${shuffledRDD.count()}")
 
     // take one row as primary key
     val (primaryKey: SerializableKey, primaryRow: Array[Byte]) = {

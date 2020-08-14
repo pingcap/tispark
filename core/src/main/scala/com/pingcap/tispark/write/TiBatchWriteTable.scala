@@ -114,6 +114,8 @@ class TiBatchWriteTable(
   def preCalculate(startTimeStamp: TiTimestamp): RDD[(SerializableKey, Array[Byte])] = {
     val sc = tiContext.sparkSession.sparkContext
     val count = df.count
+    logger.warn(s"source data count=$count")
+
     // auto increment
     val rdd = if (tiTableInfo.hasAutoIncrementColumn) {
       val isProvidedID = tableColSize == colsInDf.length
@@ -918,7 +920,7 @@ class TiBatchWriteTable(
 
         // region split
         if (regionSplitNum > 1) {
-          logger.info(
+          logger.warn(
             s"index region split, regionSplitNum=$regionSplitNum, indexName=${index.getName}")
           if (count > (regionSplitNum * 1000 + 1) * 10) {
             logger.info("split by sample data")
