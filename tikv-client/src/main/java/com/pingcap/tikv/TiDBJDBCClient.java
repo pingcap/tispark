@@ -106,7 +106,9 @@ public class TiDBJDBCClient implements AutoCloseable {
   }
 
   private void setTiDBWriteSplitRegionFinish() throws SQLException {
-    executeUpdate(String.format(TIDB_SET_WAIT_SPLIT_REGION_FINISH, waitSplitRegionFinish));
+    if (waitSplitRegionFinish == 0 || waitSplitRegionFinish == 1) {
+      executeUpdate(String.format(TIDB_SET_WAIT_SPLIT_REGION_FINISH, waitSplitRegionFinish));
+    }
   }
 
   public boolean lockTableWriteLocal(String databaseName, String tableName) throws SQLException {
