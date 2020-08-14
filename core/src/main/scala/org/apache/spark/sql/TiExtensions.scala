@@ -29,7 +29,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
     e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
 
-  // call from pyspark
+  // call from pyspark only
   def getOrCreateTiContext(sparkSession: SparkSession): TiContext =
     synchronized {
       tiContextMap.get(sparkSession) match {
@@ -65,9 +65,10 @@ object TiExtensions {
     }
   }
 
-  // only for pyspark
+  // call from pyspark only
   private var tiExtensions: TiExtensions = _
 
+  // call from pyspark only
   def getInstance(sparkSession: SparkSession): TiExtensions = {
     if (tiExtensions == null) {
       synchronized {
