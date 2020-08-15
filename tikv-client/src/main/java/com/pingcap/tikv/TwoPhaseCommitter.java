@@ -386,9 +386,10 @@ public class TwoPhaseCommitter {
       Map<ByteString, Kvrpcpb.Mutation> mutations)
       throws TiBatchWriteException {
     LOG.info(
-        "start prewrite secondary key, row={}, size={}KB",
+        "start prewrite secondary key, row={}, size={}KB, regionId={}",
         batchKeys.getKeys().size(),
-        batchKeys.getSizeInKB());
+        batchKeys.getSizeInKB(),
+        batchKeys.getRegion().getId());
 
     List<ByteString> keyList = batchKeys.getKeys();
     int batchSize = keyList.size();
@@ -433,9 +434,10 @@ public class TwoPhaseCommitter {
       }
     }
     LOG.info(
-        "prewrite secondary key successfully, row={}, size={}KB",
+        "prewrite secondary key successfully, row={}, size={}KB, regionId={}",
         batchKeys.getKeys().size(),
-        batchKeys.getSizeInKB());
+        batchKeys.getSizeInKB(),
+        batchKeys.getRegion().getId());
   }
 
   private void appendBatchBySize(
@@ -574,6 +576,11 @@ public class TwoPhaseCommitter {
 
   private void doCommitSecondaryKeySingleBatchWithRetry(
       BackOffer backOffer, BatchKeys batchKeys, long commitTs) throws TiBatchWriteException {
+    LOG.info(
+        "start commit secondary key, row={}, size={}KB, regionId={}",
+        batchKeys.getKeys().size(),
+        batchKeys.getSizeInKB(),
+        batchKeys.getRegion().getId());
     List<ByteString> keysCommit = batchKeys.getKeys();
     ByteString[] keys = new ByteString[keysCommit.size()];
     keysCommit.toArray(keys);
@@ -590,9 +597,10 @@ public class TwoPhaseCommitter {
       throw new TiBatchWriteException("commit secondary key error", commitResult.getException());
     }
     LOG.info(
-        "commit {} rows successfully, size={}KB",
+        "commit {} rows successfully, size={}KB, regionId={}",
         batchKeys.getKeys().size(),
-        batchKeys.getSizeInKB());
+        batchKeys.getSizeInKB(),
+        batchKeys.getRegion().getId());
   }
 
   private GroupKeyResult groupKeysByRegion(ByteString[] keys, int size)

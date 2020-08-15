@@ -46,14 +46,13 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{TiContext, _}
-import org.apache.spark.storage.StorageLevel
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 class TiBatchWriteTable(
-    @transient val df: DataFrame,
+    @transient var df: DataFrame,
     @transient val tiContext: TiContext,
     val options: TiDBOptions,
     val tiConf: TiConfiguration,
@@ -91,7 +90,7 @@ class TiBatchWriteTable(
   tableColSize = tiTableInfo.getColumns.size()
 
   def persist(): Unit = {
-    df.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+    df = df.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
   }
 
   def isDFEmpty: Boolean = {
@@ -180,7 +179,7 @@ class TiBatchWriteTable(
     // currently we only support replace and insert.
     val constraintCheckIsNeeded = handleCol != null || uniqueIndices.nonEmpty
 
-    val encodedTiRowRDD = if (constraintCheckIsNeeded) {
+    val keyValueRDD = if (constraintCheckIsNeeded) {
       val wrappedRowRdd = if (tiTableInfo.isPkHandle) {
         tiRowRdd.map { row =>
           WrappedRow(row, extractHandleId(row))
@@ -194,13 +193,11 @@ class TiBatchWriteTable(
 
       val distinctWrappedRowRdd = deduplicate(wrappedRowRdd)
 
-      val deletion = if (options.useSnapshotBatchGet) {
-        generateDataToBeRemovedRddV2(distinctWrappedRowRdd, startTimeStamp)
-      } else {
-        generateDataToBeRemovedRddV1(distinctWrappedRowRdd, startTimeStamp)
-      }
-
-      deletion.persist(StorageLevel.DISK_ONLY)
+      val deletion = (if (options.useSnapshotBatchGet) {
+                        generateDataToBeRemovedRddV2(distinctWrappedRowRdd, startTimeStamp)
+                      } else {
+                        generateDataToBeRemovedRddV1(distinctWrappedRowRdd, startTimeStamp)
+                      }).persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
 
       if (!options.replace && !deletion.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
@@ -219,8 +216,10 @@ class TiBatchWriteTable(
         }
       }
 
-      splitTableRegion(wrappedEncodedRecordRdd)
-      splitIndexRegion(wrappedEncodedIndexRdds, count)
+      if ("v1".equals(options.regionSplitMethod)) {
+        splitTableRegion(wrappedEncodedRecordRdd)
+        splitIndexRegion(wrappedEncodedIndexRdds, count)
+      }
 
       val g1 = (wrappedEncodedRecordRdd ++ generateRecordKV(deletion, remove = true))
         .map(wrappedEncodedRow => (wrappedEncodedRow.encodedKey, wrappedEncodedRow))
@@ -238,7 +237,7 @@ class TiBatchWriteTable(
         }
         .map(_._2)
 
-      g1 ++ g2
+      (g1 ++ g2).map(obj => (obj.encodedKey, obj.encodedValue))
     } else {
       val start = getAutoTableIdStart(count)
       val wrappedRowRdd = tiRowRdd.zipWithIndex.map { row =>
@@ -249,19 +248,25 @@ class TiBatchWriteTable(
       val wrappedEncodedIndexRdds = generateIndexKVs(wrappedRowRdd, remove = false)
       val wrappedEncodedIndexRdd = sc.union(wrappedEncodedIndexRdds.values.toSeq)
 
-      splitTableRegion(wrappedEncodedRecordRdd)
-      splitIndexRegion(wrappedEncodedIndexRdds, count)
+      if ("v1".equals(options.regionSplitMethod)) {
+        splitTableRegion(wrappedEncodedRecordRdd)
+        splitIndexRegion(wrappedEncodedIndexRdds, count)
+      }
 
-      wrappedEncodedRecordRdd ++ wrappedEncodedIndexRdd
+      (wrappedEncodedRecordRdd ++ wrappedEncodedIndexRdd).map(obj =>
+        (obj.encodedKey, obj.encodedValue))
     }
 
-    // shuffle data in same task which belong to same region
-    val shuffledRDD = if (options.shuffleKeyToSameRegion) {
-      shuffleKeyToSameRegion(encodedTiRowRDD)
-    } else {
-      doNotshuffleKeyToSameRegion(encodedTiRowRDD)
-    }
-    shuffledRDD
+    // shuffle or persist
+    val shuffledOrPersistedRDD =
+      if (options.enableRegionSplit && "v2".equals(options.regionSplitMethod)) {
+        keyValueRDD.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+      } else if (options.shuffleKeyToSameRegion) {
+        shuffleKeyToSameRegion(keyValueRDD)
+      } else {
+        shuffleUseRepartition(keyValueRDD)
+      }
+    shuffledOrPersistedRDD
   }
 
   def lockTable(): Unit = {
@@ -538,26 +543,22 @@ class TiBatchWriteTable(
 
   @throws(classOf[NoSuchTableException])
   private def shuffleKeyToSameRegion(
-      rdd: RDD[WrappedEncodedRow]): RDD[(SerializableKey, Array[Byte])] = {
+      rdd: RDD[(SerializableKey, Array[Byte])]): RDD[(SerializableKey, Array[Byte])] = {
     val regions = getRegions
     assert(regions.size() > 0)
     val tiRegionPartitioner =
       new TiRegionPartitioner(regions, options.writeConcurrency, options.taskNumPerRegion)
 
-    rdd
-      .map(obj => (obj.encodedKey, obj.encodedValue))
-      .partitionBy(tiRegionPartitioner)
+    rdd.partitionBy(tiRegionPartitioner)
   }
 
   @throws(classOf[NoSuchTableException])
-  private def doNotshuffleKeyToSameRegion(
-      rdd: RDD[WrappedEncodedRow]): RDD[(SerializableKey, Array[Byte])] = {
+  private def shuffleUseRepartition(
+      rdd: RDD[(SerializableKey, Array[Byte])]): RDD[(SerializableKey, Array[Byte])] = {
     if (options.writeTaskNumber > 0) {
-      rdd
-        .map(obj => (obj.encodedKey, obj.encodedValue))
-        .repartition(options.writeTaskNumber)
+      rdd.repartition(options.writeTaskNumber)
     } else {
-      rdd.map(obj => (obj.encodedKey, obj.encodedValue))
+      rdd
     }
   }
 

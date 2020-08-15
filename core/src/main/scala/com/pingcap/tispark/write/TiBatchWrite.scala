@@ -80,6 +80,7 @@ class TiBatchWrite(
   private var lockTTLSeconds: Long = _
   @transient private var tiDBJDBCClient: TiDBJDBCClient = _
   @transient private var tiBatchWriteTables: List[TiBatchWriteTable] = _
+  @transient private var startMS: Long = _
 
   private def write(): Unit = {
     try {
@@ -116,6 +117,8 @@ class TiBatchWrite(
   }
 
   private def doWrite(): Unit = {
+    startMS = System.currentTimeMillis()
+
     // check if write enable
     if (!tiContext.tiConf.isWriteEnable) {
       throw new TiBatchWriteException(
@@ -190,7 +193,7 @@ class TiBatchWrite(
     logger.info(s"startTS: $startTs")
 
     // pre calculate
-    val shuffledRDD: RDD[(SerializableKey, Array[Byte])] = {
+    var shuffledRDD: RDD[(SerializableKey, Array[Byte])] = {
       val rddList = tiBatchWriteTables.map(_.preCalculate(startTimeStamp))
       if (rddList.lengthCompare(1) == 0) {
         rddList.head
@@ -198,7 +201,26 @@ class TiBatchWrite(
         tiContext.sparkSession.sparkContext.union(rddList)
       }
     }
-    logger.warn(s"write kv data count=${shuffledRDD.count()}")
+    val shuffledRDDCount = shuffledRDD.count()
+    logger.warn(s"write kv data count=$shuffledRDDCount")
+
+    if (options.enableRegionSplit && "v2".equals(options.regionSplitMethod)) {
+      // calculate region split points
+      val orderedSplitPoints = getRegionSplitPoints(shuffledRDD, shuffledRDDCount)
+
+      // split region
+      try {
+        tiSession.splitRegionAndScatter(
+          orderedSplitPoints.map(_.bytes).asJava,
+          options.splitRegionBackoffMS,
+          options.scatterWaitMS)
+      } catch {
+        case e: Throwable => logger.warn("split region and scatter error!", e)
+      }
+
+      // shuffle according to split points
+      shuffledRDD = shuffledRDD.partitionBy(new TiReginSplitPartitioner(orderedSplitPoints))
+    }
 
     // take one row as primary key
     val (primaryKey: SerializableKey, primaryRow: Array[Byte]) = {
@@ -358,6 +380,48 @@ class TiBatchWrite(
     } else {
       logger.info("skipping commit secondary key")
     }
+
+    val endMS = System.currentTimeMillis()
+    logger.info(s"batch write cost ${(endMS - startMS) / 1000} seconds")
+  }
+
+  private def getRegionSplitPoints(
+      rdd: RDD[(SerializableKey, Array[Byte])],
+      count: Long): List[SerializableKey] = {
+    if (count < options.regionSplitThreshold) {
+      return Nil
+    }
+
+    val regionSplitPointNum = if (options.regionSplitNum > 0) {
+      options.regionSplitNum
+    } else {
+      Math.max(
+        options.minRegionSplitNum,
+        Math.ceil(count.toDouble / options.regionSplitKeys).toInt)
+    }
+    logger.info(s"regionSplitPointNum=$regionSplitPointNum")
+
+    val sampleSize = (regionSplitPointNum + 1) * options.sampleSplitFrac
+    logger.info(s"sampleSize=$sampleSize")
+
+    val sampleData =
+      rdd.map(_._1).sample(withReplacement = false, sampleSize.toDouble / count).collect()
+    logger.info(s"sampleData size=${sampleData.length}")
+
+    val sortedSampleData = sampleData.sorted(new Ordering[SerializableKey] {
+      override def compare(x: SerializableKey, y: SerializableKey): Int = {
+        x.compareTo(y)
+      }
+    })
+
+    val orderedSplitPoints = new Array[SerializableKey](regionSplitPointNum)
+    val step = Math.floor(sortedSampleData.length.toDouble / (regionSplitPointNum + 1)).toInt
+    for (i <- 0 until regionSplitPointNum) {
+      orderedSplitPoints(i) = sortedSampleData((i + 1) * step)
+    }
+
+    logger.info(s"orderedSplitPoints size=${orderedSplitPoints.length}")
+    orderedSplitPoints.toList
   }
 
   private def getUseTableLock: Boolean = {
