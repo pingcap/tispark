@@ -509,7 +509,6 @@ public class TwoPhaseCommitter {
   private void doCommitSecondaryKeys(
       Iterator<ByteString> keys, long commitTs, int commitBackOfferMS)
       throws TiBatchWriteException {
-    TiBatchWriteException lastException = null;
     try {
       int taskBufferSize = writeThreadPerTask * 2;
       int totalSize = 0, cnt = 0;
@@ -546,12 +545,7 @@ public class TwoPhaseCommitter {
       Thread.currentThread().interrupt();
       throw new TiBatchWriteException("Current thread interrupted.", e);
     } catch (ExecutionException e) {
-      lastException = new TiBatchWriteException("Execution exception met.", e);
-      LOG.warn("Execution exception met.", e);
-    }
-
-    if (lastException != null) {
-      throw lastException;
+      throw new TiBatchWriteException("Execution exception met.", e);
     }
   }
 
