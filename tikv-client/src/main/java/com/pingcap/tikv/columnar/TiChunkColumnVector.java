@@ -33,7 +33,6 @@ import com.pingcap.tikv.util.JsonUtils;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.sql.Timestamp;
-import java.util.Arrays;
 import org.joda.time.LocalDate;
 
 /** An implementation of {@link TiColumnVector}. All data is stored in TiDB chunk format. */
@@ -75,7 +74,14 @@ public class TiChunkColumnVector extends TiColumnVector {
       for (long offset : offsets) {
         cdo.writeLong(offset);
       }
-      return new TiChunkColumnVector(type, fixLength, numOfRows, 0, DataType.setAllNotNullBitMapWithNumRows(numOfRows), null, ByteBuffer.wrap(cdo.toBytes()));
+      return new TiChunkColumnVector(
+          type,
+          fixLength,
+          numOfRows,
+          0,
+          DataType.setAllNotNullBitMapWithNumRows(numOfRows),
+          null,
+          ByteBuffer.wrap(cdo.toBytes()));
     }
   }
 

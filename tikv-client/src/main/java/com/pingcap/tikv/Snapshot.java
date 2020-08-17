@@ -131,7 +131,8 @@ public class Snapshot {
     }
   }
 
-  public Iterator<TiChunk> indexHandleReadChunk(TiDAGRequest dagRequest, List<RegionTask> tasks, int numOfRows) {
+  public Iterator<TiChunk> indexHandleReadChunk(
+      TiDAGRequest dagRequest, List<RegionTask> tasks, int numOfRows) {
     return getTiChunkIterator(dagRequest, tasks, getSession(), numOfRows);
   }
 

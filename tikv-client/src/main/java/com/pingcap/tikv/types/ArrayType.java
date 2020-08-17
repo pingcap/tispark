@@ -31,10 +31,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 public class ArrayType extends DataType {
   public static final ArrayType ARRAY = new ArrayType(MySQLType.TypeArray);
 
-  public static final MySQLType[] subTypes =
-      new MySQLType[] {
-          MySQLType.TypeArray
-      };
+  public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeArray};
 
   protected ArrayType(MySQLType type, int flag, int len, int decimal) {
     super(type, flag, len, decimal, "", Collation.DEF_COLLATION_CODE);
