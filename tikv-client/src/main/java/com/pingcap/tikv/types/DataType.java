@@ -83,7 +83,7 @@ public abstract class DataType implements Serializable {
   protected final long length;
   private final String charset;
   private final List<String> elems;
-  private final byte[] allNotNullBitMap = initAllNotNullBitMap();
+  private static final byte[] allNotNullBitMap = initAllNotNullBitMap();
   private final byte[] readBuffer = new byte[8];
 
   public DataType(MySQLType tp, int prec, int scale) {
@@ -203,7 +203,7 @@ public abstract class DataType implements Serializable {
     return decodeNotNull(flag, cdi);
   }
 
-  private int getFixLen() {
+  public int getFixLen() {
     switch (this.getType()) {
       case TypeFloat:
         return 4;
@@ -229,7 +229,12 @@ public abstract class DataType implements Serializable {
     }
   }
 
-  private byte[] setAllNotNull(int numNullBitMapBytes) {
+  public static byte[] setAllNotNullBitMapWithNumRows(int numRows) {
+    int numNullBitmapBytes = (numRows + 7) / 8;
+    return setAllNotNull(numNullBitmapBytes);
+  }
+
+  private static byte[] setAllNotNull(int numNullBitMapBytes) {
     byte[] nullBitMaps = new byte[numNullBitMapBytes];
     for (int i = 0; i < numNullBitMapBytes; ) {
       // allNotNullBitNMap's actual length
@@ -241,7 +246,7 @@ public abstract class DataType implements Serializable {
     return nullBitMaps;
   }
 
-  private byte[] initAllNotNullBitMap() {
+  private static byte[] initAllNotNullBitMap() {
     byte[] allNotNullBitMap = new byte[128];
     Arrays.fill(allNotNullBitMap, (byte) 0xFF);
     return allNotNullBitMap;

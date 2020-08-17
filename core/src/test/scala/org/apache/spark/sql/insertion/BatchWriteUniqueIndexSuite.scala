@@ -43,7 +43,7 @@ class BatchWriteUniqueIndexSuite
 
   override def afterAll(): Unit =
     try {
-      dropTable()
+      //dropTable()
     } finally {
       super.afterAll()
     }
@@ -78,6 +78,7 @@ class BatchWriteUniqueIndexSuite
       generateRandomRows(schema, rowCount, r).map(row => tiRowToSparkRow(row, tiColInfos))
     // insert data to tikv
     tidbWriteWithTable(rows, TiUtil.getSchemaFromTable(tiTblInfo), tblName)
+    spark.sql(s"select count(*) from $database.$tblName").show
     // select data from tikv and compare with tidb
     compareTiDBSelectWithJDBCWithTable_V2(tblName = tblName, "col_bigint")
   }

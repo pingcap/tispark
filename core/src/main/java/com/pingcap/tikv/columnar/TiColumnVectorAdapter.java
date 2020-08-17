@@ -23,11 +23,17 @@ import org.apache.spark.unsafe.types.UTF8String;
 
 public class TiColumnVectorAdapter extends ColumnVector {
   private final TiColumnVector tiColumnVector;
+  private final ColumnVector offsets;
 
   /** Sets up the data type of this column vector. */
   public TiColumnVectorAdapter(TiColumnVector tiColumnVector) {
     super(TypeMapping.toSparkType(tiColumnVector.dataType()));
     this.tiColumnVector = tiColumnVector;
+    if (tiColumnVector.getOffset() == null) {
+      this.offsets = null;
+    } else {
+      this.offsets = new TiColumnVectorAdapter(tiColumnVector.getOffset());
+    }
   }
 
   /**
@@ -122,7 +128,12 @@ public class TiColumnVectorAdapter extends ColumnVector {
    */
   @Override
   public ColumnarArray getArray(int rowId) {
-    throw new UnsupportedOperationException("TiColumnVectorAdapter is not supported this method");
+    if (tiColumnVector.isNullAt(rowId)) {
+      return null;
+    }
+    int index = rowId * 8;
+    int start = offsets.getInt(index);
+    return new ColumnarArray(this, start, 8);
   }
 
   /**
