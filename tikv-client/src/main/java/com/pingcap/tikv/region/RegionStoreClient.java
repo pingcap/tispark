@@ -59,6 +59,7 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Coprocessor;
@@ -79,6 +80,8 @@ import org.tikv.kvproto.Kvrpcpb.PrewriteRequest;
 import org.tikv.kvproto.Kvrpcpb.PrewriteResponse;
 import org.tikv.kvproto.Kvrpcpb.ScanRequest;
 import org.tikv.kvproto.Kvrpcpb.ScanResponse;
+import org.tikv.kvproto.Kvrpcpb.SplitRegionRequest;
+import org.tikv.kvproto.Kvrpcpb.SplitRegionResponse;
 import org.tikv.kvproto.Kvrpcpb.TxnHeartBeatRequest;
 import org.tikv.kvproto.Kvrpcpb.TxnHeartBeatResponse;
 import org.tikv.kvproto.Metapb.Store;
@@ -749,6 +752,57 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
             reqToSend,
             handler);
     return doCoprocessor(responseIterator);
+  }
+
+  /**
+   * Send SplitRegion request to tikv split a region at splitKey. splitKey must between current
+   * region's start key and end key.
+   *
+   * @param splitKeys is the split points for a specific region.
+   * @return a split region info.
+   */
+  public List<TiRegion> splitRegion(Iterable<ByteString> splitKeys) {
+    Supplier<SplitRegionRequest> request =
+        () ->
+            SplitRegionRequest.newBuilder()
+                .setContext(region.getContext())
+                .addAllSplitKeys(splitKeys)
+                .build();
+
+    KVErrorHandler<SplitRegionResponse> handler =
+        new KVErrorHandler<>(
+            regionManager,
+            this,
+            null,
+            region,
+            resp -> resp.hasRegionError() ? resp.getRegionError() : null,
+            resp -> null,
+            resolveLockResult -> null,
+            0L,
+            false);
+
+    SplitRegionResponse resp =
+        callWithRetry(
+            ConcreteBackOffer.newGetBackOff(), TikvGrpc.getSplitRegionMethod(), request, handler);
+
+    if (resp == null) {
+      this.regionManager.onRequestFail(region);
+      throw new TiClientInternalException("SplitRegion Response failed without a cause");
+    }
+
+    if (resp.hasRegionError()) {
+      throw new TiClientInternalException(
+          String.format(
+              "failed to split region %d because %s",
+              region.getId(), resp.getRegionError().toString()));
+    }
+
+    return resp.getRegionsList()
+        .stream()
+        .map(
+            region ->
+                new TiRegion(region, null, conf.getIsolationLevel(), conf.getCommandPriority()))
+        .collect(Collectors.toList());
   }
 
   public enum RequestTypes {
