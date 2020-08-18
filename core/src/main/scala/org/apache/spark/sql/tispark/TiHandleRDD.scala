@@ -130,6 +130,7 @@ class TiHandleRDD(
             numRows += 1
           }
         }
+        offsets += curOffset
 
         val buffer0 = ByteBuffer.wrap(cdi0.toBytes)
         val buffer1 = ByteBuffer.wrap(cdi1.toBytes)
@@ -154,7 +155,7 @@ class TiHandleRDD(
           new TiChunkColumnVector(
             regionIdType,
             8,
-            numRows,
+            curOffset.toInt,
             0,
             nullBitMaps,
             offsets.toArray,

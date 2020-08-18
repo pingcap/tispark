@@ -405,7 +405,10 @@ class TiBatchWrite(
     logger.info(s"sampleSize=$sampleSize")
 
     val sampleData =
-      rdd.map(_._1).sample(withReplacement = false, sampleSize.toDouble / count).collect()
+      rdd
+        .map(_._1)
+        .sample(withReplacement = false, fraction = sampleSize.toDouble / count)
+        .collect()
     logger.info(s"sampleData size=${sampleData.length}")
 
     val sortedSampleData = sampleData.sorted(new Ordering[SerializableKey] {

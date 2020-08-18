@@ -133,7 +133,8 @@ public class TiColumnVectorAdapter extends ColumnVector {
     }
     int index = rowId * 8;
     int start = offsets.getInt(index);
-    return new ColumnarArray(this, start, 8);
+    int end = offsets.getInt(index + 1);
+    return new ColumnarArray(this, start, end - start);
   }
 
   /**
