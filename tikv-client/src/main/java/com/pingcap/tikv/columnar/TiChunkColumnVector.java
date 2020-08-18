@@ -20,6 +20,7 @@ import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.MyDecimal;
 import com.pingcap.tikv.types.AbstractDateTimeType;
+import com.pingcap.tikv.types.ArrayType;
 import com.pingcap.tikv.types.BitType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DateTimeType;
@@ -193,6 +194,8 @@ public class TiChunkColumnVector extends TiColumnVector {
     } else if (type instanceof AbstractDateTimeType) {
       return getTime(rowId);
     } else if (type instanceof TimeType) {
+      return data.getLong(rowId * fixLength);
+    } else if (type instanceof ArrayType) {
       return data.getLong(rowId * fixLength);
     }
 

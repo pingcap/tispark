@@ -153,7 +153,7 @@ class TiHandleRDD(
         childColumnVectors +=
           // any type will do? actual type is array[Long]
           new TiChunkColumnVector(
-            regionIdType,
+            handleListType,
             8,
             curOffset.toInt,
             0,
