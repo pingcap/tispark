@@ -392,6 +392,7 @@ trait SharedSQLContext
         conf.set("spark.tispark.write.allow_spark_sql", "true")
         conf.set("spark.tispark.write.without_lock_table", "true")
         conf.set("spark.tispark.tikv.region_split_size_in_mb", "1")
+        conf.set("spark.tispark.commitSecondaryKeyMode", "region")
 
         if (_isHiveEnabled) {
           // delete meta store directory to avoid multiple derby instances SPARK-10872

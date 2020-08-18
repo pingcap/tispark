@@ -20,7 +20,9 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiBatchWriteException;
+import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.region.RegionManager;
+import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.txn.type.BatchKeys;
@@ -631,5 +633,72 @@ public class TwoPhaseCommitter {
   private long getTxnLockTTL(long startTime, int txnSize) {
     // TODO: calculate txn lock ttl
     return this.lockTTL;
+  }
+
+  public void commitSecondaryKeysByRegion(
+      List<TiRegion> regionList, long startTs, long commitTs, int maxBackOfferMS)
+      throws TiBatchWriteException {
+    try {
+      ExecutorCompletionService<Void> completionService =
+          new ExecutorCompletionService<>(executorService);
+
+      for (TiRegion region : regionList) {
+        completionService.submit(
+            () -> {
+              BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(maxBackOfferMS);
+              commitSecondaryKeyByRegionWithRetry(region, startTs, commitTs, backOffer);
+              return null;
+            });
+      }
+      for (int i = 0; i < regionList.size(); i++) {
+        completionService.take().get();
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new TiBatchWriteException("Current thread interrupted.", e);
+    } catch (ExecutionException e) {
+      throw new TiBatchWriteException("Execution exception met.", e);
+    }
+  }
+
+  private void commitSecondaryKeyByRegionWithRetry(
+      TiRegion region, long startTs, long commitTs, BackOffer backOffer)
+      throws TiBatchWriteException {
+    LOG.info("commitSecondaryKeyByRegionWithRetry start, region={}", region.shortString());
+    try {
+      Metapb.Store store = this.regionManager.getRegionStoreByRegion(region);
+      RegionStoreClient regionStoreClient = kvClient.getRegionStoreClient(region, store);
+      regionStoreClient.commitSecondaryKeysByRegion(backOffer, startTs, commitTs);
+    } catch (Exception e) {
+      backOffer.doBackOff(
+          BackOffFunction.BackOffFuncType.BoRegionMiss,
+          new GrpcException(
+              String.format("commitSecondaryKeysByRegion failed, regionId=%s", region.getId())));
+      List<TiRegion> regionList = getRegions(region.getStartKey(), region.getEndKey());
+
+      LOG.info("region split into {}", regionList.size());
+      for (TiRegion region2 : regionList) {
+        LOG.info("==> {}", region2.shortString());
+      }
+
+      for (TiRegion region2 : regionList) {
+        commitSecondaryKeyByRegionWithRetry(region2, startTs, commitTs, backOffer);
+      }
+    }
+
+    LOG.info("commitSecondaryKeyByRegionWithRetry finish, region={}", region.shortString());
+  }
+
+  private List<TiRegion> getRegions(ByteString start, ByteString end) {
+    ArrayList<TiRegion> regionList = new ArrayList<>();
+    Key key = Key.toRawKey(start);
+    Key endKey = Key.toRawKey(end);
+
+    while (key.compareTo(endKey) < 0) {
+      TiRegion region = this.regionManager.getRegionByKey(key.toByteString());
+      regionList.add(region);
+      key = Key.toRawKey(region.getEndKey());
+    }
+    return regionList;
   }
 }

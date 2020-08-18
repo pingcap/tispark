@@ -78,6 +78,8 @@ import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.kvproto.Kvrpcpb.Mutation;
 import org.tikv.kvproto.Kvrpcpb.PrewriteRequest;
 import org.tikv.kvproto.Kvrpcpb.PrewriteResponse;
+import org.tikv.kvproto.Kvrpcpb.ResolveLockRequest;
+import org.tikv.kvproto.Kvrpcpb.ResolveLockResponse;
 import org.tikv.kvproto.Kvrpcpb.ScanRequest;
 import org.tikv.kvproto.Kvrpcpb.ScanResponse;
 import org.tikv.kvproto.Kvrpcpb.SplitRegionRequest;
@@ -472,6 +474,44 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
           BoTxnLock, msBeforeExpired, new KeyException(resp.getErrorsList().get(0)));
     }
     return false;
+  }
+
+  public void commitSecondaryKeysByRegion(BackOffer bo, long startTs, long commitTs) {
+    boolean forWrite = true;
+    Supplier<ResolveLockRequest> factory =
+        () ->
+            ResolveLockRequest.newBuilder()
+                .setContext(region.getContext())
+                .setStartVersion(startTs)
+                .setCommitVersion(commitTs)
+                .build();
+    KVErrorHandler<ResolveLockResponse> handler =
+        new KVErrorHandler<>(
+            regionManager,
+            this,
+            lockResolverClient,
+            region,
+            resp -> resp.hasRegionError() ? resp.getRegionError() : null,
+            resp -> resp.hasError() ? resp.getError() : null,
+            resolveLockResult -> null,
+            0L,
+            forWrite);
+    ResolveLockResponse resp =
+        callWithRetry(bo, TikvGrpc.getKvResolveLockMethod(), factory, handler);
+
+    if (resp == null) {
+      this.regionManager.onRequestFail(region);
+      throw new TiClientInternalException("getKvResolveLockMethod failed without a cause");
+    }
+
+    if (resp.hasRegionError()) {
+      throw new RegionException(resp.getRegionError());
+    }
+
+    if (resp.hasError()) {
+      logger.error(String.format("unexpected resolveLock err: %s", resp.getError()));
+      throw new KeyException(resp.getError());
+    }
   }
 
   /** TXN Heart Beat: update primary key ttl */

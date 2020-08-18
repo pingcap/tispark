@@ -64,6 +64,10 @@ public class RegionManager {
     return cacheInvalidateCallback;
   }
 
+  public TiRegion getRegionByKey(byte[] key) {
+    return getRegionByKey(ByteString.copyFrom(key));
+  }
+
   public TiRegion getRegionByKey(ByteString key) {
     return cache.getRegionByKey(key);
   }
@@ -81,6 +85,19 @@ public class RegionManager {
 
   public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key) {
     return getRegionStorePairByKey(key, TiStoreType.TiKV);
+  }
+
+  public Pair<TiRegion, Store> getRegionStorePairById(long regionId) {
+    TiRegion region = getRegionById(regionId);
+    Peer leader = region.getLeader();
+    Store store = cache.getStoreById(leader.getStoreId());
+    return Pair.create(region, store);
+  }
+
+  public Store getRegionStoreByRegion(TiRegion region) {
+    Peer leader = region.getLeader();
+    Store store = cache.getStoreById(leader.getStoreId());
+    return store;
   }
 
   public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key, TiStoreType storeType) {
@@ -128,6 +145,10 @@ public class RegionManager {
 
   public void onRegionStale(long regionId) {
     cache.invalidateRegion(regionId);
+  }
+
+  public void invalidateAll() {
+    cache.invalidateAll();
   }
 
   public boolean updateLeader(long regionId, long storeId) {
@@ -226,6 +247,12 @@ public class RegionManager {
         }
       }
       return region;
+    }
+
+    public synchronized void invalidateAll() {
+      regionCache.clear();
+      storeCache.clear();
+      keyToRegionIdCache.clear();
     }
 
     /** Removes region associated with regionId from regionCache. */

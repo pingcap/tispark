@@ -54,10 +54,6 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // Optional parameters only for writing
   // ------------------------------------------------------------
   val replace: Boolean = getOrDefault(TIDB_REPLACE, "false").toBoolean
-  // It is an optimize by the nature of 2pc protocol
-  // We leave other txn, gc or read to resolve locks.
-  val skipCommitSecondaryKey: Boolean =
-    getOrDefault(TIDB_SKIP_COMMIT_SECONDARY_KEY, "false").toBoolean
   val writeConcurrency: Int = getOrDefault(TIDB_WRITE_CONCURRENCY, "0").toInt
   // ttlMode = { "FIXED", "UPDATE", "DEFAULT" }
   val ttlMode: String = getOrDefault(TIDB_TTL_MODE, "DEFAULT").toUpperCase()
@@ -83,14 +79,9 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
     getOrDefault(TIDB_SHUFFLE_KEY_TO_SAME_REGION, "true").toBoolean
   val writeTaskNumber: Int = getOrDefault(TIDB_WRITE_TASK_NUMBER, "0").toInt
   val prewriteBackOfferMS: Int = getOrDefault(TIDB_PREWRITE_BACKOFFER_MS, "240000").toInt
-  val commitBackOfferMS: Int = getOrDefault(TIDB_COMMIT_BACKOFFER_MS, "20000").toInt
-  // 728 * 1024
-  val txnCommitBatchSize: Long = getOrDefault(TIDB_TXN_COMMIT_BATCH_SIZE, "786432").toLong
   // 32 * 1024
   val writeBufferSize: Int = getOrDefault(TIDB_WRITE_BUFFER_SIZE, "32768").toInt
   val writeThreadPerTask: Int = getOrDefault(TIDB_WRITE_THREAD_PER_TASK, "1").toInt
-  val retryCommitSecondaryKey: Boolean =
-    getOrDefault(TIDB_RETRY_COMMIT_SECONDARY_KEY, "true").toBoolean
 
   // region split
   val enableRegionSplit: Boolean = getOrDefault(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
@@ -103,6 +94,21 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val minRegionSplitNum: Int = getOrDefault(TIDB_MIN_REGION_SPLIT_NUM, "4").toInt
   val regionSplitThreshold: Int = getOrDefault(TIDB_REGION_SPLIT_THRESHOLD, "100000").toInt
   val splitRegionBackoffMS: Int = getOrDefault(TIDB_SPLIT_REGION_BACKOFFER_MS, "120000").toInt
+
+  // commit
+  // It is an optimize by the nature of 2pc protocol
+  // We leave other txn, gc or read to resolve locks.
+  val skipCommitSecondaryKey: Boolean =
+    getOrDefault(TIDB_SKIP_COMMIT_SECONDARY_KEY, "false").toBoolean
+  //commitSecondaryKeyMode = key || region
+  val commitSecondaryKeyMode: String = getOrDefault(TIDB_COMMIT_SECONDARY_KEY_MODE, "key")
+  val commitSecondaryKeyBackOfferMS: Int =
+    getOrDefault(TIDB_COMMIT_SECONDARY_KEY_BACKOFFER_MS, "20000").toInt
+  val commitBackOfferMS: Int = getOrDefault(TIDB_COMMIT_BACKOFFER_MS, "20000").toInt
+  // 728 * 1024
+  val txnCommitBatchSize: Long = getOrDefault(TIDB_TXN_COMMIT_BATCH_SIZE, "786432").toLong
+  val retryCommitSecondaryKey: Boolean =
+    getOrDefault(TIDB_RETRY_COMMIT_SECONDARY_KEY, "true").toBoolean
 
   // ------------------------------------------------------------
   // Calculated parameters
@@ -187,7 +193,6 @@ object TiDBOptions {
   val TIDB_DATABASE: String = newOption("database")
   val TIDB_TABLE: String = newOption("table")
   val TIDB_REPLACE: String = newOption("replace")
-  val TIDB_SKIP_COMMIT_SECONDARY_KEY: String = newOption("skipCommitSecondaryKey")
   val TIDB_WRITE_CONCURRENCY: String = newOption("writeConcurrency")
   val TIDB_TTL_MODE: String = newOption("ttlMode")
   val TIDB_USE_SNAPSHOT_BATCH_GET: String = newOption("useSnapshotBatchGet")
@@ -199,11 +204,8 @@ object TiDBOptions {
   val TIDB_SHUFFLE_KEY_TO_SAME_REGION: String = newOption("shuffleKeyToSameRegion")
   val TIDB_WRITE_TASK_NUMBER: String = newOption("writeTaskNumber")
   val TIDB_PREWRITE_BACKOFFER_MS: String = newOption("prewriteBackOfferMS")
-  val TIDB_COMMIT_BACKOFFER_MS: String = newOption("commitBackOfferMS")
-  val TIDB_TXN_COMMIT_BATCH_SIZE: String = newOption("txnCommitBatchSize")
   val TIDB_WRITE_BUFFER_SIZE: String = newOption("writeBufferSize")
   val TIDB_WRITE_THREAD_PER_TASK: String = newOption("writeThreadPerTask")
-  val TIDB_RETRY_COMMIT_SECONDARY_KEY: String = newOption("retryCommitSecondaryKey")
 
   // region split
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
@@ -216,6 +218,14 @@ object TiDBOptions {
   val TIDB_MIN_REGION_SPLIT_NUM: String = newOption("minRegionSplitNum")
   val TIDB_REGION_SPLIT_THRESHOLD: String = newOption("regionSplitThreshold")
   val TIDB_SPLIT_REGION_BACKOFFER_MS: String = newOption("splitRegionBackoffMS")
+
+  // commit
+  val TIDB_SKIP_COMMIT_SECONDARY_KEY: String = newOption("skipCommitSecondaryKey")
+  val TIDB_COMMIT_SECONDARY_KEY_MODE: String = newOption("commitSecondaryKeyMode")
+  val TIDB_COMMIT_SECONDARY_KEY_BACKOFFER_MS: String = newOption("commitSecondaryKeyBackOfferMS")
+  val TIDB_COMMIT_BACKOFFER_MS: String = newOption("commitBackOfferMS")
+  val TIDB_TXN_COMMIT_BATCH_SIZE: String = newOption("txnCommitBatchSize")
+  val TIDB_RETRY_COMMIT_SECONDARY_KEY: String = newOption("retryCommitSecondaryKey")
 
   // ------------------------------------------------------------
   // parameters only for test

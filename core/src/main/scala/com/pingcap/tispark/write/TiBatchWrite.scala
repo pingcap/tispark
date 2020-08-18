@@ -16,8 +16,10 @@
 package com.pingcap.tispark.write
 
 import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tikv.key.Key
+import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer}
-import com.pingcap.tikv.{TTLManager, TiDBJDBCClient, _}
+import com.pingcap.tikv._
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkConf
@@ -27,6 +29,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 object TiBatchWrite {
   type SparkRow = org.apache.spark.sql.Row
@@ -347,42 +350,124 @@ class TiBatchWrite(
 
     // executors secondary commit
     if (!options.skipCommitSecondaryKey) {
-      logger.info("start to commitSecondaryKeys")
-      secondaryKeysRDD.foreachPartition { iterator =>
-        val ti2PCClientOnExecutor = new TwoPhaseCommitter(
-          tiConf,
-          startTs,
-          lockTTLSeconds * 1000,
-          options.txnCommitBatchSize,
-          options.writeBufferSize,
-          options.writeThreadPerTask,
-          options.retryCommitSecondaryKey)
-
-        val keys = iterator.map { keyValue =>
-          new ByteWrapper(keyValue._1.bytes)
-        }.asJava
-
-        try {
-          ti2PCClientOnExecutor.commitSecondaryKeys(keys, commitTs, options.commitBackOfferMS)
-        } catch {
-          case e: TiBatchWriteException =>
-            // ignored
-            logger.warn(s"commit secondary key error", e)
-        }
-
-        try {
-          ti2PCClientOnExecutor.close()
-        } catch {
-          case _: Throwable =>
-        }
+      if (options.commitSecondaryKeyMode.equals("key")) {
+        commitSecondaryKeyByKey(secondaryKeysRDD, startTs, commitTs)
+      } else {
+        commitSecondaryKeyByRegion(secondaryKeysRDD, startTs, commitTs)
       }
-      logger.info("commitSecondaryKeys finish")
     } else {
       logger.info("skipping commit secondary key")
     }
 
     val endMS = System.currentTimeMillis()
     logger.info(s"batch write cost ${(endMS - startMS) / 1000} seconds")
+  }
+
+  private def commitSecondaryKeyByKey(
+      secondaryKeysRDD: RDD[(SerializableKey, Array[Byte])],
+      startTs: Long,
+      commitTs: Long): Unit = {
+    logger.info("start to commitSecondaryKeys by key")
+    secondaryKeysRDD.foreachPartition { iterator =>
+      val ti2PCClientOnExecutor = new TwoPhaseCommitter(
+        tiConf,
+        startTs,
+        lockTTLSeconds * 1000,
+        options.txnCommitBatchSize,
+        options.writeBufferSize,
+        options.writeThreadPerTask,
+        options.retryCommitSecondaryKey)
+
+      val keys = iterator.map { keyValue =>
+        new ByteWrapper(keyValue._1.bytes)
+      }.asJava
+
+      try {
+        ti2PCClientOnExecutor.commitSecondaryKeys(keys, commitTs, options.commitBackOfferMS)
+      } catch {
+        case e: TiBatchWriteException =>
+          // ignored
+          logger.warn(s"commit secondary key error", e)
+      }
+      try {
+        ti2PCClientOnExecutor.close()
+      } catch {
+        case _: Throwable =>
+      }
+    }
+    logger.info("commitSecondaryKeys by key finish")
+  }
+
+  private def commitSecondaryKeyByRegion(
+      secondaryKeysRDD: RDD[(SerializableKey, Array[Byte])],
+      startTs: Long,
+      commitTs: Long): Unit = {
+    logger.info("start to commitSecondaryKeys by region")
+    val regionManager = TiSession.getInstance(tiConf).getRegionManager
+    regionManager.invalidateAll()
+    val tableRegions = tiBatchWriteTables.flatMap(_.getRegions.asScala)
+
+    val distinctRDD = secondaryKeysRDD
+      .mapPartitions { iterator =>
+        val regionSet = mutable.HashSet[TiRegion]()
+        iterator.foreach {
+          case (key, _) =>
+            regionSet.add(binarySearchRegion(tableRegions, key.getRowKey))
+        }
+        regionSet.iterator
+      }
+      .distinct()
+
+    val regionList = distinctRDD.collect()
+    logger.info(
+      s"""commitSecondaryKeysByRegion, regionSize=${regionList.length}, regions=${regionList
+        .map(_.getId)
+        .mkString(",")}""")
+
+    distinctRDD.foreachPartition { iterator =>
+      val ti2PCClientOnExecutor = new TwoPhaseCommitter(
+        tiConf,
+        startTs,
+        lockTTLSeconds * 1000,
+        options.txnCommitBatchSize,
+        options.writeBufferSize,
+        options.writeThreadPerTask,
+        options.retryCommitSecondaryKey)
+      val regions = iterator.toList.asJava
+      try {
+        logger.info(s"""commitSecondaryKeysByRegion, regionSize=${regions
+          .size()}, regions=${regions.asScala.mkString(",")}""")
+        ti2PCClientOnExecutor.commitSecondaryKeysByRegion(
+          regions,
+          startTs,
+          commitTs,
+          options.commitSecondaryKeyBackOfferMS)
+      } catch {
+        case e: TiBatchWriteException =>
+          // ignored
+          logger.warn(s"commit secondary key error", e)
+      }
+    }
+    logger.info("commitSecondaryKeys by region finish")
+  }
+
+  private def binarySearchRegion(regions: List[TiRegion], key: Key): TiRegion = {
+    if (regions.head.contains(key)) {
+      return regions.head
+    }
+    var l = 0
+    var r = regions.size
+    while (l < r) {
+      val mid = l + (r - l) / 2
+      val region = regions(mid)
+      if (region.getRowEndKey.compareTo(key) <= 0) {
+        l = mid + 1
+      } else {
+        r = mid
+      }
+    }
+    assert(regions(l).contains(key))
+    regions(l)
   }
 
   private def getRegionSplitPoints(

@@ -86,6 +86,10 @@ public class TxnKVClient implements AutoCloseable {
     return timestamp;
   }
 
+  public RegionStoreClient getRegionStoreClient(TiRegion region, Metapb.Store store) {
+    return clientBuilder.build(region, store);
+  }
+
   /** when encountered region error,ErrBodyMissing, and other errors */
   public ClientRPCResult prewrite(
       BackOffer backOffer,

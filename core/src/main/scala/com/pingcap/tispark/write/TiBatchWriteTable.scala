@@ -562,7 +562,7 @@ class TiBatchWriteTable(
     }
   }
 
-  private def getRegions: util.List[TiRegion] = {
+  def getRegions: util.List[TiRegion] = {
     val regions = TiBatchWriteUtils.getRegionsByTable(tiSession, tiTableInfo)
     logger.info(s"find ${regions.size} regions in $tiTableRef tableId: ${tiTableInfo.getId}")
     regions

@@ -209,6 +209,15 @@ public class TiRegion implements Serializable {
     return Objects.hash(meta, peer, isolationLevel, commandPri);
   }
 
+  public String shortString() {
+    return String.format(
+        "{Region[%d] ConfVer[%d] Version[%d] Store[%d]}",
+        getId(),
+        getRegionEpoch().getConfVer(),
+        getRegionEpoch().getVersion(),
+        getLeader().getStoreId());
+  }
+
   @Override
   public String toString() {
     return String.format(
