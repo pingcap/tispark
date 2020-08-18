@@ -28,13 +28,12 @@ import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.types.{ArrayType, DataType, IntegerType}
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.vectorized.ColumnarBatch
-import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 
 import scala.collection.JavaConversions._
