@@ -196,7 +196,7 @@ public class TiChunkColumnVector extends TiColumnVector {
     } else if (type instanceof TimeType) {
       return data.getLong(rowId * fixLength);
     } else if (type instanceof ArrayType) {
-      return data.getLong(rowId * fixLength);
+      return data.getLong(rowId * fixLength + fixLength);
     }
 
     throw new UnsupportedOperationException("only IntegerType and Time related are supported.");
