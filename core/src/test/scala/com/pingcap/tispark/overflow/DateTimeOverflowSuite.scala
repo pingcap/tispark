@@ -15,6 +15,7 @@
 
 package com.pingcap.tispark.overflow
 
+import com.pingcap.tikv.exception.TiDBConvertException
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
@@ -58,8 +59,8 @@ class DateTimeOverflowSuite extends BaseDataSourceTest("test_data_type_datetime_
     val row = Row("10000-11-11 11:11:11")
     val schema = StructType(List(StructField("c1", StringType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[java.lang.IllegalArgumentException]
-    val tidbErrorMsg = "Timestamp format must be yyyy-mm-dd hh:mm:ss[.fffffffff]"
+    val tidbErrorClass = classOf[TiDBConvertException]
+    val tidbErrorMsg = null
 
     compareTiDBWriteFailureWithJDBC(
       List(row),

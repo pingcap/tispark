@@ -17,7 +17,13 @@ package com.pingcap.tispark
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+import org.apache.spark.sql.types.{
+  IntegerType,
+  StringType,
+  StructField,
+  StructType,
+  TimestampType
+}
 
 class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
   override def beforeAll(): Unit = {
@@ -34,6 +40,45 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
 
   test("PK is handler with null value test") {
     doTestNullValues(s"create table $dbtable(a int, b varchar(64), PRIMARY KEY (a))")
+  }
+
+  test("Index for timestamp was written multiple times") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
+    val schema = StructType(
+      List(
+        StructField("a", IntegerType),
+        StructField("b", StringType),
+        StructField("c", TimestampType)))
+    val options = Some(Map("replace" -> "true"))
+
+    dropTable()
+    jdbcUpdate(
+      s"create table $dbtable(a int, b varchar(64), c datetime, CONSTRAINT xx UNIQUE (b), key `dt_index` (c))")
+
+    for (_ <- 0 to 1) {
+      val row1 = Row(10, "1", java.sql.Timestamp.valueOf("2001-12-29 22:44:04"))
+      val row2 = Row(20, "2", java.sql.Timestamp.valueOf("2001-12-29 23:10:31"))
+      val row3 = Row(30, "3", java.sql.Timestamp.valueOf("2001-12-29 23:27:14"))
+      val row4 = Row(40, "4", java.sql.Timestamp.valueOf("2001-12-29 23:18:46"))
+      val row5 = Row(50, "5", java.sql.Timestamp.valueOf("2001-12-29 23:21:45"))
+      val row6 = Row(50, "5", java.sql.Timestamp.valueOf("2001-12-29 23:21:45"))
+      tidbWrite(List(row1, row2, row3, row4, row5, row6), schema, options)
+
+      try {
+        assert(spark.sql(s"select count(c) from $table").collect().head.get(0) === 5)
+        assert(spark.sql(s"select count(a) from $table").collect().head.get(0) === 5)
+      } finally {
+        spark.sql(s"select * from $table").show(false)
+        spark.sql(s"select count(c) from $table").show(false)
+        spark.sql(s"select count(c) from $table").explain
+        spark.sql(s"select count(a) from $table").show(false)
+        spark.sql(s"select count(a) from $table").explain
+      }
+
+    }
   }
 
   override def afterAll(): Unit =

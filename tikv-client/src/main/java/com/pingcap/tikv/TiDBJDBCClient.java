@@ -40,12 +40,21 @@ public class TiDBJDBCClient implements AutoCloseable {
   private static final String ENABLE_SPLIT_TABLE_KEY = "split-table";
   private static final Boolean ENABLE_SPLIT_TABLE_DEFAULT = false;
   private static final String TIDB_ROW_FORMAT_VERSION_SQL = "select @@tidb_row_format_version";
+  private static final String TIDB_SET_WAIT_SPLIT_REGION_FINISH =
+      "set @@tidb_wait_split_region_finish=%d;";
   private static final int TIDB_ROW_FORMAT_VERSION_DEFAULT = 1;
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
   private final Connection connection;
+  private final int waitSplitRegionFinish;
 
   public TiDBJDBCClient(Connection connection) {
     this.connection = connection;
+    this.waitSplitRegionFinish = 1;
+  }
+
+  public TiDBJDBCClient(Connection connection, int waitSplitRegionFinish) {
+    this.connection = connection;
+    this.waitSplitRegionFinish = waitSplitRegionFinish;
   }
 
   public boolean isEnableTableLock() throws IOException, SQLException {
@@ -93,6 +102,12 @@ public class TiDBJDBCClient implements AutoCloseable {
       }
     } catch (Exception ignored) {
       return TIDB_ROW_FORMAT_VERSION_DEFAULT;
+    }
+  }
+
+  private void setTiDBWriteSplitRegionFinish() throws SQLException {
+    if (waitSplitRegionFinish == 0 || waitSplitRegionFinish == 1) {
+      executeUpdate(String.format(TIDB_SET_WAIT_SPLIT_REGION_FINISH, waitSplitRegionFinish));
     }
   }
 
@@ -144,19 +159,42 @@ public class TiDBJDBCClient implements AutoCloseable {
    */
   public void splitTableRegion(
       String dbName, String tblName, long minVal, long maxVal, long regionNum) throws SQLException {
-    try (Statement tidbStmt = connection.createStatement()) {
-      String sql =
-          String.format(
-              "split table `%s`.`%s` between (%d) and (%d) regions %d",
-              dbName, tblName, minVal, maxVal, regionNum);
-      logger.info("split table region: " + sql);
-      tidbStmt.execute(sql);
-    } catch (SQLException e) {
-      logger.warn("failed to split table region", e);
-      throw e;
+
+    setTiDBWriteSplitRegionFinish();
+
+    if (minVal < maxVal) {
+      try (Statement tidbStmt = connection.createStatement()) {
+        String sql =
+            String.format(
+                "split table `%s`.`%s` between (%d) and (%d) regions %d",
+                dbName, tblName, minVal, maxVal, regionNum);
+        logger.warn("split table region: " + sql);
+        tidbStmt.execute(sql);
+      } catch (SQLException e) {
+        logger.warn("failed to split table region", e);
+        throw e;
+      }
+    } else {
+      logger.warn("try to split table region with minVal >= maxVal, skipped");
     }
   }
 
+  public void splitIndexRegion(String dbName, String tblName, String idxName, String valueList)
+      throws SQLException {
+
+    setTiDBWriteSplitRegionFinish();
+
+    try (Statement tidbStmt = connection.createStatement()) {
+      String sql =
+          String.format(
+              "split table `%s`.`%s` index `%s` by %s", dbName, tblName, idxName, valueList);
+      logger.warn("split index region: " + sql);
+      tidbStmt.execute(sql);
+    } catch (SQLException e) {
+      logger.warn("failed to split index region", e);
+      throw e;
+    }
+  }
   /**
    * split index region by calling tidb jdbc command `SPLIT TABLE`, e.g. SPLIT TABLE t INDEX idx
    * BETWEEN ("2010-01-01 00:00:00") AND ("2020-01-01 00:00:00") REGIONS 16;
@@ -176,16 +214,23 @@ public class TiDBJDBCClient implements AutoCloseable {
       String maxIndexVal,
       long regionNum)
       throws SQLException {
-    try (Statement tidbStmt = connection.createStatement()) {
-      String sql =
-          String.format(
-              "split table `%s`.`%s` index %s between (\"%s\") and (\"%s\") regions %d",
-              dbName, tblName, idxName, minIndexVal, maxIndexVal, regionNum);
-      logger.info("split index region: " + sql);
-      tidbStmt.execute(sql);
-    } catch (SQLException e) {
-      logger.warn("failed to split index region", e);
-      throw e;
+
+    setTiDBWriteSplitRegionFinish();
+
+    if (!minIndexVal.equals(maxIndexVal)) {
+      try (Statement tidbStmt = connection.createStatement()) {
+        String sql =
+            String.format(
+                "split table `%s`.`%s` index `%s` between (\"%s\") and (\"%s\") regions %d",
+                dbName, tblName, idxName, minIndexVal, maxIndexVal, regionNum);
+        logger.warn("split index region: " + sql);
+        tidbStmt.execute(sql);
+      } catch (SQLException e) {
+        logger.warn("failed to split index region", e);
+        throw e;
+      }
+    } else {
+      logger.warn("try to split index region with minVal = maxVal, skipped");
     }
   }
 
@@ -196,6 +241,12 @@ public class TiDBJDBCClient implements AutoCloseable {
   @Override
   public void close() throws Exception {
     connection.close();
+  }
+
+  private int executeUpdate(String sql) throws SQLException {
+    try (Statement tidbStmt = connection.createStatement()) {
+      return tidbStmt.executeUpdate(sql);
+    }
   }
 
   private List<List<Object>> queryTiDBViaJDBC(String query) throws SQLException {

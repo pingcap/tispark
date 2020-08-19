@@ -24,6 +24,7 @@ import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
+import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.region.AbstractRegionStoreClient;
 import com.pingcap.tikv.region.RegionManager;
@@ -179,15 +180,24 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
       Kvrpcpb.ResolveLockResponse resp =
           callWithRetry(bo, TikvGrpc.getKvResolveLockMethod(), factory, handler);
 
-      if (resp.hasError()) {
-        logger.error(
-            String.format("unexpected resolveLock err: %s, lock: %s", resp.getError(), lock));
-        throw new KeyException(resp.getError());
+      if (resp == null) {
+        logger.error("getKvResolveLockMethod failed without a cause");
+        regionManager.onRequestFail(region);
+        bo.doBackOff(
+            BoRegionMiss,
+            new TiClientInternalException("getKvResolveLockMethod failed without a cause"));
+        continue;
       }
 
       if (resp.hasRegionError()) {
         bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
         continue;
+      }
+
+      if (resp.hasError()) {
+        logger.error(
+            String.format("unexpected resolveLock err: %s, lock: %s", resp.getError(), lock));
+        throw new KeyException(resp.getError());
       }
 
       if (cleanWholeRegion) {
@@ -231,11 +241,13 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
     status = new TxnStatus();
     while (true) {
       TiRegion primaryKeyRegion = regionManager.getRegionByKey(primary);
+      // new RegionStoreClient for PrimaryKey
+      RegionStoreClient primaryKeyRegionStoreClient = clientBuilder.build(primary);
       KVErrorHandler<CleanupResponse> handler =
           new KVErrorHandler<>(
               regionManager,
-              this,
-              this,
+              primaryKeyRegionStoreClient,
+              primaryKeyRegionStoreClient.lockResolverClient,
               primaryKeyRegion,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
               resp -> resp.hasError() ? resp.getError() : null,
@@ -243,11 +255,18 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
               0L,
               false);
 
-      // new RegionStoreClient for PrimaryKey
-      RegionStoreClient primaryKeyRegionStoreClient = clientBuilder.build(primary);
       CleanupResponse resp =
           primaryKeyRegionStoreClient.callWithRetry(
               bo, TikvGrpc.getKvCleanupMethod(), factory, handler);
+
+      if (resp == null) {
+        logger.error("getKvCleanupMethod failed without a cause");
+        regionManager.onRequestFail(primaryKeyRegion);
+        bo.doBackOff(
+            BoRegionMiss,
+            new TiClientInternalException("getKvCleanupMethod failed without a cause"));
+        continue;
+      }
 
       if (resp.hasRegionError()) {
         bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));

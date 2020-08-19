@@ -22,7 +22,7 @@ import org.apache.spark.sql.functions._
 class LineItemSuite extends BaseTiSparkTest {
 
   private val table = "LINEITEM"
-  private val where = "where L_PARTKEY < 2100000"
+  private val where = "where L_PARTKEY < 3100000"
   private val batchWriteTablePrefix = "BATCH.WRITE"
   private val isPkHandlePrefix = "isPkHandle"
   private val replacePKHandlePrefix = "replacePKHandle"
@@ -54,7 +54,7 @@ class LineItemSuite extends BaseTiSparkTest {
       df,
       ti,
       new TiDBOptions(
-        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")))
+        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true", "regionSplitMethod" -> "v2")))
 
     // refresh
     refreshConnections(TestTables(database, tableToWrite))

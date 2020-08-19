@@ -17,8 +17,10 @@ package com.pingcap.tikv.columnar;
 
 import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.MyDecimal;
 import com.pingcap.tikv.types.AbstractDateTimeType;
+import com.pingcap.tikv.types.ArrayType;
 import com.pingcap.tikv.types.BitType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DateTimeType;
@@ -55,7 +57,7 @@ public class TiChunkColumnVector extends TiColumnVector {
       byte[] nullBitMaps,
       long[] offsets,
       ByteBuffer data) {
-    super(dataType, numOfRows);
+    super(dataType, numOfRows, buildColumnVectorFromOffsets(numOfRows, offsets));
     this.fixLength = fixLength;
     this.numOfNulls = numOfNulls;
     this.nullBitMaps = nullBitMaps;
@@ -63,8 +65,25 @@ public class TiChunkColumnVector extends TiColumnVector {
     this.offsets = offsets;
   }
 
-  public final String typeName() {
-    return dataType().getType().name();
+  private static TiChunkColumnVector buildColumnVectorFromOffsets(int numOfRows, long[] offsets) {
+    if (offsets == null) {
+      return null;
+    } else {
+      DataType type = IntegerType.BIGINT;
+      int fixLength = type.getFixLen();
+      CodecDataOutput cdo = new CodecDataOutput();
+      for (long offset : offsets) {
+        cdo.writeLong(offset);
+      }
+      return new TiChunkColumnVector(
+          type,
+          fixLength,
+          numOfRows,
+          0,
+          DataType.setAllNotNullBitMapWithNumRows(numOfRows),
+          null,
+          ByteBuffer.wrap(cdo.toBytes()));
+    }
   }
 
   // TODO: once we switch off_heap mode, we need control memory access pattern.
@@ -176,6 +195,8 @@ public class TiChunkColumnVector extends TiColumnVector {
       return getTime(rowId);
     } else if (type instanceof TimeType) {
       return data.getLong(rowId * fixLength);
+    } else if (type instanceof ArrayType) {
+      return data.getLong(rowId * fixLength + fixLength);
     }
 
     throw new UnsupportedOperationException("only IntegerType and Time related are supported.");

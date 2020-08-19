@@ -16,21 +16,33 @@
 package com.pingcap.tikv;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
+import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TiKVException;
+import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
+import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
+import com.pingcap.tikv.util.BackOffFunction;
+import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import com.pingcap.tikv.util.Pair;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.kvproto.Metapb;
 
 public class TiSession implements AutoCloseable {
   private static final Logger logger = LoggerFactory.getLogger(TiSession.class);
@@ -149,7 +161,10 @@ public class TiSession implements AutoCloseable {
           indexScanThreadPool =
               Executors.newFixedThreadPool(
                   conf.getIndexScanConcurrency(),
-                  new ThreadFactoryBuilder().setDaemon(true).build());
+                  new ThreadFactoryBuilder()
+                      .setNameFormat("index-scan-pool-%d")
+                      .setDaemon(true)
+                      .build());
         }
         res = indexScanThreadPool;
       }
@@ -180,6 +195,98 @@ public class TiSession implements AutoCloseable {
    */
   public void injectCallBackFunc(Function<CacheInvalidateEvent, Void> callBackFunc) {
     this.cacheInvalidateCallback = callBackFunc;
+  }
+
+  /**
+   * split region and scatter
+   *
+   * @param splitKeys
+   */
+  public void splitRegionAndScatter(
+      List<byte[]> splitKeys, int splitRegionBackoffMS, int scatterWaitMS) {
+    logger.info(String.format("split key's size is %d", splitKeys.size()));
+    long startMS = System.currentTimeMillis();
+
+    BackOffer splitRegionBackoff = ConcreteBackOffer.newCustomBackOff(splitRegionBackoffMS);
+    // split region
+    List<TiRegion> newRegions =
+        splitRegion(
+            splitKeys
+                .stream()
+                .map(k -> Key.toRawKey(k).next().toByteString())
+                .collect(Collectors.toList()),
+            splitRegionBackoff);
+
+    // scatter region
+    for (TiRegion newRegion : newRegions) {
+      getPDClient().scatterRegion(newRegion, splitRegionBackoff);
+    }
+
+    // wait scatter region finish
+    if (scatterWaitMS > 0) {
+      logger.info("start to wait scatter region finish");
+      long scatterRegionStartMS = System.currentTimeMillis();
+      for (TiRegion newRegion : newRegions) {
+        long remainMS = (scatterRegionStartMS + scatterWaitMS) - System.currentTimeMillis();
+        if (remainMS <= 0) {
+          logger.warn("wait scatter region timeout");
+          return;
+        }
+        getPDClient()
+            .waitScatterRegionFinish(newRegion, ConcreteBackOffer.newCustomBackOff((int) remainMS));
+      }
+    } else {
+      logger.info("skip to wait scatter region finish");
+    }
+
+    long endMS = System.currentTimeMillis();
+    logger.info("splitRegionAndScatter cost {} seconds", (endMS - startMS) / 1000);
+  }
+
+  private List<TiRegion> splitRegion(List<ByteString> splitKeys, BackOffer backOffer) {
+    List<TiRegion> regions = new ArrayList<>();
+
+    Map<TiRegion, List<ByteString>> groupKeys = groupKeysByRegion(splitKeys);
+    for (Map.Entry<TiRegion, List<ByteString>> entry : groupKeys.entrySet()) {
+
+      Pair<TiRegion, Metapb.Store> pair =
+          getRegionManager().getRegionStorePairByKey(entry.getKey().getStartKey());
+      TiRegion region = pair.first;
+      Metapb.Store store = pair.second;
+      List<ByteString> splits =
+          entry
+              .getValue()
+              .stream()
+              .filter(k -> !k.equals(region.getStartKey()) && !k.equals(region.getEndKey()))
+              .collect(Collectors.toList());
+
+      if (splits.isEmpty()) {
+        logger.warn(
+            "split key equal to region start key or end key. Region splitting is not needed.");
+      } else {
+        logger.info("start to split region id={}, split size={}", region.getId(), splits.size());
+        List<TiRegion> newRegions;
+        try {
+          newRegions = getRegionStoreClientBuilder().build(region, store).splitRegion(splits);
+        } catch (final TiKVException | TiClientInternalException e) {
+          // retry
+          logger.warn("ReSplitting ranges for splitRegion", e);
+          clientBuilder.getRegionManager().invalidateRegion(region.getId());
+          backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
+          newRegions = splitRegion(splits, backOffer);
+        }
+        logger.info("region id={}, new region size={}", region.getId(), newRegions.size());
+        regions.addAll(newRegions);
+      }
+    }
+
+    logger.info("splitRegion: return region size={}", regions.size());
+    return regions;
+  }
+
+  private Map<TiRegion, List<ByteString>> groupKeysByRegion(List<ByteString> keys) {
+    return keys.stream()
+        .collect(Collectors.groupingBy(clientBuilder.getRegionManager()::getRegionByKey));
   }
 
   @Override

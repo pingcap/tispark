@@ -37,6 +37,7 @@ import java.math.BigDecimal;
 public abstract class TiColumnVector implements AutoCloseable {
 
   private final int numOfRows;
+  private final TiColumnVector offsets;
   /** Data type for this column. */
   protected DataType type;
 
@@ -44,6 +45,14 @@ public abstract class TiColumnVector implements AutoCloseable {
   protected TiColumnVector(DataType type, int numOfRows) {
     this.type = type;
     this.numOfRows = numOfRows;
+    this.offsets = null;
+  }
+
+  /** Sets up the data type of this column vector. */
+  protected TiColumnVector(DataType type, int numOfRows, TiColumnVector offsets) {
+    this.type = type;
+    this.numOfRows = numOfRows;
+    this.offsets = offsets;
   }
 
   /** Returns the data type of this column vector. */
@@ -217,5 +226,9 @@ public abstract class TiColumnVector implements AutoCloseable {
 
   public int numOfRows() {
     return numOfRows;
+  }
+
+  public TiColumnVector getOffset() {
+    return offsets;
   }
 }

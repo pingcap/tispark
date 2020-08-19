@@ -30,6 +30,8 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
 
   import com.pingcap.tispark.write.TiDBOptions._
 
+  private val optParamPrefix = "spark.tispark."
+
   // ------------------------------------------------------------
   // Required parameters
   // ------------------------------------------------------------
@@ -37,7 +39,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val port: String = checkAndGet(TIDB_PORT)
   val user: String = checkAndGet(TIDB_USER)
   val password: String = checkAndGet(TIDB_PASSWORD)
-  val multiTables: Boolean = parameters.getOrElse(TIDB_MULTI_TABLES, "false").toBoolean
+  val multiTables: Boolean = getOrDefault(TIDB_MULTI_TABLES, "false").toBoolean
   val database: String = if (!multiTables) {
     checkAndGet(TIDB_DATABASE)
   } else {
@@ -51,39 +53,71 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // ------------------------------------------------------------
   // Optional parameters only for writing
   // ------------------------------------------------------------
-  val replace: Boolean = parameters.getOrElse(TIDB_REPLACE, "false").toBoolean
+  val replace: Boolean = getOrDefault(TIDB_REPLACE, "false").toBoolean
   // It is an optimize by the nature of 2pc protocol
   // We leave other txn, gc or read to resolve locks.
   val skipCommitSecondaryKey: Boolean =
-    parameters.getOrElse(TIDB_SKIP_COMMIT_SECONDARY_KEY, "false").toBoolean
-  val regionSplitNum: Int = parameters.getOrElse(TIDB_REGION_SPLIT_NUM, "0").toInt
-  val enableRegionSplit: Boolean =
-    parameters.getOrElse(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
-  val writeConcurrency: Int = parameters.getOrElse(TIDB_WRITE_CONCURRENCY, "0").toInt
+    getOrDefault(TIDB_SKIP_COMMIT_SECONDARY_KEY, "false").toBoolean
+  val writeConcurrency: Int = getOrDefault(TIDB_WRITE_CONCURRENCY, "0").toInt
   // ttlMode = { "FIXED", "UPDATE", "DEFAULT" }
-  val ttlMode: String = parameters.getOrElse(TIDB_TTL_MODE, "DEFAULT").toUpperCase()
-  val useSnapshotBatchGet: Boolean =
-    parameters.getOrElse(TIDB_USE_SNAPSHOT_BATCH_GET, "true").toBoolean
-  val snapshotBatchGetSize: Int = parameters.getOrElse(TIDB_SNAPSHOT_BATCH_GET_SIZE, "2048").toInt
+  val ttlMode: String = getOrDefault(TIDB_TTL_MODE, "DEFAULT").toUpperCase()
+  val useSnapshotBatchGet: Boolean = getOrDefault(TIDB_USE_SNAPSHOT_BATCH_GET, "true").toBoolean
+  //20k
+  val snapshotBatchGetSize: Int = getOrDefault(TIDB_SNAPSHOT_BATCH_GET_SIZE, "20480").toInt
+  val batchGetBackOfferMS: Int = getOrDefault(TIDB_BATCH_GET_BACKOFFER_MS, "60000").toInt
   val sleepAfterPrewritePrimaryKey: Long =
-    parameters.getOrElse(TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY, "0").toLong
+    getOrDefault(TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY, "0").toLong
   val sleepAfterPrewriteSecondaryKey: Long =
-    parameters.getOrElse(TIDB_SLEEP_AFTER_PREWRITE_SECONDARY_KEY, "0").toLong
-  val sleepAfterGetCommitTS: Long =
-    parameters.getOrElse(TIDB_SLEEP_AFTER_GET_COMMIT_TS, "0").toLong
-  val isTest: Boolean = parameters.getOrElse(TIDB_IS_TEST, "false").toBoolean
+    getOrDefault(TIDB_SLEEP_AFTER_PREWRITE_SECONDARY_KEY, "0").toLong
+  val sleepAfterGetCommitTS: Long = getOrDefault(TIDB_SLEEP_AFTER_GET_COMMIT_TS, "0").toLong
+  val isTest: Boolean = getOrDefault(TIDB_IS_TEST, "false").toBoolean
+  val taskNumPerRegion: Int = {
+    val num = getOrDefault(TIDB_TASK_NUM_PER_REGION, "5").toInt
+    if (num <= 0) {
+      5
+    } else {
+      num
+    }
+  }
+  val shuffleKeyToSameRegion: Boolean =
+    getOrDefault(TIDB_SHUFFLE_KEY_TO_SAME_REGION, "true").toBoolean
+  val writeTaskNumber: Int = getOrDefault(TIDB_WRITE_TASK_NUMBER, "0").toInt
+  val prewriteBackOfferMS: Int = getOrDefault(TIDB_PREWRITE_BACKOFFER_MS, "240000").toInt
+  val commitBackOfferMS: Int = getOrDefault(TIDB_COMMIT_BACKOFFER_MS, "20000").toInt
+  // 728 * 1024
+  val txnPrewriteBatchSize: Long = getOrDefault(TIDB_TXN_PREWITE_BATCH_SIZE, "786432").toLong
+  // 728 * 1024
+  val txnCommitBatchSize: Long = getOrDefault(TIDB_TXN_COMMIT_BATCH_SIZE, "786432").toLong
+  // 32 * 1024
+  val writeBufferSize: Int = getOrDefault(TIDB_WRITE_BUFFER_SIZE, "32768").toInt
+  val writeThreadPerTask: Int = getOrDefault(TIDB_WRITE_THREAD_PER_TASK, "1").toInt
+  val retryCommitSecondaryKey: Boolean =
+    getOrDefault(TIDB_RETRY_COMMIT_SECONDARY_KEY, "true").toBoolean
+
+  // region split
+  val enableRegionSplit: Boolean = getOrDefault(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
+  val regionSplitNum: Int = getOrDefault(TIDB_REGION_SPLIT_NUM, "0").toInt
+  val sampleSplitFrac: Int = getOrDefault(TIDB_SAMPLE_SPLIT_FRAC, "1000").toInt
+  val writeSplitRegionFinish: Int = getOrDefault(TIDB_WRITE_SPLIT_REGION_FINISH, "-1").toInt
+  val regionSplitMethod: String = getOrDefault(TIDB_REGION_SPLIT_METHOD, "v2")
+  val scatterWaitMS: Int = getOrDefault(TIDB_SCATTER_WAIT_MS, "300000").toInt
+  val regionSplitKeys: Int = getOrDefault(TIDB_REGION_SPLIT_KEYS, "960000").toInt
+  val minRegionSplitNum: Int = getOrDefault(TIDB_MIN_REGION_SPLIT_NUM, "4").toInt
+  val regionSplitThreshold: Int = getOrDefault(TIDB_REGION_SPLIT_THRESHOLD, "100000").toInt
+  val splitRegionBackoffMS: Int = getOrDefault(TIDB_SPLIT_REGION_BACKOFFER_MS, "120000").toInt
+
   // ------------------------------------------------------------
   // Calculated parameters
   // ------------------------------------------------------------
   val url: String =
     s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useSSL=false&rewriteBatchedStatements=true"
-  private val optParamPrefix = "spark.tispark."
+      .replaceAll("%", "%25")
 
   def useTableLock(isV4: Boolean): Boolean = {
     if (isV4) {
-      parameters.getOrElse(TIDB_USE_TABLE_LOCK, "false").toBoolean
+      getOrDefault(TIDB_USE_TABLE_LOCK, "false").toBoolean
     } else {
-      parameters.getOrElse(TIDB_USE_TABLE_LOCK, "true").toBoolean
+      getOrDefault(TIDB_USE_TABLE_LOCK, "true").toBoolean
     }
   }
 
@@ -148,7 +182,6 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
 }
 
 object TiDBOptions {
-  private final val _tidbOptionNames = collection.mutable.Set[String]()
   val TIDB_ADDRESS: String = newOption("tidb.addr")
   val TIDB_PORT: String = newOption("tidb.port")
   val TIDB_USER: String = newOption("tidb.user")
@@ -157,14 +190,36 @@ object TiDBOptions {
   val TIDB_TABLE: String = newOption("table")
   val TIDB_REPLACE: String = newOption("replace")
   val TIDB_SKIP_COMMIT_SECONDARY_KEY: String = newOption("skipCommitSecondaryKey")
-  val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
-  val TIDB_REGION_SPLIT_NUM: String = newOption("regionSplitNum")
   val TIDB_WRITE_CONCURRENCY: String = newOption("writeConcurrency")
   val TIDB_TTL_MODE: String = newOption("ttlMode")
   val TIDB_USE_SNAPSHOT_BATCH_GET: String = newOption("useSnapshotBatchGet")
   val TIDB_SNAPSHOT_BATCH_GET_SIZE: String = newOption("snapshotBatchGetSize")
+  val TIDB_BATCH_GET_BACKOFFER_MS: String = newOption("batchGetBackOfferMS")
   val TIDB_USE_TABLE_LOCK: String = newOption("useTableLock")
   val TIDB_MULTI_TABLES: String = newOption("multiTables")
+  val TIDB_TASK_NUM_PER_REGION: String = newOption("taskNumPerRegion")
+  val TIDB_SHUFFLE_KEY_TO_SAME_REGION: String = newOption("shuffleKeyToSameRegion")
+  val TIDB_WRITE_TASK_NUMBER: String = newOption("writeTaskNumber")
+  val TIDB_PREWRITE_BACKOFFER_MS: String = newOption("prewriteBackOfferMS")
+  val TIDB_COMMIT_BACKOFFER_MS: String = newOption("commitBackOfferMS")
+  val TIDB_TXN_PREWITE_BATCH_SIZE: String = newOption("txnPrewriteBatchSize")
+  val TIDB_TXN_COMMIT_BATCH_SIZE: String = newOption("txnCommitBatchSize")
+  val TIDB_WRITE_BUFFER_SIZE: String = newOption("writeBufferSize")
+  val TIDB_WRITE_THREAD_PER_TASK: String = newOption("writeThreadPerTask")
+  val TIDB_RETRY_COMMIT_SECONDARY_KEY: String = newOption("retryCommitSecondaryKey")
+
+  // region split
+  val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
+  val TIDB_REGION_SPLIT_NUM: String = newOption("regionSplitNum")
+  val TIDB_SAMPLE_SPLIT_FRAC: String = newOption("sampleSplitFrac")
+  val TIDB_WRITE_SPLIT_REGION_FINISH: String = newOption("writeSplitRegionFinish")
+  val TIDB_REGION_SPLIT_METHOD: String = newOption("regionSplitMethod")
+  val TIDB_SCATTER_WAIT_MS: String = newOption("scatterWaitSecondes")
+  val TIDB_REGION_SPLIT_KEYS: String = newOption("regionSplitKeys")
+  val TIDB_MIN_REGION_SPLIT_NUM: String = newOption("minRegionSplitNum")
+  val TIDB_REGION_SPLIT_THRESHOLD: String = newOption("regionSplitThreshold")
+  val TIDB_SPLIT_REGION_BACKOFFER_MS: String = newOption("splitRegionBackoffMS")
+
   // ------------------------------------------------------------
   // parameters only for test
   // ------------------------------------------------------------
@@ -176,8 +231,7 @@ object TiDBOptions {
   val TIDB_SLEEP_AFTER_GET_COMMIT_TS: String = newOption("sleepAfterGetCommitTS")
 
   private def newOption(name: String): String = {
-    _tidbOptionNames += name.toLowerCase(Locale.ROOT)
-    name
+    name.toLowerCase(Locale.ROOT)
   }
 
   private def mergeWithSparkConf(parameters: Map[String, String]): Map[String, String] = {

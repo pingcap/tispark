@@ -18,8 +18,12 @@ package com.pingcap.tispark.write
 import java.util
 
 import com.pingcap.tikv.codec.KeyUtils
+import com.pingcap.tikv.key.Key
+import com.pingcap.tikv.util.FastByteComparisons
 
-class SerializableKey(val bytes: Array[Byte]) extends Serializable {
+class SerializableKey(val bytes: Array[Byte])
+    extends Comparable[SerializableKey]
+    with Serializable {
   override def toString: String = KeyUtils.formatBytes(bytes)
 
   override def equals(that: Any): Boolean =
@@ -30,4 +34,12 @@ class SerializableKey(val bytes: Array[Byte]) extends Serializable {
 
   override def hashCode(): Int =
     util.Arrays.hashCode(bytes)
+
+  override def compareTo(o: SerializableKey): Int = {
+    FastByteComparisons.compareTo(bytes, o.bytes)
+  }
+
+  def getRowKey: Key = {
+    Key.toRawKey(bytes)
+  }
 }
