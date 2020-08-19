@@ -1,0 +1,154 @@
+/*
+ *
+ * Copyright 2020 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package com.pingcap.tikv.types;
+
+import com.pingcap.tidb.tipb.ExprType;
+import com.pingcap.tikv.codec.Codec;
+import com.pingcap.tikv.codec.Codec.IntegerCodec;
+import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
+import com.pingcap.tikv.exception.TypeException;
+import com.pingcap.tikv.meta.Collation;
+import com.pingcap.tikv.meta.TiColumnInfo;
+
+public class ArrayType extends DataType {
+  public static final ArrayType ARRAY = new ArrayType(MySQLType.TypeArray);
+
+  public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeArray};
+
+  protected ArrayType(MySQLType type, int flag, int len, int decimal) {
+    super(type, flag, len, decimal, "", Collation.DEF_COLLATION_CODE);
+  }
+
+  protected ArrayType(MySQLType tp) {
+    super(tp);
+  }
+
+  protected ArrayType(TiColumnInfo.InternalTypeHolder holder) {
+    super(holder);
+  }
+
+  @Override
+  protected Object doConvertToTiDBType(Object value)
+      throws ConvertNotSupportException, ConvertOverflowException {
+    // TODO: support write to YEAR
+    if (this.getType() == MySQLType.TypeYear) {
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
+    }
+
+    Long result;
+    if (this.isUnsigned()) {
+      result = Converter.safeConvertToUnsigned(value, this.unsignedUpperBound());
+    } else {
+      result =
+          Converter.safeConvertToSigned(value, this.signedLowerBound(), this.signedUpperBound());
+    }
+
+    return result;
+  }
+
+  public boolean isSameCatalog(DataType other) {
+    return other instanceof IntegerType;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  protected Object decodeNotNull(int flag, CodecDataInput cdi) {
+    int count = cdi.readInt();
+    long[] res = new long[count];
+    for (int i = 0; i < count; i++) {
+      long ret;
+      switch (flag) {
+        case Codec.UVARINT_FLAG:
+          ret = IntegerCodec.readUVarLong(cdi);
+          break;
+        case Codec.UINT_FLAG:
+          ret = IntegerCodec.readULong(cdi);
+          break;
+        case Codec.VARINT_FLAG:
+          ret = IntegerCodec.readVarLong(cdi);
+          break;
+        case Codec.INT_FLAG:
+          ret = IntegerCodec.readLong(cdi);
+          break;
+        default:
+          throw new TypeException("Invalid IntegerType flag: " + flag);
+      }
+      res[i] = ret;
+    }
+    return res;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  protected void encodeKey(CodecDataOutput cdo, Object value) {
+    long longVal = Converter.convertToLong(value);
+    if (isUnsigned()) {
+      IntegerCodec.writeULongFully(cdo, longVal, true);
+    } else {
+      IntegerCodec.writeLongFully(cdo, longVal, true);
+    }
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  protected void encodeValue(CodecDataOutput cdo, Object value) {
+    long longVal = Converter.convertToLong(value);
+    if (isUnsigned()) {
+      IntegerCodec.writeULongFully(cdo, longVal, false);
+    } else {
+      IntegerCodec.writeLongFully(cdo, longVal, false);
+    }
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  protected void encodeProto(CodecDataOutput cdo, Object value) {
+    long longVal = Converter.convertToLong(value);
+    if (isUnsigned()) {
+      IntegerCodec.writeULong(cdo, longVal);
+    } else {
+      IntegerCodec.writeLong(cdo, longVal);
+    }
+  }
+
+  @Override
+  public String getName() {
+    if (isUnsigned()) {
+      return "UNSIGNED LONG";
+    }
+    return "LONG";
+  }
+
+  @Override
+  public ExprType getProtoExprType() {
+    return isUnsigned() ? ExprType.Uint64 : ExprType.Int64;
+  }
+
+  public boolean isUnsignedLong() {
+    return tp == MySQLType.TypeLonglong && isUnsigned();
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public Object getOriginDefaultValueNonNull(String value, long version) {
+    return Long.parseLong(value);
+  }
+}

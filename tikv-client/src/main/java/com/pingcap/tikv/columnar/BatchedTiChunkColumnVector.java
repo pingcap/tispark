@@ -44,10 +44,6 @@ public class BatchedTiChunkColumnVector extends TiColumnVector {
     }
   }
 
-  public final String typeName() {
-    return dataType().getType().name();
-  }
-
   // TODO: once we switch off_heap mode, we need control memory access pattern.
   public void free() {}
 
