@@ -214,7 +214,7 @@ object TiDBOptions {
   val TIDB_SAMPLE_SPLIT_FRAC: String = newOption("sampleSplitFrac")
   val TIDB_WRITE_SPLIT_REGION_FINISH: String = newOption("writeSplitRegionFinish")
   val TIDB_REGION_SPLIT_METHOD: String = newOption("regionSplitMethod")
-  val TIDB_SCATTER_WAIT_MS: String = newOption("scatterWaitSecondes")
+  val TIDB_SCATTER_WAIT_MS: String = newOption("scatterWaitMS")
   val TIDB_REGION_SPLIT_KEYS: String = newOption("regionSplitKeys")
   val TIDB_MIN_REGION_SPLIT_NUM: String = newOption("minRegionSplitNum")
   val TIDB_REGION_SPLIT_THRESHOLD: String = newOption("regionSplitThreshold")

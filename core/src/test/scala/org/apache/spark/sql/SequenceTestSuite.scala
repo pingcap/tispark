@@ -38,7 +38,12 @@ class SequenceTestSuite extends BaseTiSparkTest {
   }
 
   override def afterAll(): Unit = {
-    dropTbl()
+    tidbStmt.execute(s"drop table if exists $table")
+    try {
+      tidbStmt.execute("drop sequence if exists sq_test")
+    } catch {
+      case _: Exception =>
+    }
   }
 
   private def dropTbl() = {
