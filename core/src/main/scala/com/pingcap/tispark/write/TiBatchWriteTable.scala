@@ -116,7 +116,7 @@ class TiBatchWriteTable(
     df.explain(true)
 
     val count = df.count
-    logger.warn(s"source data count=$count")
+    logger.info(s"source data count=$count")
 
     // auto increment
     val rdd = if (tiTableInfo.hasAutoIncrementColumn) {
@@ -924,7 +924,7 @@ class TiBatchWriteTable(
 
         // region split
         if (regionSplitNum > 1) {
-          logger.warn(
+          logger.info(
             s"index region split, regionSplitNum=$regionSplitNum, indexName=${index.getName}")
           if (count > (regionSplitNum * 1000 + 1) * 10) {
             logger.info("split by sample data")
@@ -970,7 +970,7 @@ class TiBatchWriteTable(
             }
           }
         } else {
-          logger.warn(
+          logger.info(
             s"skip index split index, regionSplitNum=$regionSplitNum, indexName=${index.getName}")
         }
       }
@@ -1028,7 +1028,7 @@ class TiBatchWriteTable(
                 }
             }
           } else {
-            logger.warn("table region split is skipped")
+            logger.info("table region split is skipped")
           }
         }
       }

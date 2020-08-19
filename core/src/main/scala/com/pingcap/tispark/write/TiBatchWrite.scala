@@ -202,7 +202,7 @@ class TiBatchWrite(
       }
     }
     val shuffledRDDCount = shuffledRDD.count()
-    logger.warn(s"write kv data count=$shuffledRDDCount")
+    logger.info(s"write kv data count=$shuffledRDDCount")
 
     if (options.enableRegionSplit && "v2".equals(options.regionSplitMethod)) {
       // calculate region split points

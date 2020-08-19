@@ -160,7 +160,8 @@ public class MetaUtils {
           null,
           null,
           version,
-          updateTimestamp);
+          updateTimestamp,
+          null);
     }
   }
 
