@@ -224,8 +224,8 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
 
     if (!compResult(jdbcResult, tidbResult)) {
       logger.error(s"""Failed on $tblName\n
-                      |TiDB via JDBC result: ${listToString(jdbcResult)}\n
-                      |DataSourceAPI result: ${listToString(tidbResult)}""".stripMargin)
+                      |DataSourceAPI result: ${listToString(jdbcResult)}\n
+                      |TiDB via JDBC result: ${listToString(tidbResult)}""".stripMargin)
       fail()
     }
   }
