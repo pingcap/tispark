@@ -99,7 +99,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val regionSplitNum: Int = getOrDefault(TIDB_REGION_SPLIT_NUM, "0").toInt
   val sampleSplitFrac: Int = getOrDefault(TIDB_SAMPLE_SPLIT_FRAC, "1000").toInt
   val writeSplitRegionFinish: Int = getOrDefault(TIDB_WRITE_SPLIT_REGION_FINISH, "-1").toInt
-  val regionSplitMethod: String = getOrDefault(TIDB_REGION_SPLIT_METHOD, "v1")
+  val regionSplitMethod: String = getOrDefault(TIDB_REGION_SPLIT_METHOD, "v2")
   val scatterWaitMS: Int = getOrDefault(TIDB_SCATTER_WAIT_MS, "300000").toInt
   val regionSplitKeys: Int = getOrDefault(TIDB_REGION_SPLIT_KEYS, "960000").toInt
   val minRegionSplitNum: Int = getOrDefault(TIDB_MIN_REGION_SPLIT_NUM, "4").toInt
