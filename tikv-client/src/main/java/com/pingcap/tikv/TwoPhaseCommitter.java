@@ -75,6 +75,7 @@ public class TwoPhaseCommitter {
   private final TxnKVClient kvClient;
   private final RegionManager regionManager;
 
+  private final long txnPrewriteBatchSize;
   private final long txnCommitBatchSize;
   private final int writeBufferSize;
   private final int writeThreadPerTask;
@@ -86,6 +87,7 @@ public class TwoPhaseCommitter {
     this.startTs = startTime;
     this.lockTTL = DEFAULT_BATCH_WRITE_LOCK_TTL;
     this.retryCommitSecondaryKeys = true;
+    this.txnPrewriteBatchSize = TXN_COMMIT_BATCH_SIZE;
     this.txnCommitBatchSize = TXN_COMMIT_BATCH_SIZE;
     this.writeBufferSize = WRITE_BUFFER_SIZE;
     this.writeThreadPerTask = 1;
@@ -96,6 +98,7 @@ public class TwoPhaseCommitter {
       TiConfiguration conf,
       long startTime,
       long lockTTL,
+      long txnPrewriteBatchSize,
       long txnCommitBatchSize,
       int writeBufferSize,
       int writeThreadPerTask,
@@ -105,6 +108,7 @@ public class TwoPhaseCommitter {
     this.startTs = startTime;
     this.lockTTL = lockTTL;
     this.retryCommitSecondaryKeys = retryCommitSecondaryKeys;
+    this.txnPrewriteBatchSize = txnPrewriteBatchSize;
     this.txnCommitBatchSize = txnCommitBatchSize;
     this.writeBufferSize = writeBufferSize;
     this.writeThreadPerTask = writeThreadPerTask;
@@ -447,6 +451,8 @@ public class TwoPhaseCommitter {
       List<ByteString> keys,
       boolean sizeIncludeValue,
       Map<ByteString, Kvrpcpb.Mutation> mutations) {
+    long commitBatchSize = sizeIncludeValue ? txnPrewriteBatchSize : txnCommitBatchSize;
+
     int start;
     int end;
     if (keys == null) {
@@ -455,7 +461,7 @@ public class TwoPhaseCommitter {
     int len = keys.size();
     for (start = 0; start < len; start = end) {
       int sizeInBytes = 0;
-      for (end = start; end < len && sizeInBytes < txnCommitBatchSize; end++) {
+      for (end = start; end < len && sizeInBytes < commitBatchSize; end++) {
         if (sizeIncludeValue) {
           sizeInBytes += this.keyValueSize(keys.get(end), mutations);
         } else {
