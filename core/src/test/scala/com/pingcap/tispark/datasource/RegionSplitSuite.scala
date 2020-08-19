@@ -39,7 +39,8 @@ class RegionSplitSuite extends BaseDataSourceTest("region_split_test") {
     jdbcUpdate(
       s"CREATE TABLE  $dbtable ( `a` int(11), unique index(a)) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
 
-    val options = Some(Map("enableRegionSplit" -> "true", "regionSplitNum" -> "3"))
+    val options = Some(
+      Map("enableRegionSplit" -> "true", "regionSplitMethod" -> "v1", "regionSplitNum" -> "3"))
 
     tidbWrite(List(row1, row2, row3), schema, options)
 
@@ -65,7 +66,8 @@ class RegionSplitSuite extends BaseDataSourceTest("region_split_test") {
     jdbcUpdate(
       s"CREATE TABLE  $dbtable ( `a` int(11) DEFAULT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
 
-    val options = Some(Map("enableRegionSplit" -> "true", "regionSplitNum" -> "3"))
+    val options = Some(
+      Map("enableRegionSplit" -> "true", "regionSplitMethod" -> "v1", "regionSplitNum" -> "3"))
 
     tidbWrite(List(row1, row2, row3), schema, options)
 
