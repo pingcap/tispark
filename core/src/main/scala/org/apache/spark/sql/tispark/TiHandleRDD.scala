@@ -134,8 +134,6 @@ class TiHandleRDD(
         val buffer0 = ByteBuffer.wrap(cdi0.toBytes)
         val buffer1 = ByteBuffer.wrap(cdi1.toBytes)
 
-        val nullBitMaps = DataType.setAllNotNullBitMapWithNumRows(numRows)
-
         val regionIdType = IntegerType.BIGINT
         val handleListType = ArrayType.ARRAY
 
@@ -146,7 +144,7 @@ class TiHandleRDD(
             regionIdType.getFixLen,
             numRows,
             0,
-            nullBitMaps,
+            DataType.setAllNotNullBitMapWithNumRows(numRows),
             null,
             buffer0)
         childColumnVectors +=
@@ -156,7 +154,7 @@ class TiHandleRDD(
             8,
             curOffset.toInt,
             0,
-            nullBitMaps,
+            DataType.setAllNotNullBitMapWithNumRows(curOffset.toInt),
             offsets.toArray,
             buffer1)
         val chunk = new TiChunk(childColumnVectors.toArray)
