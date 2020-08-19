@@ -15,6 +15,7 @@
 
 package com.pingcap.tikv;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
@@ -37,6 +38,10 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
@@ -65,24 +70,62 @@ public class TwoPhaseCommitter {
   /** unit is millisecond */
   private final long lockTTL;
 
+  private final boolean retryCommitSecondaryKeys;
+
   private final TxnKVClient kvClient;
   private final RegionManager regionManager;
+
+  private final long txnPrewriteBatchSize;
+  private final long txnCommitBatchSize;
+  private final int writeBufferSize;
+  private final int writeThreadPerTask;
+  private final ExecutorService executorService;
 
   public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
     this.kvClient = TiSession.getInstance(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = DEFAULT_BATCH_WRITE_LOCK_TTL;
+    this.retryCommitSecondaryKeys = true;
+    this.txnPrewriteBatchSize = TXN_COMMIT_BATCH_SIZE;
+    this.txnCommitBatchSize = TXN_COMMIT_BATCH_SIZE;
+    this.writeBufferSize = WRITE_BUFFER_SIZE;
+    this.writeThreadPerTask = 1;
+    this.executorService = createExecutorService();
   }
 
-  public TwoPhaseCommitter(TiConfiguration conf, long startTime, long lockTTL) {
+  public TwoPhaseCommitter(
+      TiConfiguration conf,
+      long startTime,
+      long lockTTL,
+      long txnPrewriteBatchSize,
+      long txnCommitBatchSize,
+      int writeBufferSize,
+      int writeThreadPerTask,
+      boolean retryCommitSecondaryKeys) {
     this.kvClient = TiSession.getInstance(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = lockTTL;
+    this.retryCommitSecondaryKeys = retryCommitSecondaryKeys;
+    this.txnPrewriteBatchSize = txnPrewriteBatchSize;
+    this.txnCommitBatchSize = txnCommitBatchSize;
+    this.writeBufferSize = writeBufferSize;
+    this.writeThreadPerTask = writeThreadPerTask;
+    this.executorService = createExecutorService();
   }
 
-  public void close() throws Exception {}
+  private ExecutorService createExecutorService() {
+    return Executors.newFixedThreadPool(
+        writeThreadPerTask,
+        new ThreadFactoryBuilder().setNameFormat("2pc-pool-%d").setDaemon(true).build());
+  }
+
+  public void close() throws Exception {
+    if (executorService != null) {
+      executorService.shutdownNow();
+    }
+  }
 
   /**
    * 2pc - prewrite primary key
@@ -138,7 +181,7 @@ public class TwoPhaseCommitter {
       }
     }
 
-    LOG.debug("prewrite primary key {} successfully", KeyUtils.formatBytes(key));
+    LOG.info("prewrite primary key {} successfully", KeyUtils.formatBytes(key));
   }
 
   /**
@@ -178,7 +221,7 @@ public class TwoPhaseCommitter {
       }
     }
 
-    LOG.debug("commit primary key {} successfully", KeyUtils.formatBytes(key));
+    LOG.info("commit primary key {} successfully", KeyUtils.formatBytes(key));
   }
 
   /**
@@ -188,7 +231,8 @@ public class TwoPhaseCommitter {
    * @param pairs
    * @return
    */
-  public void prewriteSecondaryKeys(byte[] primaryKey, Iterator<BytePairWrapper> pairs)
+  public void prewriteSecondaryKeys(
+      byte[] primaryKey, Iterator<BytePairWrapper> pairs, int maxBackOfferMS)
       throws TiBatchWriteException {
     Iterator<Pair<ByteString, ByteString>> byteStringKeys =
         new Iterator<Pair<ByteString, ByteString>>() {
@@ -206,28 +250,54 @@ public class TwoPhaseCommitter {
           }
         };
 
-    doPrewriteSecondaryKeys(ByteString.copyFrom(primaryKey), byteStringKeys);
+    doPrewriteSecondaryKeys(ByteString.copyFrom(primaryKey), byteStringKeys, maxBackOfferMS);
   }
 
   private void doPrewriteSecondaryKeys(
-      ByteString primaryKey, Iterator<Pair<ByteString, ByteString>> pairs)
+      ByteString primaryKey, Iterator<Pair<ByteString, ByteString>> pairs, int maxBackOfferMS)
       throws TiBatchWriteException {
-    int totalSize = 0;
-    while (pairs.hasNext()) {
-      ByteString[] keyBytes = new ByteString[WRITE_BUFFER_SIZE];
-      ByteString[] valueBytes = new ByteString[WRITE_BUFFER_SIZE];
-      int size = 0;
-      while (size < WRITE_BUFFER_SIZE && pairs.hasNext()) {
-        Pair<ByteString, ByteString> pair = pairs.next();
-        keyBytes[size] = pair.first;
-        valueBytes[size] = pair.second;
-        size++;
+    try {
+      int taskBufferSize = writeThreadPerTask * 2;
+      int totalSize = 0, cnt = 0;
+      Pair<ByteString, ByteString> pair;
+      ExecutorCompletionService<Void> completionService =
+          new ExecutorCompletionService<>(executorService);
+      while (pairs.hasNext()) {
+        int size = 0;
+        ByteString[] keyBytes = new ByteString[writeBufferSize];
+        ByteString[] valueBytes = new ByteString[writeBufferSize];
+        while (size < writeBufferSize && pairs.hasNext()) {
+          pair = pairs.next();
+          keyBytes[size] = pair.first;
+          valueBytes[size] = pair.second;
+          size++;
+        }
+        int curSize = size;
+        cnt++;
+        if (cnt > taskBufferSize) {
+          // consume one task if reaches task limit
+          completionService.take().get();
+        }
+        BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(maxBackOfferMS);
+        completionService.submit(
+            () -> {
+              doPrewriteSecondaryKeysInBatchesWithRetry(
+                  backOffer, primaryKey, keyBytes, valueBytes, curSize, 0);
+              return null;
+            });
+
+        totalSize = totalSize + size;
       }
 
-      BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF);
-      doPrewriteSecondaryKeysInBatchesWithRetry(
-          backOffer, primaryKey, keyBytes, valueBytes, size, 0);
-      totalSize = totalSize + size;
+      for (int i = 0; i < Math.min(taskBufferSize, cnt); i++) {
+        completionService.take().get();
+      }
+
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new TiBatchWriteException("Current thread interrupted.", e);
+    } catch (ExecutionException e) {
+      throw new TiBatchWriteException("Execution exception met.", e);
     }
   }
 
@@ -264,16 +334,17 @@ public class TwoPhaseCommitter {
     GroupKeyResult groupResult = this.groupKeysByRegion(keys, size);
     List<BatchKeys> batchKeyList = new LinkedList<>();
     Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
-    for (Pair<TiRegion, Metapb.Store> pair : groupKeyMap.keySet()) {
-      TiRegion tiRegion = pair.first;
-      Metapb.Store store = pair.second;
-      this.appendBatchBySize(batchKeyList, tiRegion, store, groupKeyMap.get(pair), true, mutations);
+
+    for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry : groupKeyMap.entrySet()) {
+      TiRegion tiRegion = entry.getKey().first;
+      Metapb.Store store = entry.getKey().second;
+      this.appendBatchBySize(batchKeyList, tiRegion, store, entry.getValue(), true, mutations);
     }
 
     // For prewrite, stop sending other requests after receiving first error.
     for (BatchKeys batchKeys : batchKeyList) {
       TiRegion oldRegion = batchKeys.getRegion();
-      TiRegion currentRegion = this.regionManager.getRegionById(oldRegion.getId());
+      TiRegion currentRegion = this.regionManager.getRegionByKey(oldRegion.getStartKey());
       if (oldRegion.equals(currentRegion)) {
         doPrewriteSecondaryKeySingleBatchWithRetry(backOffer, primaryKey, batchKeys, mutations);
       } else {
@@ -283,7 +354,7 @@ public class TwoPhaseCommitter {
                   "> max retry number %s, oldRegion=%s, currentRegion=%s",
                   MAX_RETRY_TIMES, oldRegion, currentRegion));
         }
-        LOG.debug(
+        LOG.info(
             String.format(
                 "oldRegion=%s != currentRegion=%s, will re-fetch region info and retry",
                 oldRegion, currentRegion));
@@ -318,7 +389,11 @@ public class TwoPhaseCommitter {
       BatchKeys batchKeys,
       Map<ByteString, Kvrpcpb.Mutation> mutations)
       throws TiBatchWriteException {
-    LOG.debug("start prewrite secondary key, size={}", batchKeys.getKeys().size());
+    LOG.info(
+        "start prewrite secondary key, row={}, size={}KB, regionId={}",
+        batchKeys.getKeys().size(),
+        batchKeys.getSizeInKB(),
+        batchKeys.getRegion().getId());
 
     List<ByteString> keyList = batchKeys.getKeys();
     int batchSize = keyList.size();
@@ -343,7 +418,7 @@ public class TwoPhaseCommitter {
           "prewrite secondary key error", prewriteResult.getException());
     }
     if (prewriteResult.isRetry()) {
-      LOG.debug("prewrite secondary key fail, will backoff and retry");
+      LOG.info("prewrite secondary key fail, will backoff and retry");
       try {
         backOffer.doBackOff(
             BackOffFunction.BackOffFuncType.BoRegionMiss,
@@ -362,7 +437,11 @@ public class TwoPhaseCommitter {
         throw new TiBatchWriteException(errorMsg, e);
       }
     }
-    LOG.debug("prewrite secondary key successfully, size={}", batchKeys.getKeys().size());
+    LOG.info(
+        "prewrite secondary key successfully, row={}, size={}KB, regionId={}",
+        batchKeys.getKeys().size(),
+        batchKeys.getSizeInKB(),
+        batchKeys.getRegion().getId());
   }
 
   private void appendBatchBySize(
@@ -372,19 +451,24 @@ public class TwoPhaseCommitter {
       List<ByteString> keys,
       boolean sizeIncludeValue,
       Map<ByteString, Kvrpcpb.Mutation> mutations) {
+    long commitBatchSize = sizeIncludeValue ? txnPrewriteBatchSize : txnCommitBatchSize;
+
     int start;
     int end;
+    if (keys == null) {
+      return;
+    }
     int len = keys.size();
     for (start = 0; start < len; start = end) {
-      int size = 0;
-      for (end = start; end < len && size < TXN_COMMIT_BATCH_SIZE; end++) {
+      int sizeInBytes = 0;
+      for (end = start; end < len && sizeInBytes < commitBatchSize; end++) {
         if (sizeIncludeValue) {
-          size += this.keyValueSize(keys.get(end), mutations);
+          sizeInBytes += this.keyValueSize(keys.get(end), mutations);
         } else {
-          size += this.keySize(keys.get(end));
+          sizeInBytes += this.keySize(keys.get(end));
         }
       }
-      BatchKeys batchKeys = new BatchKeys(tiRegion, store, keys.subList(start, end));
+      BatchKeys batchKeys = new BatchKeys(tiRegion, store, keys.subList(start, end), sizeInBytes);
       batchKeyList.add(batchKeys);
     }
   }
@@ -410,7 +494,7 @@ public class TwoPhaseCommitter {
    * @param commitTs
    * @return
    */
-  public void commitSecondaryKeys(Iterator<ByteWrapper> keys, long commitTs)
+  public void commitSecondaryKeys(Iterator<ByteWrapper> keys, long commitTs, int commitBackOfferMS)
       throws TiBatchWriteException {
 
     Iterator<ByteString> byteStringKeys =
@@ -427,35 +511,53 @@ public class TwoPhaseCommitter {
           }
         };
 
-    doCommitSecondaryKeys(byteStringKeys, commitTs);
-  }
-
-  private void doCommitSecondaryKeys(Iterator<ByteString> keys, long commitTs)
-      throws TiBatchWriteException {
-    LOG.debug("start commit secondary key");
-
-    int totalSize = 0;
-    while (keys.hasNext()) {
-      ByteString[] keyBytes = new ByteString[WRITE_BUFFER_SIZE];
-      int size = 0;
-      for (int i = 0; i < WRITE_BUFFER_SIZE; i++) {
-        if (keys.hasNext()) {
-          keyBytes[size] = keys.next();
-          size++;
-        } else {
-          break;
-        }
-      }
-      totalSize = totalSize + size;
-
-      BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF);
-      doCommitSecondaryKeys(backOffer, keyBytes, size, commitTs);
-    }
-
-    LOG.debug("commit secondary key successfully, total size={}", totalSize);
+    doCommitSecondaryKeys(byteStringKeys, commitTs, commitBackOfferMS);
   }
 
   private void doCommitSecondaryKeys(
+      Iterator<ByteString> keys, long commitTs, int commitBackOfferMS)
+      throws TiBatchWriteException {
+    try {
+      int taskBufferSize = writeThreadPerTask * 2;
+      int totalSize = 0, cnt = 0;
+      ExecutorCompletionService<Void> completionService =
+          new ExecutorCompletionService<>(executorService);
+      while (keys.hasNext()) {
+        int size = 0;
+        ByteString[] keyBytes = new ByteString[writeBufferSize];
+        while (size < writeBufferSize && keys.hasNext()) {
+          keyBytes[size] = keys.next();
+          size++;
+        }
+        int curSize = size;
+        cnt++;
+        if (cnt > taskBufferSize) {
+          // consume one task if reaches task limit
+          completionService.take().get();
+        }
+        BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(commitBackOfferMS);
+        completionService.submit(
+            () -> {
+              doCommitSecondaryKeysWithRetry(backOffer, keyBytes, curSize, commitTs);
+              return null;
+            });
+
+        totalSize = totalSize + size;
+      }
+
+      for (int i = 0; i < Math.min(taskBufferSize, cnt); i++) {
+        completionService.take().get();
+      }
+
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new TiBatchWriteException("Current thread interrupted.", e);
+    } catch (ExecutionException e) {
+      throw new TiBatchWriteException("Execution exception met.", e);
+    }
+  }
+
+  private void doCommitSecondaryKeysWithRetry(
       BackOffer backOffer, ByteString[] keys, int size, long commitTs)
       throws TiBatchWriteException {
     if (keys == null || keys.length == 0 || size <= 0) {
@@ -464,23 +566,27 @@ public class TwoPhaseCommitter {
 
     // groups keys by region
     GroupKeyResult groupResult = this.groupKeysByRegion(keys, size);
-    List<BatchKeys> batchKeyList = new LinkedList<>();
+    List<BatchKeys> batchKeyList = new ArrayList<>();
     Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
 
-    for (Pair<TiRegion, Metapb.Store> pair : groupKeyMap.keySet()) {
-      TiRegion tiRegion = pair.first;
-      Metapb.Store store = pair.second;
-      this.appendBatchBySize(batchKeyList, tiRegion, store, groupKeyMap.get(pair), false, null);
+    for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry : groupKeyMap.entrySet()) {
+      TiRegion tiRegion = entry.getKey().first;
+      Metapb.Store store = entry.getKey().second;
+      this.appendBatchBySize(batchKeyList, tiRegion, store, entry.getValue(), false, null);
     }
 
-    // For prewrite, stop sending other requests after receiving first error.
     for (BatchKeys batchKeys : batchKeyList) {
-      doCommitSecondaryKeySingleBatch(backOffer, batchKeys, commitTs);
+      doCommitSecondaryKeySingleBatchWithRetry(backOffer, batchKeys, commitTs);
     }
   }
 
-  private void doCommitSecondaryKeySingleBatch(
+  private void doCommitSecondaryKeySingleBatchWithRetry(
       BackOffer backOffer, BatchKeys batchKeys, long commitTs) throws TiBatchWriteException {
+    LOG.info(
+        "start commit secondary key, row={}, size={}KB, regionId={}",
+        batchKeys.getKeys().size(),
+        batchKeys.getSizeInKB(),
+        batchKeys.getRegion().getId());
     List<ByteString> keysCommit = batchKeys.getKeys();
     ByteString[] keys = new ByteString[keysCommit.size()];
     keysCommit.toArray(keys);
@@ -488,13 +594,19 @@ public class TwoPhaseCommitter {
     ClientRPCResult commitResult =
         this.kvClient.commit(
             backOffer, keys, this.startTs, commitTs, batchKeys.getRegion(), batchKeys.getStore());
-    if (!commitResult.isSuccess()) {
+    if (retryCommitSecondaryKeys && commitResult.isRetry()) {
+      doCommitSecondaryKeysWithRetry(backOffer, keys, keysCommit.size(), commitTs);
+    } else if (!commitResult.isSuccess()) {
       String error =
           String.format("Txn commit secondary key error, regionId=%s", batchKeys.getRegion());
       LOG.warn(error);
       throw new TiBatchWriteException("commit secondary key error", commitResult.getException());
     }
-    LOG.debug("commit {} rows successfully", batchKeys.getKeys().size());
+    LOG.info(
+        "commit {} rows successfully, size={}KB, regionId={}",
+        batchKeys.getKeys().size(),
+        batchKeys.getSizeInKB(),
+        batchKeys.getRegion().getId());
   }
 
   private GroupKeyResult groupKeysByRegion(ByteString[] keys, int size)
@@ -506,7 +618,7 @@ public class TwoPhaseCommitter {
         ByteString key = keys[index];
         Pair<TiRegion, Metapb.Store> pair = this.regionManager.getRegionStorePairByKey(key);
         if (pair != null) {
-          groups.computeIfAbsent(pair, e -> new LinkedList<>()).add(key);
+          groups.computeIfAbsent(pair, e -> new ArrayList<>()).add(key);
         }
       }
     } catch (Exception e) {
