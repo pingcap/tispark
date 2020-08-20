@@ -84,6 +84,8 @@ case class ColumnarCoprocessorRDD(
 
   override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(sparkContext.union(internalRDDs))
 
+  override protected def supportsBatch: Boolean = !fetchHandle
+
   override protected def doExecute(): RDD[InternalRow] = {
     if (!fetchHandle) {
       WholeStageCodegenExec(this)(codegenStageId = 0).execute()
@@ -187,7 +189,7 @@ case class ColumnarRegionTaskExec(
     val batchSize = tiConf.getIndexScanBatchSize
     val downgradeThreshold = tiConf.getDowngradeThreshold
 
-    def computeWithRowIterator(row: InternalRow): Iterator[InternalRow] = {
+    iter.flatMap { row =>
       val handles = row.getArray(1).toLongArray()
       val handleIterator: util.Iterator[Long] = handles.iterator
       var taskCount = 0
@@ -376,20 +378,6 @@ case class ColumnarRegionTaskExec(
         }
       }.asInstanceOf[Iterator[InternalRow]]
     }
-
-    iter match {
-      case batch: Iterator[ColumnarBatch] =>
-        batch.asInstanceOf[Iterator[ColumnarBatch]].flatMap { it =>
-          it.rowIterator().flatMap { row =>
-            computeWithRowIterator(row)
-          }
-        }
-      case _: Iterator[InternalRow] =>
-        iter.flatMap { row =>
-          computeWithRowIterator(row)
-        }
-    }
-
   }
 
   override protected def doExecute(): RDD[InternalRow] = {

@@ -131,11 +131,6 @@ public class Snapshot {
     }
   }
 
-  public Iterator<TiChunk> indexHandleReadChunk(
-      TiDAGRequest dagRequest, List<RegionTask> tasks, int numOfRows) {
-    return getTiChunkIterator(dagRequest, tasks, getSession(), numOfRows);
-  }
-
   /**
    * Below is lower level API for env like Spark which already did key range split Perform handle
    * scan
@@ -144,7 +139,7 @@ public class Snapshot {
    * @param tasks RegionTask of the coprocessor request to send
    * @return Row iterator to iterate over resulting rows
    */
-  public Iterator<Long> indexHandleReadRow(TiDAGRequest dagRequest, List<RegionTask> tasks) {
+  public Iterator<Long> indexHandleRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
     return getHandleIterator(dagRequest, tasks, session);
   }
 

@@ -18,7 +18,6 @@ package com.pingcap.tikv.datatype;
 import static com.pingcap.tikv.types.MySQLType.TypeLonglong;
 
 import com.pingcap.tikv.types.AbstractDateTimeType;
-import com.pingcap.tikv.types.ArrayType;
 import com.pingcap.tikv.types.BytesType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DateType;
@@ -95,10 +94,6 @@ public class TypeMapping {
 
     if (type instanceof TimeType) {
       return DataTypes.LongType;
-    }
-
-    if (type instanceof ArrayType) {
-      return DataTypes.createArrayType(DataTypes.LongType);
     }
 
     throw new UnsupportedOperationException(
