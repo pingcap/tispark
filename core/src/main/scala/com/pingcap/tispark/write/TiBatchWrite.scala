@@ -204,24 +204,6 @@ class TiBatchWrite(
     val shuffledRDDCount = shuffledRDD.count()
     logger.info(s"write kv data count=$shuffledRDDCount")
 
-    if (options.enableRegionSplit && "v2".equals(options.regionSplitMethod)) {
-      // calculate region split points
-      val orderedSplitPoints = getRegionSplitPoints(shuffledRDD, shuffledRDDCount)
-
-      // split region
-      try {
-        tiSession.splitRegionAndScatter(
-          orderedSplitPoints.map(_.bytes).asJava,
-          options.splitRegionBackoffMS,
-          options.scatterWaitMS)
-      } catch {
-        case e: Throwable => logger.warn("split region and scatter error!", e)
-      }
-
-      // shuffle according to split points
-      shuffledRDD = shuffledRDD.partitionBy(new TiReginSplitPartitioner(orderedSplitPoints))
-    }
-
     // take one row as primary key
     val (primaryKey: SerializableKey, primaryRow: Array[Byte]) = {
       val takeOne = shuffledRDD.take(1)
@@ -238,6 +220,23 @@ class TiBatchWrite(
     // filter primary key
     val secondaryKeysRDD = shuffledRDD.filter { keyValue =>
       !keyValue._1.equals(primaryKey)
+    }
+
+    // split region
+    if (options.enableRegionSplit && "v2".equals(options.regionSplitMethod)) {
+      val orderedSplitPoints = getRegionSplitPoints(shuffledRDD, shuffledRDDCount)
+
+      try {
+        tiSession.splitRegionAndScatter(
+          orderedSplitPoints.map(_.bytes).asJava,
+          options.splitRegionBackoffMS,
+          options.scatterWaitMS)
+      } catch {
+        case e: Throwable => logger.warn("split region and scatter error!", e)
+      }
+
+      // shuffle according to split points
+      shuffledRDD = shuffledRDD.partitionBy(new TiReginSplitPartitioner(orderedSplitPoints))
     }
 
     // driver primary pre-write
