@@ -407,24 +407,50 @@ class TiBatchWrite(
     val sampleSize = (regionSplitPointNum + 1) * options.sampleSplitFrac
     logger.info(s"sampleSize=$sampleSize")
 
-    val sampleData =
-      rdd.map(_._1).sample(withReplacement = false, sampleSize.toDouble / count).collect()
+    val sampleData = rdd.sample(false, sampleSize.toDouble / count).collect()
     logger.info(s"sampleData size=${sampleData.length}")
 
-    val sortedSampleData = sampleData.sorted(new Ordering[SerializableKey] {
-      override def compare(x: SerializableKey, y: SerializableKey): Int = {
-        x.compareTo(y)
+    val finalRegionSplitPointNum = if (options.regionSplitUsingSize) {
+      val avgSize = getAverageSizeInBytes(sampleData)
+      logger.info(s"avgSize=$avgSize Bytes")
+      if (avgSize <= options.bytesPerRegion / options.regionSplitKeys) {
+        regionSplitPointNum
+      } else {
+        Math.min(
+          Math.floor((count.toDouble / options.bytesPerRegion) * avgSize).toInt,
+          sampleData.length / 10)
       }
-    })
+    } else {
+      regionSplitPointNum
+    }
+    logger.info(s"finalRegionSplitPointNum=$finalRegionSplitPointNum")
 
-    val orderedSplitPoints = new Array[SerializableKey](regionSplitPointNum)
-    val step = Math.floor(sortedSampleData.length.toDouble / (regionSplitPointNum + 1)).toInt
-    for (i <- 0 until regionSplitPointNum) {
+    val sortedSampleData = sampleData
+      .map(_._1)
+      .sorted(new Ordering[SerializableKey] {
+        override def compare(x: SerializableKey, y: SerializableKey): Int = {
+          x.compareTo(y)
+        }
+      })
+    val orderedSplitPoints = new Array[SerializableKey](finalRegionSplitPointNum)
+    val step = Math.floor(sortedSampleData.length.toDouble / (finalRegionSplitPointNum + 1)).toInt
+    for (i <- 0 until finalRegionSplitPointNum) {
       orderedSplitPoints(i) = sortedSampleData((i + 1) * step)
     }
 
     logger.info(s"orderedSplitPoints size=${orderedSplitPoints.length}")
     orderedSplitPoints.toList
+  }
+
+  private def getAverageSizeInBytes(keyValues: Array[(SerializableKey, Array[Byte])]): Int = {
+    var avg: Double = 0
+    var t: Int = 1
+    keyValues.foreach { keyValue =>
+      val keySize: Double = keyValue._1.bytes.length + keyValue._2.length
+      avg = avg + (keySize - avg) / t
+      t = t + 1
+    }
+    Math.ceil(avg).toInt
   }
 
   private def getUseTableLock: Boolean = {

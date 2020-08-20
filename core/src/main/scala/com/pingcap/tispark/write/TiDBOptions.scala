@@ -105,6 +105,10 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val minRegionSplitNum: Int = getOrDefault(TIDB_MIN_REGION_SPLIT_NUM, "4").toInt
   val regionSplitThreshold: Int = getOrDefault(TIDB_REGION_SPLIT_THRESHOLD, "100000").toInt
   val splitRegionBackoffMS: Int = getOrDefault(TIDB_SPLIT_REGION_BACKOFFER_MS, "120000").toInt
+  val regionSplitUsingSize: Boolean =
+    getOrDefault(TIDB_REGION_SPLIT_USING_SIZE, "false").toBoolean
+  //96M
+  val bytesPerRegion: Int = getOrDefault(TIDB_BYTES_PER_REGION, "100663296").toInt
 
   // ------------------------------------------------------------
   // Calculated parameters
@@ -219,6 +223,8 @@ object TiDBOptions {
   val TIDB_MIN_REGION_SPLIT_NUM: String = newOption("minRegionSplitNum")
   val TIDB_REGION_SPLIT_THRESHOLD: String = newOption("regionSplitThreshold")
   val TIDB_SPLIT_REGION_BACKOFFER_MS: String = newOption("splitRegionBackoffMS")
+  val TIDB_REGION_SPLIT_USING_SIZE: String = newOption("regionSplitUsingSize")
+  val TIDB_BYTES_PER_REGION: String = newOption("bytesPerRegion")
 
   // ------------------------------------------------------------
   // parameters only for test
