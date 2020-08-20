@@ -19,6 +19,7 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
+  // https://github.com/pingcap/tispark/issues/1570
   test("Fix covering index generates incorrect plan when first column is not included in index") {
     tidbStmt.execute("DROP TABLE IF EXISTS tt")
     tidbStmt.execute("create table tt(c varchar(12), dt datetime, key dt_index(dt))")
@@ -29,10 +30,8 @@ class IssueTestSuite extends BaseTiSparkTest {
                        | ('cc', '2007-09-03 00:00:00'),
                        | ('dd', '2007-09-04 00:00:00')""".stripMargin)
 
-    spark
-      .sql(
-        "select count(*) from tt where dt >= timestamp '2007-09-01 00:00:01' and dt <=  timestamp '2007-09-04 00:00:00'")
-      .show(false)
+    runTest(
+      "select count(*) from tt where dt >= timestamp '2007-09-01 00:00:01' and dt <=  timestamp '2007-09-04 00:00:00'")
   }
 
   test("fix partition table pruning when partdef contains bigint") {
