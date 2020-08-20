@@ -52,8 +52,7 @@ public enum MySQLType {
   TypeBlob(0xfc, 65535, 2, -1),
   TypeVarString(0xfd, 255, 1, -1),
   TypeString(0xfe, 255, 1, 1),
-  TypeGeometry(0xff, 1024, 1, -1),
-  TypeArray(100, 65536, 2, -1);
+  TypeGeometry(0xff, 1024, 1, -1);
 
   private static final Map<Integer, MySQLType> typeMap = new HashMap<>();
   private static final Map<Integer, Long> sizeMap = new HashMap<>();
