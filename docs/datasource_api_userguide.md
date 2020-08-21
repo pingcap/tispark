@@ -173,35 +173,23 @@ CREATE TABLE tpch_test.TARGET_TABLE_CUSTOMER (
 )
 ```
 
-3. Register a TiDB table `tpch_test.CUSTOMER` to the Spark Catalog:
+3. Register the TiDB table `tpch_test.TARGET_TABLE_CUSTOMER` to the Spark Catalog:
 
 ```
-CREATE TABLE CUSTOMER_SRC USING tidb OPTIONS (
+CREATE TABLE CUSTOMER_DST USING tidb OPTIONS (
   tidb.user 'root',
   tidb.password '',
   database 'tpch_test',
-  table 'CUSTOMER'
+  table 'TARGET_TABLE_CUSTOMER'
 )
 ```
 
-4. Select data from `tpch_test.CUSTOMER`:
-
-```
-SELECT * FROM CUSTOMER_SRC limit 10
-```
-
-5. Register another TiDB table `tpch_test.TARGET_TABLE_CUSTOMER` to the Spark Catalog:
-
-```
-CREATE TABLE CUSTOMER_DST USING tidb OPTIONS (database 'tpch_test', table 'TARGET_TABLE_CUSTOMER')
-```
-
-6. Write data to `tpch_test.TARGET_TABLE_CUSTOMER`:
+4. Write data to `tpch_test.TARGET_TABLE_CUSTOMER`:
 
 ```
 INSERT INTO CUSTOMER_DST VALUES(1000, 'Customer#000001000', 'AnJ5lxtLjioClr2khl9pb8NLxG2', 9, '19-407-425-2584', 2209.81, 'AUTOMOBILE', '. even, express theodolites upo')
 
-INSERT INTO CUSTOMER_DST SELECT * FROM CUSTOMER_SRC
+INSERT INTO CUSTOMER_DST SELECT * FROM tpch_test.CUSTOMER
 ```
 
 ## Writing to Multi-tables
