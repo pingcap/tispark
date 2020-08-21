@@ -54,9 +54,9 @@ trait LeafColumnarExecRDD extends LeafExecNode {
       val b = new mutable.StringBuilder()
       b.append(s"TiSpark $nodeName on partition table:\n")
       tiRDDs.zipWithIndex.map {
-        case (_, i) => b.append(s"partition p$i")
+        case (_, i) => b.append(s" partition p$i")
       }
-      b.append(s"with dag request: $dagRequest")
+      b.append(s" with dag request: $dagRequest")
       b.toString()
     } else {
       s"${dagRequest.getStoreType.name()} $nodeName{$dagRequest}" +

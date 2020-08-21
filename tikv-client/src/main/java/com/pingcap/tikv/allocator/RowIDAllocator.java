@@ -23,7 +23,9 @@ import com.pingcap.tikv.TwoPhaseCommitter;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.MetaCodec;
+import com.pingcap.tikv.exception.AllocateRowIDOverflowException;
 import com.pingcap.tikv.exception.TiBatchWriteException;
+import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.Arrays;
@@ -46,12 +48,18 @@ public final class RowIDAllocator {
   }
 
   public static RowIDAllocator create(
-      long dbId, long tableId, TiConfiguration conf, boolean unsigned, long step) {
+      long dbId, TiTableInfo table, TiConfiguration conf, boolean unsigned, long step) {
     RowIDAllocator allocator = new RowIDAllocator(dbId, step, conf);
     if (unsigned) {
-      allocator.initUnsigned(TiSession.getInstance(conf).createSnapshot(), tableId);
+      allocator.initUnsigned(
+          TiSession.getInstance(conf).createSnapshot(),
+          table.getId(),
+          table.getMaxShardRowIDBits());
     } else {
-      allocator.initSigned(TiSession.getInstance(conf).createSnapshot(), tableId);
+      allocator.initSigned(
+          TiSession.getInstance(conf).createSnapshot(),
+          table.getId(),
+          table.getMaxShardRowIDBits());
     }
 
     return allocator;
@@ -83,7 +91,7 @@ public final class RowIDAllocator {
 
     try {
       twoPhaseCommitter.close();
-    } catch (Throwable e) {
+    } catch (Throwable ignored) {
     }
   }
 
@@ -139,22 +147,35 @@ public final class RowIDAllocator {
     return Long.parseLong(new String(newVal));
   }
 
-  private boolean isDBExisted(long dbId, Snapshot snapshot) {
+  private static boolean isDBExisted(long dbId, Snapshot snapshot) {
     ByteString dbKey = MetaCodec.encodeDatabaseID(dbId);
     ByteString json = MetaCodec.hashGet(MetaCodec.KEY_DBs, dbKey, snapshot);
     return json != null && !json.isEmpty();
   }
 
-  private boolean isTableExisted(long dbId, long tableId, Snapshot snapshot) {
+  private static boolean isTableExisted(long dbId, long tableId, Snapshot snapshot) {
     ByteString dbKey = MetaCodec.encodeDatabaseID(dbId);
     ByteString tableKey = MetaCodec.tableKey(tableId);
     return !MetaCodec.hashGet(dbKey, tableKey, snapshot).isEmpty();
   }
+
+  public static boolean shardRowBitsOverflow(
+      long base, long step, long shardRowBits, boolean reservedSignBit) {
+    long signBit = reservedSignBit ? 1 : 0;
+    long mask = ((1L << shardRowBits) - 1) << (64 - shardRowBits - signBit);
+    if (reservedSignBit) {
+      return ((base + step) & mask) > 0;
+    } else {
+      return Long.compareUnsigned((base + step) & mask, 0) > 0;
+    }
+  }
+
   /**
    * read current row id from TiKV and write the calculated value back to TiKV. The calculation rule
    * is start(read from TiKV) + step.
    */
-  public long getAutoTableId(long dbId, long tableId, long step, Snapshot snapshot) {
+  public long udpateAllocateId(
+      long dbId, long tableId, long step, Snapshot snapshot, long shard, boolean hasSignedBit) {
     if (isDBExisted(dbId, snapshot) && isTableExisted(dbId, tableId, snapshot)) {
       return updateHash(
           MetaCodec.encodeDatabaseID(dbId),
@@ -164,7 +185,9 @@ public final class RowIDAllocator {
             if (oldVal != null && oldVal.length != 0) {
               base = Long.parseLong(new String(oldVal));
             }
-
+            if (shardRowBitsOverflow(base, step, shard, hasSignedBit)) {
+              throw new AllocateRowIDOverflowException(base, step, shard);
+            }
             base += step;
             return String.valueOf(base).getBytes();
           },
@@ -175,7 +198,7 @@ public final class RowIDAllocator {
   }
 
   /** read current row id from TiKV according to database id and table id. */
-  public long getAutoTableId(long dbId, long tableId, Snapshot snapshot) {
+  public static long getAllocateId(long dbId, long tableId, Snapshot snapshot) {
     if (isDBExisted(dbId, snapshot) && isTableExisted(dbId, tableId, snapshot)) {
       ByteString dbKey = MetaCodec.encodeDatabaseID(dbId);
       ByteString tblKey = MetaCodec.autoTableIDKey(tableId);
@@ -187,10 +210,9 @@ public final class RowIDAllocator {
     throw new IllegalArgumentException("table or database is not existed");
   }
 
-  private void initSigned(Snapshot snapshot, long tableId) {
-    long newEnd;
+  private void initSigned(Snapshot snapshot, long tableId, long shard) {
     // get new start from TiKV, and calculate new end and set it back to TiKV.
-    long newStart = getAutoTableId(dbId, tableId, snapshot);
+    long newStart = getAllocateId(dbId, tableId, snapshot);
     long tmpStep = Math.min(Long.MAX_VALUE - newStart, step);
     if (tmpStep != step) {
       throw new TiBatchWriteException("cannot allocate ids for this write");
@@ -198,15 +220,12 @@ public final class RowIDAllocator {
     if (newStart == Long.MAX_VALUE) {
       throw new TiBatchWriteException("cannot allocate more ids since it ");
     }
-    newEnd = getAutoTableId(dbId, tableId, tmpStep, snapshot);
-
-    end = newEnd;
+    end = udpateAllocateId(dbId, tableId, tmpStep, snapshot, shard, true);
   }
 
-  private void initUnsigned(Snapshot snapshot, long tableId) {
-    long newEnd;
+  private void initUnsigned(Snapshot snapshot, long tableId, long shard) {
     // get new start from TiKV, and calculate new end and set it back to TiKV.
-    long newStart = getAutoTableId(dbId, tableId, snapshot);
+    long newStart = getAllocateId(dbId, tableId, snapshot);
     // for unsigned long, -1L is max value.
     long tmpStep = UnsignedLongs.min(-1L - newStart, step);
     if (tmpStep != step) {
@@ -217,8 +236,6 @@ public final class RowIDAllocator {
       throw new TiBatchWriteException(
           "cannot allocate more ids since the start reaches " + "unsigned long's max value ");
     }
-    newEnd = getAutoTableId(dbId, tableId, tmpStep, snapshot);
-
-    end = newEnd;
+    end = udpateAllocateId(dbId, tableId, tmpStep, snapshot, shard, false);
   }
 }
