@@ -24,14 +24,18 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiTimestamp;
+import com.pingcap.tikv.operation.NoopHandler;
 import com.pingcap.tikv.operation.PDErrorHandler;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.util.BackOffFunction.BackOffFuncType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.FutureObserver;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
@@ -57,15 +61,23 @@ import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
 import org.tikv.kvproto.PDGrpc.PDStub;
+import org.tikv.kvproto.Pdpb.Error;
+import org.tikv.kvproto.Pdpb.ErrorType;
 import org.tikv.kvproto.Pdpb.GetAllStoresRequest;
 import org.tikv.kvproto.Pdpb.GetMembersRequest;
 import org.tikv.kvproto.Pdpb.GetMembersResponse;
+import org.tikv.kvproto.Pdpb.GetOperatorRequest;
+import org.tikv.kvproto.Pdpb.GetOperatorResponse;
 import org.tikv.kvproto.Pdpb.GetRegionByIDRequest;
 import org.tikv.kvproto.Pdpb.GetRegionRequest;
 import org.tikv.kvproto.Pdpb.GetRegionResponse;
 import org.tikv.kvproto.Pdpb.GetStoreRequest;
 import org.tikv.kvproto.Pdpb.GetStoreResponse;
+import org.tikv.kvproto.Pdpb.OperatorStatus;
 import org.tikv.kvproto.Pdpb.RequestHeader;
+import org.tikv.kvproto.Pdpb.ResponseHeader;
+import org.tikv.kvproto.Pdpb.ScatterRegionRequest;
+import org.tikv.kvproto.Pdpb.ScatterRegionResponse;
 import org.tikv.kvproto.Pdpb.Timestamp;
 import org.tikv.kvproto.Pdpb.TsoRequest;
 import org.tikv.kvproto.Pdpb.TsoResponse;
@@ -110,6 +122,87 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     TsoResponse resp = callWithRetry(backOffer, PDGrpc.getTsoMethod(), request, handler);
     Timestamp timestamp = resp.getTimestamp();
     return new TiTimestamp(timestamp.getPhysical(), timestamp.getLogical());
+  }
+
+  /**
+   * Sends request to pd to scatter region.
+   *
+   * @param region represents a region info
+   */
+  void scatterRegion(TiRegion region, BackOffer backOffer) {
+    Supplier<ScatterRegionRequest> request =
+        () ->
+            ScatterRegionRequest.newBuilder().setHeader(header).setRegionId(region.getId()).build();
+
+    PDErrorHandler<ScatterRegionResponse> handler =
+        new PDErrorHandler<>(
+            r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
+            this);
+
+    ScatterRegionResponse resp =
+        callWithRetry(backOffer, PDGrpc.getScatterRegionMethod(), request, handler);
+    // TODO: maybe we should retry here, need dig into pd's codebase.
+    if (resp.hasHeader() && resp.getHeader().hasError()) {
+      throw new TiClientInternalException(
+          String.format("failed to scatter region because %s", resp.getHeader().getError()));
+    }
+  }
+
+  /**
+   * wait scatter region until finish
+   *
+   * @param region
+   */
+  void waitScatterRegionFinish(TiRegion region, BackOffer backOffer) {
+    for (; ; ) {
+      GetOperatorResponse resp = getOperator(region.getId());
+      if (resp != null) {
+        if (isScatterRegionFinish(resp)) {
+          logger.info(String.format("wait scatter region on %d is finished", region.getId()));
+          return;
+        } else {
+          backOffer.doBackOff(
+              BackOffFuncType.BoRegionMiss, new GrpcException("waiting scatter region"));
+          logger.info(
+              String.format(
+                  "wait scatter region %d at key %s is %s",
+                  region.getId(),
+                  KeyUtils.formatBytes(resp.getDesc().toByteArray()),
+                  resp.getStatus().toString()));
+        }
+      }
+    }
+  }
+
+  private GetOperatorResponse getOperator(long regionId) {
+    Supplier<GetOperatorRequest> request =
+        () -> GetOperatorRequest.newBuilder().setHeader(header).setRegionId(regionId).build();
+    // get operator no need to handle error and no need back offer.
+    return callWithRetry(
+        ConcreteBackOffer.newCustomBackOff(0),
+        PDGrpc.getGetOperatorMethod(),
+        request,
+        new NoopHandler<>());
+  }
+
+  private boolean isScatterRegionFinish(GetOperatorResponse resp) {
+    // If the current operator of region is not `scatter-region`, we could assume
+    // that `scatter-operator` has finished or timeout.
+    boolean finished =
+        !resp.getDesc().equals(ByteString.copyFromUtf8("scatter-region"))
+            || resp.getStatus() != OperatorStatus.RUNNING;
+
+    if (resp.hasHeader()) {
+      ResponseHeader header = resp.getHeader();
+      if (header.hasError()) {
+        Error error = header.getError();
+        // heartbeat may not send to PD
+        if (error.getType() == ErrorType.REGION_NOT_FOUND) {
+          finished = true;
+        }
+      }
+    }
+    return finished;
   }
 
   @Override

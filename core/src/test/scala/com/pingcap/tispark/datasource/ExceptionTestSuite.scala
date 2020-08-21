@@ -110,7 +110,7 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
       }
       assert(
         caught.getMessage
-          .equals("Insert null value to not null column! 1 rows contain illegal null values!"))
+          .equals("Insert null value to not null column! rows contain illegal null values!"))
     }
   }
 

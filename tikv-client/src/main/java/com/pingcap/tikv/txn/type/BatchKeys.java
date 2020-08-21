@@ -25,12 +25,15 @@ public class BatchKeys {
   private final TiRegion region;
   private final Metapb.Store store;
   private List<ByteString> keys;
+  private final int sizeInBytes;
 
-  public BatchKeys(TiRegion region, Metapb.Store store, List<ByteString> keysInput) {
+  public BatchKeys(
+      TiRegion region, Metapb.Store store, List<ByteString> keysInput, int sizeInBytes) {
     this.region = region;
     this.store = store;
     this.keys = new ArrayList<>();
     this.keys.addAll(keysInput);
+    this.sizeInBytes = sizeInBytes;
   }
 
   public List<ByteString> getKeys() {
@@ -47,5 +50,13 @@ public class BatchKeys {
 
   public Metapb.Store getStore() {
     return store;
+  }
+
+  public int getSizeInBytes() {
+    return sizeInBytes;
+  }
+
+  public float getSizeInKB() {
+    return ((float) sizeInBytes) / 1024;
   }
 }

@@ -143,8 +143,7 @@ case class ColumnValueGenerator(
     val nullString = if (!nullable) " not null" else ""
     val defaultString = if (!noDefault) s" default $default" else ""
     val unsignedString = if (isUnsigned) " unsigned" else ""
-    val uniqueString = if (isUnique) " unique" else ""
-    s"$unsignedString$nullString$uniqueString$defaultString"
+    s"$unsignedString$nullString$defaultString"
   }
   private var generatedRandomValues: List[Any] = List.empty[Any]
   private var curPos = 0

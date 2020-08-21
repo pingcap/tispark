@@ -84,6 +84,8 @@ case class ColumnarCoprocessorRDD(
 
   override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(sparkContext.union(internalRDDs))
 
+  override protected def supportsBatch: Boolean = !fetchHandle
+
   override protected def doExecute(): RDD[InternalRow] = {
     if (!fetchHandle) {
       WholeStageCodegenExec(this)(codegenStageId = 0).execute()

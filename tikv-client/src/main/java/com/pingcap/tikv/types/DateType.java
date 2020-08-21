@@ -101,4 +101,14 @@ public class DateType extends AbstractDateTimeType {
     // return how many days from EPOCH
     return Math.floorDiv(date.toDate().getTime(), AbstractDateTimeType.MILLS_PER_DAY);
   }
+
+  @Override
+  protected Date decodeNotNullForBatchWrite(int flag, CodecDataInput cdi) {
+    LocalDate date = decodeDate(flag, cdi);
+
+    if (date == null) {
+      return null;
+    }
+    return new Date(date.toDate().getTime());
+  }
 }

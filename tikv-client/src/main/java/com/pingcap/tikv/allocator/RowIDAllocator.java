@@ -80,6 +80,11 @@ public final class RowIDAllocator {
         ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF),
         key.toByteArray(),
         session.getTimestamp().getVersion());
+
+    try {
+      twoPhaseCommitter.close();
+    } catch (Throwable e) {
+    }
   }
 
   private void updateMeta(ByteString key, byte[] oldVal, Snapshot snapshot) {

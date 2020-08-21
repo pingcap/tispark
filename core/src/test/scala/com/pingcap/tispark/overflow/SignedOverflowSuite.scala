@@ -15,6 +15,7 @@
 
 package com.pingcap.tispark.overflow
 
+import com.pingcap.tikv.exception.TiDBConvertException
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
@@ -364,8 +365,8 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     val row = Row("9223372036854775808")
     val schema = StructType(List(StructField("c1", StringType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[java.lang.NumberFormatException]
-    val tidbErrorMsg = "For input string: \"9223372036854775808\""
+    val tidbErrorClass = classOf[TiDBConvertException]
+    val tidbErrorMsg = null
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
@@ -400,8 +401,8 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     val row = Row("-9223372036854775809")
     val schema = StructType(List(StructField("c1", StringType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[java.lang.NumberFormatException]
-    val tidbErrorMsg = "For input string: \"-9223372036854775809\""
+    val tidbErrorClass = classOf[TiDBConvertException]
+    val tidbErrorMsg = null
 
     compareTiDBWriteFailureWithJDBC(
       List(row),

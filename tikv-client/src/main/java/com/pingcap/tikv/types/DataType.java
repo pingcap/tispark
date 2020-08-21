@@ -199,6 +199,10 @@ public abstract class DataType implements Serializable {
 
   protected abstract Object decodeNotNull(int flag, CodecDataInput cdi);
 
+  protected Object decodeNotNullForBatchWrite(int flag, CodecDataInput cdi) {
+    return decodeNotNull(flag, cdi);
+  }
+
   private int getFixLen() {
     switch (this.getType()) {
       case TypeFloat:
@@ -317,6 +321,14 @@ public abstract class DataType implements Serializable {
       return null;
     }
     return decodeNotNull(flag, cdi);
+  }
+
+  public Object decodeForBatchWrite(CodecDataInput cdi) {
+    int flag = cdi.readUnsignedByte();
+    if (isNullFlag(flag)) {
+      return null;
+    }
+    return decodeNotNullForBatchWrite(flag, cdi);
   }
 
   public boolean isNextNull(CodecDataInput cdi) {

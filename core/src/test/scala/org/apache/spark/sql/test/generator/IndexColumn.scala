@@ -101,11 +101,17 @@ case class IndexColumnInfo(column: String, length: Integer) {
   }
 }
 
-case class IndexInfo(indexName: String, indexColumns: List[IndexColumnInfo], isPrimary: Boolean) {
+case class IndexInfo(
+    indexName: String,
+    indexColumns: List[IndexColumnInfo],
+    isPrimary: Boolean,
+    isUnique: Boolean) {
   override def toString: String = {
     val indexColumnString = indexColumns.mkString("(", ",", ")")
     if (isPrimary) {
       s"PRIMARY KEY $indexColumnString"
+    } else if (isUnique) {
+      s"UNIQUE KEY $indexColumnString"
     } else {
       s"KEY `$indexName`$indexColumnString"
     }

@@ -20,6 +20,10 @@ public class ConvertOverflowException extends RuntimeException {
     super(msg);
   }
 
+  public ConvertOverflowException(String msg, Throwable e) {
+    super(msg, e);
+  }
+
   public static ConvertOverflowException newMaxLengthException(String value, long maxLength) {
     return new ConvertOverflowException("value " + value + " length > max length " + maxLength);
   }
