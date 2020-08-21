@@ -65,7 +65,11 @@ public class RegionManager {
   }
 
   public TiRegion getRegionByKey(ByteString key) {
-    return cache.getRegionByKey(key);
+    return getRegionByKey(key, ConcreteBackOffer.newGetBackOff());
+  }
+
+  public TiRegion getRegionByKey(ByteString key, BackOffer backOffer) {
+    return cache.getRegionByKey(key, backOffer);
   }
 
   @Deprecated
@@ -79,12 +83,21 @@ public class RegionManager {
     return cache.getRegionById(ConcreteBackOffer.newGetBackOff(), regionId);
   }
 
+  public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key, BackOffer backOffer) {
+    return getRegionStorePairByKey(key, TiStoreType.TiKV, backOffer);
+  }
+
   public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key) {
     return getRegionStorePairByKey(key, TiStoreType.TiKV);
   }
 
   public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key, TiStoreType storeType) {
-    TiRegion region = cache.getRegionByKey(key);
+    return getRegionStorePairByKey(key, storeType, ConcreteBackOffer.newGetBackOff());
+  }
+
+  public Pair<TiRegion, Store> getRegionStorePairByKey(
+      ByteString key, TiStoreType storeType, BackOffer backOffer) {
+    TiRegion region = cache.getRegionByKey(key, backOffer);
     if (region == null) {
       throw new TiClientInternalException("Region not exist for key:" + formatBytesUTF8(key));
     }
@@ -95,11 +108,11 @@ public class RegionManager {
     Store store = null;
     if (storeType == TiStoreType.TiKV) {
       Peer leader = region.getLeader();
-      store = cache.getStoreById(leader.getStoreId());
+      store = cache.getStoreById(leader.getStoreId(), backOffer);
     } else {
       outerLoop:
       for (Peer peer : region.getLearnerList()) {
-        Store s = getStoreById(peer.getStoreId());
+        Store s = getStoreById(peer.getStoreId(), backOffer);
         for (Metapb.StoreLabel label : s.getLabelsList()) {
           if (label.getKey().equals(storeType.getLabelKey())
               && label.getValue().equals(storeType.getLabelValue())) {
@@ -123,7 +136,11 @@ public class RegionManager {
   }
 
   public Store getStoreById(long id) {
-    return cache.getStoreById(id);
+    return getStoreById(id, ConcreteBackOffer.newGetBackOff());
+  }
+
+  public Store getStoreById(long id, BackOffer backOffer) {
+    return cache.getStoreById(id, backOffer);
   }
 
   public void onRegionStale(long regionId) {
@@ -181,7 +198,7 @@ public class RegionManager {
       this.pdClient = pdClient;
     }
 
-    public synchronized TiRegion getRegionByKey(ByteString key) {
+    public synchronized TiRegion getRegionByKey(ByteString key, BackOffer backOffer) {
       Long regionId;
       regionId = keyToRegionIdCache.get(Key.toRawKey(key));
       if (logger.isDebugEnabled()) {
@@ -191,7 +208,7 @@ public class RegionManager {
 
       if (regionId == null) {
         logger.debug("Key not find in keyToRegionIdCache:" + formatBytesUTF8(key));
-        TiRegion region = pdClient.getRegionByKey(ConcreteBackOffer.newGetBackOff(), key);
+        TiRegion region = pdClient.getRegionByKey(backOffer, key);
         if (!putRegion(region)) {
           throw new TiClientInternalException("Invalid Region: " + region.toString());
         }
@@ -264,11 +281,11 @@ public class RegionManager {
       storeCache.remove(storeId);
     }
 
-    public synchronized Store getStoreById(long id) {
+    public synchronized Store getStoreById(long id, BackOffer backOffer) {
       try {
         Store store = storeCache.get(id);
         if (store == null) {
-          store = pdClient.getStore(ConcreteBackOffer.newGetBackOff(), id);
+          store = pdClient.getStore(backOffer, id);
         }
         if (store.getState().equals(StoreState.Tombstone)) {
           return null;
