@@ -143,7 +143,7 @@ public class TwoPhaseCommitter {
 
   private void doPrewritePrimaryKeyWithRetry(BackOffer backOffer, ByteString key, ByteString value)
       throws TiBatchWriteException {
-    Pair<TiRegion, Metapb.Store> pair = this.regionManager.getRegionStorePairByKey(key);
+    Pair<TiRegion, Metapb.Store> pair = this.regionManager.getRegionStorePairByKey(key, backOffer);
     TiRegion tiRegion = pair.first;
     Metapb.Store store = pair.second;
 
@@ -198,7 +198,7 @@ public class TwoPhaseCommitter {
 
   private void doCommitPrimaryKeyWithRetry(BackOffer backOffer, ByteString key, long commitTs)
       throws TiBatchWriteException {
-    Pair<TiRegion, Metapb.Store> pair = this.regionManager.getRegionStorePairByKey(key);
+    Pair<TiRegion, Metapb.Store> pair = this.regionManager.getRegionStorePairByKey(key, backOffer);
     TiRegion tiRegion = pair.first;
     Metapb.Store store = pair.second;
     ByteString[] keys = new ByteString[] {key};
@@ -331,7 +331,7 @@ public class TwoPhaseCommitter {
     }
 
     // groups keys by region
-    GroupKeyResult groupResult = this.groupKeysByRegion(keys, size);
+    GroupKeyResult groupResult = this.groupKeysByRegion(keys, size, backOffer);
     List<BatchKeys> batchKeyList = new LinkedList<>();
     Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
 
@@ -344,7 +344,8 @@ public class TwoPhaseCommitter {
     // For prewrite, stop sending other requests after receiving first error.
     for (BatchKeys batchKeys : batchKeyList) {
       TiRegion oldRegion = batchKeys.getRegion();
-      TiRegion currentRegion = this.regionManager.getRegionByKey(oldRegion.getStartKey());
+      TiRegion currentRegion =
+          this.regionManager.getRegionByKey(oldRegion.getStartKey(), backOffer);
       if (oldRegion.equals(currentRegion)) {
         doPrewriteSecondaryKeySingleBatchWithRetry(backOffer, primaryKey, batchKeys, mutations);
       } else {
@@ -565,7 +566,7 @@ public class TwoPhaseCommitter {
     }
 
     // groups keys by region
-    GroupKeyResult groupResult = this.groupKeysByRegion(keys, size);
+    GroupKeyResult groupResult = this.groupKeysByRegion(keys, size, backOffer);
     List<BatchKeys> batchKeyList = new ArrayList<>();
     Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
 
@@ -609,14 +610,15 @@ public class TwoPhaseCommitter {
         batchKeys.getRegion().getId());
   }
 
-  private GroupKeyResult groupKeysByRegion(ByteString[] keys, int size)
+  private GroupKeyResult groupKeysByRegion(ByteString[] keys, int size, BackOffer backOffer)
       throws TiBatchWriteException {
     Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groups = new HashMap<>();
     int index = 0;
     try {
       for (; index < size; index++) {
         ByteString key = keys[index];
-        Pair<TiRegion, Metapb.Store> pair = this.regionManager.getRegionStorePairByKey(key);
+        Pair<TiRegion, Metapb.Store> pair =
+            this.regionManager.getRegionStorePairByKey(key, backOffer);
         if (pair != null) {
           groups.computeIfAbsent(pair, e -> new ArrayList<>()).add(key);
         }

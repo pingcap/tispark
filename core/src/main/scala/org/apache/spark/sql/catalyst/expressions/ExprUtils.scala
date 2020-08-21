@@ -80,8 +80,12 @@ object ExprUtils {
             val col = meta.getColumns.asScala.filter(col => col.isPrimaryKey).head
             ColumnRef.create(col.getName, meta)
           } else {
-            val firstCol = meta.getColumns.get(0)
-            ColumnRef.create(firstCol.getName, meta)
+            if (dagRequest.getFields.isEmpty) {
+              val firstCol = meta.getColumns.get(0)
+              ColumnRef.create(firstCol.getName, meta)
+            } else {
+              dagRequest.getFields.head
+            }
           }
 
           dagRequest.addRequiredColumn(firstColRef)
