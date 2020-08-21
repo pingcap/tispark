@@ -43,6 +43,7 @@ public class MetaUtils {
     private Long tid = null;
     private long version = 0L;
     private final long updateTimestamp = 0L;
+    private final long maxShardRowIDBits = 0L;
 
     public TableBuilder() {}
 
@@ -161,6 +162,7 @@ public class MetaUtils {
           null,
           version,
           updateTimestamp,
+          maxShardRowIDBits,
           null);
     }
   }
