@@ -1,6 +1,13 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.2] 2020-08-21
+### Fixes
+- Fix batch write bug and optimize batch write execution [#1562](https://github.com/pingcap/tispark/pull/1562)
+- Fix columnar batch execution [#1566](https://github.com/pingcap/tispark/pull/1566)
+- Fix covering index generates incorrect plan when first column is not included in index [#1573](https://github.com/pingcap/tispark/pull/1573)
+- Fix pytispark [#1557](https://github.com/pingcap/tispark/pull/1557)
+
 ## [TiSpark 2.3.1] 2020-07-08
 ### Fixes
 - Ignore get version sql exception [#1516](https://github.com/pingcap/tispark/pull/1516)
