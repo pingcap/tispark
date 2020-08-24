@@ -54,6 +54,7 @@ public class TiTableInfo implements Serializable {
   private final TiFlashReplicaInfo tiflashReplicaInfo;
   private final long version;
   private final long updateTimestamp;
+  private final long maxShardRowIDBits;
   private final TiSequenceInfo sequenceInfo;
 
   @JsonCreator
@@ -76,6 +77,7 @@ public class TiTableInfo implements Serializable {
       @JsonProperty("tiflash_replica") TiFlashReplicaInfo tiFlashReplicaInfo,
       @JsonProperty("version") long version,
       @JsonProperty("update_timestamp") long updateTimestamp,
+      @JsonProperty("max_shard_row_id_bits") long maxShardRowIDBits,
       @JsonProperty("sequence") TiSequenceInfo sequenceInfo) {
     this.id = id;
     this.name = name.getL();
@@ -110,6 +112,7 @@ public class TiTableInfo implements Serializable {
     this.tiflashReplicaInfo = tiFlashReplicaInfo;
     this.version = version;
     this.updateTimestamp = updateTimestamp;
+    this.maxShardRowIDBits = maxShardRowIDBits;
     this.sequenceInfo = sequenceInfo;
 
     TiColumnInfo primaryKey = null;
@@ -152,6 +155,10 @@ public class TiTableInfo implements Serializable {
     TiColumnInfo col = getAutoIncrementColInfo();
     if (col == null) return false;
     return col.getType().isUnsigned();
+  }
+
+  public long getMaxShardRowIDBits() {
+    return this.maxShardRowIDBits;
   }
 
   public long getId() {
@@ -295,6 +302,7 @@ public class TiTableInfo implements Serializable {
           getTiflashReplicaInfo(),
           version,
           updateTimestamp,
+          maxShardRowIDBits,
           null);
     } else {
       return this;
