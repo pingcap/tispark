@@ -17,7 +17,7 @@ package org.apache.spark.sql.insertion
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import com.pingcap.tispark.utils.TiUtil
-import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
+import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.Schema
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 
@@ -48,14 +48,30 @@ class BatchWritePkSuite
     }
 
   test("test pk cases") {
-    val schemas = genSchema(dataTypes, table)
+    for (pk <- dataTypes) {
+      val schemas = genSchema(List(pk, INT), table)
 
-    schemas.foreach { schema =>
-      dropAndCreateTbl(schema)
+      schemas.foreach { schema =>
+        dropAndCreateTbl(schema)
+      }
+
+      schemas.foreach { schema =>
+        insertAndSelect(schema)
+      }
     }
+  }
 
-    schemas.foreach { schema =>
-      insertAndSelect(schema)
+  test("unsigned pk cases") {
+    for (pk <- unsignedDataTypes) {
+      val schemas = genSchema(List(pk, INT), table)
+
+      schemas.foreach { schema =>
+        dropAndCreateTbl(schema)
+      }
+
+      schemas.foreach { schema =>
+        insertAndSelect(schema)
+      }
     }
   }
 
@@ -78,6 +94,6 @@ class BatchWritePkSuite
     // insert data to tikv
     tidbWriteWithTable(rows, TiUtil.getSchemaFromTable(tiTblInfo), tblName)
     // select data from tikv and compare with tidb
-    compareTiDBSelectWithJDBCWithTable_V2(tblName = tblName, "col_bigint")
+    compareTiDBSelectWithJDBCWithTable_V2(tblName = tblName, schema.pkColumnName)
   }
 }

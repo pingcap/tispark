@@ -23,6 +23,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
+import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.region.AbstractRegionStoreClient;
 import com.pingcap.tikv.region.RegionManager;
@@ -142,6 +143,16 @@ public class LockResolverClientV2 extends AbstractRegionStoreClient
       CleanupResponse resp = callWithRetry(bo, TikvGrpc.getKvCleanupMethod(), factory, handler);
 
       status = 0L;
+
+      if (resp == null) {
+        logger.error("getKvCleanupMethod failed without a cause");
+        regionManager.onRequestFail(region);
+        bo.doBackOff(
+            BoRegionMiss,
+            new TiClientInternalException("getKvCleanupMethod failed without a cause"));
+        continue;
+      }
+
       if (resp.hasRegionError()) {
         bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
         continue;
@@ -249,15 +260,24 @@ public class LockResolverClientV2 extends AbstractRegionStoreClient
       ResolveLockResponse resp =
           callWithRetry(bo, TikvGrpc.getKvResolveLockMethod(), factory, handler);
 
-      if (resp.hasError()) {
-        logger.error(
-            String.format("unexpected resolveLock err: %s, lock: %s", resp.getError(), lock));
-        throw new KeyException(resp.getError());
+      if (resp == null) {
+        logger.error("getKvResolveLockMethod failed without a cause");
+        regionManager.onRequestFail(region);
+        bo.doBackOff(
+            BoRegionMiss,
+            new TiClientInternalException("getKvResolveLockMethod failed without a cause"));
+        continue;
       }
 
       if (resp.hasRegionError()) {
         bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
         continue;
+      }
+
+      if (resp.hasError()) {
+        logger.error(
+            String.format("unexpected resolveLock err: %s, lock: %s", resp.getError(), lock));
+        throw new KeyException(resp.getError());
       }
 
       cleanRegion.add(region.getVerID());

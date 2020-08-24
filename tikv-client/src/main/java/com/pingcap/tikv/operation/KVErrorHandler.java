@@ -143,17 +143,19 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   }
 
   private void resolveLock(BackOffer backOffer, Lock lock) {
-    logger.warn("resolving lock");
+    if (lockResolverClient != null) {
+      logger.warn("resolving lock");
 
-    ResolveLockResult resolveLockResult =
-        lockResolverClient.resolveLocks(
-            backOffer, callerStartTS, Collections.singletonList(lock), forWrite);
-    resolveLockResultCallback.apply(resolveLockResult);
-    long msBeforeExpired = resolveLockResult.getMsBeforeTxnExpired();
-    if (msBeforeExpired > 0) {
-      // if not resolve all locks, we wait and retry
-      backOffer.doBackOffWithMaxSleep(
-          BoTxnLockFast, msBeforeExpired, new KeyException(lock.toString()));
+      ResolveLockResult resolveLockResult =
+          lockResolverClient.resolveLocks(
+              backOffer, callerStartTS, Collections.singletonList(lock), forWrite);
+      resolveLockResultCallback.apply(resolveLockResult);
+      long msBeforeExpired = resolveLockResult.getMsBeforeTxnExpired();
+      if (msBeforeExpired > 0) {
+        // if not resolve all locks, we wait and retry
+        backOffer.doBackOffWithMaxSleep(
+            BoTxnLockFast, msBeforeExpired, new KeyException(lock.toString()));
+      }
     }
   }
 

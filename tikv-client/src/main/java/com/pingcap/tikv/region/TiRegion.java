@@ -113,6 +113,10 @@ public class TiRegion implements Serializable {
     return meta.getEndKey();
   }
 
+  public Key getRowEndKey() {
+    return Key.toRawKey(getEndKey());
+  }
+
   public Kvrpcpb.Context getContext() {
     return getContext(java.util.Collections.emptySet());
   }

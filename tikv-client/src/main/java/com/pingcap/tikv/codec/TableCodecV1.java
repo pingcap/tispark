@@ -66,7 +66,7 @@ public class TableCodecV1 {
     Object[] res = new Object[colSize];
     while (!cdi.eof()) {
       long colID = (long) IntegerType.BIGINT.decode(cdi);
-      Object colValue = idToColumn.get(colID).getType().decode(cdi);
+      Object colValue = idToColumn.get(colID).getType().decodeForBatchWrite(cdi);
       decodedDataMap.put(colID, colValue);
     }
 

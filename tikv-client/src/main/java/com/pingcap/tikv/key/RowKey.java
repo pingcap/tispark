@@ -17,6 +17,8 @@ package com.pingcap.tikv.key;
 
 import static com.pingcap.tikv.codec.Codec.IntegerCodec.writeLong;
 
+import com.pingcap.tikv.codec.Codec.IntegerCodec;
+import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiExpressionException;
@@ -66,6 +68,16 @@ public class RowKey extends Key implements Serializable {
 
   public static RowKey createBeyondMax(long tableId) {
     return new RowKey(tableId);
+  }
+
+  public static RowKey decode(byte[] value) {
+    CodecDataInput cdi = new CodecDataInput(value);
+    cdi.readByte();
+    long tableId = IntegerCodec.readLong(cdi); // tableId
+    cdi.readByte();
+    cdi.readByte();
+    long handle = IntegerCodec.readLong(cdi); // handle
+    return toRowKey(tableId, handle);
   }
 
   private static byte[] encode(long tableId, long handle) {

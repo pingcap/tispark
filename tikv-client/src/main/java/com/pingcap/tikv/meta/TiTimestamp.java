@@ -46,6 +46,10 @@ public class TiTimestamp implements Serializable {
     return this.logical;
   }
 
+  public TiTimestamp getPrevious() {
+    return new TiTimestamp(physical, logical - 1);
+  }
+
   @Override
   public boolean equals(Object other) {
     if (other == this) {

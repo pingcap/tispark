@@ -15,50 +15,32 @@
 
 package com.pingcap.tispark.write
 
-import java.util
-
 import com.pingcap.tikv.key.Key
-import com.pingcap.tikv.region.TiRegion
 import org.apache.spark.Partitioner
 
-class TiRegionPartitioner(
-    regions: util.List[TiRegion],
-    writeConcurrency: Int,
-    taskNumPerRegion: Int)
-    extends Partitioner {
+class TiReginSplitPartitioner(orderedSplitPoints: List[SerializableKey]) extends Partitioner {
   override def getPartition(key: Any): Int = {
     val serializableKey = key.asInstanceOf[SerializableKey]
     val rawKey = Key.toRawKey(serializableKey.bytes)
-
-    if (writeConcurrency <= 0) {
-      val regionNumber = binarySearch(rawKey)
-      val offset = Math.abs(rawKey.hashCode()) % taskNumPerRegion
-      (regionNumber * taskNumPerRegion + offset) % numPartitions
-    } else {
-      binarySearch(rawKey) % numPartitions
-    }
+    binarySearch(rawKey) % numPartitions
   }
 
   def binarySearch(key: Key): Int = {
-    if (regions.get(0).contains(key)) {
-      return 0
-    }
     var l = 0
-    var r = regions.size()
+    var r = orderedSplitPoints.size
     while (l < r) {
       val mid = l + (r - l) / 2
-      val region = regions.get(mid)
-      if (region.getRowEndKey.compareTo(key) <= 0) {
+      val splitPointKey = orderedSplitPoints(mid).getRowKey
+      if (splitPointKey.compareTo(key) < 0) {
         l = mid + 1
       } else {
         r = mid
       }
     }
-    assert(regions.get(l).contains(key))
     l
   }
 
   override def numPartitions: Int = {
-    if (writeConcurrency <= 0) regions.size() * taskNumPerRegion else writeConcurrency
+    orderedSplitPoints.size + 1
   }
 }

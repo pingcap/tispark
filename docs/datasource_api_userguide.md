@@ -173,35 +173,23 @@ CREATE TABLE tpch_test.TARGET_TABLE_CUSTOMER (
 )
 ```
 
-3. Register a TiDB table `tpch_test.CUSTOMER` to the Spark Catalog:
+3. Register the TiDB table `tpch_test.TARGET_TABLE_CUSTOMER` to the Spark Catalog:
 
 ```
-CREATE TABLE CUSTOMER_SRC USING tidb OPTIONS (
+CREATE TABLE CUSTOMER_DST USING tidb OPTIONS (
   tidb.user 'root',
   tidb.password '',
   database 'tpch_test',
-  table 'CUSTOMER'
+  table 'TARGET_TABLE_CUSTOMER'
 )
 ```
 
-4. Select data from `tpch_test.CUSTOMER`:
-
-```
-SELECT * FROM CUSTOMER_SRC limit 10
-```
-
-5. Register another TiDB table `tpch_test.TARGET_TABLE_CUSTOMER` to the Spark Catalog:
-
-```
-CREATE TABLE CUSTOMER_DST USING tidb OPTIONS (database 'tpch_test', table 'TARGET_TABLE_CUSTOMER')
-```
-
-6. Write data to `tpch_test.TARGET_TABLE_CUSTOMER`:
+4. Write data to `tpch_test.TARGET_TABLE_CUSTOMER`:
 
 ```
 INSERT INTO CUSTOMER_DST VALUES(1000, 'Customer#000001000', 'AnJ5lxtLjioClr2khl9pb8NLxG2', 9, '19-407-425-2584', 2209.81, 'AUTOMOBILE', '. even, express theodolites upo')
 
-INSERT INTO CUSTOMER_DST SELECT * FROM CUSTOMER_SRC
+INSERT INTO CUSTOMER_DST SELECT * FROM tpch_test.CUSTOMER
 ```
 
 ## Writing to Multi-tables
@@ -237,36 +225,34 @@ TiBatchWrite.write(
 
 The following table shows the TiDB-specific options, which can be passed in through `TiDBOptions` or `SparkConf`.
 
-| Key                        | Short Name    | Required | Default                | Description                                                                                                                                    |
-| -------------------------- | ------------- | -------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| spark.tispark.pd.addresses | -             | true     | -                      | The addresses of PD clusters, split by comma                                                                                                   |
-| spark.tispark.tidb.addr    | tidb.addr     | true     | -                      | TiDB address, which currently only supports one instance                                                                                       |
-| spark.tispark.tidb.port    | tidb.port     | true     | -                      | TiDB Port                                                                                                                                      |
-| spark.tispark.tidb.user    | tidb.user     | true     | -                      | TiDB User                                                                                                                                      |
-| tidb.password              | tidb.password | true     | -                      | TiDB Password                                                                                                                                  |
-| database                   | -             | true     | -                      | TiDB Database                                                                                                                                  |
-| table                      | -             | true     | -                      | TiDB Table                                                                                                                                     |
-| replace                    | -             | false    | false                  | To define the behavior of append                                                                                                               |
-| useTableLock               | -             | false    | true (3.x) false (4.x) | Whether to lock the table during writing                                                                                                       |
-| skipCommitSecondaryKey     | -             | false    | false                  | Whether to skip the commit phase of secondary keys                                                                                             |
-| enableRegionSplit          | -             | false    | true                   | To split Region to avoid hot Region during insertion                                                                                           |
-| regionSplitNum             | -             | false    | 0                      | The Region split number defined by user during insertion                                                                                       |
-| writeConcurrency           | -             | false    | 0                      | The maximum number of threads that write data to TiKV. It is recommended that `writeConcurrency` is smaller than 8 * `number of TiKV instance` |
-| snapshotBatchGetSize       | -             | false    | 2048                   | The max size of keys for calling `Snapshot.batchGet`                                                                                           |
+| Key                | Required | Default                | Description                                              |
+| ------------------ | -------- | ---------------------- | -------------------------------------------------------- |
+| pd.addresses       | true     | -                      | The addresses of PD clusters, split by comma             |
+| tidb.addr          | true     | -                      | TiDB address, which currently only supports one instance |
+| tidb.port          | true     | -                      | TiDB Port                                                |
+| tidb.user          | true     | -                      | TiDB User                                                |
+| tidb.password      | true     | -                      | TiDB Password                                            |
+| database           | true     | -                      | TiDB Database                                            |
+| table              | true     | -                      | TiDB Table                                               |
+| replace            | false    | false                  | To define the behavior of append                         |
+| useTableLock       | false    | true (3.x) false (4.x) | Whether to lock the table during writing                 |
+| enableRegionSplit  | false    | true                   | To split Region to avoid hot Region during insertion     |
+| scatterWaitMS      | false    | 300000                 | Max time to wait scatter region                          |
+| writeThreadPerTask | false    | 1                      | Thread number each spark task use to write data to TiKV  |
 
-## TiDB Version and Configuration for Write
+## TiDB Version
 
 TiDB's version must be **3.0.14 or later**.
 
-Make sure that the following TiDB configuration item (`split-table`) is enabled.
+## TiDB Configuration
+
+Please use the following command to increase `GC life time` and make sure that the total time of writing does not exceed the `GC life time`.
 
 ```
-# When creating table, split a separated Region for it. It is recommended to
-# turn off this option if there is a large number of tables created.
-split-table: true
+update mysql.tidb set VARIABLE_VALUE="6h" where VARIABLE_NAME="tikv_gc_life_time";
 ```
 
-Make sure that the following TiDB configuration items (`table-lock`) are correctly set if you are using TiDB-3.x.
+Make sure that the following TiDB configuration items (`table-lock`) are correctly set if TiDB-3.x is used.
 
 ```
 # enable-table-lock is used to control the table lock feature. The default value is false, indicating that the table lock feature is disabled.

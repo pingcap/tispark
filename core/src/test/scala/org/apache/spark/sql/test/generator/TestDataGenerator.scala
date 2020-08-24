@@ -246,17 +246,18 @@ object TestDataGenerator {
     }
 
     // single column primary key defined in schema
-    val singleColumnPrimaryKey: Map[String, (List[(String, Integer)], Boolean)] = columnDesc.toMap
-      .filter { colDesc =>
-        colDesc._2._3.contains("primary key")
-      }
-      .map { x =>
-        (x._1, (List((x._1, null)), true))
-      }
+    val singleColumnPrimaryKey: Map[String, (List[(String, Integer)], Boolean, Boolean)] =
+      columnDesc.toMap
+        .filter { colDesc =>
+          colDesc._2._3.contains("primary key")
+        }
+        .map { x =>
+          (x._1, (List((x._1, null)), true, true))
+        }
 
     assert(singleColumnPrimaryKey.size <= 1, "More than one primary key present in schema")
 
-    val idxColumns: Map[String, (List[(String, Integer)], Boolean)] =
+    val idxColumns: Map[String, (List[(String, Integer)], Boolean, Boolean)] =
       singleColumnPrimaryKey ++
         indices.map { idx =>
           val columns = idx.indexColumns.map(x => (columnNames(x.getId), x.getLength))
@@ -269,7 +270,7 @@ object TestDataGenerator {
             generateIndexName(columns.map {
               _._1
             }),
-            (columns, idx.isPrimaryKey))
+            (columns, idx.isPrimaryKey, idx.isUnique))
         }.toMap
 
     Schema(database, table, columnNames, columnDesc.toMap, idxColumns)

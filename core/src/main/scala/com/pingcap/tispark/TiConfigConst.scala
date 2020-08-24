@@ -44,6 +44,7 @@ object TiConfigConst {
   val TIKV_REGION_SPLIT_SIZE_IN_MB: String = "spark.tispark.tikv.region_split_size_in_mb"
   val ISOLATION_READ_ENGINES: String = "spark.tispark.isolation_read_engines"
   val PARTITION_PER_SPLIT: String = "spark.tispark.partition_per_split"
+  val KV_CLIENT_CONCURRENCY: String = "spark.tispark.kv_client_concurrency"
 
   val SNAPSHOT_ISOLATION_LEVEL: String = "SI"
   val READ_COMMITTED_ISOLATION_LEVEL: String = "RC"
