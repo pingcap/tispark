@@ -314,7 +314,7 @@ class TiBatchWriteTable(
 
   private def getAutoTableIdStart(step: Long): Long = {
     RowIDAllocator
-      .create(tiDBInfo.getId, tiTableInfo.getId, tiConf, tiTableInfo.isAutoIncColUnsigned, step)
+      .create(tiDBInfo.getId, tiTableInfo, tiConf, tiTableInfo.isAutoIncColUnsigned, step)
       .getStart
   }
 
