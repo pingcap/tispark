@@ -17,6 +17,7 @@ package org.apache.spark.sql.catalyst.plans.logical
 
 import com.pingcap.tikv.meta.TiTimestamp
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
+import org.apache.spark.sql.execution.aggregate.HashAggregateExec
 
 class LogicalPlanTestSuite extends BasePlanTest {
   test("fix Residual Filter containing wrong info") {
@@ -114,6 +115,43 @@ class LogicalPlanTestSuite extends BasePlanTest {
       "select artical_id from t where artical_id = 'abcdefg' and last_modify_time > '2020-06-22 00:00:00'")
     checkIsIndexScan(df, "t")
     checkIndex(df, "artical_id")
+  }
+
+  test("test checkoverflow elimination") {
+    val df = spark.sql("select sum(tp_decimal * tp_decimal) from full_data_type_table")
+    val agg = toPlan(df).collectFirst {
+      case h: HashAggregateExec => h.aggregateExpressions
+    }
+    assert(agg.isDefined)
+    val str = agg.head.toString.toLowerCase()
+    // no CheckOverflow
+    assert(!str.contains("checkoverflow"))
+    // no promote_precision
+    assert(!str.contains("promote_precision"))
+  }
+
+  test("test aggregate pushdown when cast decimal exists in sum/avg") {
+    tidbStmt.execute("DROP TABLE IF EXISTS t")
+    tidbStmt.execute("create table t(c varchar(12), d decimal(20, 3))")
+    tidbStmt.execute(
+      "INSERT INTO t VALUES ('aa', 12.231), ('bb', 4.145), ('cc', 7.268), ('dd', 6.510)")
+
+    def checkPlan(query: String, mustContain: String): Unit = {
+      explainAndRunTest(query)
+      val df = spark.sql(query)
+      val req = extractDAGRequests(df)
+      val str = req.head.toString.toLowerCase()
+      assert(str.contains(mustContain))
+    }
+
+    explainAndRunTest("select sum(d) from t")
+    explainAndRunTest("select sum(d * d) from t")
+
+    val pushDownSum = "sum([d@decimal(20, 3) multiply [1.000 minus d@decimal(20, 3)]])"
+
+    checkPlan("select sum(d * (1 - d)) from t", pushDownSum)
+    checkPlan("select c, sum(d * (1 - d)) from t group by c", pushDownSum)
+    checkPlan("select c, avg(d * (1 - d)) from t group by c", pushDownSum)
   }
 
   override def afterAll(): Unit =

@@ -19,10 +19,13 @@ import org.apache.spark.sql.catalyst.expressions.NamedExpression.newExprId
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{
   Alias,
+  Attribute,
   Cast,
+  CheckOverflow,
   Divide,
   Expression,
-  NamedExpression
+  NamedExpression,
+  PromotePrecision
 }
 import org.apache.spark.sql.catalyst.planning.PhysicalAggregation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -41,49 +44,40 @@ object TiAggregationImpl {
             child) =>
         // Rewrites all `Average`s into the form of `Divide(Sum / Count)` so that we can push the
         // converted `Sum`s and `Count`s down to TiKV.
-        val averages =
-          aggregateExpressions
-            .map(_.asInstanceOf[AggregateExpression])
-            .partition {
-              case AggregateExpression(_: Average, _, _, _) => true
-              case _ => false
-            }
-            ._1
+        val averages = aggregateExpressions.partition {
+          case AggregateExpression(_: Average, _, _, _) => true
+          case _ => false
+        }._1
 
-        val sums = aggregateExpressions
-          .map(_.asInstanceOf[AggregateExpression])
-          .partition {
-            case AggregateExpression(_: Sum, _, _, _) => true
-            case _ => false
-          }
-          ._1
+        val sums = aggregateExpressions.partition {
+          case AggregateExpression(_: Sum, _, _, _) => true
+          case _ => false
+        }._1
 
-        val sumAndAvgEliminated =
-          aggregateExpressions
-            .map(_.asInstanceOf[AggregateExpression])
-            .partition {
-              case AggregateExpression(_: Sum, _, _, _) => false
-              case AggregateExpression(_: Average, _, _, _) => false
-              case _ => true
-            }
-            ._1
+        val sumAndAvgEliminated = aggregateExpressions.partition {
+          case AggregateExpression(_: Sum, _, _, _) => false
+          case AggregateExpression(_: Average, _, _, _) => false
+          case _ => true
+        }._1
 
         val sumsRewriteMap = sums.map {
           case s @ AggregateExpression(Sum(ref), _, _, _) =>
             // need cast long type to decimal type
+            val rewriteRef = ref.transformUp(rewrite)
             val sum =
-              if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
+              if (rewriteRef.dataType.eq(LongType)) PromotedSum(rewriteRef) else Sum(rewriteRef)
             s.resultAttribute -> s.copy(aggregateFunction = sum, resultId = newExprId)
         }.toMap
 
         // An auxiliary map that maps result attribute IDs of all detected `Average`s to corresponding
         // converted `Sum`s and `Count`s.
-        val avgRewriteMap = averages.map {
+        val avgRewriteMap: Map[Attribute, Seq[AggregateExpression]] = averages.map {
           case a @ AggregateExpression(Average(ref), _, _, _) =>
             // We need to do a type promotion on Sum(Long) to avoid LongType overflow in Average rewrite
             // scenarios to stay consistent with original spark's Average behaviour
+            val rewriteRef = ref.transformUp(rewrite)
             val sum =
-              if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
+              if (rewriteRef.dataType.eq(LongType)) PromotedSum(rewriteRef) else Sum(rewriteRef)
             a.resultAttribute -> Seq(
               a.copy(aggregateFunction = sum, resultId = newExprId),
               a.copy(aggregateFunction = Count(ref), resultId = newExprId))
@@ -118,7 +112,9 @@ object TiAggregationImpl {
           val extraSumsAndCounts = avgRewriteMap.values
             .reduceOption { _ ++ _ } getOrElse Nil
           val rewriteSums = sumsRewriteMap.values
-          (sumAndAvgEliminated ++ extraSumsAndCounts ++ rewriteSums).distinct
+          (sumAndAvgEliminated ++ extraSumsAndCounts ++ rewriteSums)
+            .map(_.asInstanceOf[AggregateExpression])
+            .distinct
         }
 
         Some(
@@ -129,4 +125,9 @@ object TiAggregationImpl {
 
       case _ => Option.empty[ReturnType]
     }
+
+  def rewrite: PartialFunction[Expression, Expression] = {
+    case c: CheckOverflow => c.child
+    case p: PromotePrecision => p.child
+  }
 }

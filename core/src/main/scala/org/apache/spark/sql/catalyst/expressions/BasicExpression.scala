@@ -84,6 +84,12 @@ object BasicExpression {
         Some(
           Constant.create(convertLiteral(value, dataType), TiConverter.fromSparkType(dataType)))
 
+      case Cast(BasicExpression(value), dataType, _)
+          if dataType.isInstanceOf[DecimalType] && value.getDataType
+            .isInstanceOf[com.pingcap.tikv.types.DecimalType] =>
+        // let tikv decide decimal precision promotion
+        Some(value)
+
       case Add(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(ArithmeticBinaryExpression.plus(lhs, rhs))
 
