@@ -230,6 +230,7 @@ class TiBatchWrite(
         tiSession.splitRegionAndScatter(
           orderedSplitPoints.map(_.bytes).asJava,
           options.splitRegionBackoffMS,
+          options.scatterRegionBackoffMS,
           options.scatterWaitMS)
       } catch {
         case e: Throwable => logger.warn("split region and scatter error!", e)
