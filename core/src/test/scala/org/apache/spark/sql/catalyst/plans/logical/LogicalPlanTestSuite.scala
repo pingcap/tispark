@@ -151,6 +151,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
 
     checkPlan("select sum(d * (1 - d)) from t", pushDownSum)
     checkPlan("select c, sum(d * (1 - d)) from t group by c", pushDownSum)
+    checkPlan("select c, sum(d * (1 - d) * (1 + d)) from t group by c", pushDownSum)
     checkPlan("select c, avg(d * (1 - d)) from t group by c", pushDownSum)
   }
 
