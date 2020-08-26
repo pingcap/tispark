@@ -16,7 +16,7 @@
 package com.pingcap.tispark.write
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer}
+import com.pingcap.tikv.util.ConcreteBackOffer
 import com.pingcap.tikv.{TTLManager, TiDBJDBCClient, _}
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.utils.TiUtil
@@ -252,7 +252,7 @@ class TiBatchWrite(
         options.writeThreadPerTask,
         options.retryCommitSecondaryKey)
     val prewritePrimaryBackoff =
-      ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
+      ConcreteBackOffer.newCustomBackOff(options.prewriteBackOfferMS)
     logger.info("start to prewritePrimaryKey")
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
     logger.info("prewritePrimaryKey success")
