@@ -16,9 +16,23 @@
 package org.apache.spark.sql
 
 import com.pingcap.tispark.TiConfigConst
+import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
+
+  test("large column number + double read") {
+    tidbStmt.execute(
+      resourceToString(
+        s"issue/LargeColumn.sql",
+        classLoader = Thread.currentThread().getContextClassLoader))
+    refreshConnections()
+
+    sql("explain select * from large_column where a = 1").show(false)
+    sql("select * from large_column where a = 1").show(false)
+    judge("select * from large_column where a = 1")
+  }
+
   // https://github.com/pingcap/tispark/issues/1570
   test("Fix covering index generates incorrect plan when first column is not included in index") {
     tidbStmt.execute("DROP TABLE IF EXISTS tt")
