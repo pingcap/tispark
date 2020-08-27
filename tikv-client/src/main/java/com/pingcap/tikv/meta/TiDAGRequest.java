@@ -114,7 +114,7 @@ public class TiDAGRequest implements Serializable {
   private TiStoreType storeType = TiStoreType.TiKV;
   private TiIndexInfo indexInfo;
   private List<Long> prunedPhysicalIds = new ArrayList<>();
-  private Map<Long, String> prunedPartNames = new HashMap<>();
+  private final Map<Long, String> prunedPartNames = new HashMap<>();
   private long physicalId;
   private int pushDownLimits;
   private int limit;
@@ -157,13 +157,15 @@ public class TiDAGRequest implements Serializable {
 
   public void setPrunedParts(List<TiPartitionDef> prunedParts) {
     this.prunedParts = prunedParts;
-    List<Long> ids = new ArrayList<>();
-    prunedPartNames.clear();
-    for (TiPartitionDef pDef : prunedParts) {
-      ids.add(pDef.getId());
-      prunedPartNames.put(pDef.getId(), pDef.getName());
+    if (prunedParts != null) {
+      List<Long> ids = new ArrayList<>();
+      prunedPartNames.clear();
+      for (TiPartitionDef pDef : prunedParts) {
+        ids.add(pDef.getId());
+        prunedPartNames.put(pDef.getId(), pDef.getName());
+      }
+      this.prunedPhysicalIds = ids;
     }
-    this.prunedPhysicalIds = ids;
   }
 
   public List<Long> getPrunedPhysicalIds() {
