@@ -107,7 +107,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val splitRegionBackoffMS: Int = getOrDefault(TIDB_SPLIT_REGION_BACKOFFER_MS, "120000").toInt
   val scatterRegionBackoffMS: Int = getOrDefault(TIDB_SCATTER_REGION_BACKOFFER_MS, "30000").toInt
   val regionSplitUsingSize: Boolean =
-    getOrDefault(TIDB_REGION_SPLIT_USING_SIZE, "false").toBoolean
+    getOrDefault(TIDB_REGION_SPLIT_USING_SIZE, "true").toBoolean
   //96M
   val bytesPerRegion: Int = getOrDefault(TIDB_BYTES_PER_REGION, "100663296").toInt
 
