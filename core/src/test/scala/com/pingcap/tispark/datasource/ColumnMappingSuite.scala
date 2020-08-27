@@ -36,7 +36,8 @@ class ColumnMappingSuite
       super.afterAll()
     }
 
-  test("Test different column order with full schema") {
+  // currently user provided auto increment value is not supported!
+  ignore("Test different column order with full schema") {
     if (!supportBatchWrite) {
       cancel
     }

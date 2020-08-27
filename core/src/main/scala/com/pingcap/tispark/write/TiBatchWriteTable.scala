@@ -126,7 +126,9 @@ class TiBatchWriteTable(
       // when auto increment column is provided but the corresponding column in df contains null,
       // we need throw exception
       if (isProvidedID) {
-        if (!df.columns.contains(autoIncrementColName)) {
+        throw new TiBatchWriteException(
+          "currently user provided auto increment value is not supported!")
+        /*if (!df.columns.contains(autoIncrementColName)) {
           throw new TiBatchWriteException(
             "Column size is matched but cannot find auto increment column by name")
         }
@@ -140,7 +142,7 @@ class TiBatchWriteTable(
           throw new TiBatchWriteException(
             "cannot allocate id on the condition of having null value and valid value on auto increment column")
         }
-        df.rdd
+        df.rdd*/
       } else {
         // if auto increment column is not provided, we need allocate id for it.
         // adding an auto increment column to df
