@@ -502,6 +502,8 @@ public class TiKVScanAnalyzer {
     }
 
     public static class Builder {
+      private final String tableName;
+      private final Logger logger = LoggerFactory.getLogger(getClass().getName());
       private Map<Long, List<KeyRange>> keyRanges;
       private Set<Expression> filters;
       private double cost;
@@ -510,8 +512,6 @@ public class TiKVScanAnalyzer {
       private double estimatedRowCount = -1;
       private List<TiPartitionDef> prunedParts;
       private TiStoreType storeType = TiStoreType.TiKV;
-      private final String tableName;
-      private final Logger logger = LoggerFactory.getLogger(getClass().getName());
 
       private Builder(String tableName) {
         this.tableName = tableName;

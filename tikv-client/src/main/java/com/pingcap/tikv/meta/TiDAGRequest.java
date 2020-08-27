@@ -113,6 +113,9 @@ public class TiDAGRequest implements Serializable {
   private List<TiPartitionDef> prunedParts;
   private TiStoreType storeType = TiStoreType.TiKV;
   private TiIndexInfo indexInfo;
+  private List<Long> prunedPhysicalIds = new ArrayList<>();
+  private Map<Long, String> prunedPartNames = new HashMap<>();
+  private long physicalId;
   private int pushDownLimits;
   private int limit;
   private int timeZoneOffset;
@@ -148,8 +151,27 @@ public class TiDAGRequest implements Serializable {
     return prunedParts;
   }
 
+  private String getPrunedPartName(long id) {
+    return prunedPartNames.getOrDefault(id, "unknown");
+  }
+
   public void setPrunedParts(List<TiPartitionDef> prunedParts) {
     this.prunedParts = prunedParts;
+    List<Long> ids = new ArrayList<>();
+    prunedPartNames.clear();
+    for (TiPartitionDef pDef : prunedParts) {
+      ids.add(pDef.getId());
+      prunedPartNames.put(pDef.getId(), pDef.getName());
+    }
+    this.prunedPhysicalIds = ids;
+  }
+
+  public List<Long> getPrunedPhysicalIds() {
+    if (!this.tableInfo.isPartitionEnabled()) {
+      return prunedPhysicalIds = ImmutableList.of(this.tableInfo.getId());
+    } else {
+      return prunedPhysicalIds;
+    }
   }
 
   public TiStoreType getStoreType() {
@@ -212,7 +234,7 @@ public class TiDAGRequest implements Serializable {
    * @return final DAGRequest built
    */
   private DAGRequest.Builder buildScan(boolean buildIndexScan, List<Integer> outputOffsets) {
-    long id = tableInfo.getId();
+    long id = getPhysicalId();
     checkNotNull(startTs, "startTs is null");
     checkArgument(startTs.getVersion() != 0, "timestamp is 0");
     clearPushDownInfo();
@@ -534,19 +556,17 @@ public class TiDAGRequest implements Serializable {
 
   public TiDAGRequest setTableInfo(TiTableInfo tableInfo) {
     this.tableInfo = requireNonNull(tableInfo, "tableInfo is null");
+    setPhysicalId(tableInfo.getId());
     return this;
   }
 
-  public List<Long> getIds() {
-    if (!this.tableInfo.isPartitionEnabled()) {
-      return ImmutableList.of(this.tableInfo.getId());
-    }
+  public long getPhysicalId() {
+    return this.physicalId;
+  }
 
-    List<Long> ids = new ArrayList<>();
-    for (TiPartitionDef pDef : this.getPrunedParts()) {
-      ids.add(pDef.getId());
-    }
-    return ids;
+  public TiDAGRequest setPhysicalId(long id) {
+    this.physicalId = id;
+    return this;
   }
 
   public TiIndexInfo getIndexInfo() {
@@ -715,6 +735,10 @@ public class TiDAGRequest implements Serializable {
   public TiDAGRequest addRanges(Map<Long, List<Coprocessor.KeyRange>> ranges) {
     idToRanges.putAll(requireNonNull(ranges, "KeyRange is null"));
     return this;
+  }
+
+  private void resetRanges() {
+    idToRanges.clear();
   }
 
   public void resetFilters(List<Expression> filters) {
@@ -941,15 +965,14 @@ public class TiDAGRequest implements Serializable {
 
     // Key ranges might be also useful
     if (!getRangesMaps().isEmpty()) {
-      sb.append(", KeyRange: ");
+      sb.append(", KeyRange: [");
       if (tableInfo.isPartitionEnabled()) {
         getRangesMaps()
-            .values()
             .forEach(
-                vList -> {
-                  for (int i = 9; i < vList.size(); i++) {
-                    sb.append(String.format("partition p%d", i));
-                    sb.append(KeyUtils.formatBytesUTF8(vList.get(i)));
+                (key, value) -> {
+                  for (Coprocessor.KeyRange v : value) {
+                    sb.append(" partition: ").append(getPrunedPartName(key));
+                    sb.append(KeyUtils.formatBytesUTF8(v));
                   }
                 });
       } else {
@@ -962,6 +985,7 @@ public class TiDAGRequest implements Serializable {
                   }
                 });
       }
+      sb.append("]");
     }
 
     if (!getPushDownFilters().isEmpty()) {
@@ -1000,6 +1024,17 @@ public class TiDAGRequest implements Serializable {
     }
   }
 
+  public TiDAGRequest copyReqWithPhysicalId(long id) {
+    TiDAGRequest req = this.copy();
+    req.setPhysicalId(id);
+    List<Coprocessor.KeyRange> currentIdRange = req.getRangesByPhysicalId(id);
+    req.resetRanges();
+    Map<Long, List<Coprocessor.KeyRange>> rangeMap = new HashMap<>();
+    rangeMap.put(id, currentIdRange);
+    req.addRanges(rangeMap);
+    return req;
+  }
+
   public enum TruncateMode {
     IgnoreTruncation(0x1),
     TruncationAsWarning(0x2);
@@ -1033,6 +1068,7 @@ public class TiDAGRequest implements Serializable {
     private final List<ByItem> orderBys = new ArrayList<>();
     private final Map<Long, List<Coprocessor.KeyRange>> ranges = new HashMap<>();
     private TiTableInfo tableInfo;
+    private long physicalId;
     private int limit;
     private TiTimestamp startTs;
 
@@ -1071,6 +1107,12 @@ public class TiDAGRequest implements Serializable {
 
     public Builder setTableInfo(TiTableInfo tableInfo) {
       this.tableInfo = tableInfo;
+      setPhysicalId(tableInfo.getId());
+      return this;
+    }
+
+    public Builder setPhysicalId(long id) {
+      this.physicalId = id;
       return this;
     }
 
@@ -1097,6 +1139,7 @@ public class TiDAGRequest implements Serializable {
     public TiDAGRequest build(PushDownType pushDownType) {
       TiDAGRequest req = new TiDAGRequest(pushDownType);
       req.setTableInfo(tableInfo);
+      req.setPhysicalId(physicalId);
       req.addRanges(ranges);
       req.addFilters(filters);
       // this request will push down all filters

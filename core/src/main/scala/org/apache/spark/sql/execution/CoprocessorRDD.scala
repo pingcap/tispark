@@ -52,12 +52,13 @@ trait LeafColumnarExecRDD extends LeafExecNode {
   override def verboseString: String =
     if (tiRDDs.lengthCompare(1) > 0) {
       val b = new mutable.StringBuilder()
-      b.append(s"TiSpark $nodeName on partition table:\n")
-      tiRDDs.zipWithIndex.map {
-        case (_, i) => b.append(s" partition p$i")
+      b.append("partition table[\n")
+      tiRDDs.zipWithIndex.foreach { z =>
+        val zr = z._1.dagRequest
+        b.append(s" ${zr.getStoreType.name()} $nodeName{$zr} ${TiUtil.getReqEstCountStr(zr)}\n")
       }
-      b.append(s" with dag request: $dagRequest")
-      b.toString()
+      b.append("]")
+      b.toString
     } else {
       s"${dagRequest.getStoreType.name()} $nodeName{$dagRequest}" +
         s"${TiUtil.getReqEstCountStr(dagRequest)}"
@@ -205,7 +206,7 @@ case class ColumnarRegionTaskExec(
         indexTasks.addAll(
           RangeSplitter
             .newSplitter(session.getRegionManager)
-            .splitAndSortHandlesByRegion(dagRequest.getIds, handles))
+            .splitAndSortHandlesByRegion(dagRequest.getPrunedPhysicalIds, handles))
         indexTasks
       }
 
