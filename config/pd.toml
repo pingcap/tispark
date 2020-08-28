@@ -50,7 +50,7 @@ level = "info"
 # prometheus client push interval, set "0s" to disable prometheus.
 interval = "0s"
 # prometheus pushgateway address, leaves it empty will disable prometheus.
-address = "pushgateway:9091"
+# address = "pushgateway:9091"
 
 [schedule]
 max-snapshot-count = 3
