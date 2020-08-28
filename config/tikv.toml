@@ -76,7 +76,7 @@
 # the Prometheus client push interval. Setting the value to 0s stops Prometheus client from pushing.
 interval = "0s"
 # the Prometheus pushgateway address. Leaving it empty stops Prometheus client from pushing.
-address = "pushgateway:9091"
+# address = "pushgateway:9091"
 # the Prometheus client push job name. Note: A node id will automatically append, e.g., "tikv_1".
 # job = "tikv"
 

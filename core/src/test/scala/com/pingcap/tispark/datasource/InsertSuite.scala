@@ -164,7 +164,8 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
     testTiDBSelect(data)
   }
 
-  test("Test insert to table with primary key (auto increase case 1)") {
+  // currently user provided auto increment value is not supported!
+  ignore("Test insert to table with primary key (auto increase case 1)") {
     if (!supportBatchWrite) {
       cancel
     }
