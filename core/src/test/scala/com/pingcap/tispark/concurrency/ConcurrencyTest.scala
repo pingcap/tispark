@@ -38,7 +38,7 @@ class ConcurrencyTest extends BaseDataSourceTest("test_concurrency_write_read") 
     List(StructField("i", IntegerType), StructField("s", StringType)))
 
   protected val sleepBeforeQuery = 10000
-  protected val sleepAfterPrewriteSecondaryKey = 240000
+  protected val sleepAfterGetCommitTS = 480000
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -68,10 +68,16 @@ class ConcurrencyTest extends BaseDataSourceTest("test_concurrency_write_read") 
         Thread.sleep(sleepBeforeQuery)
         logger.info(s"readThread$i: start query via jdbc")
         try {
-          val result = queryTiDBViaJDBC(
-            s"select s from $dbtable where i = $i",
-            retryOnFailure = 1,
-            tidbConn.createStatement())
+          val sql = s"select s from $dbtable where i = $i"
+
+          val plan =
+            queryTiDBViaJDBC(s"explain $sql", retryOnFailure = 1, tidbConn.createStatement())
+          logger.info(s"readThread$i:" + sql)
+          plan.foreach { row =>
+            logger.info(s"readThread$i:" + row.mkString("\t"))
+          }
+
+          val result = queryTiDBViaJDBC(sql, retryOnFailure = 1, tidbConn.createStatement())
           logger.info(s"readThread$i:" + result)
           res.hasError = false
           if (result.isEmpty) {
@@ -96,7 +102,15 @@ class ConcurrencyTest extends BaseDataSourceTest("test_concurrency_write_read") 
         Thread.sleep(sleepBeforeQuery)
         logger.info(s"readThread$i: start query via tispark")
         try {
-          val result = queryViaTiSpark(s"select s from $dbtableWithPrefix where i = $i")
+          val sql = s"select s from $dbtableWithPrefix where i = $i"
+
+          val plan = queryViaTiSpark(s"explain $sql")
+          logger.info(s"readThread$i:" + sql)
+          plan.foreach { row =>
+            logger.info(s"readThread$i:" + row.mkString("\t"))
+          }
+
+          val result = queryViaTiSpark(sql)
           logger.info(s"readThread$i:" + result)
           res.hasError = false
           if (result.isEmpty) {
@@ -127,7 +141,7 @@ class ConcurrencyTest extends BaseDataSourceTest("test_concurrency_write_read") 
           .options(options)
           .option("database", database)
           .option("table", table)
-          .option("sleepAfterPrewriteSecondaryKey", sleepAfterPrewriteSecondaryKey)
+          .option("sleepAfterGetCommitTS", sleepAfterGetCommitTS)
           .option("replace", "true")
           .mode("append")
           .save()
