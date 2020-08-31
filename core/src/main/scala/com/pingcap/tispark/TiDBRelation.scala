@@ -65,13 +65,13 @@ case class TiDBRelation(
 
   def logicalPlanToRDD(dagRequest: TiDAGRequest, output: Seq[Attribute]): List[TiRowRDD] = {
     import scala.collection.JavaConverters._
-    val ids = dagRequest.getIds.asScala
+    val ids = dagRequest.getPrunedPhysicalIds.asScala
     var tiRDDs = new ListBuffer[TiRowRDD]
     val tiConf = session.getConf
     tiConf.setPartitionPerSplit(TiUtil.getPartitionPerSplit(sqlContext))
     ids.foreach(id => {
       tiRDDs += new TiRowRDD(
-        dagRequest,
+        dagRequest.copyReqWithPhysicalId(id),
         id,
         TiUtil.getChunkBatchSize(sqlContext),
         tiConf,
@@ -85,7 +85,7 @@ case class TiDBRelation(
 
   def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
     import scala.collection.JavaConverters._
-    val ids = dagRequest.getIds.asScala
+    val ids = dagRequest.getPrunedPhysicalIds.asScala
     var tiHandleRDDs = new ListBuffer[TiHandleRDD]()
     lazy val attributeRef = Seq(
       newAttributeReference("RegionId", LongType, nullable = false, Metadata.empty),

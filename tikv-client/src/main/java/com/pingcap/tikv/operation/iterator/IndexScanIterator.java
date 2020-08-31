@@ -71,7 +71,7 @@ public class IndexScanIterator implements Iterator<Row> {
           completionService.submit(
               () -> {
                 List<RegionTask> tasks = new ArrayList<>();
-                List<Long> ids = dagReq.getIds();
+                List<Long> ids = dagReq.getPrunedPhysicalIds();
                 tasks.addAll(
                     RangeSplitter.newSplitter(session.getRegionManager())
                         .splitAndSortHandlesByRegion(ids, handles));

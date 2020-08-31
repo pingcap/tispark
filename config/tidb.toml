@@ -103,7 +103,7 @@ report-status = true
 status-port = 10080
 
 # Prometheus pushgateway address, leaves it empty will disable prometheus push.
-metrics-addr = "pushgateway:9091"
+# metrics-addr = "pushgateway:9091"
 
 # Prometheus client push interval in second, set \"0\" to disable prometheus push.
 metrics-interval = 0

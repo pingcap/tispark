@@ -15,26 +15,123 @@
 
 package com.pingcap.tispark.datasource
 
+import com.pingcap.tikv.allocator.RowIDAllocator
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
+import org.apache.spark.sql.types._
 
-class ShardRowIDBitsSuite extends BaseDataSourceTest("test_shard_row_id_bits") {
-  private val row1 = Row(1)
-  private val row2 = Row(2)
-  private val row3 = Row(3)
-  private val schema = StructType(List(StructField("a", IntegerType)))
+class ShardRowIDBitsSuite extends BaseDataSourceTest("test_datasource_shard_row_id_bits") {
+  private val schema = StructType(List(StructField("i", LongType)))
 
-  test("reading and writing a table with shard_row_id_bits") {
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+  }
+
+  test("tispark overflow") {
+    val maxShardRowIDBits = 15
+
+    dropTable()
+
+    jdbcUpdate(s"create table $dbtable(i int) SHARD_ROW_ID_BITS = $maxShardRowIDBits")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    // hack: update AllocateId on TiKV to a huge number to trigger overflow
+    val size = Math.pow(2, 64 - maxShardRowIDBits - 1).toLong - 3
+    val allocator = allocateID(size)
+    println(s"start: \t${getLongBinaryString(allocator.getStart)}")
+    println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    // TiSpark insert overflow
+
+    val caught = intercept[com.pingcap.tikv.exception.AllocateRowIDOverflowException] {
+      tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+    }
+    assert(caught.getMessage.startsWith("Overflow when allocating row id"))
+  }
+
+  test("tidb overflow") {
+    val maxShardRowIDBits = 15
+
+    dropTable()
+
+    jdbcUpdate(s"create table $dbtable(i int) SHARD_ROW_ID_BITS = $maxShardRowIDBits")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    // hack: update AllocateId on TiKV to a huge number to trigger overflow
+    val size = Math.pow(2, 64 - maxShardRowIDBits - 1).toLong - 3
+    val allocator = allocateID(size)
+    println(s"start: \t${getLongBinaryString(allocator.getStart)}")
+    println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
+
+    // TiDB insert
+    jdbcUpdate(s"insert into $dbtable values(1)")
+
+    // TiDB insert overflow
+    val caught = intercept[java.sql.SQLException] {
+      jdbcUpdate(s"insert into $dbtable values(1)")
+    }
+    assert(caught.getMessage.equals("Failed to read auto-increment value from storage engine"))
+  }
+
+  test("test rowid overlap: tidb write -> tispark write -> tidb write") {
     if (!supportBatchWrite) {
       cancel
     }
 
+    val maxShardRowIDBits = 0
+
     dropTable()
-    jdbcUpdate(s"CREATE TABLE  $dbtable ( `a` int(11))  SHARD_ROW_ID_BITS = 4")
 
-    jdbcUpdate(s"insert into $dbtable values(null)")
+    jdbcUpdate(s"create table $dbtable(i int) SHARD_ROW_ID_BITS = $maxShardRowIDBits")
 
-    tidbWrite(List(row1, row2, row3), schema)
-    testTiDBSelect(List(Row(null), row1, row2, row3), sortCol = "a")
+    // TiDB insert
+    jdbcUpdate(s"insert into $dbtable values(1)")
+
+    // TiSpark insert
+    tidbWrite((2L to 2L).map(Row(_)).toList, schema)
+    printTableWithTiDBRowID()
+    val tidbRowID = queryTiDBViaJDBC(s"select _tidb_rowid, i from $dbtable where i = 2").head.head
+      .asInstanceOf[Long]
+
+    // TiDB insert
+    generateDataViaTiDB(tidbRowID + 10000, 3L)
+    printTableWithTiDBRowID(where = "where i = 2")
+
+    // assert
+    val tidbRowID2 = queryTiDBViaJDBC(
+      s"select _tidb_rowid, i from $dbtable where i = 2").head.head.asInstanceOf[Long]
+    assert(tidbRowID == tidbRowID2)
   }
+
+  private def printTableWithTiDBRowID(where: String = ""): Unit = {
+    queryTiDBViaJDBC(s"select _tidb_rowid, i from $dbtable $where order by i").foreach { row =>
+      print(getLongBinaryString(row.head.asInstanceOf[Long]))
+      println("\t" + row)
+    }
+  }
+
+  private def getTableCount: Long = {
+    queryTiDBViaJDBC(s"select count(*) from $dbtable").head.head.asInstanceOf[Long]
+  }
+
+  private def generateDataViaTiDB(minCount: Long, value: Long) = {
+    (1 to 10).foreach(i => jdbcUpdate(s"insert into $dbtable values($value)"))
+
+    while (getTableCount < minCount) {
+      jdbcUpdate(s"insert into $dbtable select * from $dbtable where i = $value limit 200000")
+    }
+  }
+
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 }

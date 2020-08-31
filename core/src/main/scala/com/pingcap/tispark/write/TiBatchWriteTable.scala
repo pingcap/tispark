@@ -126,7 +126,9 @@ class TiBatchWriteTable(
       // when auto increment column is provided but the corresponding column in df contains null,
       // we need throw exception
       if (isProvidedID) {
-        if (!df.columns.contains(autoIncrementColName)) {
+        throw new TiBatchWriteException(
+          "currently user provided auto increment value is not supported!")
+        /*if (!df.columns.contains(autoIncrementColName)) {
           throw new TiBatchWriteException(
             "Column size is matched but cannot find auto increment column by name")
         }
@@ -140,12 +142,12 @@ class TiBatchWriteTable(
           throw new TiBatchWriteException(
             "cannot allocate id on the condition of having null value and valid value on auto increment column")
         }
-        df.rdd
+        df.rdd*/
       } else {
         // if auto increment column is not provided, we need allocate id for it.
         // adding an auto increment column to df
         val newDf = df.withColumn(autoIncrementColName, lit(null).cast("long"))
-        val start = getAutoTableIdStart(count)
+        val rowIDAllocator = getRowIDAllocator(count)
 
         // update colsInDF since we just add one column in df
         colsInDf = newDf.columns.toList.map(_.toLowerCase())
@@ -155,7 +157,8 @@ class TiBatchWriteTable(
             val colOffset = data._2
             if (colsMapInTiDB.contains(colsInDf(colOffset))) {
               if (colsMapInTiDB(colsInDf(colOffset)).isAutoIncrement) {
-                row._2 + start
+                val index = row._2 + 1
+                rowIDAllocator.getShardRowId(index)
               } else {
                 data._1
               }
@@ -185,9 +188,11 @@ class TiBatchWriteTable(
           WrappedRow(row, extractHandleId(row))
         }
       } else {
-        val start = getAutoTableIdStart(count)
-        tiRowRdd.zipWithIndex.map { data =>
-          WrappedRow(data._1, data._2 + start)
+        val rowIDAllocator = getRowIDAllocator(count)
+        tiRowRdd.zipWithIndex.map { row =>
+          val index = row._2 + 1
+          val rowId = rowIDAllocator.getShardRowId(index)
+          WrappedRow(row._1, rowId)
         }
       }
 
@@ -239,9 +244,11 @@ class TiBatchWriteTable(
 
       (g1 ++ g2).map(obj => (obj.encodedKey, obj.encodedValue))
     } else {
-      val start = getAutoTableIdStart(count)
+      val rowIDAllocator = getRowIDAllocator(count)
       val wrappedRowRdd = tiRowRdd.zipWithIndex.map { row =>
-        WrappedRow(row._1, row._2 + start)
+        val index = row._2 + 1
+        val rowId = rowIDAllocator.getShardRowId(index)
+        WrappedRow(row._1, rowId)
       }
 
       val wrappedEncodedRecordRdd = generateRecordKV(wrappedRowRdd, remove = false)
@@ -312,10 +319,13 @@ class TiBatchWriteTable(
     }
   }
 
-  private def getAutoTableIdStart(step: Long): Long = {
-    RowIDAllocator
-      .create(tiDBInfo.getId, tiTableInfo.getId, tiConf, tiTableInfo.isAutoIncColUnsigned, step)
-      .getStart
+  private def getRowIDAllocator(step: Long): RowIDAllocator = {
+    RowIDAllocator.create(
+      tiDBInfo.getId,
+      tiTableInfo,
+      tiConf,
+      tiTableInfo.isAutoIncColUnsigned,
+      step)
   }
 
   private def isNullUniqueIndexValue(value: Array[Byte]): Boolean = {
