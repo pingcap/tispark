@@ -28,28 +28,52 @@ import com.pingcap.tikv.exception.TiBatchWriteException;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.function.Function;
 
 /**
  * RowIDAllocator read current start from TiKV and write back 'start+step' back to TiKV. It designs
  * to allocate all id for data to be written at once, hence it does not need run inside a txn.
+ *
+ * <p>(start, end] is allocated
  */
-public final class RowIDAllocator {
+public final class RowIDAllocator implements Serializable {
+  private final long maxShardRowIDBits;
   private final long dbId;
   private final TiConfiguration conf;
   private final long step;
   private long end;
 
-  private RowIDAllocator(long dbId, long step, TiConfiguration conf) {
+  private RowIDAllocator(long maxShardRowIDBits, long dbId, long step, TiConfiguration conf) {
+    this.maxShardRowIDBits = maxShardRowIDBits;
     this.dbId = dbId;
     this.step = step;
     this.conf = conf;
   }
 
+  /**
+   * @param index should >= 1
+   * @return
+   */
+  public long getShardRowId(long index) {
+    return getShardRowId(maxShardRowIDBits, index, index + getStart());
+  }
+
+  static long getShardRowId(long maxShardRowIDBits, long partitionIndex, long rowID) {
+    if (maxShardRowIDBits <= 0 || maxShardRowIDBits >= 16) {
+      return rowID;
+    }
+
+    // assert rowID < Math.pow(2, 64 - maxShardRowIDBits)
+
+    long partition = partitionIndex & ((1L << maxShardRowIDBits) - 1);
+    return rowID | (partition << (64 - maxShardRowIDBits - 1));
+  }
+
   public static RowIDAllocator create(
       long dbId, TiTableInfo table, TiConfiguration conf, boolean unsigned, long step) {
-    RowIDAllocator allocator = new RowIDAllocator(dbId, step, conf);
+    RowIDAllocator allocator = new RowIDAllocator(table.getMaxShardRowIDBits(), dbId, step, conf);
     if (unsigned) {
       allocator.initUnsigned(
           TiSession.getInstance(conf).createSnapshot(),
@@ -185,7 +209,7 @@ public final class RowIDAllocator {
             if (oldVal != null && oldVal.length != 0) {
               base = Long.parseLong(new String(oldVal));
             }
-            if (shardRowBitsOverflow(base, step, shard, hasSignedBit)) {
+            if (shard >= 1 && shardRowBitsOverflow(base, step, shard, hasSignedBit)) {
               throw new AllocateRowIDOverflowException(base, step, shard);
             }
             base += step;

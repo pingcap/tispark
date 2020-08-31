@@ -92,7 +92,7 @@ class ColumnMappingSuite
     // insert 2 rows
     //val (ref, insert) = generateData(1,10, List(2,0,1))
     var posMap = List(1, 0)
-    var data = generateData(0, 10, posMap, skipFirstCol = true)
+    var data = generateData(1, 10, posMap, skipFirstCol = true)
     var ans = data._1
 
     var writeSchema = StructType(List(schema.toList(posMap(0) + 1), schema.toList(posMap(1) + 1)))
@@ -100,7 +100,7 @@ class ColumnMappingSuite
     testTiDBSelect(ans)
 
     posMap = List(0, 1)
-    data = generateData(10, 10, posMap, skipFirstCol = true)
+    data = generateData(11, 10, posMap, skipFirstCol = true)
     ans = ans ::: data._1
     writeSchema = StructType(List(schema.toList(posMap(0) + 1), schema.toList(posMap(1) + 1)))
     tidbWrite(data._2, writeSchema)

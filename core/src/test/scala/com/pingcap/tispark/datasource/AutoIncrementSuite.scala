@@ -15,6 +15,7 @@
 
 package com.pingcap.tispark.datasource
 
+import com.pingcap.tikv.exception.ConvertOverflowException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -75,6 +76,274 @@ class AutoIncrementSuite extends BaseDataSourceTest("test_datasource_auto_increm
     jdbcUpdate(s"insert into $dbtable (j) values(5)")
 
     assert(5 == sql(s"select * from $dbtableWithPrefix").collect().length)
+  }
+
+  test("bigint signed tidb overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
+    val schema = StructType(List(StructField("j", LongType)))
+
+    dropTable()
+
+    jdbcUpdate(
+      s"create table $dbtable(i bigint NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    // hack: update AllocateId on TiKV to a huge number to trigger overflow
+    val size = Math.pow(2, 63).toLong - 3
+    val allocator = allocateID(size)
+    println(s"start: \t${getLongBinaryString(allocator.getStart)}")
+    println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
+
+    // TiDB insert
+    jdbcUpdate(s"insert into $dbtable (j) values(1)")
+
+    sql(s"select * from $dbtableWithPrefix").show(false)
+
+    // TiDB insert overflow
+    val caught = intercept[java.sql.SQLException] {
+      jdbcUpdate(s"insert into $dbtable (j) values(1)")
+    }
+    assert(caught.getMessage.equals("Failed to read auto-increment value from storage engine"))
+  }
+
+  test("bigint signed tispark overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
+    val schema = StructType(List(StructField("j", LongType)))
+
+    dropTable()
+
+    jdbcUpdate(
+      s"create table $dbtable(i bigint NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    // hack: update AllocateId on TiKV to a huge number to trigger overflow
+    val size = Math.pow(2, 63).toLong - 3
+    val allocator = allocateID(size)
+    println(s"start: \t${getLongBinaryString(allocator.getStart)}")
+    println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    sql(s"select * from $dbtableWithPrefix").show(false)
+
+    // TiSpark insert overflow
+    val caught = intercept[com.pingcap.tikv.exception.TiBatchWriteException] {
+      tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+    }
+    assert(caught.getMessage.equals("cannot allocate ids for this write"))
+  }
+
+  test("bigint unsigned tidb overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
+    val schema = StructType(List(StructField("j", LongType)))
+
+    dropTable()
+
+    jdbcUpdate(
+      s"create table $dbtable(i bigint unsigned NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    // hack: update AllocateId on TiKV to a huge number to trigger overflow
+    val size = 0xfffffffffffffffcL
+    val allocator = allocateID(size)
+    println(s"start: \t${getLongBinaryString(allocator.getStart)}")
+    println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
+
+    // TiDB insert
+    jdbcUpdate(s"insert into $dbtable (j) values(1)")
+    sql(s"select * from $dbtableWithPrefix").show(false)
+
+    // TiDB insert overflow
+    val caught = intercept[java.sql.SQLException] {
+      jdbcUpdate(s"insert into $dbtable (j) values(1)")
+    }
+    assert(caught.getMessage.equals("Failed to read auto-increment value from storage engine"))
+  }
+
+  test("bigint unsigned tispark overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
+    val schema = StructType(List(StructField("j", LongType)))
+
+    dropTable()
+
+    jdbcUpdate(
+      s"create table $dbtable(i bigint unsigned NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    // hack: update AllocateId on TiKV to a huge number to trigger overflow
+    val size = 0xfffffffffffffffcL
+    val allocator = allocateID(size)
+    println(s"start: \t${getLongBinaryString(allocator.getStart)}")
+    println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    sql(s"select * from $dbtableWithPrefix").show(false)
+
+    // TiSpark insert overflow
+    val caught = intercept[com.pingcap.tikv.exception.TiBatchWriteException] {
+      tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+    }
+    assert(caught.getMessage.equals("cannot allocate ids for this write"))
+  }
+
+  test("tinyint signed tidb overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
+    val schema = StructType(List(StructField("j", LongType)))
+
+    dropTable()
+
+    jdbcUpdate(
+      s"create table $dbtable(i tinyint NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    // hack: update AllocateId on TiKV to a huge number to trigger overflow
+    val size = 125
+    val allocator = allocateID(size)
+    println(s"start: \t${getLongBinaryString(allocator.getStart)}")
+    println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
+
+    // TiDB insert
+    jdbcUpdate(s"insert into $dbtable (j) values(1)")
+
+    sql(s"select * from $dbtableWithPrefix").show(false)
+
+    // TiDB insert overflow
+    val caught = intercept[java.sql.SQLException] {
+      jdbcUpdate(s"insert into $dbtable (j) values(1)")
+    }
+    assert(caught.getMessage.equals("Data truncation: constant 128 overflows tinyint"))
+  }
+
+  test("tinyint signed tispark overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
+    val schema = StructType(List(StructField("j", LongType)))
+
+    dropTable()
+
+    jdbcUpdate(
+      s"create table $dbtable(i tinyint NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    // hack: update AllocateId on TiKV to a huge number to trigger overflow
+    val size = 125
+    val allocator = allocateID(size)
+    println(s"start: \t${getLongBinaryString(allocator.getStart)}")
+    println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    sql(s"select * from $dbtableWithPrefix").show(false)
+
+    // TiSpark insert overflow
+    val caught = intercept[org.apache.spark.SparkException] {
+      tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+    }
+    assert(caught.getCause.isInstanceOf[ConvertOverflowException])
+    assert(caught.getCause.getMessage.equals("value 128 > upperBound 127"))
+  }
+
+  test("tinyint unsigned tidb overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
+    val schema = StructType(List(StructField("j", LongType)))
+
+    dropTable()
+
+    jdbcUpdate(
+      s"create table $dbtable(i tinyint unsigned NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    // hack: update AllocateId on TiKV to a huge number to trigger overflow
+    val size = 253
+    val allocator = allocateID(size)
+    println(s"start: \t${getLongBinaryString(allocator.getStart)}")
+    println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
+
+    // TiDB insert
+    jdbcUpdate(s"insert into $dbtable (j) values(1)")
+    sql(s"select * from $dbtableWithPrefix").show(false)
+
+    // TiDB insert overflow
+    val caught = intercept[java.sql.SQLException] {
+      jdbcUpdate(s"insert into $dbtable (j) values(1)")
+    }
+    assert(caught.getMessage.equals("Data truncation: constant 256 overflows tinyint"))
+  }
+
+  test("tinyint unsigned tispark overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
+    val schema = StructType(List(StructField("j", LongType)))
+
+    dropTable()
+
+    jdbcUpdate(
+      s"create table $dbtable(i tinyint unsigned NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    // hack: update AllocateId on TiKV to a huge number to trigger overflow
+    val size = 253
+    val allocator = allocateID(size)
+    println(s"start: \t${getLongBinaryString(allocator.getStart)}")
+    println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
+
+    // TiSpark insert
+    tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+
+    sql(s"select * from $dbtableWithPrefix").show(false)
+
+    // TiSpark insert overflow
+    val caught = intercept[org.apache.spark.SparkException] {
+      tidbWrite((1L to 1L).map(Row(_)).toList, schema)
+    }
+    assert(caught.getCause.isInstanceOf[ConvertOverflowException])
+    assert(caught.getCause.getMessage.equals("value 256 > upperBound 255"))
   }
 
   override def afterAll(): Unit =
