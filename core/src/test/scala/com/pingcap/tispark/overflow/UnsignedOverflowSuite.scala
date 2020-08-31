@@ -113,7 +113,7 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     val schema = StructType(List(StructField("c1", IntegerType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
-    val tidbErrorMsg = "value -1 < lowerBound 0"
+    val tidbErrorMsg = null
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
@@ -185,7 +185,7 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     val schema = StructType(List(StructField("c1", IntegerType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
-    val tidbErrorMsg = "value -1 < lowerBound 0"
+    val tidbErrorMsg = null
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
@@ -257,7 +257,7 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     val schema = StructType(List(StructField("c1", IntegerType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
-    val tidbErrorMsg = "value -1 < lowerBound 0"
+    val tidbErrorMsg = null
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
