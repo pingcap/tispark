@@ -28,7 +28,9 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.PDClient;
+import com.pingcap.tikv.StoreVersion;
 import com.pingcap.tikv.TiConfiguration;
+import com.pingcap.tikv.Version;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.LockException;
@@ -104,6 +106,16 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
   /** startTS -> List(locks) */
   private final Map<Long, Set<Long>> resolvedLocks = new HashMap<>();
 
+  private final PDClient pdClient;
+  private Boolean isV4 = null;
+
+  private synchronized Boolean getIsV4() {
+    if (isV4 == null) {
+      isV4 = StoreVersion.minTiKVVersion(Version.RESOLVE_LOCK_V4, pdClient);
+    }
+    return isV4;
+  }
+
   private RegionStoreClient(
       TiConfiguration conf,
       TiRegion region,
@@ -156,6 +168,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
               pdClient,
               clientBuilder);
     }
+    this.pdClient = pdClient;
   }
 
   public synchronized boolean addResolvedLocks(Long version, List<Long> locks) {
@@ -399,16 +412,27 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     while (true) {
       Supplier<PrewriteRequest> factory =
           () ->
-              PrewriteRequest.newBuilder()
-                  .setContext(region.getContext())
-                  .setStartVersion(startTs)
-                  .setPrimaryLock(primaryLock)
-                  .addAllMutations(mutations)
-                  .setLockTtl(ttl)
-                  .setSkipConstraintCheck(skipConstraintCheck)
-                  .setMinCommitTs(startTs)
-                  .setTxnSize(16)
-                  .build();
+              getIsV4()
+                  ? PrewriteRequest.newBuilder()
+                      .setContext(region.getContext())
+                      .setStartVersion(startTs)
+                      .setPrimaryLock(primaryLock)
+                      .addAllMutations(mutations)
+                      .setLockTtl(ttl)
+                      .setSkipConstraintCheck(skipConstraintCheck)
+                      .setMinCommitTs(startTs)
+                      .setTxnSize(16)
+                      .build()
+                  : PrewriteRequest.newBuilder()
+                      .setContext(region.getContext())
+                      .setStartVersion(startTs)
+                      .setPrimaryLock(primaryLock)
+                      .addAllMutations(mutations)
+                      .setLockTtl(ttl)
+                      .setSkipConstraintCheck(skipConstraintCheck)
+                      // v3 does not support setMinCommitTs(startTs)
+                      .setTxnSize(16)
+                      .build();
       KVErrorHandler<PrewriteResponse> handler =
           new KVErrorHandler<>(
               regionManager,
