@@ -201,8 +201,6 @@ class TiBatchWrite(
         tiContext.sparkSession.sparkContext.union(rddList)
       }
     }
-    val shuffledRDDCount = shuffledRDD.count()
-    logger.info(s"write kv data count=$shuffledRDDCount")
 
     // take one row as primary key
     val (primaryKey: SerializableKey, primaryRow: Array[Byte]) = {
@@ -224,7 +222,8 @@ class TiBatchWrite(
 
     // split region
     if (options.enableRegionSplit && "v2".equals(options.regionSplitMethod)) {
-      val orderedSplitPoints = getRegionSplitPoints(shuffledRDD, shuffledRDDCount)
+      val insertRDD = shuffledRDD.filter(kv => kv._2.length > 0)
+      val orderedSplitPoints = getRegionSplitPoints(insertRDD)
 
       try {
         tiSession.splitRegionAndScatter(
@@ -389,8 +388,9 @@ class TiBatchWrite(
   }
 
   private def getRegionSplitPoints(
-      rdd: RDD[(SerializableKey, Array[Byte])],
-      count: Long): List[SerializableKey] = {
+      rdd: RDD[(SerializableKey, Array[Byte])]): List[SerializableKey] = {
+    val count = rdd.count()
+
     if (count < options.regionSplitThreshold) {
       return Nil
     }
