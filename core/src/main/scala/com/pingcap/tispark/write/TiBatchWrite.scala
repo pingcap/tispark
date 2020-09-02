@@ -215,11 +215,6 @@ class TiBatchWrite(
 
     logger.info(s"primary key: $primaryKey")
 
-    // filter primary key
-    val secondaryKeysRDD = shuffledRDD.filter { keyValue =>
-      !keyValue._1.equals(primaryKey)
-    }
-
     // split region
     if (options.enableRegionSplit && "v2".equals(options.regionSplitMethod)) {
       val insertRDD = shuffledRDD.filter(kv => kv._2.length > 0)
@@ -237,6 +232,11 @@ class TiBatchWrite(
 
       // shuffle according to split points
       shuffledRDD = shuffledRDD.partitionBy(new TiReginSplitPartitioner(orderedSplitPoints))
+    }
+
+    // filter primary key
+    val secondaryKeysRDD = shuffledRDD.filter { keyValue =>
+      !keyValue._1.equals(primaryKey)
     }
 
     // driver primary pre-write
