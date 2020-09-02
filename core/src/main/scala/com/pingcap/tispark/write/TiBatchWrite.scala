@@ -201,8 +201,6 @@ class TiBatchWrite(
         tiContext.sparkSession.sparkContext.union(rddList)
       }
     }
-    val shuffledRDDCount = shuffledRDD.count()
-    logger.info(s"write kv data count=$shuffledRDDCount")
 
     // take one row as primary key
     val (primaryKey: SerializableKey, primaryRow: Array[Byte]) = {
@@ -224,7 +222,8 @@ class TiBatchWrite(
 
     // split region
     if (options.enableRegionSplit && "v2".equals(options.regionSplitMethod)) {
-      val orderedSplitPoints = getRegionSplitPoints(shuffledRDD, shuffledRDDCount)
+      val insertRDD = shuffledRDD.filter(kv => kv._2.length > 0)
+      val orderedSplitPoints = getRegionSplitPoints(insertRDD)
 
       try {
         tiSession.splitRegionAndScatter(
@@ -300,18 +299,18 @@ class TiBatchWrite(
     }
     logger.info("prewriteSecondaryKeys success")
 
-    // for test
-    if (options.sleepAfterPrewriteSecondaryKey > 0) {
-      logger.info(s"sleep ${options.sleepAfterPrewriteSecondaryKey} ms for test")
-      Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
-    }
-
     // driver primary commit
     val commitTs = tiSession.getTimestamp.getVersion
     // check commitTS
     if (commitTs <= startTs) {
       throw new TiBatchWriteException(
         s"invalid transaction tso with startTs=$startTs, commitTs=$commitTs")
+    }
+
+    // for test
+    if (options.sleepAfterPrewriteSecondaryKey > 0) {
+      logger.info(s"sleep ${options.sleepAfterPrewriteSecondaryKey} ms for test")
+      Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
     }
 
     // check schema change
@@ -389,8 +388,9 @@ class TiBatchWrite(
   }
 
   private def getRegionSplitPoints(
-      rdd: RDD[(SerializableKey, Array[Byte])],
-      count: Long): List[SerializableKey] = {
+      rdd: RDD[(SerializableKey, Array[Byte])]): List[SerializableKey] = {
+    val count = rdd.count()
+
     if (count < options.regionSplitThreshold) {
       return Nil
     }
