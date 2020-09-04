@@ -82,7 +82,6 @@ Fow how to use it with extensions enabled, see [code examples with extensions](h
     // write data to tidb
     df.write.
       format("tidb").
-      options(tidbOptions).
       option("tidb.user", "root").
       option("tidb.password", "").
       option("database", "tpch_test").
