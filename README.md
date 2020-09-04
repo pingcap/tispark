@@ -189,7 +189,7 @@ The configurations in the table below can be put together with `spark-defaults.c
 |    Key    | Default Value | Description |
 | ---------- | --- | --- |
 | `spark.tispark.pd.addresses` |  `127.0.0.1:2379` | The addresses of PD cluster, which are split by comma |
-| `spark.tispark.grpc.framesize` |  `268435456` | The maximum frame size of gRPC response |
+| `spark.tispark.grpc.framesize` |  `2147483647` | The maximum frame size of gRPC response in bytes (default 2G) |
 | `spark.tispark.grpc.timeout_in_sec` |  `10` | The gRPC timeout time in seconds |
 | `spark.tispark.plan.allow_agg_pushdown` |  `true` | Whether aggregations are allowed to push down to TiKV (in case of busy TiKV nodes) |
 | `spark.tispark.plan.allow_index_read` |  `true` |  Whether index is enabled in planning (which might cause heavy pressure on TiKV) |
