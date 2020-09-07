@@ -250,7 +250,7 @@ class TiBatchWrite(
         options.writeBufferSize,
         options.writeThreadPerTask,
         options.retryCommitSecondaryKey,
-        options.maxRetryTimes)
+        options.prewriteMaxRetryTimes)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(options.prewriteBackOfferMS)
     logger.info("start to prewritePrimaryKey")
@@ -282,7 +282,7 @@ class TiBatchWrite(
           options.writeBufferSize,
           options.writeThreadPerTask,
           options.retryCommitSecondaryKey,
-          options.maxRetryTimes)
+          options.prewriteMaxRetryTimes)
 
       val pairs = iterator.map { keyValue =>
         new BytePairWrapper(keyValue._1.bytes, keyValue._2)
@@ -361,7 +361,7 @@ class TiBatchWrite(
           options.writeBufferSize,
           options.writeThreadPerTask,
           options.retryCommitSecondaryKey,
-          options.maxRetryTimes)
+          options.prewriteMaxRetryTimes)
 
         val keys = iterator.map { keyValue =>
           new ByteWrapper(keyValue._1.bytes)
