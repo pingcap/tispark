@@ -15,6 +15,7 @@
 
 package org.apache.spark.sql.catalyst.plans.logical
 
+import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.meta.TiTimestamp
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 
@@ -114,6 +115,14 @@ class LogicalPlanTestSuite extends BasePlanTest {
       "select artical_id from t where artical_id = 'abcdefg' and last_modify_time > '2020-06-22 00:00:00'")
     checkIsIndexScan(df, "t")
     checkIndex(df, "artical_id")
+  }
+
+  test("test sum push down") {
+    val df = spark.sql("select sum(tp_int) from full_data_type_table")
+    val req = extractDAGRequests(df).head
+    req.init(false)
+    assert(!req.getPushDownAggregates.isEmpty)
+    assert(req.getPushDownAggregates.get(0).getType === FunctionType.Sum)
   }
 
   override def afterAll(): Unit =

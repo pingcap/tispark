@@ -494,8 +494,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
         case e: Sum => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
         case e: SpecialSum => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
         case e: First => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case _: Count =>
-          aggExpr.copy(aggregateFunction = SumNotNullable(partialResultRef))
+        case _: Count => aggExpr.copy(aggregateFunction = CountSum(partialResultRef))
         case _: Average => throw new IllegalStateException("All AVGs should have been rewritten.")
         case _ => aggExpr
       }
@@ -575,12 +574,6 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
             IntegerLiteral(limit),
             logical.Project(projectList, logical.Sort(order, true, child))) =>
         takeOrderedAndProject(limit, order, child, projectList) :: Nil
-      // Collapse filters and projections and push plan directly
-      case PhysicalOperation(
-            projectList,
-            filters,
-            LogicalRelation(source: TiDBRelation, _, _, _)) =>
-        pruneFilterProject(projectList, filters, source, newTiDAGRequest()) :: Nil
 
       // Basic logic of original Spark's aggregation plan is:
       // PhysicalAggregation extractor will rewrite original aggregation
@@ -613,6 +606,12 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
           resultExpressions,
           `source`,
           dagReq)
+      // Collapse filters and projections and push plan directly
+      case PhysicalOperation(
+            projectList,
+            filters,
+            LogicalRelation(source: TiDBRelation, _, _, _)) =>
+        pruneFilterProject(projectList, filters, source, newTiDAGRequest()) :: Nil
       case _ => Nil
     }
 }
