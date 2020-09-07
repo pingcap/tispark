@@ -62,8 +62,6 @@ public class TwoPhaseCommitter {
   /** unit is millisecond */
   private static final long DEFAULT_BATCH_WRITE_LOCK_TTL = 3600000;
 
-  private static final long MAX_RETRY_TIMES = 3;
-
   private static final Logger LOG = LoggerFactory.getLogger(TwoPhaseCommitter.class);
   /** start timestamp of transaction which get from PD */
   private final long startTs;
@@ -79,6 +77,7 @@ public class TwoPhaseCommitter {
   private final long txnCommitBatchSize;
   private final int writeBufferSize;
   private final int writeThreadPerTask;
+  private final int maxRetryTimes;
   private final ExecutorService executorService;
 
   public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
@@ -91,6 +90,7 @@ public class TwoPhaseCommitter {
     this.txnCommitBatchSize = TXN_COMMIT_BATCH_SIZE;
     this.writeBufferSize = WRITE_BUFFER_SIZE;
     this.writeThreadPerTask = 1;
+    this.maxRetryTimes = 3;
     this.executorService = createExecutorService();
   }
 
@@ -102,7 +102,8 @@ public class TwoPhaseCommitter {
       long txnCommitBatchSize,
       int writeBufferSize,
       int writeThreadPerTask,
-      boolean retryCommitSecondaryKeys) {
+      boolean retryCommitSecondaryKeys,
+      int maxRetryTimes) {
     this.kvClient = TiSession.getInstance(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
@@ -112,6 +113,7 @@ public class TwoPhaseCommitter {
     this.txnCommitBatchSize = txnCommitBatchSize;
     this.writeBufferSize = writeBufferSize;
     this.writeThreadPerTask = writeThreadPerTask;
+    this.maxRetryTimes = maxRetryTimes;
     this.executorService = createExecutorService();
   }
 
@@ -349,11 +351,11 @@ public class TwoPhaseCommitter {
       if (oldRegion.equals(currentRegion)) {
         doPrewriteSecondaryKeySingleBatchWithRetry(backOffer, primaryKey, batchKeys, mutations);
       } else {
-        if (level > MAX_RETRY_TIMES) {
+        if (level > maxRetryTimes) {
           throw new TiBatchWriteException(
               String.format(
                   "> max retry number %s, oldRegion=%s, currentRegion=%s",
-                  MAX_RETRY_TIMES, oldRegion, currentRegion));
+                  maxRetryTimes, oldRegion, currentRegion));
         }
         LOG.info(
             String.format(

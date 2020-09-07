@@ -93,6 +93,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val writeThreadPerTask: Int = getOrDefault(TIDB_WRITE_THREAD_PER_TASK, "2").toInt
   val retryCommitSecondaryKey: Boolean =
     getOrDefault(TIDB_RETRY_COMMIT_SECONDARY_KEY, "true").toBoolean
+  val maxRetryTimes: Int = getOrDefault(TIDB_MAX_RETRY_TIMES, "64").toInt
 
   // region split
   val enableRegionSplit: Boolean = getOrDefault(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
@@ -212,6 +213,7 @@ object TiDBOptions {
   val TIDB_WRITE_BUFFER_SIZE: String = newOption("writeBufferSize")
   val TIDB_WRITE_THREAD_PER_TASK: String = newOption("writeThreadPerTask")
   val TIDB_RETRY_COMMIT_SECONDARY_KEY: String = newOption("retryCommitSecondaryKey")
+  val TIDB_MAX_RETRY_TIMES: String = newOption("maxRetryTimes")
 
   // region split
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
