@@ -54,7 +54,7 @@ class LineItemSuite extends BaseTiSparkTest {
       df,
       ti,
       new TiDBOptions(
-        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true", "regionSplitMethod" -> "v2")))
+        tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")))
 
     // refresh
     refreshConnections(TestTables(database, tableToWrite))

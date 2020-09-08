@@ -85,6 +85,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
 
   // region split
   val enableRegionSplit: Boolean = getOrDefault(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
+  val getRegionSplitPointMethod: String = getOrDefault(TIDB_GET_REGION_SPLIT_POINT_METHOD, "v2")
   val regionSplitNum: Int = getOrDefault(TIDB_REGION_SPLIT_NUM, "0").toInt
   val sampleSplitFrac: Int = getOrDefault(TIDB_SAMPLE_SPLIT_FRAC, "1000").toInt
   val scatterWaitMS: Int = getOrDefault(TIDB_SCATTER_WAIT_MS, "300000").toInt
@@ -199,6 +200,7 @@ object TiDBOptions {
 
   // region split
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
+  val TIDB_GET_REGION_SPLIT_POINT_METHOD: String = newOption("getRegionSplitPointMethod")
   val TIDB_REGION_SPLIT_NUM: String = newOption("regionSplitNum")
   val TIDB_SAMPLE_SPLIT_FRAC: String = newOption("sampleSplitFrac")
   val TIDB_SCATTER_WAIT_MS: String = newOption("scatterWaitMS")

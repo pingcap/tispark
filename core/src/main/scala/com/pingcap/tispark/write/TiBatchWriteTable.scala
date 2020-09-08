@@ -24,7 +24,7 @@ import com.pingcap.tikv.exception.{
   TiBatchWriteException,
   TiDBConvertException
 }
-import com.pingcap.tikv.key.{IndexKey, RowKey}
+import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
 import com.pingcap.tikv.meta._
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
@@ -105,6 +105,16 @@ class TiBatchWriteTable(
     if (tiTableInfo.getUpdateTimestamp < newTableInfo.getUpdateTimestamp) {
       throw new TiBatchWriteException("schema has changed during prewrite!")
     }
+  }
+
+  def getRowAndIndexPrefixKeys: List[Key] = {
+    val indexPrefixKeys = tiTableInfo.getIndices.asScala.map { index =>
+      IndexKey.toIndexKey(tiTableInfo.getId, index.getId)
+    }.toList
+
+    val rowPrefixKey = RowKey.createMin(tiTableInfo.getId)
+
+    rowPrefixKey :: indexPrefixKeys
   }
 
   def preCalculate(startTimeStamp: TiTimestamp): RDD[(SerializableKey, Array[Byte])] = {

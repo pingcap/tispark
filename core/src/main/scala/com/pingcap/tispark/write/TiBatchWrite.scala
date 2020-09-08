@@ -16,6 +16,7 @@
 package com.pingcap.tispark.write
 
 import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tikv.key.Key
 import com.pingcap.tikv.util.ConcreteBackOffer
 import com.pingcap.tikv.{TTLManager, TiDBJDBCClient, _}
 import com.pingcap.tispark.TiDBUtils
@@ -214,6 +215,7 @@ class TiBatchWrite(
     // split region
     val finalRDD = if (options.enableRegionSplit) {
       val insertRDD = shuffledRDD.filter(kv => kv._2.length > 0)
+
       val orderedSplitPoints = getRegionSplitPoints(insertRDD)
 
       try {
@@ -390,6 +392,7 @@ class TiBatchWrite(
 
   private def getRegionSplitPoints(
       rdd: RDD[(SerializableKey, Array[Byte])]): List[SerializableKey] = {
+
     val count = rdd.count()
 
     if (count < options.regionSplitThreshold) {
@@ -411,6 +414,19 @@ class TiBatchWrite(
     val sampleData = rdd.sample(false, sampleSize.toDouble / count).collect()
     logger.info(s"sampleData size=${sampleData.length}")
 
+    if ("v1".equals(options.getRegionSplitPointMethod)) {
+      getOrderedSplitPointsV1(count, regionSplitPointNum, sampleData)
+    } else {
+      val sortedRowAndIndexPrefixKeys =
+        tiBatchWriteTables.flatMap(_.getRowAndIndexPrefixKeys).sorted
+      getOrderedSplitPointsV2(count, regionSplitPointNum, sampleData, sortedRowAndIndexPrefixKeys)
+    }
+  }
+
+  def getOrderedSplitPointsV1(
+      count: Long,
+      regionSplitPointNum: Int,
+      sampleData: Array[(SerializableKey, Array[Byte])]): List[SerializableKey] = {
     val finalRegionSplitPointNum = if (options.regionSplitUsingSize) {
       val avgSize = getAverageSizeInBytes(sampleData)
       logger.info(s"avgSize=$avgSize Bytes")
@@ -418,7 +434,7 @@ class TiBatchWrite(
         regionSplitPointNum
       } else {
         Math.min(
-          Math.floor((count.toDouble / options.bytesPerRegion) * avgSize).toInt,
+          Math.ceil((count.toDouble / options.bytesPerRegion) * avgSize).toInt,
           sampleData.length / 10)
       }
     } else {
@@ -441,6 +457,69 @@ class TiBatchWrite(
 
     logger.info(s"orderedSplitPoints size=${orderedSplitPoints.length}")
     orderedSplitPoints.toList
+  }
+
+  def getOrderedSplitPointsV2(
+      count: Long,
+      regionSplitPointNum: Int,
+      sampleData: Array[(SerializableKey, Array[Byte])],
+      sortedRowAndIndexPrefixKeys: List[Key]): List[SerializableKey] = {
+    val size = sortedRowAndIndexPrefixKeys.size + 1
+    val sampleDataArray =
+      new Array[scala.collection.mutable.ArrayBuffer[(SerializableKey, Array[Byte])]](size)
+
+    (0 until size).foreach { i =>
+      sampleDataArray(i) =
+        new scala.collection.mutable.ArrayBuffer[(SerializableKey, Array[Byte])]()
+    }
+
+    sampleData.foreach { data =>
+      var i = 0
+      var break = false
+      while (!break) {
+        if (i == size - 1 || data._1.getRowKey.compareTo(sortedRowAndIndexPrefixKeys(i)) < 0) {
+          sampleDataArray(i).append(data)
+          break = true
+        }
+        i = i + 1
+      }
+    }
+
+    sampleDataArray.flatMap { subSampleData =>
+      if (subSampleData.isEmpty) {
+        Nil
+      } else {
+        val avgSize = getAverageSizeInBytes(subSampleData.toArray)
+        logger.info(s"avgSize=$avgSize Bytes")
+        val finalRegionSplitPointNum =
+          if (avgSize <= options.bytesPerRegion / options.regionSplitKeys) {
+            regionSplitPointNum / (size - 1)
+          } else {
+            Math.min(
+              Math.ceil((count.toDouble / (size - 1) / options.bytesPerRegion) * avgSize).toInt,
+              subSampleData.length / 10)
+          }
+        logger.info(s"finalRegionSplitPointNum=$finalRegionSplitPointNum")
+
+        val sortedSampleData = subSampleData
+          .map(_._1)
+          .sorted(new Ordering[SerializableKey] {
+            override def compare(x: SerializableKey, y: SerializableKey): Int = {
+              x.compareTo(y)
+            }
+          })
+        val orderedSplitPoints = new Array[SerializableKey](finalRegionSplitPointNum)
+        val step =
+          Math.floor(sortedSampleData.length.toDouble / (finalRegionSplitPointNum + 1)).toInt
+        for (i <- 0 until finalRegionSplitPointNum) {
+          orderedSplitPoints(i) = sortedSampleData((i + 1) * step)
+        }
+
+        logger.info(s"orderedSplitPoints size=${orderedSplitPoints.length}")
+        orderedSplitPoints.toList
+      }
+
+    }.toList
   }
 
   private def getAverageSizeInBytes(keyValues: Array[(SerializableKey, Array[Byte])]): Int = {
