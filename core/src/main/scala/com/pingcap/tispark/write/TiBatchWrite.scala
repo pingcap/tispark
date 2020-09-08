@@ -135,7 +135,6 @@ class TiBatchWrite(
 
     // init tiBatchWriteTables
     tiBatchWriteTables = {
-      val isEnableSplitRegion = tiDBJDBCClient.isEnableSplitRegion
       dataToWrite.map {
         case (dbTable, df) =>
           new TiBatchWriteTable(
@@ -143,8 +142,7 @@ class TiBatchWrite(
             tiContext,
             options.setDBTable(dbTable),
             tiConf,
-            tiDBJDBCClient,
-            isEnableSplitRegion)
+            tiDBJDBCClient)
       }.toList
     }
 

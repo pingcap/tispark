@@ -54,8 +54,7 @@ class TiBatchWriteTable(
     @transient val tiContext: TiContext,
     val options: TiDBOptions,
     val tiConf: TiConfiguration,
-    @transient val tiDBJDBCClient: TiDBJDBCClient,
-    val isEnableSplitRegion: Boolean)
+    @transient val tiDBJDBCClient: TiDBJDBCClient)
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 

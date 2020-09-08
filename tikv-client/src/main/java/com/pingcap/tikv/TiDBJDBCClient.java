@@ -37,8 +37,6 @@ public class TiDBJDBCClient implements AutoCloseable {
   private static final Boolean ENABLE_TABLE_LOCK_DEFAULT = false;
   private static final String DELAY_CLEAN_TABLE_LOCK = "delay-clean-table-lock";
   private static final int DELAY_CLEAN_TABLE_LOCK_DEFAULT = 0;
-  private static final String ENABLE_SPLIT_TABLE_KEY = "split-table";
-  private static final Boolean ENABLE_SPLIT_TABLE_DEFAULT = false;
   private static final String TIDB_ROW_FORMAT_VERSION_SQL = "select @@tidb_row_format_version";
   private static final int TIDB_ROW_FORMAT_VERSION_DEFAULT = 1;
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
@@ -124,12 +122,6 @@ public class TiDBJDBCClient implements AutoCloseable {
     TypeReference<HashMap<String, Object>> typeRef =
         new TypeReference<HashMap<String, Object>>() {};
     return objectMapper.readValue(configJSON, typeRef);
-  }
-
-  public boolean isEnableSplitRegion() throws IOException, SQLException {
-    Map<String, Object> configMap = readConfMapFromTiDB();
-    Object splitTable = configMap.getOrDefault(ENABLE_SPLIT_TABLE_KEY, ENABLE_SPLIT_TABLE_DEFAULT);
-    return (Boolean) splitTable;
   }
 
   public boolean isClosed() throws SQLException {
