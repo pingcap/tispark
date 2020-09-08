@@ -131,9 +131,7 @@ class TiBatchWrite(
     val tikvSupportUpdateTTL = StoreVersion.minTiKVVersion("3.0.5", tiSession.getPDClient)
     isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
     lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
-    tiDBJDBCClient = new TiDBJDBCClient(
-      TiDBUtils.createConnectionFactory(options.url)(),
-      options.writeSplitRegionFinish)
+    tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
 
     // init tiBatchWriteTables
     tiBatchWriteTables = {
@@ -193,7 +191,7 @@ class TiBatchWrite(
     logger.info(s"startTS: $startTs")
 
     // pre calculate
-    var shuffledRDD: RDD[(SerializableKey, Array[Byte])] = {
+    val shuffledRDD: RDD[(SerializableKey, Array[Byte])] = {
       val rddList = tiBatchWriteTables.map(_.preCalculate(startTimeStamp))
       if (rddList.lengthCompare(1) == 0) {
         rddList.head
@@ -216,7 +214,7 @@ class TiBatchWrite(
     logger.info(s"primary key: $primaryKey")
 
     // split region
-    if (options.enableRegionSplit && "v2".equals(options.regionSplitMethod)) {
+    val finalRDD = if (options.enableRegionSplit) {
       val insertRDD = shuffledRDD.filter(kv => kv._2.length > 0)
       val orderedSplitPoints = getRegionSplitPoints(insertRDD)
 
@@ -231,11 +229,13 @@ class TiBatchWrite(
       }
 
       // shuffle according to split points
-      shuffledRDD = shuffledRDD.partitionBy(new TiReginSplitPartitioner(orderedSplitPoints))
+      shuffledRDD.partitionBy(new TiReginSplitPartitioner(orderedSplitPoints))
+    } else {
+      shuffledRDD
     }
 
     // filter primary key
-    val secondaryKeysRDD = shuffledRDD.filter { keyValue =>
+    val secondaryKeysRDD = finalRDD.filter { keyValue =>
       !keyValue._1.equals(primaryKey)
     }
 
