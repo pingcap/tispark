@@ -25,7 +25,6 @@ import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.utils.ReflectionUtil.ReflectionMapPartitionWithIndexInternal
 import com.pingcap.tispark.utils.TiUtil
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
@@ -47,9 +46,9 @@ trait LeafColumnarExecRDD extends LeafExecNode {
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
   private[execution] def tiRDDs: List[TiRDD]
 
-  override def simpleString: String = verboseString
+  override def simpleString(maxFields: Int): String = verboseString(maxFields)
 
-  override def verboseString: String =
+  override def verboseString(maxFields: Int): String =
     if (tiRDDs.lengthCompare(1) > 0) {
       val b = new mutable.StringBuilder()
       b.append("partition table[\n")
@@ -71,8 +70,7 @@ case class ColumnarCoprocessorRDD(
     output: Seq[Attribute],
     tiRDDs: List[TiRDD],
     fetchHandle: Boolean)
-    extends LeafColumnarExecRDD
-    with ColumnarBatchScan {
+    extends LeafColumnarExecRDD {
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
   override val nodeName: String = if (fetchHandle) {
     "FetchHandleRDD"
@@ -83,9 +81,11 @@ case class ColumnarCoprocessorRDD(
 
   override def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
 
-  override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(sparkContext.union(internalRDDs))
+  override val supportsColumnar: Boolean = !fetchHandle
 
-  override protected def supportsBatch: Boolean = !fetchHandle
+  protected override def doExecuteColumnar(): RDD[ColumnarBatch] = {
+    sparkContext.union(internalRDDs.map(rdd => rdd.asInstanceOf[RDD[ColumnarBatch]]))
+  }
 
   override protected def doExecute(): RDD[InternalRow] = {
     if (!fetchHandle) {
@@ -115,8 +115,7 @@ case class ColumnarRegionTaskExec(
     ts: TiTimestamp,
     @transient private val session: TiSession,
     @transient private val sparkSession: SparkSession)
-    extends UnaryExecNode
-    with ColumnarBatchScan {
+    extends UnaryExecNode {
 
   override lazy val metrics: Map[String, SQLMetric] = Map(
     "scanTime" -> SQLMetrics.createTimingMetric(sparkContext, "scan time"),
@@ -139,12 +138,10 @@ case class ColumnarRegionTaskExec(
   // used for driver to update PD cache
   private val callBackFunc: CacheInvalidateListener = CacheInvalidateListener.getInstance()
 
-  override def simpleString: String = verboseString
+  override def simpleString(maxFields: Int): String = verboseString(maxFields)
 
-  override def verboseString: String =
+  override def verboseString(maxFields: Int): String =
     s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
-
-  override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(inputRDD())
 
   private def inputRDD(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
@@ -160,17 +157,18 @@ case class ColumnarRegionTaskExec(
     downgradeDagRequest.clearIndexInfo()
     downgradeDagRequest.resetFilters(downgradeDagRequest.getDowngradeFilters)
 
-    ReflectionMapPartitionWithIndexInternal(
-      child.execute(),
-      fetchTableResultsFromHandles(
-        numOutputRows,
-        numHandles,
-        numIndexScanTasks,
-        numDowngradedTasks,
-        numRegions,
-        numIndexRangesScanned,
-        numDowngradeRangesScanned,
-        downgradeDagRequest)).invoke()
+    child
+      .execute()
+      .mapPartitionsWithIndexInternal(
+        fetchTableResultsFromHandles(
+          numOutputRows,
+          numHandles,
+          numIndexScanTasks,
+          numDowngradedTasks,
+          numRegions,
+          numIndexRangesScanned,
+          numDowngradeRangesScanned,
+          downgradeDagRequest))
   }
 
   def fetchTableResultsFromHandles(
@@ -379,6 +377,12 @@ case class ColumnarRegionTaskExec(
         }
       }.asInstanceOf[Iterator[InternalRow]]
     }
+  }
+
+  override val supportsColumnar: Boolean = true
+
+  override protected def doExecuteColumnar(): RDD[ColumnarBatch] = {
+    inputRDD().asInstanceOf[RDD[ColumnarBatch]]
   }
 
   override protected def doExecute(): RDD[InternalRow] = {

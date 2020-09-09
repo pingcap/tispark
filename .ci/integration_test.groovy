@@ -12,6 +12,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def PARALLEL_NUMBER = 18
     def TEST_REGION_SIZE = "normal"
     def TEST_TIFLASH = "false"
+    def TEST_SPARK_CATALOG = "false"
 
     // parse tidb branch
     def m1 = ghprbCommentBody =~ /tidb\s*=\s*([^\s\\]+)(\s|\\|$)/
@@ -63,6 +64,12 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def m8 = ghprbCommentBody =~ /test-flash\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m8) {
         TEST_TIFLASH = "${m8[0][1]}"
+    }
+
+    // parse test spark catalog
+    def m100 = ghprbCommentBody =~ /test-spark-catalog\s*=\s*([^\s\\]+)(\s|\\|$)/
+    if (m100) {
+        TEST_SPARK_CATALOG = "${m100[0][1]}"
     }
 
     groovy.lang.Closure readfile = { filename ->
@@ -162,6 +169,13 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
 
                         if (TEST_TIFLASH != "false") {
                             sh "cp .ci/tidb_config-for-tiflash-test.properties core/src/test/resources/tidb_config.properties"
+                        }
+
+                        if (TEST_SPARK_CATALOG != "false") {
+                            sh """
+                            touch core/src/test/resources/tidb_config.properties
+                            echo "spark.sql.catalog.tidb_catalog=org.apache.spark.sql.catalyst.catalog.TiCatalog" >> core/src/test/resources/tidb_config.properties
+                            """
                         }
 
                         sh """

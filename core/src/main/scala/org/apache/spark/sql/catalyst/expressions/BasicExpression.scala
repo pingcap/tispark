@@ -141,12 +141,12 @@ object BasicExpression {
       case EndsWith(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(StringRegExpression.endsWith(lhs, rhs))
 
-      case Like(BasicExpression(lhs), BasicExpression(rhs)) =>
+      case Like(BasicExpression(lhs), BasicExpression(rhs), _) =>
         Some(StringRegExpression.like(lhs, rhs))
 
       // Coprocessor has its own behavior of type promoting and overflow check
       // so we simply remove it from expression and let cop handle it
-      case CheckOverflow(BasicExpression(expr), dec: DecimalType) =>
+      case CheckOverflow(BasicExpression(expr), dec: DecimalType, _) =>
         expr.setDataType(TiConverter.fromSparkType(dec))
         Some(expr)
 

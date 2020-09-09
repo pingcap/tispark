@@ -14,16 +14,16 @@
  */
 package org.apache.spark.sql.execution.command
 
-import com.pingcap.tispark.utils.ReflectionUtil._
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{NoSuchDatabaseException, UnresolvedAttribute}
+import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.catalyst.catalog._
-import org.apache.spark.sql.catalyst.expressions.Attribute
-import org.apache.spark.sql.catalyst.plans.logical.Histogram
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.types.{MetadataBuilder, StringType, StructType}
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession, TiContext}
 
 import scala.collection.mutable.ArrayBuffer
+import org.apache.spark.sql.catalyst.plans.logical.{Command, Histogram}
 
 /**
  * CHECK Spark [[org.apache.spark.sql.execution.command.ShowTablesCommand]]
@@ -34,39 +34,34 @@ import scala.collection.mutable.ArrayBuffer
 case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    val db = delegate.databaseName.getOrElse(tiCatalog.getCurrentDatabase)
-    if (delegate.partitionSpec.isEmpty) {
-      // Show the information of tables.
-      val tables =
-        delegate.tableIdentifierPattern.fold(tiCatalog.listTables(db))(
-          tiCatalog.listTables(db, _))
-      tables.map { tableIdent =>
-        val database = tableIdent.database.getOrElse("")
-        val tableName = tableIdent.table
-        val isTemp = tiCatalog.isTemporaryTable(tableIdent)
-        if (delegate.isExtended) {
-          val information = tiCatalog.getTempViewOrPermanentTableMetadata(tableIdent).simpleString
-          Row(database, tableName, isTemp, s"$information\n")
-        } else {
-          Row(database, tableName, isTemp)
-        }
+    val db = delegate.databaseName match {
+      case Some("default") => tiCatalog.getCurrentDatabase
+      case Some(d) => d
+      case None => tiCatalog.getCurrentDatabase
+    }
+
+    // Show the information of tables.
+    val tables = delegate.tableIdentifierPattern
+      .map(tiCatalog.listTables(db, _))
+      .getOrElse(tiCatalog.listTables(db, "*"))
+    tables.map { tableIdent =>
+      val database = tableIdent.database.getOrElse("")
+      val tableName = tableIdent.table
+      val isTemp = tiCatalog.isTemporaryTable(tableIdent)
+      if (delegate.isExtended) {
+        val information = tiCatalog.getTempViewOrPermanentTableMetadata(tableIdent).simpleString
+        Row(database, tableName, isTemp, s"$information\n")
+      } else {
+        Row(database, tableName, isTemp)
       }
-    } else {
-      // Show the information of partitions.
-      //
-      // Note: tableIdentifierPattern should be non-empty, otherwise a [[ParseException]]
-      // should have been thrown by the sql parser.
-      val tableIdent = TableIdentifier(delegate.tableIdentifierPattern.get, Some(db))
-      val table = tiCatalog.getTableMetadata(tableIdent).identifier
-      val partition = tiCatalog.getPartition(tableIdent, delegate.partitionSpec.get)
-      val database = table.database.getOrElse("")
-      val tableName = table.table
-      val isTemp = tiCatalog.isTemporaryTable(table)
-      val information = partition.simpleString
-      Seq(Row(database, tableName, isTemp, s"$information\n"))
     }
   }
 }
+
+case class DescribeTableInfo(
+    tableName: TableIdentifier,
+    partitionSpec: TablePartitionSpec,
+    isExtended: Boolean) {}
 
 /**
  * CHECK Spark [[org.apache.spark.sql.execution.command.DescribeTableCommand]]
@@ -74,67 +69,90 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
  * @param tiContext tiContext which contains our catalog info
  * @param delegate original DescribeTableCommand
  */
-case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTableCommand)
+case class TiDescribeTablesCommand(
+    tiContext: TiContext,
+    delegate: Command,
+    tableInfo: DescribeTableInfo)
     extends TiCommand(delegate) {
   override val output: Seq[Attribute] = Seq(
     // Column names are based on Hive.
-    newAttributeReference(
+    AttributeReference(
       "col_name",
       StringType,
       nullable = false,
-      new MetadataBuilder().putString("comment", "name of the column").build()),
-    newAttributeReference(
+      new MetadataBuilder().putString("comment", "name of the column").build())(),
+    AttributeReference(
       "data_type",
       StringType,
       nullable = false,
-      new MetadataBuilder().putString("comment", "data type of the column").build()),
-    newAttributeReference(
+      new MetadataBuilder().putString("comment", "data type of the column").build())(),
+    AttributeReference(
       "nullable",
       StringType,
       nullable = false,
-      new MetadataBuilder().putString("comment", "whether the column is nullable").build()),
-    newAttributeReference(
+      new MetadataBuilder().putString("comment", "whether the column is nullable").build())(),
+    AttributeReference(
       "comment",
       StringType,
       nullable = true,
-      new MetadataBuilder().putString("comment", "comment of the column").build()))
+      new MetadataBuilder().putString("comment", "comment of the column").build())())
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    if (tiCatalog.isTemporaryTable(delegate.table)) {
-      val schema = tiCatalog.getTempViewOrPermanentTableMetadata(delegate.table).schema
-      getDelegateResult(sparkSession, schema)
+    if (tiCatalog.isTemporaryTable(tableInfo.tableName)) {
+      val result = new ArrayBuffer[Row]
+      val metadata = tiCatalog.getTempViewOrPermanentTableMetadata(tableInfo.tableName)
+      describeSchema(metadata.schema, result, header = false)
+
+      if (tableInfo.isExtended) {
+        describeFormattedTableInfo(metadata, result)
+      }
+
+      result
     } else {
       tiCatalog
-        .catalogOf(delegate.table.database)
+        .catalogOf(tableInfo.tableName.database)
         .getOrElse(throw new NoSuchDatabaseException(
-          delegate.table.database.getOrElse(tiCatalog.getCurrentDatabase))) match {
-        case _: TiSessionCatalog =>
+          tableInfo.tableName.database.getOrElse(tiCatalog.getCurrentDatabase))) match {
+        case tiSessionCatalog: TiSessionCatalog =>
           val result = new ArrayBuffer[Row]
-          if (delegate.partitionSpec.nonEmpty) {
+          if (tableInfo.partitionSpec.nonEmpty) {
             throw new AnalysisException(
-              s"DESC PARTITION is not supported on TiDB table: ${delegate.table.identifier}")
+              s"DESC PARTITION is not supported on TiDB table: ${tableInfo.tableName}")
           }
-          val metadata = tiCatalog.getTableMetadata(delegate.table)
+          val metadata = tiCatalog.getTableMetadata(tableInfo.tableName)
           describeSchema(metadata.schema, result, header = false)
 
-          if (delegate.isExtended) {
+          if (tableInfo.isExtended) {
             describeFormattedTableInfo(metadata, result)
           }
 
           result
         case _: SessionCatalog =>
-          val schema = tiCatalog.getTableMetadata(delegate.table).schema
-          getDelegateResult(sparkSession, schema)
+          delegate match {
+            case dt: DescribeTableCommand =>
+              val schema = tiCatalog.getTableMetadata(tableInfo.tableName).schema
+              val (delegateResult, extendedResult) =
+                dt.run(sparkSession).zipWithIndex.splitAt(schema.length)
+              delegateResult.map(
+                (r: (Row, Int)) =>
+                  Row(
+                    r._1(0),
+                    r._1(1),
+                    schema.fields(r._2).nullable.toString,
+                    r._1(2))) ++ extendedResult.map(r => Row(r._1(0), r._1(1), "", r._1(2)))
+            case _ =>
+              val result = new ArrayBuffer[Row]
+              val metadata = tiCatalog.getTableMetadata(tableInfo.tableName)
+              describeSchema(metadata.schema, result, header = false)
+
+              if (tableInfo.isExtended) {
+                describeFormattedTableInfo(metadata, result)
+              }
+
+              result
+          }
       }
     }
-  }
-
-  private def getDelegateResult(sparkSession: SparkSession, schema: StructType): Seq[Row] = {
-    val (delegateResult, extendedResult) =
-      delegate.run(sparkSession).zipWithIndex.splitAt(schema.length)
-    delegateResult.map((r: (Row, Int)) =>
-      Row(r._1(0), r._1(1), schema.fields(r._2).nullable.toString, r._1(2))) ++ extendedResult
-      .map(r => Row(r._1(0), r._1(1), "", r._1(2)))
   }
 
   private def describeSchema(
@@ -154,15 +172,6 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
     }
   }
 
-  private def describeFormattedTableInfo(table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
-    // TODO: Add more extended table information.
-    append(buffer, "", "", "")
-    append(buffer, "# Detailed Table Information", "", "")
-    table.toLinkedHashMap.foreach { s =>
-      append(buffer, s._1, s._2, "")
-    }
-  }
-
   private def append(
       buffer: ArrayBuffer[Row],
       column: String,
@@ -171,6 +180,14 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
       nullable: String = ""): Unit =
     buffer += Row(column, dataType, nullable, comment)
 
+  private def describeFormattedTableInfo(table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
+    // TODO: Add more extended table information.
+    append(buffer, "", "", "")
+    append(buffer, "# Detailed Table Information", "", "")
+    table.toLinkedHashMap.foreach { s =>
+      append(buffer, s._1, s._2, "")
+    }
+  }
 }
 
 /**
@@ -185,14 +202,7 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val resolver = sparkSession.sessionState.conf.resolver
 
-    val tableIdentifier = delegate.table
-    val tableWithDBName = tableIdentifier.database match {
-      case Some(_) => tableIdentifier
-      case None =>
-        val dbName = getDatabaseFromIdentifier(tableIdentifier)
-        TableIdentifier(tableIdentifier.table, Some(dbName))
-    }
-
+    val tableWithDBName = getTableIdentifierFromIdentifier(delegate.table)
     val relation = sparkSession.table(tableWithDBName).queryExecution.analyzed
 
     val colName = UnresolvedAttribute(delegate.colNameParts).name
@@ -207,7 +217,7 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
         s"DESC TABLE COLUMN command does not support nested data types: $colName")
     }
 
-    val catalogTable = tiCatalog.getTempViewOrPermanentTableMetadata(delegate.table)
+    val catalogTable = tiCatalog.getTempViewOrPermanentTableMetadata(tableWithDBName)
     val colStats = catalogTable.stats.map(_.colStats).getOrElse(Map.empty)
     val cs = colStats.get(field.name)
 
@@ -238,8 +248,18 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
     buffer
   }
 
-  private def getDatabaseFromIdentifier(tableIdentifier: TableIdentifier): String =
-    tableIdentifier.database.getOrElse(tiCatalog.getCurrentDatabase)
+  private def getTableIdentifierFromIdentifier(
+      tableIdentifier: TableIdentifier): TableIdentifier = {
+    tableIdentifier.database match {
+      case Some("default") =>
+        val dbName = tiCatalog.getCurrentDatabase
+        TableIdentifier(tableIdentifier.table, Some(dbName))
+      case Some(_) => tableIdentifier
+      case None =>
+        val dbName = tiCatalog.getCurrentDatabase
+        TableIdentifier(tableIdentifier.table, Some(dbName))
+    }
+  }
 
   private def histogramDescription(histogram: Histogram): Seq[Row] = {
     val header =
@@ -263,18 +283,15 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
 case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsCommand)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    val databaseName = delegate.databaseName
-    val tableName = delegate.tableName
-    val catalog = tiCatalog
-    val resolver = sparkSession.sessionState.conf.resolver
-    val lookupTable = databaseName match {
-      case None => tableName
-      case Some(db) if tableName.database.exists(!resolver(_, db)) =>
-        throw new AnalysisException(
-          s"SHOW COLUMNS with conflicting databases: '$db' != '${tableName.database.get}'")
-      case Some(db) => TableIdentifier(tableName.identifier, Some(db))
+    val db = delegate.tableName.database match {
+      case Some("default") => tiCatalog.getCurrentDatabase
+      case Some(d) => d
+      case None => tiCatalog.getCurrentDatabase
     }
-    val table = catalog.getTempViewOrPermanentTableMetadata(lookupTable)
+    val tableName = delegate.tableName.table
+    val lookupTable = TableIdentifier(tableName, Some(db))
+
+    val table = tiCatalog.getTempViewOrPermanentTableMetadata(lookupTable)
     table.schema.map { c =>
       Row(c.name)
     }
@@ -302,19 +319,21 @@ case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableL
     // If the location is specified, we create an external table internally.
     // Otherwise create a managed table.
     val tblType =
-      if (delegate.location.isEmpty) CatalogTableType.MANAGED else CatalogTableType.EXTERNAL
+      if (delegate.fileFormat.locationUri.isEmpty) CatalogTableType.MANAGED
+      else CatalogTableType.EXTERNAL
 
     val newTableDesc =
       CatalogTable(
         identifier = delegate.targetTable,
         tableType = tblType,
         storage = sourceTableDesc.storage
-          .copy(locationUri = delegate.location.map(CatalogUtils.stringToURI)),
+          .copy(locationUri = delegate.fileFormat.locationUri),
         schema = sourceTableDesc.schema,
         provider = newProvider,
         partitionColumnNames = sourceTableDesc.partitionColumnNames,
         bucketSpec = sourceTableDesc.bucketSpec)
-    callSessionCatalogCreateTable(catalog, newTableDesc, delegate.ifNotExists)
+
+    catalog.createTable(newTableDesc, delegate.ifNotExists)
     Seq.empty[Row]
   }
 }
