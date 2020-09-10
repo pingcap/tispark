@@ -15,6 +15,7 @@
 
 package org.apache.spark.sql
 
+import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.sql.extensions.{TiDDLRule, TiParser, TiResolutionRule}
 
 import scala.collection.mutable
@@ -23,6 +24,8 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
   private val tiContextMap = mutable.HashMap.empty[SparkSession, TiContext]
 
   override def apply(e: SparkSessionExtensions): Unit = {
+    TiSparkInfo.checkVersion()
+
     e.injectParser(TiParser(getOrCreateTiContext))
     e.injectResolutionRule(TiDDLRule(getOrCreateTiContext))
     e.injectResolutionRule(TiResolutionRule(getOrCreateTiContext))
