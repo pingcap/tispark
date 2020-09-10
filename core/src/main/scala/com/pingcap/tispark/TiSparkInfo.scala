@@ -15,7 +15,12 @@
 
 package com.pingcap.tispark
 
+import com.pingcap.tikv.exception.TiInternalException
+import org.slf4j.LoggerFactory
+
 object TiSparkInfo {
+  private final val logger = LoggerFactory.getLogger(getClass.getName)
+
   val SUPPORTED_SPARK_VERSION: List[String] = "2.3" :: "2.4" :: Nil
 
   val SPARK_VERSION: String = org.apache.spark.SPARK_VERSION
@@ -31,5 +36,13 @@ object TiSparkInfo {
 
   def versionSupport(): Boolean = {
     TiSparkInfo.SUPPORTED_SPARK_VERSION.contains(SPARK_MAJOR_VERSION)
+  }
+
+  def checkVersion(): Unit = {
+    logger.info(info)
+    if (!versionSupport()) {
+      logger.error("Current TiSpark Version is not compatible with current Spark Version!")
+      throw new TiInternalException("")
+    }
   }
 }
