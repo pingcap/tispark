@@ -15,12 +15,17 @@
 
 package com.pingcap.tikv.catalog;
 
+import static com.pingcap.tikv.util.BackOffer.CATALOG_BACKOFFER;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.util.BackOffFunction;
+import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -82,12 +87,34 @@ public class Catalog implements AutoCloseable {
   }
 
   public TiDBInfo getDatabase(String dbName) {
+    BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(CATALOG_BACKOFFER);
+    while (true) {
+      try {
+        return doGetDatabase(dbName);
+      } catch (Exception e) {
+        backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoTiKVRPC, e);
+      }
+    }
+  }
+
+  private TiDBInfo doGetDatabase(String dbName) {
     Objects.requireNonNull(dbName, "dbName is null");
     reloadCache();
     return metaCache.getDatabase(dbName);
   }
 
   public TiTableInfo getTable(String dbName, String tableName) {
+    BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(CATALOG_BACKOFFER);
+    while (true) {
+      try {
+        return doGetTable(dbName, tableName);
+      } catch (Exception e) {
+        backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoTiKVRPC, e);
+      }
+    }
+  }
+
+  private TiTableInfo doGetTable(String dbName, String tableName) {
     TiDBInfo database = getDatabase(dbName);
     if (database == null) {
       return null;
@@ -95,7 +122,7 @@ public class Catalog implements AutoCloseable {
     return getTable(database, tableName);
   }
 
-  public TiTableInfo getTable(TiDBInfo database, String tableName) {
+  private TiTableInfo getTable(TiDBInfo database, String tableName) {
     Objects.requireNonNull(database, "database is null");
     Objects.requireNonNull(tableName, "tableName is null");
     reloadCache();
