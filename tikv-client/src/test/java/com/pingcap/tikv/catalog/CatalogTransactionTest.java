@@ -55,6 +55,36 @@ public class CatalogTransactionTest extends CatalogTest {
   }
 
   @Test
+  public void getMultipleDatabasesTest() {
+    MetaMockHelper helper = new MetaMockHelper(pdServer, kvServer);
+    helper.preparePDForRegionRead();
+    helper.addDatabase(130, "global_temp");
+    for (int i = 1; i <= 200; i++) {
+      helper.addDatabase(263 + i, String.format("TPCH_%03d", i));
+    }
+
+    CatalogTransaction trx = new CatalogTransaction(session.createSnapshot());
+    List<TiDBInfo> dbs = trx.getDatabases();
+    assertEquals(201, dbs.size());
+    assertEquals(130, dbs.get(0).getId());
+    assertEquals("global_temp", dbs.get(0).getName());
+
+    assertEquals(264, dbs.get(1).getId());
+    assertEquals("tpch_001", dbs.get(1).getName());
+
+    assertEquals(463, dbs.get(200).getId());
+    assertEquals("tpch_200", dbs.get(200).getName());
+
+    TiDBInfo db0 = trx.getDatabase(130);
+    assertEquals(130, db0.getId());
+    assertEquals("global_temp", db0.getName());
+
+    TiDBInfo db1 = trx.getDatabase(400);
+    assertEquals(400, db1.getId());
+    assertEquals("tpch_137", db1.getName());
+  }
+
+  @Test
   public void getTablesTest() {
     MetaMockHelper helper = new MetaMockHelper(pdServer, kvServer);
     helper.preparePDForRegionRead();
