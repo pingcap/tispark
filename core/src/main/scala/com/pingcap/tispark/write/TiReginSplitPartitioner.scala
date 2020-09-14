@@ -18,14 +18,15 @@ package com.pingcap.tispark.write
 import com.pingcap.tikv.key.Key
 import org.apache.spark.Partitioner
 
-class TiReginSplitPartitioner(orderedSplitPoints: List[SerializableKey]) extends Partitioner {
+class TiReginSplitPartitioner(orderedSplitPoints: List[SerializableKey], maxWriteTaskNumber: Int)
+    extends Partitioner {
   override def getPartition(key: Any): Int = {
     val serializableKey = key.asInstanceOf[SerializableKey]
     val rawKey = Key.toRawKey(serializableKey.bytes)
     binarySearch(rawKey) % numPartitions
   }
 
-  def binarySearch(key: Key): Int = {
+  private def binarySearch(key: Key): Int = {
     var l = 0
     var r = orderedSplitPoints.size
     while (l < r) {
@@ -41,6 +42,11 @@ class TiReginSplitPartitioner(orderedSplitPoints: List[SerializableKey]) extends
   }
 
   override def numPartitions: Int = {
-    orderedSplitPoints.size + 1
+    val partitionNumber = orderedSplitPoints.size + 1
+    if (maxWriteTaskNumber > 0) {
+      Math.min(maxWriteTaskNumber, partitionNumber)
+    } else {
+      partitionNumber
+    }
   }
 }
