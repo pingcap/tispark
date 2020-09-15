@@ -97,6 +97,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
     getOrDefault(TIDB_REGION_SPLIT_USING_SIZE, "true").toBoolean
   //96M
   val bytesPerRegion: Int = getOrDefault(TIDB_BYTES_PER_REGION, "100663296").toInt
+  val maxWriteTaskNumber: Int = getOrDefault(TIDB_MAX_WRITE_TASK_NUMBER, "0").toInt
 
   // ------------------------------------------------------------
   // Calculated parameters
@@ -209,6 +210,7 @@ object TiDBOptions {
   val TIDB_SCATTER_REGION_BACKOFFER_MS: String = newOption("scatterRegionBackoffMS")
   val TIDB_REGION_SPLIT_USING_SIZE: String = newOption("regionSplitUsingSize")
   val TIDB_BYTES_PER_REGION: String = newOption("bytesPerRegion")
+  val TIDB_MAX_WRITE_TASK_NUMBER: String = newOption("maxWriteTaskNumber")
 
   // ------------------------------------------------------------
   // parameters only for test
