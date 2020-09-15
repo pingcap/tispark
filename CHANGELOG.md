@@ -1,6 +1,14 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.3] 2020-09-02
+### Fixes
+- Optimize scatter region logic [#1582](https://github.com/pingcap/tispark/pull/1582)
+- Set regionSplitUsingSize default value to true [#1584](https://github.com/pingcap/tispark/pull/1584)
+- User provided auto increment value is not supported [#1586](https://github.com/pingcap/tispark/pull/1586)
+- Fix partition table on tiflash [#1588](https://github.com/pingcap/tispark/pull/1588)
+- Use ShardRowIDBits to generate row id [#1585](https://github.com/pingcap/tispark/pull/1585)
+
 ## [TiSpark 2.3.2] 2020-08-21
 ### Fixes
 - Fix batch write bug and optimize batch write execution [#1562](https://github.com/pingcap/tispark/pull/1562)

@@ -222,7 +222,7 @@ case class ColumnarRegionTaskExec(
       // returns true if the number of handle ranges retrieved exceeds
       // the `downgradeThreshold` after handle merge, false otherwise.
       def satisfyDowngradeThreshold: Boolean =
-        indexTaskRanges.size() > downgradeThreshold
+        indexTaskRanges.size > downgradeThreshold
 
       def isTaskRangeSizeInvalid(task: RegionTask): Boolean =
         task == null ||

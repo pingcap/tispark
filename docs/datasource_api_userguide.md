@@ -59,29 +59,7 @@ Fow how to use it with extensions enabled, see [code examples with extensions](h
     val spark = SparkSession.builder.config(sparkConf).getOrCreate()
     ```
 
-2. Read using scala.
-
-    ```scala
-    val sqlContext = spark.sqlContext
-
-    // use TiDB config in the spark config if no data source config is provided
-    val tidbOptions: Map[String, String] = Map(
-      "tidb.user" -> "root",
-      "tidb.password" -> ""
-    )
-
-    val df = sqlContext.read.
-      format("tidb").
-      options(tidbOptions).
-      option("database", "tpch_test").
-      option("table", "CUSTOMER").
-      load().
-      filter("C_CUSTKEY = 1").
-      select("C_NAME")
-    df.show()
-    ```
-
-3. Write using scala.
+2. Write using scala.
 
     ```scala
     /* create table before run the code
@@ -98,53 +76,18 @@ Fow how to use it with extensions enabled, see [code examples with extensions](h
     )
     */
 
-    // use TiDB config in the spark config if no data source config is provided
-    val tidbOptions: Map[String, String] = Map(
-      "tidb.user" -> "root",
-      "tidb.password" -> ""
-    )
+    // select data to write
+    val df = spark.sql("select * from tpch_test.ORDERS")
 
-    // data to write
-    val df = sqlContext.read.
-      format("tidb").
-      options(tidbOptions).
-      option("database", "tpch_test").
-      option("table", "ORDERS").
-      load()
-
-    // append
+    // write data to tidb
     df.write.
       format("tidb").
-      options(tidbOptions).
+      option("tidb.user", "root").
+      option("tidb.password", "").
       option("database", "tpch_test").
       option("table", "target_table_orders").
       mode("append").
       save()
-    ```
-
-4. Use another TiDB.
-
-   TiDB configuration can be overwritten in data source options, so you can connect to a different TiDB.
-
-    ```scala
-    // TiDB config priority: data source config > spark config
-    val tidbOptions: Map[String, String] = Map(
-      "tidb.addr" -> "anotherTidbIP",
-      "tidb.password" -> "",
-      "tidb.port" -> "4000",
-      "tidb.user" -> "root",
-      "spark.tispark.pd.addresses" -> "pd0:2379"
-    )
-
-    val df = sqlContext.read.
-      format("tidb").
-      options(tidbOptions).
-      option("database", "tpch_test").
-      option("table", "CUSTOMER").
-      load().
-      filter("C_CUSTKEY = 1").
-      select("C_NAME").
-    df.show()
     ```
 
 ## Use Data Source API in SparkSQL

@@ -248,6 +248,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
         builder.addAllPairs(
             kvs.entrySet()
                 .stream()
+                .limit(request.getLimit())
                 .map(
                     kv ->
                         Kvrpcpb.KvPair.newBuilder()

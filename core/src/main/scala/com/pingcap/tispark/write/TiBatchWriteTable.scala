@@ -15,7 +15,6 @@
 
 package com.pingcap.tispark.write
 
-import java.sql.SQLException
 import java.util
 
 import com.pingcap.tikv.allocator.RowIDAllocator
@@ -31,7 +30,6 @@ import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType.EncodeType
 import com.pingcap.tikv.types.IntegerType
-import com.pingcap.tikv.util.FastByteComparisons
 import com.pingcap.tikv.{
   BytePairWrapper,
   TiBatchWriteUtils,
@@ -56,8 +54,7 @@ class TiBatchWriteTable(
     @transient val tiContext: TiContext,
     val options: TiDBOptions,
     val tiConf: TiConfiguration,
-    @transient val tiDBJDBCClient: TiDBJDBCClient,
-    val isEnableSplitRegion: Boolean)
+    @transient val tiDBJDBCClient: TiDBJDBCClient)
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -221,11 +218,6 @@ class TiBatchWriteTable(
         }
       }
 
-      if ("v1".equals(options.regionSplitMethod)) {
-        splitTableRegion(wrappedEncodedRecordRdd)
-        splitIndexRegion(wrappedEncodedIndexRdds, count)
-      }
-
       val g1 = (wrappedEncodedRecordRdd ++ generateRecordKV(deletion, remove = true))
         .map(wrappedEncodedRow => (wrappedEncodedRow.encodedKey, wrappedEncodedRow))
         .reduceByKey { (r1, r2) =>
@@ -255,25 +247,12 @@ class TiBatchWriteTable(
       val wrappedEncodedIndexRdds = generateIndexKVs(wrappedRowRdd, remove = false)
       val wrappedEncodedIndexRdd = sc.union(wrappedEncodedIndexRdds.values.toSeq)
 
-      if ("v1".equals(options.regionSplitMethod)) {
-        splitTableRegion(wrappedEncodedRecordRdd)
-        splitIndexRegion(wrappedEncodedIndexRdds, count)
-      }
-
       (wrappedEncodedRecordRdd ++ wrappedEncodedIndexRdd).map(obj =>
         (obj.encodedKey, obj.encodedValue))
     }
 
-    // shuffle or persist
-    val shuffledOrPersistedRDD =
-      if (options.enableRegionSplit && "v2".equals(options.regionSplitMethod)) {
-        keyValueRDD.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
-      } else if (options.shuffleKeyToSameRegion) {
-        shuffleKeyToSameRegion(keyValueRDD)
-      } else {
-        shuffleUseRepartition(keyValueRDD)
-      }
-    shuffledOrPersistedRDD
+    // persist
+    keyValueRDD.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
   }
 
   def lockTable(): Unit = {
@@ -551,27 +530,6 @@ class TiBatchWriteTable(
     mutableRdd
   }
 
-  @throws(classOf[NoSuchTableException])
-  private def shuffleKeyToSameRegion(
-      rdd: RDD[(SerializableKey, Array[Byte])]): RDD[(SerializableKey, Array[Byte])] = {
-    val regions = getRegions
-    assert(regions.size() > 0)
-    val tiRegionPartitioner =
-      new TiRegionPartitioner(regions, options.writeConcurrency, options.taskNumPerRegion)
-
-    rdd.partitionBy(tiRegionPartitioner)
-  }
-
-  @throws(classOf[NoSuchTableException])
-  private def shuffleUseRepartition(
-      rdd: RDD[(SerializableKey, Array[Byte])]): RDD[(SerializableKey, Array[Byte])] = {
-    if (options.writeTaskNumber > 0) {
-      rdd.repartition(options.writeTaskNumber)
-    } else {
-      rdd
-    }
-  }
-
   private def getRegions: util.List[TiRegion] = {
     val regions = TiBatchWriteUtils.getRegionsByTable(tiSession, tiTableInfo)
     logger.info(s"find ${regions.size} regions in $tiTableRef tableId: ${tiTableInfo.getId}")
@@ -722,66 +680,6 @@ class TiBatchWriteTable(
     }
   }
 
-  private def calcSize(rdd: RDD[WrappedEncodedRow]): Long = {
-    rdd.aggregate(0L)(
-      (prev, r) => prev + r.encodedKey.bytes.length + r.encodedValue.length,
-      (r1, r2) => r1 + r2)
-  }
-
-  private def calcRecordMinMax(rdd: RDD[WrappedEncodedRow]): (Long, Long) = {
-    rdd.aggregate((Long.MaxValue, Long.MinValue))(
-      (prev, r) => (Math.min(prev._1, r.handle), Math.max(prev._2, r.handle)),
-      (r1, r2) => (Math.min(r1._1, r2._1), Math.max(r1._2, r2._2)))
-  }
-
-  private def calcIndexMinMax(rdd: RDD[WrappedEncodedRow], index: TiIndexInfo): (Any, Any) = {
-    val colName = index.getIndexColumns.get(0).getName
-    val tiColumn = tiTableInfo.getColumn(colName)
-    val colOffset = tiColumn.getOffset
-    val dataType = tiColumn.getType
-
-    def compare(x: Any, y: Any): Int = {
-      x match {
-        case _: java.lang.Integer =>
-          x.asInstanceOf[java.lang.Integer]
-            .compareTo(y.asInstanceOf[java.lang.Integer])
-        case _: java.lang.Long =>
-          x.asInstanceOf[java.lang.Long]
-            .compareTo(y.asInstanceOf[java.lang.Long])
-        case _: java.lang.Double =>
-          x.asInstanceOf[java.lang.Double]
-            .compareTo(y.asInstanceOf[java.lang.Double])
-        case _: java.lang.Float =>
-          x.asInstanceOf[java.lang.Float]
-            .compareTo(y.asInstanceOf[java.lang.Float])
-        case _: Array[Byte] =>
-          FastByteComparisons.compareTo(x.asInstanceOf[Array[Byte]], y.asInstanceOf[Array[Byte]])
-        case _ => x.toString.compareTo(y.toString)
-      }
-    }
-
-    def min(x: Any, y: Any): Any = {
-      if (x == null) y
-      else if (y == null) x
-      else if (compare(x, y) < 0) x
-      else y
-    }
-
-    def max(x: Any, y: Any): Any = {
-      if (x == null) y
-      else if (y == null) x
-      else if (compare(x, y) > 0) x
-      else y
-    }
-
-    rdd.aggregate((null: Any, null: Any))(
-      (prev, r) => {
-        val v = r.row.get(colOffset, dataType)
-        (min(prev._1, v), max(prev._2, v))
-      },
-      (r1, r2) => (min(r1._1, r2._1), max(r1._2, r2._2)))
-  }
-
   private def generateRecordKV(rdd: RDD[WrappedRow], remove: Boolean): RDD[WrappedEncodedRow] = {
     rdd
       .map { row =>
@@ -857,191 +755,5 @@ class TiBatchWriteTable(
   // calculate the real physical table.
   private def locatePhysicalTable(row: TiRow): Long = {
     tiTableInfo.getId
-  }
-
-  private def estimateRegionSplitNum(totalSize: Long): Long = {
-    //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
-    Math.ceil(totalSize / (tiContext.tiConf.getTikvRegionSplitSizeInMB * 1024.0 * 1024)).toLong
-  }
-
-  private def checkTidbRegionSplitContidion(
-      minHandle: Long,
-      maxHandle: Long,
-      regionSplitNum: Long): Boolean = {
-    maxHandle - minHandle > regionSplitNum * 1000
-  }
-
-  private def toString(value: Any): String = {
-    value match {
-      case a: Array[Byte] => java.util.Arrays.toString(a)
-      case _ => value.toString
-    }
-  }
-
-  private def splitIndexRegion(
-      wrappedEncodedRdd: Map[Long, RDD[WrappedEncodedRow]],
-      count: Long): Unit = {
-    if (options.enableRegionSplit && isEnableSplitRegion) {
-      val indices = tiTableInfo.getIndices.asScala
-
-      indices.foreach { index =>
-        val colName = index.getIndexColumns.get(0).getName
-        val tiColumn = tiTableInfo.getColumn(colName)
-        val colOffset = tiColumn.getOffset
-        val dataType = tiColumn.getType
-
-        val ordering: Ordering[WrappedEncodedRow] = new Ordering[WrappedEncodedRow] {
-          override def compare(x: WrappedEncodedRow, y: WrappedEncodedRow): Int = {
-            val xIndex = x.row.get(colOffset, dataType)
-            val yIndex = y.row.get(colOffset, dataType)
-            xIndex match {
-              case _: java.lang.Integer =>
-                xIndex
-                  .asInstanceOf[java.lang.Integer]
-                  .compareTo(yIndex.asInstanceOf[java.lang.Integer])
-              case _: java.lang.Long =>
-                xIndex
-                  .asInstanceOf[java.lang.Long]
-                  .compareTo(yIndex.asInstanceOf[java.lang.Long])
-              case _: java.lang.Double =>
-                xIndex
-                  .asInstanceOf[java.lang.Double]
-                  .compareTo(yIndex.asInstanceOf[java.lang.Double])
-              case _: java.lang.Float =>
-                xIndex
-                  .asInstanceOf[java.lang.Float]
-                  .compareTo(yIndex.asInstanceOf[java.lang.Float])
-              case _: Array[Byte] =>
-                FastByteComparisons.compareTo(
-                  xIndex.asInstanceOf[Array[Byte]],
-                  yIndex.asInstanceOf[Array[Byte]])
-              case _ => xIndex.toString.compareTo(yIndex.toString)
-            }
-          }
-        }
-
-        val rdd = wrappedEncodedRdd(index.getId)
-
-        val regionSplitNum = if (options.regionSplitNum != 0) {
-          options.regionSplitNum
-        } else {
-          val indexSize = calcSize(rdd)
-          logger.info(s"count=$count indexSize=$indexSize")
-          val splitNum = estimateRegionSplitNum(indexSize)
-          logger.info(s"index region split num=$splitNum")
-          splitNum
-        }
-
-        // region split
-        if (regionSplitNum > 1) {
-          logger.info(
-            s"index region split, regionSplitNum=$regionSplitNum, indexName=${index.getName}")
-          if (count > (regionSplitNum * 1000 + 1) * 10) {
-            logger.info("split by sample data")
-            val frac = options.sampleSplitFrac
-            val sampleData = rdd.takeSample(false, (regionSplitNum * frac + 1).toInt)
-            val sortedSampleData = sampleData.sorted(ordering)
-            val buf = new StringBuilder
-            for (i <- 1 until regionSplitNum.toInt) {
-              val indexValue = toString(sortedSampleData(i * frac).row.get(colOffset, dataType))
-              buf.append(" (")
-              buf.append("\"")
-              buf.append(indexValue)
-              buf.append("\"")
-              buf.append(")")
-              if (i != regionSplitNum - 1) {
-                buf.append(",")
-              }
-            }
-            try {
-              tiDBJDBCClient
-                .splitIndexRegion(options.database, options.table, index.getName, buf.toString())
-            } catch {
-              case e: SQLException => throw e
-            }
-          } else {
-            logger.info("split by min/max data")
-            val (minIndexValue, maxIndexValue) = calcIndexMinMax(rdd, index)
-            logger.info(s"index min=$minIndexValue max=$maxIndexValue")
-            try {
-              tiDBJDBCClient
-                .splitIndexRegion(
-                  options.database,
-                  options.table,
-                  index.getName,
-                  minIndexValue.toString,
-                  maxIndexValue.toString,
-                  regionSplitNum)
-            } catch {
-              case e: SQLException =>
-                if (options.isTest) {
-                  throw e
-                }
-            }
-          }
-        } else {
-          logger.info(
-            s"skip index split index, regionSplitNum=$regionSplitNum, indexName=${index.getName}")
-        }
-      }
-    }
-  }
-
-  // when data to be inserted is too small to do region split, we check is user set region split num.
-  // If so, we do region split as user's intention. This is also useful for writing test case.
-  // We assume the data to be inserted is ruled by normal distribution.
-  private def splitTableRegion(wrappedRowRdd: RDD[WrappedEncodedRow]): Unit = {
-    if (options.enableRegionSplit && isEnableSplitRegion) {
-      if (options.regionSplitNum != 0) {
-        try {
-          tiDBJDBCClient
-            .splitTableRegion(
-              options.database,
-              options.table,
-              0,
-              Int.MaxValue,
-              options.regionSplitNum)
-        } catch {
-          case e: SQLException =>
-            if (options.isTest) {
-              throw e
-            }
-        }
-      } else {
-
-        val regionSplitNum = if (options.regionSplitNum != 0) {
-          options.regionSplitNum
-        } else {
-          val recordSize = calcSize(wrappedRowRdd)
-          val splitNum = estimateRegionSplitNum(recordSize)
-          logger.info(s"record region split num=$splitNum")
-          splitNum
-        }
-        // region split
-        if (regionSplitNum > 1) {
-          val (minHandle, maxHandle) = calcRecordMinMax(wrappedRowRdd)
-          logger.info(s"record min=$minHandle max=$maxHandle")
-          if (checkTidbRegionSplitContidion(minHandle, maxHandle, regionSplitNum)) {
-            logger.info(s"table region split is enabled, regionSplitNum=$regionSplitNum")
-            try {
-              tiDBJDBCClient
-                .splitTableRegion(
-                  options.database,
-                  options.table,
-                  minHandle,
-                  maxHandle,
-                  regionSplitNum)
-            } catch {
-              case e: SQLException =>
-                if (options.isTest) {
-                  throw e
-                }
-            }
-          } else {
-            logger.info("table region split is skipped")
-          }
-        }
-      }
-    }
   }
 }
