@@ -1,6 +1,16 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.4] 2020-09-15
+ ### Fixes
+- Filter Tombstone store [#1582](https://github.com/pingcap/tispark/pull/1595)
+- Increase gRPC response default limit size to 2G [#1597](https://github.com/pingcap/tispark/pull/1597)
+- Update txnPrewriteBatchSize & txnCommitBatchSize default value to 16K [#1599](https://github.com/pingcap/tispark/pull/1599)
+- Update writeThreadPerTask default value to 2 [#1600](https://github.com/pingcap/tispark/pull/1600)
+- Fix multiple database scan test bug [#1603](https://github.com/pingcap/tispark/pull/1603)
+- Update grpc version to 1.29.0 [#1609](https://github.com/pingcap/tispark/pull/1609)
+- BatchWrite: add parameter maxWriteTaskNumber [#1616](https://github.com/pingcap/tispark/pull/1616)
+
 ## [TiSpark 2.3.3] 2020-09-02
 ### Fixes
 - Optimize scatter region logic [#1582](https://github.com/pingcap/tispark/pull/1582)
