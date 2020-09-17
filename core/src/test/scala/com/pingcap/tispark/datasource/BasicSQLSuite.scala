@@ -20,7 +20,7 @@ import org.apache.spark.sql.Row
 
 import scala.util.Random
 
-class BasicSQLSuite extends BaseDataSourceTest("test_datasource_sql") {
+class BasicSQLSuite extends BaseBatchWriteTest("test_datasource_sql") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
@@ -28,25 +28,15 @@ class BasicSQLSuite extends BaseDataSourceTest("test_datasource_sql") {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')")
   }
 
   test("Test Select") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     testSelectSQL(Seq(row1, row2))
   }
 
   test("Test Insert Into") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val tmpTable = "default.testInsert"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpTable
@@ -70,10 +60,6 @@ class BasicSQLSuite extends BaseDataSourceTest("test_datasource_sql") {
   }
 
   test("Test Insert Overwrite") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val tmpTable = "default.testOverwrite"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpTable
@@ -99,13 +85,6 @@ class BasicSQLSuite extends BaseDataSourceTest("test_datasource_sql") {
       caught.getMessage
         .equals("SaveMode: Overwrite is not supported. TiSpark only support SaveMode.Append."))
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 
   private def testSelectSQL(expectedAnswer: Seq[Row]): Unit = {
     val tmpName =

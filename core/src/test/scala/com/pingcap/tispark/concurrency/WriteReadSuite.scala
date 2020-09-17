@@ -53,9 +53,6 @@ class WriteReadSuite extends ConcurrencyTest {
   }
 
   def doTestJDBC(createTable: String, pkIsHandle: Boolean, hasIndex: Boolean) = {
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     dropTable()
     jdbcUpdate(createTable)
@@ -112,9 +109,6 @@ class WriteReadSuite extends ConcurrencyTest {
   }
 
   def doTestTiSpark(createTable: String, hasIndex: Boolean) = {
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     dropTable()
     jdbcUpdate(createTable)

@@ -18,7 +18,7 @@ package com.pingcap.tispark.datasource
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
 
-class TiSparkTypeSuite extends BaseDataSourceTest("type_test") {
+class TiSparkTypeSuite extends BaseBatchWriteTest("type_test") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2L, "TiDB")
   private val row3 = Row(3L, "Spark")
@@ -26,9 +26,6 @@ class TiSparkTypeSuite extends BaseDataSourceTest("type_test") {
 
   private val schema = StructType(List(StructField("i", LongType), StructField("s", StringType)))
   test("bigint test") {
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     dropTable()
     jdbcUpdate(s"create table $dbtable(i bigint, s varchar(128))")

@@ -21,6 +21,7 @@ import java.io.File
 import java.sql.{Connection, Date, Statement}
 import java.util.{Locale, Properties, TimeZone}
 
+import com.pingcap.tikv.{StoreVersion, Version}
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
@@ -163,15 +164,16 @@ trait SharedSQLContext
     }
   }
 
+  protected def supportBatchWrite: Boolean = {
+    // currently only the following versions support BatchWrite
+    // 3.0.x (x >= 14)
+    // 3.1.x (x >= 0)
+    // >= 4.0.0
+    StoreVersion.minTiKVVersion(Version.BATCH_WRITE, ti.tiSession.getPDClient)
+  }
+
   protected def initializeStatement(): Unit = {
     _statement = _tidbConnection.createStatement()
-    // TODO: support new row format
-    //  https://github.com/pingcap/tispark/issues/1355
-    val resultSet =
-      _statement.executeQuery("SHOW GLOBAL VARIABLES LIKE 'tidb_row_format_version'")
-    if (resultSet.next()) {
-      _statement.execute("SET GLOBAL tidb_row_format_version=1")
-    }
   }
 
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset

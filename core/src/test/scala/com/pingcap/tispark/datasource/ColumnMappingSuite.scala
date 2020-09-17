@@ -21,7 +21,7 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 import scala.collection.mutable.ArrayBuffer
 
 class ColumnMappingSuite
-    extends BaseDataSourceTest("test_datasource_insert_with_different_column_order") {
+    extends BaseBatchWriteTest("test_datasource_insert_with_different_column_order") {
 
   private val schema = StructType(
     List(
@@ -29,20 +29,8 @@ class ColumnMappingSuite
       StructField("s", StringType),
       StructField("c", StringType)))
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   // currently user provided auto increment value is not supported!
   ignore("Test different column order with full schema") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(
       s"create table $dbtable(i int primary key auto_increment, s varchar(128), c varchar(128))")
 
@@ -81,11 +69,6 @@ class ColumnMappingSuite
   }
 
   test("Test different column order without auto increment column") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(
       s"create table $dbtable(i int primary key auto_increment, s varchar(128), c varchar(128))")
 

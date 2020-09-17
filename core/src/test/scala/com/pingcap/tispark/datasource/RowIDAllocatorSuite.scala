@@ -20,9 +20,6 @@ import org.apache.spark.sql.BaseTiSparkTest
 
 class RowIDAllocatorSuite extends BaseTiSparkTest {
   test("test unsigned allocator") {
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     tidbStmt.execute("drop table if exists rowid_allocator")
     tidbStmt.execute("""CREATE TABLE `rowid_allocator` (
@@ -42,9 +39,6 @@ class RowIDAllocatorSuite extends BaseTiSparkTest {
   }
 
   test("test signed allocator") {
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("""CREATE TABLE `t` (

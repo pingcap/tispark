@@ -21,7 +21,7 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 
 import scala.collection.mutable.ArrayBuffer
 
-class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
+class InsertSuite extends BaseBatchWriteTest("test.datasource_insert") {
   private val row1 = Row(null, "Hello")
   private val row5 = Row(5, "Duplicate")
 
@@ -30,23 +30,11 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   private val schema = StructType(
     List(StructField("i", IntegerType), StructField("s", StringType)))
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   private def compareRow(r1: Row, r2: Row): Boolean = {
     r1.getAs[Int](0) < r2.getAs[Int](0)
   }
 
   test("Test insert to table without primary key") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(null, 'Hello')")
 
@@ -79,11 +67,6 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   }
 
   test("Test insert to table with primary key (primary key is handle)") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(2, 'TiDB')")
 
@@ -114,11 +97,6 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   }
 
   test("Test insert to table with primary key with tiny int") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i tinyint primary key, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(2, 'TiDB')")
 
@@ -131,11 +109,6 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   }
 
   test("Test insert to table with primary key with small int") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i smallint primary key, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(2, 'TiDB')")
 
@@ -148,11 +121,6 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   }
 
   test("Test insert to table with primary key with medium int") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i mediumint primary key, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(2, 'TiDB')")
 
@@ -166,11 +134,6 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
 
   // currently user provided auto increment value is not supported!
   ignore("Test insert to table with primary key (auto increase case 1)") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key AUTO_INCREMENT, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(2, 'TiDB')")
 
@@ -209,11 +172,6 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   }
 
   test("Test insert to table with primary key (auto increase case 2)") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key AUTO_INCREMENT, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable(s) values('Hello')")
 

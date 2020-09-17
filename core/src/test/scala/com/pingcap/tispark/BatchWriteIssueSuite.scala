@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{
   IntegerType,
@@ -25,7 +25,7 @@ import org.apache.spark.sql.types.{
   TimestampType
 }
 
-class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
+class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
   override def beforeAll(): Unit = {
     super.beforeAll()
   }
@@ -43,9 +43,6 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
   }
 
   test("Index for timestamp was written multiple times") {
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     val schema = StructType(
       List(
@@ -81,17 +78,8 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
     }
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   private def doTestNullValues(createTableSQL: String): Unit = {
-    if (!supportBatchWrite) {
-      cancel
-    }
+
     val schema = StructType(
       List(
         StructField("a", IntegerType),

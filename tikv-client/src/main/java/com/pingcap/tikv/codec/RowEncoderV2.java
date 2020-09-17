@@ -316,12 +316,19 @@ public class RowEncoderV2 {
   }
 
   private void encodeDecimal(CodecDataOutput cdo, Object value) {
-    MyDecimal dec = new MyDecimal();
-    BigDecimal decimal = (BigDecimal) value;
-    int prec = decimal.precision();
-    int frac = decimal.scale();
-    dec.fromString(((BigDecimal) value).toPlainString());
-    DecimalCodec.writeDecimal(cdo, dec, prec, frac);
+    if (value instanceof MyDecimal) {
+      MyDecimal dec = (MyDecimal) value;
+      DecimalCodec.writeDecimal(cdo, dec, dec.precision(), dec.frac());
+    } else if (value instanceof BigDecimal) {
+      MyDecimal dec = new MyDecimal();
+      BigDecimal decimal = (BigDecimal) value;
+      int prec = decimal.precision();
+      int frac = decimal.scale();
+      dec.fromString(((BigDecimal) value).toPlainString());
+      DecimalCodec.writeDecimal(cdo, dec, prec, frac);
+    } else {
+      throw new CodecException("invalid decimal type " + value.getClass());
+    }
   }
 
   private void encodeEnum(CodecDataOutput cdo, Object value, List<String> elems) {

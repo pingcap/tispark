@@ -39,9 +39,6 @@ class MultiTableWriteSuite extends BaseTiSparkTest {
   }
 
   test("multi table batch write") {
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     val data = tables.map { table =>
       val tableToWrite = s"${batchWriteTablePrefix}_$table"

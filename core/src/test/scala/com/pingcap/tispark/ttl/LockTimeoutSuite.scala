@@ -17,12 +17,12 @@ package com.pingcap.tispark.ttl
 
 import com.pingcap.tikv.TTLManager
 import com.pingcap.tikv.exception.GrpcException
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class LockTimeoutSuite extends BaseDataSourceTest("test_lock_timeout") {
+class LockTimeoutSuite extends BaseBatchWriteTest("test_lock_timeout") {
   private val row1 = Row(1, "Hello")
 
   private val schema = StructType(
@@ -30,7 +30,6 @@ class LockTimeoutSuite extends BaseDataSourceTest("test_lock_timeout") {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
   }
 
@@ -70,11 +69,4 @@ class LockTimeoutSuite extends BaseDataSourceTest("test_lock_timeout") {
       grpcException.getCause.getCause.getMessage.startsWith(
         "Key exception occurred and the reason is retryable: \"Txn(Mvcc(TxnLockNotFound"))
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

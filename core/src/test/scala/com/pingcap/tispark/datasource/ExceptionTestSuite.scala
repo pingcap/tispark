@@ -19,22 +19,13 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
 
-class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_test") {
-
-  override def beforeAll(): Unit =
-    super.beforeAll()
+class ExceptionTestSuite extends BaseBatchWriteTest("test_datasource_exception_test") {
 
   test("Test write to table does not exist") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val row1 = Row(null, "Hello")
     val row2 = Row(2L, "TiDB")
 
     val schema = StructType(List(StructField("i", LongType), StructField("s", StringType)))
-
-    dropTable()
 
     val caught = intercept[TiBatchWriteException] {
       tidbWrite(List(row1, row2), schema)
@@ -43,15 +34,9 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
   }
 
   test("Test column does not exist") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val row1 = Row(2L, 3L)
 
     val schema = StructType(List(StructField("i", LongType), StructField("i2", LongType)))
-
-    dropTable()
 
     jdbcUpdate(s"create table $dbtable(i int)")
 
@@ -67,15 +52,9 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
   }
 
   test("Missing insert column") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val row1 = Row(2L, 3L)
 
     val schema = StructType(List(StructField("i", LongType), StructField("i2", LongType)))
-
-    dropTable()
 
     jdbcUpdate(s"create table $dbtable(i int, i2 int, i3 int)")
 
@@ -91,10 +70,6 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
   }
 
   test("Insert null value to Not Null Column") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val row1 = Row(null, 3L)
     val row2 = Row(4L, null)
 
@@ -113,11 +88,4 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
           .equals("Insert null value to not null column! rows contain illegal null values!"))
     }
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

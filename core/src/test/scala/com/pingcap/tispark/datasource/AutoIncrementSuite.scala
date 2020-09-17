@@ -19,18 +19,11 @@ import com.pingcap.tikv.exception.ConvertOverflowException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
-class AutoIncrementSuite extends BaseDataSourceTest("test_datasource_auto_increment") {
-
-  override def beforeAll(): Unit =
-    super.beforeAll()
+class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increment") {
 
   // Duplicate entry '2' for key 'PRIMARY'
   // currently user provided auto increment value is not supported!
   ignore("auto increment: user provide id") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val row1 = Row(1L, 1L)
     val row2 = Row(2L, 2L)
     val row3 = Row(3L, 3L)
@@ -54,10 +47,6 @@ class AutoIncrementSuite extends BaseDataSourceTest("test_datasource_auto_increm
   }
 
   test("auto increment: tispark generate id") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val row2 = Row(2L)
     val row3 = Row(3L)
     val row4 = Row(4L)
@@ -79,13 +68,7 @@ class AutoIncrementSuite extends BaseDataSourceTest("test_datasource_auto_increm
   }
 
   test("bigint signed tidb overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val schema = StructType(List(StructField("j", LongType)))
-
-    dropTable()
 
     jdbcUpdate(
       s"create table $dbtable(i bigint NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
@@ -112,13 +95,8 @@ class AutoIncrementSuite extends BaseDataSourceTest("test_datasource_auto_increm
   }
 
   test("bigint signed tispark overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     val schema = StructType(List(StructField("j", LongType)))
-
-    dropTable()
 
     jdbcUpdate(
       s"create table $dbtable(i bigint NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
@@ -147,13 +125,8 @@ class AutoIncrementSuite extends BaseDataSourceTest("test_datasource_auto_increm
   }
 
   test("bigint unsigned tidb overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     val schema = StructType(List(StructField("j", LongType)))
-
-    dropTable()
 
     jdbcUpdate(
       s"create table $dbtable(i bigint unsigned NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
@@ -179,13 +152,7 @@ class AutoIncrementSuite extends BaseDataSourceTest("test_datasource_auto_increm
   }
 
   test("bigint unsigned tispark overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val schema = StructType(List(StructField("j", LongType)))
-
-    dropTable()
 
     jdbcUpdate(
       s"create table $dbtable(i bigint unsigned NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
@@ -214,13 +181,7 @@ class AutoIncrementSuite extends BaseDataSourceTest("test_datasource_auto_increm
   }
 
   test("tinyint signed tidb overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val schema = StructType(List(StructField("j", LongType)))
-
-    dropTable()
 
     jdbcUpdate(
       s"create table $dbtable(i tinyint NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
@@ -247,13 +208,7 @@ class AutoIncrementSuite extends BaseDataSourceTest("test_datasource_auto_increm
   }
 
   test("tinyint signed tispark overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val schema = StructType(List(StructField("j", LongType)))
-
-    dropTable()
 
     jdbcUpdate(
       s"create table $dbtable(i tinyint NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
@@ -281,13 +236,7 @@ class AutoIncrementSuite extends BaseDataSourceTest("test_datasource_auto_increm
   }
 
   test("tinyint unsigned tidb overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val schema = StructType(List(StructField("j", LongType)))
-
-    dropTable()
 
     jdbcUpdate(
       s"create table $dbtable(i tinyint unsigned NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
@@ -313,13 +262,7 @@ class AutoIncrementSuite extends BaseDataSourceTest("test_datasource_auto_increm
   }
 
   test("tinyint unsigned tispark overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val schema = StructType(List(StructField("j", LongType)))
-
-    dropTable()
 
     jdbcUpdate(
       s"create table $dbtable(i tinyint unsigned NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
@@ -345,11 +288,4 @@ class AutoIncrementSuite extends BaseDataSourceTest("test_datasource_auto_increm
     assert(caught.getCause.isInstanceOf[ConvertOverflowException])
     assert(caught.getCause.getMessage.equals("value 256 > upperBound 255"))
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

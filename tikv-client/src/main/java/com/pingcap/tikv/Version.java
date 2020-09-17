@@ -25,4 +25,6 @@ public class Version {
   public static final String RESOLVE_LOCK_V4 = "4.0.0";
 
   public static final String BATCH_WRITE = "3.0.14";
+
+  public static final String NEW_ROW_FORMAT = "4.0.0";
 }

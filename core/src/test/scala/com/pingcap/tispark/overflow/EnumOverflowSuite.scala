@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark.overflow
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -23,46 +23,25 @@ import org.apache.spark.sql.types._
  * ENUM type include:
  * 1. ENUM
  */
-class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow") {
+class EnumOverflowSuite extends BaseBatchWriteTest("test_data_type_enum_overflow") {
 
   test("Test ENUM Value Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testEnumValueOverflow(false)
   }
 
   test("Test ENUM as key Value Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testEnumValueOverflow(true)
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   test("Test ENUM Number Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testEnumNumberOverflow(false)
   }
 
   test("Test ENUM as key Number Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testEnumNumberOverflow(true)
   }
 
   private def testEnumValueOverflow(testKey: Boolean): Unit = {
-
-    dropTable()
     if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
@@ -85,8 +64,6 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
   }
 
   private def testEnumNumberOverflow(testKey: Boolean): Unit = {
-
-    dropTable()
     if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")

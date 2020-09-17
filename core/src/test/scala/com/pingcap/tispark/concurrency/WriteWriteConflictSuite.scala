@@ -20,9 +20,6 @@ import org.apache.spark.sql.Row
 
 class WriteWriteConflictSuite extends ConcurrencyTest {
   test("write write conflict using TableLock & jdbc") {
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     if (!isEnableTableLock) {
       cancel
@@ -45,9 +42,6 @@ class WriteWriteConflictSuite extends ConcurrencyTest {
   }
 
   test("write write conflict using TableLock & tispark") {
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     if (!isEnableTableLock) {
       cancel

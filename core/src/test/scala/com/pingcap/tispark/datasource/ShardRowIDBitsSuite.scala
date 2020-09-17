@@ -19,17 +19,11 @@ import com.pingcap.tikv.allocator.RowIDAllocator
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
-class ShardRowIDBitsSuite extends BaseDataSourceTest("test_datasource_shard_row_id_bits") {
+class ShardRowIDBitsSuite extends BaseBatchWriteTest("test_datasource_shard_row_id_bits") {
   private val schema = StructType(List(StructField("i", LongType)))
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-  }
 
   test("tispark overflow") {
     val maxShardRowIDBits = 15
-
-    dropTable()
 
     jdbcUpdate(s"create table $dbtable(i int) SHARD_ROW_ID_BITS = $maxShardRowIDBits")
 
@@ -56,8 +50,6 @@ class ShardRowIDBitsSuite extends BaseDataSourceTest("test_datasource_shard_row_
   test("tidb overflow") {
     val maxShardRowIDBits = 15
 
-    dropTable()
-
     jdbcUpdate(s"create table $dbtable(i int) SHARD_ROW_ID_BITS = $maxShardRowIDBits")
 
     // TiSpark insert
@@ -80,13 +72,7 @@ class ShardRowIDBitsSuite extends BaseDataSourceTest("test_datasource_shard_row_
   }
 
   test("test rowid overlap: tidb write -> tispark write -> tidb write") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val maxShardRowIDBits = 0
-
-    dropTable()
 
     jdbcUpdate(s"create table $dbtable(i int) SHARD_ROW_ID_BITS = $maxShardRowIDBits")
 
@@ -120,18 +106,11 @@ class ShardRowIDBitsSuite extends BaseDataSourceTest("test_datasource_shard_row_
     queryTiDBViaJDBC(s"select count(*) from $dbtable").head.head.asInstanceOf[Long]
   }
 
-  private def generateDataViaTiDB(minCount: Long, value: Long) = {
+  private def generateDataViaTiDB(minCount: Long, value: Long): Unit = {
     (1 to 10).foreach(i => jdbcUpdate(s"insert into $dbtable values($value)"))
 
     while (getTableCount < minCount) {
       jdbcUpdate(s"insert into $dbtable select * from $dbtable where i = $value limit 200000")
     }
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

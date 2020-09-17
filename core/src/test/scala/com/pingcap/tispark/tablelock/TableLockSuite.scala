@@ -17,9 +17,9 @@ package com.pingcap.tispark.tablelock
 
 import com.pingcap.tikv.TiDBJDBCClient
 import com.pingcap.tispark.TiDBUtils
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 
-class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
+class TableLockSuite extends BaseBatchWriteTest("test_table_lock") {
 
   private var tiDBJDBCClient: TiDBJDBCClient = _
 

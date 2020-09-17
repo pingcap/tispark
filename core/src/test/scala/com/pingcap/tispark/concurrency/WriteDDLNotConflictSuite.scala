@@ -36,9 +36,6 @@ class WriteDDLNotConflictSuite extends ConcurrencyTest {
   }
 
   private def doTest(ddl: String): Unit = {
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")

@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark.convert
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -23,7 +23,7 @@ import org.apache.spark.sql.types._
  * DATETIME type include:
  * 1. DATETIME
  */
-class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_datetime") {
+class ToDateTimeSuite extends BaseBatchWriteTest("test_data_type_convert_to_datetime") {
 
   private val readSchema = StructType(
     List(
@@ -45,18 +45,7 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
     readRow2 = Row(2, readA, readB, readC)
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   test("Test Convert from String to DATETIME") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // String -> DATETIME
     compareTiDBWriteWithJDBC {
@@ -82,10 +71,6 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
   }
 
   test("Test Convert from java.sql.Date to DATETIME") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.sql.Date -> DATETIME
     compareTiDBWriteWithJDBC {
@@ -114,10 +99,6 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
   }
 
   test("Test Convert from java.sql.Timestamp to DATETIME") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.sql.Timestamp -> DATETIME
     compareTiDBWriteWithJDBC {
