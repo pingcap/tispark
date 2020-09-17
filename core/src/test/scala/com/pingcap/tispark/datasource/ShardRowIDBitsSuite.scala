@@ -15,7 +15,6 @@
 
 package com.pingcap.tispark.datasource
 
-import com.pingcap.tikv.allocator.RowIDAllocator
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 

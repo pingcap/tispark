@@ -19,7 +19,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 
-class OnlyOnePkSuite extends BaseBatchWriteTest("test_datasource_only_one_pk") {
+class OnlyOnePkSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_only_one_pk") {
   private val row3 = Row(3)
   private val row4 = Row(4)
 
