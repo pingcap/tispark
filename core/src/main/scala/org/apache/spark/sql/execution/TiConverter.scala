@@ -27,6 +27,7 @@ object TiConverter {
     // TODO: review type system
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-99
     tp match {
+      case _: sql.types.BooleanType => BitType.BIT
       case _: sql.types.BinaryType => BytesType.BLOB
       case _: sql.types.StringType => StringType.VARCHAR
       case _: sql.types.LongType => IntegerType.BIGINT
