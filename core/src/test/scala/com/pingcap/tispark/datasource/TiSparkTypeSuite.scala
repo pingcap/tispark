@@ -26,8 +26,6 @@ class TiSparkTypeSuite extends BaseBatchWriteTest("type_test") {
 
   private val schema = StructType(List(StructField("i", LongType), StructField("s", StringType)))
   test("bigint test") {
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i bigint, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')")
 

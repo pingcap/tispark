@@ -13,15 +13,13 @@
  * limitations under the License.
  */
 
-package com.pingcap.tispark.datasource
+package org.apache.spark.sql
 
-class BaseBatchWriteTest(
-    override val table: String,
-    override val database: String = "tispark_test")
-    extends BaseBatchWriteWithoutDropTableTest(table, database) {
-
+class BaseTiSparkEnableBatchWriteTest extends BaseTiSparkTest {
   override def beforeEach(): Unit = {
     super.beforeEach()
-    dropTable()
+    if (!supportBatchWrite) {
+      cancel
+    }
   }
 }

@@ -40,18 +40,6 @@ class ConcurrencyTest extends BaseBatchWriteTest("test_concurrency_write_read") 
   protected val sleepBeforeQuery = 10000
   protected val sleepAfterGetCommitTS = 480000
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-  }
-
-  override def afterAll(): Unit = {
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-  }
-
   override protected def dropTable(): Unit = {
     try {
       jdbcUpdate(s"admin cleanup table lock $dbtable")

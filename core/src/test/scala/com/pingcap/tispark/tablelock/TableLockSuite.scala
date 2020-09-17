@@ -66,7 +66,6 @@ class TableLockSuite extends BaseBatchWriteTest("test_table_lock") {
     // init
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     tiDBJDBCClient = new TiDBJDBCClient(conn)
-    dropTable()
     createTable()
 
     // lock table
@@ -91,7 +90,6 @@ class TableLockSuite extends BaseBatchWriteTest("test_table_lock") {
     // init
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     tiDBJDBCClient = new TiDBJDBCClient(conn)
-    dropTable()
     createTable()
 
     // lock table
@@ -125,7 +123,6 @@ class TableLockSuite extends BaseBatchWriteTest("test_table_lock") {
     // init
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     tiDBJDBCClient = new TiDBJDBCClient(conn)
-    dropTable()
     createTable()
 
     // lock table

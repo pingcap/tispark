@@ -21,12 +21,10 @@ import org.apache.spark.sql.Row
 
 class WriteDDLConflictSuite extends ConcurrencyTest {
   test("write ddl conflict using TableLock") {
-
     if (!isEnableTableLock) {
       cancel
     }
 
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(4, 'null')")
 
@@ -43,8 +41,6 @@ class WriteDDLConflictSuite extends ConcurrencyTest {
   }
 
   test("write ddl conflict using SchemaVersionCheck") {
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(4, 'null')")
 

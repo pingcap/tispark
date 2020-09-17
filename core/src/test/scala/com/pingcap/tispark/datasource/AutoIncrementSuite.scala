@@ -31,8 +31,6 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
 
     val schema = StructType(List(StructField("i", LongType), StructField("j", LongType)))
 
-    dropTable()
-
     jdbcUpdate(
       s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
 
@@ -52,8 +50,6 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
     val row4 = Row(4L)
 
     val schema = StructType(List(StructField("j", LongType)))
-
-    dropTable()
 
     jdbcUpdate(
       s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")

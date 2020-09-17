@@ -75,8 +75,6 @@ class ExceptionTestSuite extends BaseBatchWriteTest("test_datasource_exception_t
 
     val schema = StructType(List(StructField("i", LongType), StructField("i2", LongType)))
 
-    dropTable()
-
     jdbcUpdate(s"create table $dbtable(i int, i2 int NOT NULL)")
 
     {

@@ -16,10 +16,10 @@
 package com.pingcap.tispark
 
 import com.pingcap.tispark.write.{TiBatchWrite, TiDBOptions}
-import org.apache.spark.sql.BaseTiSparkTest
+import org.apache.spark.sql.BaseTiSparkEnableBatchWriteTest
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 
-class TiBatchWriteSuite extends BaseTiSparkTest {
+class TiBatchWriteSuite extends BaseTiSparkEnableBatchWriteTest {
 
   private val tables =
     "CUSTOMER" ::
@@ -49,7 +49,6 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write") {
-
     for (table <- tables) {
       logDebug(s"start test table [$table]")
 
@@ -79,7 +78,6 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: isPkHandle") {
-
     for (table <- tables) {
       logDebug(s"start test table [$table]")
       val tableToWrite = s"${batchWriteTablePrefix}_${isPkHandlePrefix}_$table"
@@ -204,7 +202,6 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: replace + isPkHandle") {
-
     for (table <- tables) {
       logDebug(s"start test table [$table]")
 
@@ -369,7 +366,6 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: replace + uniqueKey") {
-
     for (table <- tables) {
       logDebug(s"start test table [$table]")
 
@@ -535,7 +531,6 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
   }
 
   test("table not exists") {
-
     // select
     val df = sql(s"select * from CUSTOMER")
 
