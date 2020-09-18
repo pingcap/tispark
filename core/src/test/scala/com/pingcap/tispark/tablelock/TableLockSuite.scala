@@ -17,11 +17,18 @@ package com.pingcap.tispark.tablelock
 
 import com.pingcap.tikv.TiDBJDBCClient
 import com.pingcap.tispark.TiDBUtils
-import com.pingcap.tispark.datasource.BaseBatchWriteWithoutDropTableTest
+import com.pingcap.tispark.datasource.BaseDataSourceTest
 
-class TableLockSuite extends BaseBatchWriteWithoutDropTableTest("test_table_lock") {
+class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
 
   private var tiDBJDBCClient: TiDBJDBCClient = _
+
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    if (!supportBatchWrite) {
+      cancel
+    }
+  }
 
   override def afterAll(): Unit = {
     try {

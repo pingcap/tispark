@@ -20,7 +20,7 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 
 class UpperCaseColumnNameSuite
-    extends BaseBatchWriteTest("test_datasource_uppser_case_column_name") {
+    extends BaseBatchWriteWithoutDropTableTest("test_datasource_uppser_case_column_name") {
 
   private val row1 = Row(1, 2)
 
