@@ -227,7 +227,8 @@ class TiBatchWrite(
       }
 
       // shuffle according to split points
-      shuffledRDD.partitionBy(new TiReginSplitPartitioner(orderedSplitPoints))
+      shuffledRDD.partitionBy(
+        new TiReginSplitPartitioner(orderedSplitPoints, options.maxWriteTaskNumber))
     } else {
       shuffledRDD
     }
