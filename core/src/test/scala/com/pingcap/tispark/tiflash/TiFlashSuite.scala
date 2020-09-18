@@ -31,10 +31,44 @@ class TiFlashSuite extends BaseTiSparkTest {
   private val sleepBeforeQuery = 10000
   private val sleepAfterPrewriteSecondaryKey = 240000
 
-  test("lock on tiflash: not expired") {
+  def cancelIfTiFlashDisabled(): Unit = {
     if (!enableTiFlashTest) {
       cancel("tiflash test not enabled")
     }
+  }
+
+  test("Test reading TiFlash partition table") {
+    cancelIfTiFlashDisabled()
+
+    tidbStmt.execute("DROP TABLE IF EXISTS `quarterly_report_status`")
+    tidbStmt.execute(
+      """
+        |CREATE TABLE `quarterly_report_status` (
+        |  `report_id` int(11) NOT NULL,
+        |  `report_status` varchar(20) NOT NULL,
+        |  `report_updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+        |PARTITION BY RANGE ( UNIX_TIMESTAMP(`report_updated`) ) (
+        |  PARTITION `p0` VALUES LESS THAN (1593532800),
+        |  PARTITION `p1` VALUES LESS THAN (1596211200),
+        |  PARTITION `p2` VALUES LESS THAN (1598889600),
+        |  PARTITION `p3` VALUES LESS THAN (MAXVALUE)
+        |)
+        |""".stripMargin)
+    tidbStmt.execute("""
+                       |INSERT INTO quarterly_report_status VALUES
+                       | (1,'a','2020-07-02 00:00:00'),
+                       | (2,'b','2020-08-02 00:00:00'),
+                       | (3,'c','2020-02-02 00:00:00');""".stripMargin)
+
+    tidbStmt.execute("""alter table quarterly_report_status set tiflash replica 1""")
+
+    assert(checkLoadTiFlashWithRetry("quarterly_report_status", Some("tispark_test")))
+    explainAndRunTest("select * from quarterly_report_status", canTestTiFlash = true)
+  }
+
+  test("lock on tiflash: not expired") {
+    cancelIfTiFlashDisabled()
 
     if (!supportBatchWrite) {
       cancel
@@ -63,9 +97,7 @@ class TiFlashSuite extends BaseTiSparkTest {
   }
 
   test("lock on tiflash: expired") {
-    if (!enableTiFlashTest) {
-      cancel("tiflash test not enabled")
-    }
+    cancelIfTiFlashDisabled()
 
     if (!supportBatchWrite) {
       cancel

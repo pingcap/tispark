@@ -111,7 +111,7 @@ trait SharedSQLContext
 
     if (check.isEmpty) {
       throw new RuntimeException(
-        s"$tableName not found in TiDB after load. Load SQL file failed.")
+        s"$tableName not found in TiDB after load. Load Data to TiFlash failed.")
     }
     logger.info(s"Table $tableName found present in ${check.head.head}")
     for (_ <- 0 until 60) {

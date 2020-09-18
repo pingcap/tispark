@@ -203,11 +203,13 @@ public class TiSession implements AutoCloseable {
    * @param splitKeys
    */
   public void splitRegionAndScatter(
-      List<byte[]> splitKeys, int splitRegionBackoffMS, int scatterWaitMS) {
+      List<byte[]> splitKeys,
+      int splitRegionBackoffMS,
+      int scatterRegionBackoffMS,
+      int scatterWaitMS) {
     logger.info(String.format("split key's size is %d", splitKeys.size()));
     long startMS = System.currentTimeMillis();
 
-    BackOffer splitRegionBackoff = ConcreteBackOffer.newCustomBackOff(splitRegionBackoffMS);
     // split region
     List<TiRegion> newRegions =
         splitRegion(
@@ -215,11 +217,16 @@ public class TiSession implements AutoCloseable {
                 .stream()
                 .map(k -> Key.toRawKey(k).next().toByteString())
                 .collect(Collectors.toList()),
-            splitRegionBackoff);
+            ConcreteBackOffer.newCustomBackOff(splitRegionBackoffMS));
 
     // scatter region
     for (TiRegion newRegion : newRegions) {
-      getPDClient().scatterRegion(newRegion, splitRegionBackoff);
+      try {
+        getPDClient()
+            .scatterRegion(newRegion, ConcreteBackOffer.newCustomBackOff(scatterRegionBackoffMS));
+      } catch (Exception e) {
+        logger.warn(String.format("failed to scatter region: %d", newRegion.getId()), e);
+      }
     }
 
     // wait scatter region finish

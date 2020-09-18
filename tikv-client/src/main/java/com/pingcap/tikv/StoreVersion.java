@@ -19,6 +19,7 @@ import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Metapb;
@@ -60,10 +61,19 @@ public class StoreVersion {
     StoreVersion storeVersion = new StoreVersion(version);
 
     BackOffer bo = ConcreteBackOffer.newCustomBackOff(BackOffer.PD_INFO_BACKOFF);
-    List<Metapb.Store> storeList = pdClient.getAllStores(bo);
+    List<Metapb.Store> storeList =
+        pdClient
+            .getAllStores(bo)
+            .stream()
+            .filter(
+                store ->
+                    !isTiFlash(store)
+                        && (store.getState() == Metapb.StoreState.Up
+                            || store.getState() == Metapb.StoreState.Offline))
+            .collect(Collectors.toList());
 
     for (Metapb.Store store : storeList) {
-      if (!isTiFlash(store) && storeVersion.greatThan(new StoreVersion(store.getVersion()))) {
+      if (storeVersion.greatThan(new StoreVersion(store.getVersion()))) {
         return false;
       }
     }

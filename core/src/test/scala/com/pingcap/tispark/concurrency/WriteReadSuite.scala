@@ -17,31 +17,42 @@ package com.pingcap.tispark.concurrency
 
 class WriteReadSuite extends ConcurrencyTest {
 
-  ignore("read conflict using jdbc") {
-    doTestJDBC(s"create table $dbtable(i int, s varchar(128))")
+  test("read conflict using jdbc") {
+    doTestJDBC(
+      s"create table $dbtable(i int, s varchar(128))",
+      pkIsHandle = false,
+      hasIndex = false)
   }
 
-  ignore("read conflict using jdbc: primary key") {
-    doTestJDBC(s"create table $dbtable(i int, s varchar(128), PRIMARY KEY(i))")
+  test("read conflict using jdbc: primary key") {
+    doTestJDBC(
+      s"create table $dbtable(i int, s varchar(128), PRIMARY KEY(i))",
+      pkIsHandle = true,
+      hasIndex = true)
   }
 
-  ignore("read conflict using jdbc: unique key") {
-    doTestJDBC(s"create table $dbtable(i int, s varchar(128), UNIQUE KEY(i))")
+  test("read conflict using jdbc: unique key") {
+    doTestJDBC(
+      s"create table $dbtable(i int, s varchar(128), UNIQUE KEY(i))",
+      pkIsHandle = false,
+      hasIndex = true)
   }
 
-  ignore("read conflict using tispark") {
-    doTestTiSpark(s"create table $dbtable(i int, s varchar(128))")
+  test("read conflict using tispark") {
+    doTestTiSpark(s"create table $dbtable(i int, s varchar(128))", hasIndex = false)
   }
 
-  ignore("read conflict using tispark: primary key") {
-    doTestTiSpark(s"create table $dbtable(i int, s varchar(128), PRIMARY KEY(i))")
+  test("read conflict using tispark: primary key") {
+    doTestTiSpark(
+      s"create table $dbtable(i int, s varchar(128), PRIMARY KEY(i))",
+      hasIndex = true)
   }
 
-  ignore("read conflict using tispark: unique key") {
-    doTestTiSpark(s"create table $dbtable(i int, s varchar(128), UNIQUE KEY(i))")
+  test("read conflict using tispark: unique key") {
+    doTestTiSpark(s"create table $dbtable(i int, s varchar(128), UNIQUE KEY(i))", hasIndex = true)
   }
 
-  def doTestJDBC(createTable: String) = {
+  def doTestJDBC(createTable: String, pkIsHandle: Boolean, hasIndex: Boolean) = {
     if (!supportBatchWrite) {
       cancel
     }
@@ -72,33 +83,35 @@ class WriteReadSuite extends ConcurrencyTest {
     readThread3.join()
 
     if (blockingRead) {
+      if (pkIsHandle) {
+        // point get optimization
+        assert(!result1.hasError)
+        assert(result1.isEmpty)
+      } else {
+        // Resolve Lock Timeout
+        assert(result1.hasError)
+      }
+
       // Resolve Lock Timeout
-      val errorMsg = "Resolve lock timeout"
-
-      assert(result1.hasError)
-      assert(result1.error.getCause.getMessage.equals(errorMsg))
-
       assert(result2.hasError)
-      assert(result2.error.getCause.getMessage.equals(errorMsg))
 
-      assert(result3.hasError)
-      assert(result3.error.getCause.getMessage.equals(errorMsg))
+      if (hasIndex) {
+        // point get optimization
+        assert(result3.obj.equals("v3"))
+      } else {
+        // Resolve Lock Timeout
+        assert(result3.hasError)
+      }
     } else {
       // non-blocking read old data
       assert(!result1.hasError)
       assert(result1.isEmpty)
-
-      assert(!result2.hasError)
-      assert(!result2.isEmpty)
       assert(result2.obj.equals("v2"))
-
-      assert(!result3.hasError)
-      assert(!result3.isEmpty)
       assert(result3.obj.equals("v3"))
     }
   }
 
-  def doTestTiSpark(createTable: String) = {
+  def doTestTiSpark(createTable: String, hasIndex: Boolean) = {
     if (!supportBatchWrite) {
       cancel
     }
@@ -130,27 +143,20 @@ class WriteReadSuite extends ConcurrencyTest {
 
     if (blockingRead) {
       // Resolve Lock Timeout
-      val errorMsg = "com.pingcap.tikv.exception.KeyException: com.pingcap.tikv.txn.Lock"
-
+      // com.pingcap.tikv.exception.LockException
+      // com.pingcap.tikv.exception.KeyException: com.pingcap.tikv.txn.Lock
       assert(result1.hasError)
-      assert(result1.error.getMessage.contains(errorMsg))
-
       assert(result2.hasError)
-      assert(result2.error.getMessage.contains(errorMsg))
-
-      assert(result3.hasError)
-      assert(result3.error.getMessage.contains(errorMsg))
+      if (hasIndex) {
+        assert(result3.obj.equals("v3"))
+      } else {
+        assert(result3.hasError)
+      }
     } else {
       // non-blocking read old data
       assert(!result1.hasError)
       assert(result1.isEmpty)
-
-      assert(!result2.hasError)
-      assert(!result2.isEmpty)
       assert(result2.obj.equals("v2"))
-
-      assert(!result3.hasError)
-      assert(!result3.isEmpty)
       assert(result3.obj.equals("v3"))
     }
   }

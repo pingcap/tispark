@@ -30,7 +30,7 @@ class RowIDAllocatorSuite extends BaseTiSparkTest {
                        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
       """.stripMargin)
 
-    val dbName = "tidb_tispark_test"
+    val dbName = dbPrefix + "tispark_test"
     val tableName = "rowid_allocator"
     val tiDBInfo = ti.tiSession.getCatalog.getDatabase(dbName)
     val tiTableInfo =
@@ -52,7 +52,7 @@ class RowIDAllocatorSuite extends BaseTiSparkTest {
                        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
       """.stripMargin)
 
-    val dbName = "tidb_tispark_test"
+    val dbName = dbPrefix + "tispark_test"
     val tableName = "t"
     val tiDBInfo = ti.tiSession.getCatalog.getDatabase(dbName)
     val tiTableInfo =

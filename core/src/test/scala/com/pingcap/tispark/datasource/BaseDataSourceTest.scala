@@ -17,6 +17,7 @@ package com.pingcap.tispark.datasource
 
 import java.util.Objects
 
+import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.meta.TiColumnInfo
 import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.SparkException
@@ -32,6 +33,8 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
   override def beforeAll(): Unit = {
     super.beforeAll()
   }
+
+  protected def databaseWithPrefix = s"$dbPrefix$database"
 
   protected def dbtableWithPrefix = s"`$dbPrefix$database`.`$table`"
 
@@ -281,4 +284,23 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
   }
 
   protected def getTestDatabaseNameInSpark(database: String): String = s"$dbPrefix$database"
+
+  protected def getLongBinaryString(v: Long): String = {
+    var str = java.lang.Long.toBinaryString(v)
+    while (str.length < 64) {
+      str = "0" + str
+    }
+    "0x" + str
+  }
+
+  protected def allocateID(size: Long): RowIDAllocator = {
+    val tiDBInfo = ti.tiSession.getCatalog.getDatabase(databaseWithPrefix)
+    val tiTableInfo = ti.tiSession.getCatalog.getTable(databaseWithPrefix, table)
+    RowIDAllocator.create(
+      tiDBInfo.getId,
+      tiTableInfo,
+      ti.tiSession.getConf,
+      tiTableInfo.isAutoIncColUnsigned,
+      size)
+  }
 }

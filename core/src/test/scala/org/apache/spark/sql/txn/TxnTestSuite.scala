@@ -105,6 +105,8 @@ class TxnTestSuite extends BaseTiSparkTest {
   test("resolveLock concurrent test") {
     ti.tiConf.setIsolationLevel(IsolationLevel.SI)
 
+    setCurrentDatabase("resolveLock_test")
+
     val start = queryViaTiSpark(sumString).head.head
 
     val threads =

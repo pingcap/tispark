@@ -16,9 +16,37 @@
 package org.apache.spark.sql
 
 import com.pingcap.tispark.TiConfigConst
+import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
+
+  test("Scala match error when predicate includes boolean type conversion") {
+    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute("""
+                       |CREATE TABLE `t` (
+                       |  `id` varchar(11) DEFAULT NULL,
+                       |  `flag` boolean DEFAULT NULL
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+                       |""".stripMargin)
+
+    tidbStmt.execute("insert into t values('1', true), ('2', false), ('3', true), ('4', false)")
+
+    explainAndRunTest(s"SELECT * FROM t WHERE FLAG = 'true' and SUBSTR(ID, 1, 2) = '1'")
+  }
+
+  test("large column number + double read") {
+    tidbStmt.execute(
+      resourceToString(
+        s"issue/LargeColumn.sql",
+        classLoader = Thread.currentThread().getContextClassLoader))
+    refreshConnections()
+
+    sql("explain select * from large_column where a = 1").show(false)
+    sql("select * from large_column where a = 1").show(false)
+    judge("select * from large_column where a = 1")
+  }
+
   // https://github.com/pingcap/tispark/issues/1570
   test("Fix covering index generates incorrect plan when first column is not included in index") {
     tidbStmt.execute("DROP TABLE IF EXISTS tt")

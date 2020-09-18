@@ -16,7 +16,7 @@
 package com.pingcap.tispark.write
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer}
+import com.pingcap.tikv.util.ConcreteBackOffer
 import com.pingcap.tikv.{TTLManager, TiDBJDBCClient, _}
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.utils.TiUtil
@@ -131,13 +131,10 @@ class TiBatchWrite(
     val tikvSupportUpdateTTL = StoreVersion.minTiKVVersion("3.0.5", tiSession.getPDClient)
     isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
     lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
-    tiDBJDBCClient = new TiDBJDBCClient(
-      TiDBUtils.createConnectionFactory(options.url)(),
-      options.writeSplitRegionFinish)
+    tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
 
     // init tiBatchWriteTables
     tiBatchWriteTables = {
-      val isEnableSplitRegion = tiDBJDBCClient.isEnableSplitRegion
       dataToWrite.map {
         case (dbTable, df) =>
           new TiBatchWriteTable(
@@ -145,8 +142,7 @@ class TiBatchWrite(
             tiContext,
             options.setDBTable(dbTable),
             tiConf,
-            tiDBJDBCClient,
-            isEnableSplitRegion)
+            tiDBJDBCClient)
       }.toList
     }
 
@@ -193,7 +189,7 @@ class TiBatchWrite(
     logger.info(s"startTS: $startTs")
 
     // pre calculate
-    var shuffledRDD: RDD[(SerializableKey, Array[Byte])] = {
+    val shuffledRDD: RDD[(SerializableKey, Array[Byte])] = {
       val rddList = tiBatchWriteTables.map(_.preCalculate(startTimeStamp))
       if (rddList.lengthCompare(1) == 0) {
         rddList.head
@@ -201,8 +197,6 @@ class TiBatchWrite(
         tiContext.sparkSession.sparkContext.union(rddList)
       }
     }
-    val shuffledRDDCount = shuffledRDD.count()
-    logger.info(s"write kv data count=$shuffledRDDCount")
 
     // take one row as primary key
     val (primaryKey: SerializableKey, primaryRow: Array[Byte]) = {
@@ -217,26 +211,31 @@ class TiBatchWrite(
 
     logger.info(s"primary key: $primaryKey")
 
-    // filter primary key
-    val secondaryKeysRDD = shuffledRDD.filter { keyValue =>
-      !keyValue._1.equals(primaryKey)
-    }
-
     // split region
-    if (options.enableRegionSplit && "v2".equals(options.regionSplitMethod)) {
-      val orderedSplitPoints = getRegionSplitPoints(shuffledRDD, shuffledRDDCount)
+    val finalRDD = if (options.enableRegionSplit) {
+      val insertRDD = shuffledRDD.filter(kv => kv._2.length > 0)
+      val orderedSplitPoints = getRegionSplitPoints(insertRDD)
 
       try {
         tiSession.splitRegionAndScatter(
           orderedSplitPoints.map(_.bytes).asJava,
           options.splitRegionBackoffMS,
+          options.scatterRegionBackoffMS,
           options.scatterWaitMS)
       } catch {
         case e: Throwable => logger.warn("split region and scatter error!", e)
       }
 
       // shuffle according to split points
-      shuffledRDD = shuffledRDD.partitionBy(new TiReginSplitPartitioner(orderedSplitPoints))
+      shuffledRDD.partitionBy(
+        new TiReginSplitPartitioner(orderedSplitPoints, options.maxWriteTaskNumber))
+    } else {
+      shuffledRDD
+    }
+
+    // filter primary key
+    val secondaryKeysRDD = finalRDD.filter { keyValue =>
+      !keyValue._1.equals(primaryKey)
     }
 
     // driver primary pre-write
@@ -249,9 +248,10 @@ class TiBatchWrite(
         options.txnCommitBatchSize,
         options.writeBufferSize,
         options.writeThreadPerTask,
-        options.retryCommitSecondaryKey)
+        options.retryCommitSecondaryKey,
+        options.prewriteMaxRetryTimes)
     val prewritePrimaryBackoff =
-      ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
+      ConcreteBackOffer.newCustomBackOff(options.prewriteBackOfferMS)
     logger.info("start to prewritePrimaryKey")
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
     logger.info("prewritePrimaryKey success")
@@ -280,7 +280,8 @@ class TiBatchWrite(
           options.txnCommitBatchSize,
           options.writeBufferSize,
           options.writeThreadPerTask,
-          options.retryCommitSecondaryKey)
+          options.retryCommitSecondaryKey,
+          options.prewriteMaxRetryTimes)
 
       val pairs = iterator.map { keyValue =>
         new BytePairWrapper(keyValue._1.bytes, keyValue._2)
@@ -299,18 +300,18 @@ class TiBatchWrite(
     }
     logger.info("prewriteSecondaryKeys success")
 
-    // for test
-    if (options.sleepAfterPrewriteSecondaryKey > 0) {
-      logger.info(s"sleep ${options.sleepAfterPrewriteSecondaryKey} ms for test")
-      Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
-    }
-
     // driver primary commit
     val commitTs = tiSession.getTimestamp.getVersion
     // check commitTS
     if (commitTs <= startTs) {
       throw new TiBatchWriteException(
         s"invalid transaction tso with startTs=$startTs, commitTs=$commitTs")
+    }
+
+    // for test
+    if (options.sleepAfterPrewriteSecondaryKey > 0) {
+      logger.info(s"sleep ${options.sleepAfterPrewriteSecondaryKey} ms for test")
+      Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
     }
 
     // check schema change
@@ -358,7 +359,8 @@ class TiBatchWrite(
           options.txnCommitBatchSize,
           options.writeBufferSize,
           options.writeThreadPerTask,
-          options.retryCommitSecondaryKey)
+          options.retryCommitSecondaryKey,
+          options.prewriteMaxRetryTimes)
 
         val keys = iterator.map { keyValue =>
           new ByteWrapper(keyValue._1.bytes)
@@ -388,8 +390,9 @@ class TiBatchWrite(
   }
 
   private def getRegionSplitPoints(
-      rdd: RDD[(SerializableKey, Array[Byte])],
-      count: Long): List[SerializableKey] = {
+      rdd: RDD[(SerializableKey, Array[Byte])]): List[SerializableKey] = {
+    val count = rdd.count()
+
     if (count < options.regionSplitThreshold) {
       return Nil
     }
