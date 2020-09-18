@@ -21,6 +21,20 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("Scala match error when predicate includes boolean type conversion") {
+    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute("""
+                       |CREATE TABLE `t` (
+                       |  `id` varchar(11) DEFAULT NULL,
+                       |  `flag` boolean DEFAULT NULL
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+                       |""".stripMargin)
+
+    tidbStmt.execute("insert into t values('1', true), ('2', false), ('3', true), ('4', false)")
+
+    explainAndRunTest(s"SELECT * FROM t WHERE FLAG = 'true' and SUBSTR(ID, 1, 2) = '1'")
+  }
+
   test("large column number + double read") {
     tidbStmt.execute(
       resourceToString(
