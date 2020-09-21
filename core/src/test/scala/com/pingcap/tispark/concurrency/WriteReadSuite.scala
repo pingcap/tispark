@@ -26,7 +26,7 @@ class WriteReadSuite extends ConcurrencyTest {
       hasIndex = false)
   }
 
-  test("read conflict using jdbc: primary key") {
+  ignore("read conflict using jdbc: primary key") {
     doTestJDBC(
       s"create table $dbtable(i int, s varchar(128), PRIMARY KEY(i))",
       pkIsHandle = true,
