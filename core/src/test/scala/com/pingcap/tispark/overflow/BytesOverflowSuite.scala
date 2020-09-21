@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark.overflow
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -28,45 +28,25 @@ import org.apache.spark.sql.types._
  * 5. MEDIUMBLOB
  * 6. LONGBLOB
  */
-class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overflow") {
+class BytesOverflowSuite extends BaseBatchWriteTest("test_data_type_bytes_overflow") {
 
   test("Test BINARY Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBinaryOverflow(false)
   }
 
   test("Test BINARY as key Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBinaryOverflow(true)
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   test("Test VARBINARY Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testVarbinaryOverflow(false)
   }
 
   test("Test VARBINARY as key Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testVarbinaryOverflow(true)
   }
 
   private def testBinaryOverflow(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 BINARY(8), primary key (c1(4)))")
     } else {
@@ -88,21 +68,14 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
   }
 
   test("Test TINYBLOB Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTinyBlobOverflow(false)
   }
 
   test("Test TINYBLOB as key Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTinyBlobOverflow(true)
   }
 
   private def testVarbinaryOverflow(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 VARBINARY(8), primary key (c1(4)))")
     } else {
@@ -124,7 +97,6 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
   }
 
   private def testTinyBlobOverflow(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 TINYBLOB, primary key (c1(4)))")
     } else {

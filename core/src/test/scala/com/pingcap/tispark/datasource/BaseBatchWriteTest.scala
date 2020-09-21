@@ -1,5 +1,4 @@
 /*
- *
  * Copyright 2020 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +11,17 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package com.pingcap.tikv;
+package com.pingcap.tispark.datasource
 
-public class Version {
-  public static final String RESOLVE_LOCK_V2 = "2.0.0";
+class BaseBatchWriteTest(
+    override val table: String,
+    override val database: String = "tispark_test")
+    extends BaseBatchWriteWithoutDropTableTest(table, database) {
 
-  public static final String RESOLVE_LOCK_V3 = "3.0.5";
-
-  public static final String RESOLVE_LOCK_V4 = "4.0.0";
-
-  public static final String BATCH_WRITE = "3.0.14";
-
-  public static final String NEW_ROW_FORMAT = "4.0.0";
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    dropTable()
+  }
 }

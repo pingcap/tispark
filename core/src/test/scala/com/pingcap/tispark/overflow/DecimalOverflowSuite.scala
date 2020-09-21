@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark.overflow
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, _}
 
@@ -23,20 +23,9 @@ import org.apache.spark.sql.types.{StructField, _}
  * DECIMAL type include:
  * 1. DECIMAL
  */
-class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_overflow") {
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
+class DecimalOverflowSuite extends BaseBatchWriteTest("test_data_type_decimal_overflow") {
 
   test("Test DECIMAL Not Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val testDataList =
       TestData(38, 0, 1.5d, 2L) ::
         TestData(38, 0, 1.4d, 1L) ::
@@ -85,10 +74,6 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
   case class TestData(length: Int, precision: Int, writeData: Double, readData: Long) {}
 
   test("Test DECIMAL Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val testDataList =
       OverflowTestData(10, 4, 1000000d) ::
         OverflowTestData(2, 0, 100d) ::

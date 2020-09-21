@@ -16,7 +16,7 @@
 package com.pingcap.tispark.overflow
 
 import com.pingcap.tikv.exception.TiDBConvertException
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -24,32 +24,17 @@ import org.apache.spark.sql.types._
  * DATETIME type include:
  * 1. DATETIME
  */
-class DateTimeOverflowSuite extends BaseDataSourceTest("test_data_type_datetime_overflow") {
+class DateTimeOverflowSuite extends BaseBatchWriteTest("test_data_type_datetime_overflow") {
 
   test("Test DATETIME YEAR Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testDateTimeOverflow(false)
   }
 
   test("Test DATETIME as key YEAR Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testDateTimeOverflow(true)
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   private def testDateTimeOverflow(testKey: Boolean): Unit = {
-
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 DATETIME(6) primary key)")
     } else {

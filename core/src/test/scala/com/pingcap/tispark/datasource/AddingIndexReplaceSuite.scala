@@ -18,7 +18,7 @@ package com.pingcap.tispark.datasource
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace") {
+class AddingIndexReplaceSuite extends BaseBatchWriteTest("adding_index_replace") {
   private val row1 = Row(1, 1, 1, "Hello")
   private val row2 = Row(2, 2, 2, "TiDB")
   private val row3 = Row(3, 3, 3, "Spark")
@@ -36,11 +36,6 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
       StructField("s", StringType)))
 
   test("test unique index replace with primary key is handle and index") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(
       s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2), index(s))")
     jdbcUpdate(s"insert into $dbtable values(1, 1, 1, 'Hello')")
@@ -58,11 +53,6 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   }
 
   test("test same key in one rdd") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))")
     jdbcUpdate(s"insert into $dbtable values(1, 1, 1, 'Hello')")
 
@@ -76,11 +66,6 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   }
 
   test("test unique index replace with primary key is handle") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(
       s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2))")
     jdbcUpdate(s"insert into $dbtable values(1, 1, 1, 'Hello')")
@@ -98,11 +83,6 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   }
 
   test("test unique index replace without primary key") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(
       s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), unique index(c1), unique index(c2))")
     jdbcUpdate(s"insert into $dbtable values(1, 1, 1, 'Hello')")
@@ -116,11 +96,6 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   }
 
   test("test pk is handle") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))")
     jdbcUpdate(s"insert into $dbtable values(1, 1, 1, 'Hello')")
     // insert row2 row3
@@ -128,10 +103,4 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
     testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

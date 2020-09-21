@@ -15,14 +15,14 @@
 
 package org.apache.spark.sql.insertion
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.Schema
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 
 class BatchWritePkSuite
-    extends BaseDataSourceTest("batch_write_insertion_pk", "batch_write_test_pk")
+    extends BaseBatchWriteTest("batch_write_insertion_pk", "batch_write_test_pk")
     with EnumeratePKDataTypeTestAction {
   // TODO: support binary insertion.
   override def dataTypes: List[ReflectedDataType] =
@@ -39,13 +39,6 @@ class BatchWritePkSuite
 
   // this is only for mute the warning
   override def test(): Unit = {}
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 
   test("test pk cases") {
     for (pk <- dataTypes) {

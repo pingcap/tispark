@@ -18,7 +18,7 @@ package com.pingcap.tispark.multitable
 import com.pingcap.tispark.write.{DBTable, TiBatchWrite}
 import org.apache.spark.sql._
 
-class MultiTableWriteSuite extends BaseTiSparkTest {
+class MultiTableWriteSuite extends BaseTiSparkEnableBatchWriteTest {
 
   private val tables =
     "CUSTOMER" ::
@@ -39,10 +39,6 @@ class MultiTableWriteSuite extends BaseTiSparkTest {
   }
 
   test("multi table batch write") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val data = tables.map { table =>
       val tableToWrite = s"${batchWriteTablePrefix}_$table"
       val dbTable = DBTable(database, tableToWrite)

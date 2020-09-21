@@ -15,14 +15,14 @@
 
 package org.apache.spark.sql.insertion
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 import org.apache.spark.sql.test.generator.Schema
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 
 class BatchWriteUniqueIndexSuite
-    extends BaseDataSourceTest("batch_write_insertion_one_unique_index", "batch_write_test_index")
+    extends BaseBatchWriteTest("batch_write_insertion_one_unique_index", "batch_write_test_index")
     with EnumerateUniqueIndexDataTypeTestAction {
   // TODO: support binary insertion.
   override def dataTypes: List[ReflectedDataType] =
@@ -40,13 +40,6 @@ class BatchWriteUniqueIndexSuite
 
   // this is only for mute the warning
   override def test(): Unit = {}
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 
   test("test unique indices cases") {
     val schemas = genSchema(dataTypes, table)

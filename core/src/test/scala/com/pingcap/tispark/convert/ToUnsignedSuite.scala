@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark.convert
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -27,7 +27,7 @@ import org.apache.spark.sql.types._
  * 4. INT UNSIGNED
  * 5. BIGINT UNSIGNED
  */
-class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsigned") {
+class ToUnsignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_unsigned") {
   private val readSchema = StructType(
     List(
       StructField("i", IntegerType),
@@ -37,18 +37,7 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
       StructField("c4", LongType),
       StructField("c5", LongType)))
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   test("Test Convert from java.lang.Boolean to UNSIGNED") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Boolean -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
     compareTiDBWriteWithJDBC {
@@ -88,10 +77,6 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
   }
 
   test("Test Convert from java.lang.Byte to UNSIGNED") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Byte -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
     compareTiDBWriteWithJDBC {
@@ -127,10 +112,6 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
   }
 
   test("Test Convert from java.lang.Short to UNSIGNED") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Short -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
     compareTiDBWriteWithJDBC {
@@ -168,10 +149,6 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
   }
 
   test("Test Convert from java.lang.Integer to UNSIGNED") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Integer -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
     compareTiDBWriteWithJDBC {
@@ -210,10 +187,6 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
   }
 
   test("Test Convert from java.lang.Long to UNSIGNED") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Long -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
     compareTiDBWriteWithJDBC {
@@ -253,10 +226,6 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
   }
 
   test("Test Convert from java.lang.Float to UNSIGNED") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Float -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
     compareTiDBWriteWithJDBC {
@@ -313,10 +282,6 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
   }
 
   test("Test Convert from java.lang.Double to UNSIGNED") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Double -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
     compareTiDBWriteWithJDBC {
@@ -372,10 +337,6 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
   }
 
   test("Test Convert from String to UNSIGNED") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // String -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
     compareTiDBWriteWithJDBC {

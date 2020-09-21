@@ -19,18 +19,12 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_unsupported") {
+class CheckUnsupportedSuite extends BaseBatchWriteTest("test_datasource_check_unsupported") {
 
   override def beforeAll(): Unit =
     super.beforeAll()
 
   test("Test write to partition table") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
-
     tidbStmt.execute("set @@tidb_enable_table_partition = 1")
 
     jdbcUpdate(
@@ -56,11 +50,6 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
   }
 
   test("Check Virtual Generated Column") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i INT, c1 INT, c2 INT,  c3 INT AS (c1 + c2))")
 
     val row1 = Row(1, 2, 3)
@@ -80,11 +69,6 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
   }
 
   test("Check Stored Generated Column") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i INT, c1 INT, c2 INT,  c3 INT AS (c1 + c2) STORED)")
 
     val row1 = Row(1, 2, 3)
@@ -101,11 +85,4 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
         .equals("tispark currently does not support write data to table with generated column!"))
 
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

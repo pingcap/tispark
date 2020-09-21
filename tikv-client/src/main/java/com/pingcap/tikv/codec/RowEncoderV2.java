@@ -209,13 +209,11 @@ public class RowEncoderV2 {
       case TypeString:
       case TypeVarString:
       case TypeVarchar:
-        cdo.write(((String) value).getBytes(StandardCharsets.UTF_8));
-        break;
       case TypeBlob:
       case TypeTinyBlob:
       case TypeMediumBlob:
       case TypeLongBlob:
-        cdo.write(((byte[]) value));
+        encodeString(cdo, value);
         break;
       case TypeNewDecimal:
         encodeDecimal(cdo, value);
@@ -290,9 +288,15 @@ public class RowEncoderV2 {
 
   private void encodeBit(CodecDataOutput cdo, Object value) {
     long s = 0;
-    for (byte b : (byte[]) value) {
-      s <<= 8;
-      s |= b;
+    if (value instanceof Long) {
+      s = (long) value;
+    } else if (value instanceof byte[]) {
+      for (byte b : (byte[]) value) {
+        s <<= 8;
+        s |= b;
+      }
+    } else {
+      throw new CodecException("invalid bytes type " + value.getClass());
     }
     encodeInt(cdo, s);
   }
@@ -315,18 +319,41 @@ public class RowEncoderV2 {
     }
   }
 
+  private void encodeString(CodecDataOutput cdo, Object value) {
+    if (value instanceof byte[]) {
+      cdo.write((byte[]) value);
+    } else if (value instanceof String) {
+      cdo.write(((String) value).getBytes(StandardCharsets.UTF_8));
+    } else {
+      throw new CodecException("invalid string type " + value.getClass());
+    }
+  }
+
   private void encodeDecimal(CodecDataOutput cdo, Object value) {
-    MyDecimal dec = new MyDecimal();
-    BigDecimal decimal = (BigDecimal) value;
-    int prec = decimal.precision();
-    int frac = decimal.scale();
-    dec.fromString(((BigDecimal) value).toPlainString());
-    DecimalCodec.writeDecimal(cdo, dec, prec, frac);
+    if (value instanceof MyDecimal) {
+      MyDecimal dec = (MyDecimal) value;
+      DecimalCodec.writeDecimal(cdo, dec, dec.precision(), dec.frac());
+    } else if (value instanceof BigDecimal) {
+      MyDecimal dec = new MyDecimal();
+      BigDecimal decimal = (BigDecimal) value;
+      int prec = decimal.precision();
+      int frac = decimal.scale();
+      dec.fromString(((BigDecimal) value).toPlainString());
+      DecimalCodec.writeDecimal(cdo, dec, prec, frac);
+    } else {
+      throw new CodecException("invalid decimal type " + value.getClass());
+    }
   }
 
   private void encodeEnum(CodecDataOutput cdo, Object value, List<String> elems) {
-    int val = EnumCodec.parseEnumName((String) value, elems);
-    encodeInt(cdo, val);
+    if (value instanceof Integer) {
+      encodeInt(cdo, (int) value);
+    } else if (value instanceof String) {
+      int val = EnumCodec.parseEnumName((String) value, elems);
+      encodeInt(cdo, val);
+    } else {
+      throw new CodecException("invalid enum type " + value.getClass());
+    }
   }
 
   private void encodeSet(CodecDataOutput cdo, Object value, List<String> elems) {

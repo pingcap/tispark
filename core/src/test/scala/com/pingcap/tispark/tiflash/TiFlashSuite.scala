@@ -70,10 +70,6 @@ class TiFlashSuite extends BaseTiSparkTest {
   test("lock on tiflash: not expired") {
     cancelIfTiFlashDisabled()
 
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     dropTable()
 
     tidbStmt.execute("create table t(i int, s varchar(128))")
@@ -98,10 +94,6 @@ class TiFlashSuite extends BaseTiSparkTest {
 
   test("lock on tiflash: expired") {
     cancelIfTiFlashDisabled()
-
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     dropTable()
 

@@ -15,6 +15,8 @@
 
 package com.pingcap.tispark.concurrency
 
+import org.scalatest.Assertion
+
 class WriteReadSuite extends ConcurrencyTest {
 
   test("read conflict using jdbc") {
@@ -52,12 +54,7 @@ class WriteReadSuite extends ConcurrencyTest {
     doTestTiSpark(s"create table $dbtable(i int, s varchar(128), UNIQUE KEY(i))", hasIndex = true)
   }
 
-  def doTestJDBC(createTable: String, pkIsHandle: Boolean, hasIndex: Boolean) = {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
+  def doTestJDBC(createTable: String, pkIsHandle: Boolean, hasIndex: Boolean): Assertion = {
     jdbcUpdate(createTable)
     jdbcUpdate(s"insert into $dbtable values(2, 'v2')")
     jdbcUpdate(s"insert into $dbtable values(3, 'v3')")
@@ -111,12 +108,7 @@ class WriteReadSuite extends ConcurrencyTest {
     }
   }
 
-  def doTestTiSpark(createTable: String, hasIndex: Boolean) = {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
+  def doTestTiSpark(createTable: String, hasIndex: Boolean): Assertion = {
     jdbcUpdate(createTable)
     jdbcUpdate(s"insert into $dbtable values(2, 'v2')")
     jdbcUpdate(s"insert into $dbtable values(3, 'v3')")

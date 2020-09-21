@@ -17,7 +17,8 @@ package com.pingcap.tispark.datasource
 
 import org.apache.spark.sql.Row
 
-class FilterPushdownSuite extends BaseDataSourceTest("test_datasource_filter_pushdown") {
+class FilterPushdownSuite
+    extends BaseBatchWriteWithoutDropTableTest("test_datasource_filter_pushdown") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
@@ -25,37 +26,23 @@ class FilterPushdownSuite extends BaseDataSourceTest("test_datasource_filter_pus
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
       s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)")
   }
 
   test("Test Simple Comparisons") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     testTiDBSelectFilter("s = 'Hello'", Seq(row1))
     testTiDBSelectFilter("i > 2", Seq(row3, row4))
     testTiDBSelectFilter("i < 3", Seq(row2))
   }
 
   test("Test >= and <=") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     testTiDBSelectFilter("i >= 2", Seq(row2, row3, row4))
     testTiDBSelectFilter("i <= 3", Seq(row2, row3))
   }
 
   test("Test logical operators") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     testTiDBSelectFilter("i >= 2 AND i <= 3", Seq(row2, row3))
     testTiDBSelectFilter("NOT i = 3", Seq(row2, row4))
     testTiDBSelectFilter("NOT i = 3 OR i IS NULL", Seq(row1, row2, row4))
@@ -63,17 +50,6 @@ class FilterPushdownSuite extends BaseDataSourceTest("test_datasource_filter_pus
   }
 
   test("Test IN") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     testTiDBSelectFilter("i IN ( 2, 3)", Seq(row2, row3))
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

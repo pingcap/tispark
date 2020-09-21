@@ -30,9 +30,6 @@ import scala.collection.mutable.ArrayBuffer
 
 class BaseDataSourceTest(val table: String, val database: String = "tispark_test")
     extends BaseTiSparkTest {
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-  }
 
   protected def databaseWithPrefix = s"$dbPrefix$database"
 
@@ -165,13 +162,6 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
     (a == null && b == null) || a.startsWith(b)
   }
 
-  protected def compareTiDBWriteWithJDBC(
-      testCode: ((List[Row], StructType, Option[Map[String, String]]) => Unit, String) => Unit)
-      : Unit = {
-    testCode(tidbWrite, "tidbWrite")
-    testCode(jdbcWrite, "jdbcWrite")
-  }
-
   protected def compareTiDBSelectWithJDBC(
       expectedAnswer: Seq[Row],
       schema: StructType,
@@ -211,29 +201,7 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
   protected def queryDatasourceTiDB(sortCol: String): DataFrame =
     queryDatasourceTiDBWithTable(sortCol, table)
 
-  protected def compareTiDBSelectWithJDBC_V2(sortCol: String = "i"): Unit = {
-    compareTiDBSelectWithJDBCWithTable_V2(table, sortCol)
-  }
-
-  protected def compareTiDBSelectWithJDBCWithTable_V2(
-      tblName: String,
-      sortCol: String = "i"): Unit = {
-    val sql = s"select * from `$database`.`$tblName` order by $sortCol"
-
-    // check jdbc result & data source result
-    val jdbcResult = queryTiDBViaJDBC(sql)
-    val df = queryDatasourceTiDBWithTable(sortCol, tableName = tblName)
-    val tidbResult = seqRowToList(df.collect(), df.schema)
-
-    if (!compResult(jdbcResult, tidbResult)) {
-      logger.error(s"""Failed on $tblName\n
-                      |DataSourceAPI result: ${listToString(jdbcResult)}\n
-                      |TiDB via JDBC result: ${listToString(tidbResult)}""".stripMargin)
-      fail()
-    }
-  }
-
-  private def seqRowToList(rows: Seq[Row], schema: StructType): List[List[Any]] =
+  protected def seqRowToList(rows: Seq[Row], schema: StructType): List[List[Any]] =
     rows
       .map(row => {
         val rowRes = ArrayBuffer.empty[Any]
