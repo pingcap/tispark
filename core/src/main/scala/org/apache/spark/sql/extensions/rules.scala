@@ -91,17 +91,17 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   protected def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
     case i @ InsertIntoStatement(UnresolvedRelation(tableIdentifier), _, _, _, _)
         if tiCatalog
-          .catalogOf(if (tableIdentifier.size == 1) None else Some(tableIdentifier.head))
+          .catalogOf(tableIdentifier)
           .exists(_.isInstanceOf[TiSessionCatalog]) =>
       i.copy(table = EliminateSubqueryAliases(resolveTiDBRelation()(tableIdentifier)))
     case UnresolvedRelation(tableIdentifier)
         if tiCatalog
-          .catalogOf(if (tableIdentifier.size == 1) None else Some(tableIdentifier.head))
+          .catalogOf(tableIdentifier)
           .exists(_.isInstanceOf[TiSessionCatalog]) =>
       resolveTiDBRelation()(tableIdentifier)
     case UnresolvedTableOrView(tableIdentifier)
         if tiCatalog
-          .catalogOf(if (tableIdentifier.size == 1) None else Some(tableIdentifier.head))
+          .catalogOf(tableIdentifier)
           .exists(_.isInstanceOf[TiSessionCatalog]) =>
       resolveTiDBRelation(false)(tableIdentifier)
   }

@@ -34,4 +34,8 @@ trait TiSessionCatalog extends SessionCatalog {
    *        returns current catalog when database is empty
    */
   def catalogOf(database: Option[String] = None): Option[SessionCatalog]
+
+  def catalogOf(tableIdentifier: Seq[String]): Option[SessionCatalog] = {
+    catalogOf(if (tableIdentifier.size == 1) None else Some(tableIdentifier.head))
+  }
 }

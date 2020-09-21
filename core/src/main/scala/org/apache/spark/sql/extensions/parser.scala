@@ -136,6 +136,12 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
       Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase)))
   }
 
+  private def needQualify(tableIdentifier: Seq[String]): Boolean = {
+    tableIdentifier.size == 1 && tiContext.sessionCatalog
+      .getTempView(tableIdentifier.head)
+      .isEmpty && !cteTableNames.get().contains(tableIdentifier.head.toLowerCase())
+  }
+
   /**
    * Determines whether a table specified by tableIdentifier is
    * needs to be qualified. This is used for TiSpark to transform
@@ -144,12 +150,6 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
    * @param tableIdentifier tableIdentifier
    * @return whether it needs qualifying
    */
-  private def needQualify(tableIdentifier: Seq[String]): Boolean = {
-    tableIdentifier.size == 1 && tiContext.sessionCatalog
-      .getTempView(tableIdentifier.head)
-      .isEmpty && !cteTableNames.get().contains(tableIdentifier.head.toLowerCase())
-  }
-
   private def needQualify(tableIdentifier: TableIdentifier): Boolean = {
     tableIdentifier.database.isEmpty && tiContext.sessionCatalog
       .getTempView(tableIdentifier.table)

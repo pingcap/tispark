@@ -26,6 +26,7 @@ import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql._
+import org.apache.spark.sql.catalyst.catalog.TiCatalog
 import org.apache.spark.sql.test.SharedSQLContext.timeZone
 import org.apache.spark.sql.test.TestConstants._
 import org.apache.spark.sql.test.Utils._
@@ -419,9 +420,7 @@ trait SharedSQLContext
       conf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
       conf.set(DB_PREFIX, dbPrefix)
       if (catalogPluginMode) {
-        conf.set(
-          "spark.sql.catalog.tidb_catalog",
-          "org.apache.spark.sql.catalyst.catalog.TiCatalog")
+        conf.set("spark.sql.catalog.tidb_catalog", TiCatalog.className)
         conf.set("spark.sql.catalog.tidb_catalog.pd.address", pdAddresses)
       }
     }

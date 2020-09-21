@@ -173,6 +173,18 @@ class CatalogTestSuite extends BaseTiSparkTest {
       List("tp_time"),
       List("tp_enum"),
       List("tp_set"))
+
+    spark.sql("create database d1")
+    spark.sql("use d1")
+    spark.sql("create table m(m1 int)")
+    spark.sql("show columns from m").show(200, truncate = false)
+
+    spark
+      .sql("show columns from tidb_tispark_test.full_data_type_table")
+      .show(200, truncate = false)
+    spark.sql("use tidb_tispark_test")
+    spark.sql("show columns from full_data_type_table").show(200, truncate = false)
+
     setCurrentDatabase("tispark_test")
     explainAndRunTest(
       "show columns from full_data_type_table",

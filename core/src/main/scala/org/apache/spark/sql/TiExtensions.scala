@@ -16,6 +16,7 @@
 package org.apache.spark.sql
 
 import com.pingcap.tispark.TiSparkInfo
+import org.apache.spark.sql.catalyst.catalog.TiCatalog
 import org.apache.spark.sql.extensions.{
   TiDDLRuleFactory,
   TiParserFactory,
@@ -57,7 +58,7 @@ object TiExtensions {
     sparkSession.sparkContext.conf
       .getAllWithPrefix("spark.sql.catalog.")
       .toSeq
-      .find(pair => "org.apache.spark.sql.catalyst.catalog.TiCatalog".equals(pair._2)) match {
+      .find(pair => TiCatalog.className.equals(pair._2)) match {
       case Some(_) => true
       case None => false
     }

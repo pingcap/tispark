@@ -103,6 +103,10 @@ case class TiDBTable(v1Table: CatalogTable) extends Table {
   override def toString: String = s"UnresolvedTiDBTable($name)"
 }
 
+object TiCatalog {
+  val className = getClass.getName
+}
+
 class TiCatalog extends TableCatalog with SupportsNamespaces {
   var meta: Option[MetaManager] = None
   private var _name: Option[String] = None

@@ -200,9 +200,19 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
     extends TiCommand(delegate) {
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
+    try {
+      doRun(sparkSession, delegate.table)
+    } catch {
+      case _: Throwable =>
+        doRun(
+          sparkSession,
+          TableIdentifier(delegate.table.table, Some(tiCatalog.getCurrentDatabase)))
+    }
+  }
+
+  private def doRun(sparkSession: SparkSession, tableWithDBName: TableIdentifier): Seq[Row] = {
     val resolver = sparkSession.sessionState.conf.resolver
 
-    val tableWithDBName = getTableIdentifierFromIdentifier(delegate.table)
     val relation = sparkSession.table(tableWithDBName).queryExecution.analyzed
 
     val colName = UnresolvedAttribute(delegate.colNameParts).name
@@ -248,19 +258,6 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
     buffer
   }
 
-  private def getTableIdentifierFromIdentifier(
-      tableIdentifier: TableIdentifier): TableIdentifier = {
-    tableIdentifier.database match {
-      case Some("default") =>
-        val dbName = tiCatalog.getCurrentDatabase
-        TableIdentifier(tableIdentifier.table, Some(dbName))
-      case Some(_) => tableIdentifier
-      case None =>
-        val dbName = tiCatalog.getCurrentDatabase
-        TableIdentifier(tableIdentifier.table, Some(dbName))
-    }
-  }
-
   private def histogramDescription(histogram: Histogram): Seq[Row] = {
     val header =
       Row("histogram", s"height: ${histogram.height}, num_of_bins: ${histogram.bins.length}")
@@ -283,14 +280,17 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
 case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsCommand)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    val db = delegate.tableName.database match {
-      case Some("default") => tiCatalog.getCurrentDatabase
-      case Some(d) => d
-      case None => tiCatalog.getCurrentDatabase
-    }
     val tableName = delegate.tableName.table
-    val lookupTable = TableIdentifier(tableName, Some(db))
+    try {
+      doRun(tableName, delegate.tableName.database)
+    } catch {
+      case _: Throwable =>
+        doRun(tableName, Some(tiCatalog.getCurrentDatabase))
+    }
+  }
 
+  private def doRun(tableName: String, databaseName: Option[String]): Seq[Row] = {
+    val lookupTable = TableIdentifier(tableName, databaseName)
     val table = tiCatalog.getTempViewOrPermanentTableMetadata(lookupTable)
     table.schema.map { c =>
       Row(c.name)
