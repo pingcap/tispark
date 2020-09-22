@@ -104,7 +104,10 @@ case class TiDBTable(v1Table: CatalogTable) extends Table {
 }
 
 object TiCatalog {
-  val className = getClass.getName
+  val className = {
+    val fullname = getClass.getName
+    fullname.substring(0, fullname.length - 1)
+  }
 }
 
 class TiCatalog extends TableCatalog with SupportsNamespaces {
