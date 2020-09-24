@@ -75,7 +75,7 @@ public class TxnKVClient implements AutoCloseable {
         try {
           timestamp = pdClient.getTimestamp(bo);
           break;
-        } catch (final TiKVException e) {
+        } catch (final TiKVException | TiClientInternalException e) {
           // retry is exhausted
           bo.doBackOff(BackOffFunction.BackOffFuncType.BoPDRPC, e);
         }
