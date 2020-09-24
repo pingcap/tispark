@@ -110,8 +110,6 @@ class TiBatchWriteTable(
   def preCalculate(startTimeStamp: TiTimestamp): RDD[(SerializableKey, Array[Byte])] = {
     val sc = tiContext.sparkSession.sparkContext
 
-    df.explain(true)
-
     val count = df.count
     logger.info(s"source data count=$count")
 
