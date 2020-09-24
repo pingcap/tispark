@@ -37,7 +37,6 @@ import com.pingcap.tikv.region.TiRegion.RegionVerID;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.TsoUtils;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -110,7 +109,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
 
     Map<Long, Set<RegionVerID>> cleanTxns = new HashMap<>();
     boolean pushFail = false;
-    List<Long> pushed = new ArrayList<>(locks.size());
+    Set<Long> pushed = new HashSet<>(locks.size());
 
     for (Lock l : locks) {
       TxnStatus status = getTxnStatusFromLock(bo, l, callerStartTS);
@@ -150,7 +149,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     }
 
     if (pushFail) {
-      pushed = new ArrayList<>();
+      pushed = new HashSet<>();
     }
 
     return new ResolveLockResult(msBeforeTxnExpired.value(), pushed);

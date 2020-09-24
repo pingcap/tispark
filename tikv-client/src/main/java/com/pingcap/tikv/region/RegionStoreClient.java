@@ -171,7 +171,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     this.pdClient = pdClient;
   }
 
-  public synchronized boolean addResolvedLocks(Long version, List<Long> locks) {
+  public synchronized boolean addResolvedLocks(Long version, Set<Long> locks) {
     Set<Long> oldList = resolvedLocks.get(version);
     if (oldList != null) {
       oldList.addAll(locks);
