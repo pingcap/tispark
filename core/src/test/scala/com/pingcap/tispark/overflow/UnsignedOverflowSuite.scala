@@ -16,7 +16,7 @@
 package com.pingcap.tispark.overflow
 
 import com.pingcap.tikv.exception.TiDBConvertException
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -28,45 +28,25 @@ import org.apache.spark.sql.types._
  * 4. INT UNSIGNED
  * 5. BIGINT UNSIGNED
  */
-class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_overflow") {
+class UnsignedOverflowSuite extends BaseBatchWriteTest("test_data_type_unsigned_overflow") {
 
   test("Test TINYINT UNSIGNED Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTinyIntUnsignedUpperBound(false)
   }
 
   test("Test TINYINT UNSIGNED as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTinyIntUnsignedUpperBound(true)
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   test("Test TINYINT UNSIGNED Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTinyIntUnsignedLowerBound(false)
   }
 
   test("Test TINYINT UNSIGNED as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTinyIntUnsignedLowerBound(false)
   }
 
   private def testTinyIntUnsignedUpperBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 TINYINT UNSIGNED primary key)")
     } else {
@@ -88,21 +68,14 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test SMALLINT UNSIGNED Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testSmallIntUnsignedUpperBound(false)
   }
 
   test("Test SMALLINT UNSIGNED as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testSmallIntUnsignedUpperBound(true)
   }
 
   private def testTinyIntUnsignedLowerBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 TINYINT UNSIGNED primary key)")
     } else {
@@ -124,21 +97,14 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test SMALLINT UNSIGNED Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testSmallIntUnsignedLowerBound(false)
   }
 
   test("Test SMALLINT UNSIGNED as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testSmallIntUnsignedLowerBound(true)
   }
 
   private def testSmallIntUnsignedUpperBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 SMALLINT UNSIGNED primary key)")
     } else {
@@ -160,21 +126,14 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test MEDIUMINT UNSIGNED Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testMediumIntUnsignedUpperBound(false)
   }
 
   test("Test MEDIUMINT UNSIGNED as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testMediumIntUnsignedUpperBound(true)
   }
 
   private def testSmallIntUnsignedLowerBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 SMALLINT UNSIGNED primary key)")
     } else {
@@ -196,21 +155,14 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test MEDIUMINT UNSIGNED Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testMediumIntUnsignedLowerBound(false)
   }
 
   test("Test MEDIUMINT UNSIGNED as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testMediumIntUnsignedLowerBound(true)
   }
 
   private def testMediumIntUnsignedUpperBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 MEDIUMINT UNSIGNED primary key)")
     } else {
@@ -232,21 +184,14 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test INT UNSIGNED Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testIntUnsignedUpperBound(false)
   }
 
   test("Test INT UNSIGNED as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testIntUnsignedUpperBound(true)
   }
 
   private def testMediumIntUnsignedLowerBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 MEDIUMINT UNSIGNED primary key)")
     } else {
@@ -268,21 +213,14 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test INT UNSIGNED Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testIntUnsignedLowerBound(false)
   }
 
   test("Test INT UNSIGNED as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testIntUnsignedLowerBound(true)
   }
 
   private def testIntUnsignedUpperBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 INT UNSIGNED primary key)")
     } else {
@@ -304,21 +242,14 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test BIGINT UNSIGNED Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBigIntUnsignedUpperBound(false)
   }
 
   test("Test BIGINT UNSIGNED as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBigIntUnsignedUpperBound(true)
   }
 
   private def testIntUnsignedLowerBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 INT UNSIGNED primary key)")
     } else {
@@ -342,21 +273,14 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test BIGINT UNSIGNED Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBigIntUnsignedLowerBound(false)
   }
 
   test("Test BIGINT UNSIGNED as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBigIntUnsignedLowerBound(true)
   }
 
   private def testBigIntUnsignedUpperBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 BIGINT UNSIGNED primary key)")
     } else {
@@ -378,7 +302,6 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   private def testBigIntUnsignedLowerBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 BIGINT UNSIGNED primary key)")
     } else {

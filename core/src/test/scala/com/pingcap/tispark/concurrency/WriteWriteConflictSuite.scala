@@ -20,15 +20,10 @@ import org.apache.spark.sql.Row
 
 class WriteWriteConflictSuite extends ConcurrencyTest {
   test("write write conflict using TableLock & jdbc") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     if (!isEnableTableLock) {
       cancel
     }
 
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(4, 'null')")
 
@@ -45,15 +40,10 @@ class WriteWriteConflictSuite extends ConcurrencyTest {
   }
 
   test("write write conflict using TableLock & tispark") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     if (!isEnableTableLock) {
       cancel
     }
 
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(4, 'null')")
 

@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark.overflow
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, _}
 
@@ -28,45 +28,25 @@ import org.apache.spark.sql.types.{StructField, _}
  * 5. MEDIUMTEXT
  * 6. LONGTEXT
  */
-class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_overflow") {
+class StringOverflowSuite extends BaseBatchWriteTest("test_data_type_string_overflow") {
 
   test("Test CHAR Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testCharOverflow(false)
   }
 
   test("Test CHAR as key Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testCharOverflow(true)
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   test("Test VARCHAR Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testVarcharOverflow(false)
   }
 
   test("Test VARCHAR as key Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testVarcharOverflow(true)
   }
 
   private def testCharOverflow(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 CHAR(8) primary key)")
     } else {
@@ -88,21 +68,14 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
   }
 
   test("Test TINYTEXT Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTinyTextOverflow(false)
   }
 
   test("Test TINYTEXT as key Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTinyTextOverflow(true)
   }
 
   private def testVarcharOverflow(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 VARCHAR(8) primary key)")
     } else {
@@ -124,21 +97,14 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
   }
 
   test("Test TEXT Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTextOverflow(false)
   }
 
   test("Test TEXT as key Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTextOverflow(true)
   }
 
   private def testTinyTextOverflow(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 TINYTEXT, primary key (c1(4)))")
     } else {
@@ -165,7 +131,6 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
   }
 
   private def testTextOverflow(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 TEXT(8), primary key (c1(4)))")
     } else {

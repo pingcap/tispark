@@ -15,14 +15,14 @@
 
 package org.apache.spark.sql.insertion
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 import org.apache.spark.sql.test.generator.Schema
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 
 class BatchWritePKAndUniqueIndexSuite
-    extends BaseDataSourceTest(
+    extends BaseBatchWriteTest(
       "batch_write_insertion_pk_and_one_unique_index",
       "batch_write_test_pk_and_index")
     with EnumerateUniqueIndexDataTypeTestAction {
@@ -41,13 +41,6 @@ class BatchWritePKAndUniqueIndexSuite
 
   // this is only for mute the warning
   override def test(): Unit = {}
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 
   test("test pk and unique indices cases") {
     val schemas = genSchema(dataTypes, table)

@@ -23,6 +23,13 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
 
   private var tiDBJDBCClient: TiDBJDBCClient = _
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    if (!supportBatchWrite) {
+      cancel
+    }
+  }
+
   override def afterAll(): Unit = {
     try {
       if (!tiDBJDBCClient.isClosed) {
@@ -66,7 +73,6 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
     // init
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     tiDBJDBCClient = new TiDBJDBCClient(conn)
-    dropTable()
     createTable()
 
     // lock table
@@ -91,7 +97,6 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
     // init
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     tiDBJDBCClient = new TiDBJDBCClient(conn)
-    dropTable()
     createTable()
 
     // lock table
@@ -125,7 +130,6 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
     // init
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     tiDBJDBCClient = new TiDBJDBCClient(conn)
-    dropTable()
     createTable()
 
     // lock table

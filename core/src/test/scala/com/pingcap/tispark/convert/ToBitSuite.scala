@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark.convert
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, _}
 
@@ -23,7 +23,7 @@ import org.apache.spark.sql.types.{StructField, _}
  * BIT type include:
  * 1. BIT
  */
-class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
+class ToBitSuite extends BaseBatchWriteTest("test_data_type_convert_to_bit") {
 
   private val readZero: java.lang.Long = 0L
   private val readOne: java.lang.Long = 1L
@@ -45,18 +45,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
       StructField("c2", LongType),
       StructField("c3", LongType)))
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   test("Test Convert from java.lang.Boolean to BIT") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Boolean -> BIT
     compareTiDBWriteWithJDBC {
@@ -95,10 +84,6 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   }
 
   test("Test Convert from java.lang.Byte to BIT") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Byte -> BIT
     compareTiDBWriteWithJDBC {
@@ -133,10 +118,6 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   }
 
   test("Test Convert from java.lang.Short to BIT") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Short -> BIT
     compareTiDBWriteWithJDBC {
@@ -171,10 +152,6 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   }
 
   test("Test Convert from java.lang.Integer to BIT") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Integer -> BIT
     compareTiDBWriteWithJDBC {
@@ -209,10 +186,6 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   }
 
   test("Test Convert from java.lang.Long to BIT") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Long -> BIT
     compareTiDBWriteWithJDBC {
@@ -247,10 +220,6 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   }
 
   test("Test Convert from java.lang.Float to BIT") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Float -> BIT
     compareTiDBWriteWithJDBC {
@@ -287,10 +256,6 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   }
 
   test("Test Convert from java.lang.Double to BIT") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Double -> BIT
     compareTiDBWriteWithJDBC {

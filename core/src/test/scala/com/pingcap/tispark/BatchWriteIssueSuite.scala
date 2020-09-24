@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{
   IntegerType,
@@ -25,10 +25,7 @@ import org.apache.spark.sql.types.{
   TimestampType
 }
 
-class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-  }
+class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
 
   test("Combine unique index with null value test") {
     doTestNullValues(s"create table $dbtable(a int, b varchar(64), CONSTRAINT ab UNIQUE (a, b))")
@@ -43,10 +40,6 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
   }
 
   test("Index for timestamp was written multiple times") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val schema = StructType(
       List(
         StructField("a", IntegerType),
@@ -54,7 +47,6 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
         StructField("c", TimestampType)))
     val options = Some(Map("replace" -> "true"))
 
-    dropTable()
     jdbcUpdate(
       s"create table $dbtable(a int, b varchar(64), c datetime, CONSTRAINT xx UNIQUE (b), key `dt_index` (c))")
 
@@ -81,17 +73,7 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
     }
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   private def doTestNullValues(createTableSQL: String): Unit = {
-    if (!supportBatchWrite) {
-      cancel
-    }
     val schema = StructType(
       List(
         StructField("a", IntegerType),
@@ -100,7 +82,6 @@ class BatchWriteIssueSuite extends BaseDataSourceTest("test_batchwrite_issue") {
 
     val options = Some(Map("replace" -> "true"))
 
-    dropTable()
     jdbcUpdate(createTableSQL)
     jdbcUpdate(s"alter table $dbtable add column to_delete int")
     jdbcUpdate(s"alter table $dbtable add column c varchar(64) default 'c33'")

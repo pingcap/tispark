@@ -20,7 +20,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class BasicDataSourceSuite extends BaseDataSourceTest("test_datasource_basic") {
+class BasicBatchWriteSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_basic") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
@@ -31,25 +31,15 @@ class BasicDataSourceSuite extends BaseDataSourceTest("test_datasource_basic") {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-
-    dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')")
   }
 
   test("Test Select") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     testTiDBSelect(Seq(row1, row2))
   }
 
   test("Test Write Append") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val data: RDD[Row] = sc.makeRDD(List(row3, row4))
     val df = sqlContext.createDataFrame(data, schema)
 
@@ -65,10 +55,6 @@ class BasicDataSourceSuite extends BaseDataSourceTest("test_datasource_basic") {
   }
 
   test("Test Write Overwrite") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val data: RDD[Row] = sc.makeRDD(List(row3, row4))
     val df = sqlContext.createDataFrame(data, schema)
 
@@ -86,11 +72,4 @@ class BasicDataSourceSuite extends BaseDataSourceTest("test_datasource_basic") {
       caught.getMessage
         .equals("SaveMode: Overwrite is not supported. TiSpark only support SaveMode.Append."))
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

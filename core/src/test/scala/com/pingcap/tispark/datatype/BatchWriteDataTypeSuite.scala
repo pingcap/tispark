@@ -19,18 +19,13 @@ import java.sql.{Date, Timestamp}
 import java.util.Calendar
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
-class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
+class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test") {
 
   test("Test Read different types") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i INT,
@@ -111,11 +106,6 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
 
   //todo support TIME/YEAR/BINARY/SET
   test("Test different data type") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
-    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i INT primary key,
@@ -302,7 +292,6 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
 
   test("Test integer pk") {
     // integer pk
-    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i INT primary key,
@@ -324,12 +313,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test decimal pk") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // decimal pk
-    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i decimal(3,2) primary key,
@@ -352,12 +336,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test char pk") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // char pk
-    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i char(4) primary key,
@@ -379,12 +358,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test varchar pk") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // char pk
-    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i varchar(4) primary key,
@@ -406,12 +380,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test date pk") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // char pk
-    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i date primary key,
@@ -435,12 +404,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test datetime pk") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // datetime pk
-    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i DATETIME primary key,
@@ -464,12 +428,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test timestamp pk") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // timestamp pk
-    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i timestamp primary key,
@@ -493,12 +452,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test text pk") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // timestamp pk
-    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i text,
@@ -521,12 +475,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test blob pk") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // blob pk
-    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i blob,
@@ -550,12 +499,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test enum pk") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // enum pk
-    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i ENUM('male','female','both','unknown') primary key,
@@ -577,12 +521,7 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test composite pk") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // enum pk
-    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i int,
@@ -608,11 +547,4 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
       tidbWrite(data, schema)
     }
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

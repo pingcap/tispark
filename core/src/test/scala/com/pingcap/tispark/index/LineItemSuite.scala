@@ -16,10 +16,10 @@
 package com.pingcap.tispark.index
 
 import com.pingcap.tispark.write.{TiBatchWrite, TiDBOptions}
-import org.apache.spark.sql.BaseTiSparkTest
+import org.apache.spark.sql.BaseTiSparkEnableBatchWriteTest
 import org.apache.spark.sql.functions._
 
-class LineItemSuite extends BaseTiSparkTest {
+class LineItemSuite extends BaseTiSparkEnableBatchWriteTest {
 
   private val table = "LINEITEM"
   private val where = "where L_PARTKEY < 3100000"
@@ -39,10 +39,6 @@ class LineItemSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: lineitem") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val tableToWrite = s"${batchWriteTablePrefix}_$table"
 
     // select
@@ -72,10 +68,6 @@ class LineItemSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: isPkHandle: lineitem") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val tableToWrite = s"${batchWriteTablePrefix}_${isPkHandlePrefix}_$table"
     tidbStmt.execute(s"drop table if exists `$tableToWrite`")
     val createTableSQL =
@@ -137,10 +129,6 @@ class LineItemSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: replace + isPkHandle: lineitem") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val tableToWrite = s"${batchWriteTablePrefix}_${replacePKHandlePrefix}_$table"
     tidbStmt.execute(s"drop table if exists `$tableToWrite`")
     val createTableSQL =
@@ -215,10 +203,6 @@ class LineItemSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: replace + uniqueKey: lineitem") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     val tableToWrite = s"${batchWriteTablePrefix}_${replaceUniquePrefix}_$table"
     tidbStmt.execute(s"drop table if exists `$tableToWrite`")
     val createTableSQL =

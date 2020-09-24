@@ -16,7 +16,7 @@
 package com.pingcap.tispark.overflow
 
 import com.pingcap.tikv.exception.TiDBConvertException
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -29,45 +29,25 @@ import org.apache.spark.sql.types._
  * 5. BIGINT SINGED
  * 6. BOOLEAN
  */
-class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_overflow") {
+class SignedOverflowSuite extends BaseBatchWriteTest("test_data_type_signed_overflow") {
 
   test("Test TINYINT Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTinyIntUpperBound(false)
   }
 
   test("Test TINYINT as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTinyIntUpperBound(true)
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   test("Test TINYINT Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTinyIntLowerBound(false)
   }
 
   test("Test TINYINT as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testTinyIntLowerBound(true)
   }
 
   private def testTinyIntUpperBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 TINYINT primary key)")
     } else {
@@ -89,21 +69,14 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test SMALLINT Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testSmallIntUpperBound(false)
   }
 
   test("Test SMALLINT as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testSmallIntUpperBound(true)
   }
 
   private def testTinyIntLowerBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 TINYINT primary key)")
     } else {
@@ -125,21 +98,14 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test SMALLINT Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testSmallIntLowerBound(false)
   }
 
   test("Test SMALLINT as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testSmallIntLowerBound(true)
   }
 
   private def testSmallIntUpperBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 SMALLINT primary key)")
     } else {
@@ -161,21 +127,14 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test MEDIUMINT Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testMediumIntUpperBound(false)
   }
 
   test("Test MEDIUMINT as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testMediumIntUpperBound(true)
   }
 
   private def testSmallIntLowerBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 SMALLINT primary key)")
     } else {
@@ -197,21 +156,14 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test MEDIUMINT Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testMediumIntLowerBound(false)
   }
 
   test("Test MEDIUMINT as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testMediumIntLowerBound(true)
   }
 
   private def testMediumIntUpperBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 MEDIUMINT primary key)")
     } else {
@@ -233,21 +185,14 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test INT Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testIntUpperBound(false)
   }
 
   test("Test INT as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testIntUpperBound(true)
   }
 
   private def testMediumIntLowerBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 MEDIUMINT primary key)")
     } else {
@@ -269,21 +214,14 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test INT Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testIntLowerBound(false)
   }
 
   test("Test INT as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testIntLowerBound(true)
   }
 
   private def testIntUpperBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 INT primary key)")
     } else {
@@ -305,21 +243,14 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BIGINT Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBigIntUpperBound(false)
   }
 
   test("Test BIGINT as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBigIntUpperBound(true)
   }
 
   private def testIntLowerBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 INT primary key)")
     } else {
@@ -341,21 +272,14 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BIGINT Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBigIntLowerBound(false)
   }
 
   test("Test BIGINT as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBigIntLowerBound(true)
   }
 
   private def testBigIntUpperBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 BIGINT primary key)")
     } else {
@@ -377,21 +301,14 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BOOLEAN Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBooleanUpperBound(false)
   }
 
   test("Test BOOLEAN as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBooleanUpperBound(true)
   }
 
   private def testBigIntLowerBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 BIGINT primary key)")
     } else {
@@ -413,21 +330,14 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BOOLEAN Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBooleanLowerBound(false)
   }
 
   test("Test BOOLEAN as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBooleanLowerBound(true)
   }
 
   private def testBooleanUpperBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 BOOLEAN primary key)")
     } else {
@@ -449,7 +359,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   private def testBooleanLowerBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 BOOLEAN primary key)")
     } else {

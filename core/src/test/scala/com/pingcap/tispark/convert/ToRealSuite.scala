@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark.convert
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -24,7 +24,7 @@ import org.apache.spark.sql.types._
  * 1. FLOAT
  * 2. DOUBLE
  */
-class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
+class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
 
   //  + 1.0E-40f because of this issue: https://github.com/pingcap/tidb/issues/10587
   private val minFloat: java.lang.Float = java.lang.Float.MIN_VALUE + 1.0e-40f
@@ -38,17 +38,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
       StructField("c1", FloatType),
       StructField("c2", DoubleType)))
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   test("Test Convert from java.lang.Boolean to REAL") {
-    if (!supportBatchWrite) {
-      cancel
-    }
 
     // success
     // java.lang.Boolean -> FLOAT
@@ -81,10 +71,6 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
   }
 
   test("Test Convert from java.lang.Byte to REAL") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Byte -> FLOAT
     // java.lang.Byte -> DOUBLE
@@ -114,10 +100,6 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
   }
 
   test("Test Convert from java.lang.Short to REAL") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Short -> FLOAT
     // java.lang.Short -> DOUBLE
@@ -147,10 +129,6 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
   }
 
   test("Test Convert from java.lang.Integer to REAL") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Integer -> FLOAT
     // java.lang.Integer -> DOUBLE
@@ -183,10 +161,6 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
   }
 
   test("Test Convert from java.lang.Long to REAL") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Long -> FLOAT
     // java.lang.Long -> DOUBLE
@@ -213,10 +187,6 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
   }
 
   test("Test Convert from java.lang.Float to REAL") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Float -> FLOAT
     // java.lang.Float -> DOUBLE
@@ -258,10 +228,6 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
   }
 
   test("Test Convert from java.lang.Double to REAL") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Double -> FLOAT
     // java.lang.Double -> DOUBLE
@@ -300,10 +266,6 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
   }
 
   test("Test Convert from String to REAL") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // String -> FLOAT
     // String -> DOUBLE

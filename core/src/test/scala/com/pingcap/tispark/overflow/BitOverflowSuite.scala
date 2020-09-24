@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark.overflow
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -23,45 +23,24 @@ import org.apache.spark.sql.types._
  * BIT type include:
  * 1. BIT
  */
-class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow") {
+class BitOverflowSuite extends BaseBatchWriteTest("test_data_type_bit_overflow") {
 
   test("Test BIT(1) Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBit1UpperBound(false)
   }
   test("Test BIT(1) as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBit1UpperBound(true)
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   test("Test BIT(1) Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBit1LowerBound(false)
   }
 
   test("Test BIT(1) as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBit1LowerBound(true)
   }
 
   private def testBit1UpperBound(testKey: Boolean): Unit = {
-
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 BIT(1) primary key)")
     } else {
@@ -84,22 +63,14 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(4) Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBit4UpperBound(false)
   }
 
   test("Test BIT(4) as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBit4UpperBound(true)
   }
 
   private def testBit1LowerBound(testKey: Boolean): Unit = {
-
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 BIT(1) primary key)")
     } else {
@@ -122,21 +93,14 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(4) Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBit4LowerBound(false)
   }
 
   test("Test BIT(4) as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBit4LowerBound(true)
   }
 
   private def testBit4UpperBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 BIT(4) primary key)")
     } else {
@@ -159,21 +123,14 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(8) Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBit8UpperBound(false)
   }
 
   test("Test BIT(8) as key Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBit8UpperBound(true)
   }
 
   private def testBit4LowerBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 BIT(4) primary key)")
     } else {
@@ -196,22 +153,14 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(8) Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBit8LowerBound(false)
   }
 
   test("Test BIT(8) as key Lower bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testBit8LowerBound(true)
   }
 
   private def testBit8UpperBound(testKey: Boolean): Unit = {
-
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 BIT(8) primary key)")
     } else {
@@ -234,7 +183,6 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   private def testBit8LowerBound(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 BIT(8) primary key)")
     } else {

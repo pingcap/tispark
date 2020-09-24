@@ -93,7 +93,14 @@ public class CatalogTransaction {
     ImmutableList.Builder<TiTableInfo> builder = ImmutableList.builder();
     for (Pair<ByteString, ByteString> pair : fields) {
       if (KeyUtils.hasPrefix(pair.first, ByteString.copyFromUtf8(MetaCodec.KEY_TABLE))) {
-        builder.add(parseFromJson(pair.second, TiTableInfo.class));
+        try {
+          TiTableInfo tableInfo = parseFromJson(pair.second, TiTableInfo.class);
+          if (!tableInfo.isSequence()) {
+            builder.add(tableInfo);
+          }
+        } catch (TiClientInternalException e) {
+          logger.warn("fail to parse table from json!", e);
+        }
       }
     }
     return builder.build();

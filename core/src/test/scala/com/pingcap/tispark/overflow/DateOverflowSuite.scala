@@ -16,7 +16,7 @@
 package com.pingcap.tispark.overflow
 
 import com.pingcap.tikv.exception.TiDBConvertException
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -24,45 +24,25 @@ import org.apache.spark.sql.types._
  * DATE type include:
  * 1. DATE
  */
-class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow") {
+class DateOverflowSuite extends BaseBatchWriteTest("test_data_type_date_overflow") {
 
   test("Test DATE YEAR Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testYearOverflow(false)
   }
 
   test("Test DATE as key YEAR Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testYearOverflow(true)
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
-
   test("Test DATE Month Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testMonthOverflow(false)
   }
 
   test("Test DATE as key Month Upper bound Overflow") {
-    if (!supportBatchWrite) {
-      cancel
-    }
     testMonthOverflow(true)
   }
 
   private def testYearOverflow(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 DATE primary key)")
     } else {
@@ -84,7 +64,6 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
   }
 
   private def testMonthOverflow(testKey: Boolean): Unit = {
-    dropTable()
     if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 DATE primary key)")
     } else {

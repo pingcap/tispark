@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark.convert
 
-import com.pingcap.tispark.datasource.BaseDataSourceTest
+import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, _}
 
@@ -28,20 +28,9 @@ import org.apache.spark.sql.types.{StructField, _}
  * 5. MEDIUMBLOB
  * 6. LONGBLOB
  */
-class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes") {
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
+class ToBytesSuite extends BaseBatchWriteTest("test_data_type_convert_to_bytes") {
 
   test("Test Convert from java.lang.Boolean to BYTES") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Boolean -> BYTES
     compareTiDBWriteWithJDBC {
@@ -101,10 +90,6 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
   }
 
   test("Test Convert from java.lang.Byte to BYTES") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Byte -> BYTES
     compareTiDBWriteWithJDBC {
@@ -164,10 +149,6 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
   }
 
   test("Test Convert from java.lang.Short to BYTES") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Short -> BYTES
     compareTiDBWriteWithJDBC {
@@ -227,10 +208,6 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
   }
 
   test("Test Convert from java.lang.Integer to BYTES") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Integer -> BYTES
     compareTiDBWriteWithJDBC {
@@ -290,10 +267,6 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
   }
 
   test("Test Convert from java.lang.Long to BYTES") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.Long -> BYTES
     compareTiDBWriteWithJDBC {
@@ -353,10 +326,6 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
   }
 
   test("Test Convert from String to BYTES") {
-    if (!supportBatchWrite) {
-      cancel
-    }
-
     // success
     // java.lang.String -> BYTES
     compareTiDBWriteWithJDBC {
