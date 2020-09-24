@@ -37,7 +37,8 @@ class BasicSQLSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_
   }
 
   test("Test Insert Into") {
-    val tmpTable = "default.testInsert"
+    val tmpTable =
+      if (catalogPluginMode) "spark_catalog.default.testInsert" else "default.testInsert"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpTable
                       |USING tidb
@@ -60,7 +61,8 @@ class BasicSQLSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_
   }
 
   test("Test Insert Overwrite") {
-    val tmpTable = "default.testOverwrite"
+    val tmpTable =
+      if (catalogPluginMode) "spark_catalog.default.testOverwrite" else "default.testOverwrite"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpTable
                       |USING tidb
@@ -87,10 +89,13 @@ class BasicSQLSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_
   }
 
   private def testSelectSQL(expectedAnswer: Seq[Row]): Unit = {
-    val tmpName =
-      s"default.testSelect_${Math.abs(Random.nextLong())}_${System.currentTimeMillis()}"
+    val tmpTable =
+      if (catalogPluginMode)
+        s"spark_catalog.default.`testSelect_${Math.abs(Random.nextLong())}_${System.currentTimeMillis()}`"
+      else s"default.`testSelect_${Math.abs(Random.nextLong())}_${System.currentTimeMillis()}`"
+
     sql(s"""
-           |CREATE TABLE $tmpName
+           |CREATE TABLE $tmpTable
            |USING tidb
            |OPTIONS (
            |  database '$database',
@@ -102,7 +107,7 @@ class BasicSQLSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_
            |  spark.tispark.pd.addresses '$pdAddresses'
            |)
        """.stripMargin)
-    val df = sql(s"select * from $tmpName sort by i")
+    val df = sql(s"select * from $tmpTable sort by i")
     checkAnswer(df, expectedAnswer)
   }
 }

@@ -24,6 +24,7 @@ import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient, Version}
 import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
+import org.apache.spark.sql.execution.ExplainMode
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.test.SharedSQLContext
 
@@ -84,24 +85,34 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       .createOrReplaceTempView(s"`$viewName$postfix`")
 
   protected def setCurrentDatabase(dbName: String): Unit =
-    if (tiCatalog
-        .catalogOf(Some(dbPrefix + dbName))
-        .exists(_.isInstanceOf[TiSessionCatalog])) {
-      if (!tidbConn.getCatalog.equals(dbName)) {
-        // reuse previous connection if catalog is not changed
-        logger.info(s"set catalog to $dbName!")
+    if (catalogPluginMode) {
+      if (dbName != "default") {
         tidbConn.setCatalog(dbName)
         initializeStatement()
+        spark.sql(s"use tidb_catalog.`$dbName`")
+      } else {
+        try {
+          spark.sql(s"use spark_catalog.`$dbName`")
+          logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
+        } catch {
+          case e: NoSuchDatabaseException => fail(e)
+        }
       }
-      spark.sql(s"use `$dbPrefix$dbName`")
     } else {
-      // should be an existing database in hive/meta_store
-      try {
-        spark.sql(s"use `$dbName`")
-        logger.info("tidb databases:" + ti.meta.getDatabases.map(_.getName).mkString(","))
-        logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
-      } catch {
-        case e: NoSuchDatabaseException => fail(e)
+      if (tiCatalog
+          .catalogOf(Some(dbPrefix + dbName))
+          .exists(_.isInstanceOf[TiSessionCatalog])) {
+        tidbConn.setCatalog(dbName)
+        initializeStatement()
+        spark.sql(s"use `$dbPrefix$dbName`")
+      } else {
+        // should be an existing database in hive/meta_store
+        try {
+          spark.sql(s"use `$dbName`")
+          logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
+        } catch {
+          case e: NoSuchDatabaseException => fail(e)
+        }
       }
     }
 
@@ -383,7 +394,8 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
         val dataFrame = spark.sql(sql)
         import org.apache.spark.sql.execution.command.ExplainCommand
         spark.sessionState
-          .executePlan(ExplainCommand(dataFrame.queryExecution.logical))
+          .executePlan(
+            ExplainCommand(dataFrame.queryExecution.logical, ExplainMode.fromString("simple")))
           .executedPlan
           .executeCollect()
           .map(_.getString(0))

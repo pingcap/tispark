@@ -16,7 +16,12 @@
 package org.apache.spark.sql
 
 import com.pingcap.tispark.TiSparkInfo
-import org.apache.spark.sql.extensions.{TiDDLRule, TiParser, TiResolutionRule}
+import org.apache.spark.sql.catalyst.catalog.TiCatalog
+import org.apache.spark.sql.extensions.{
+  TiDDLRuleFactory,
+  TiParserFactory,
+  TiResolutionRuleFactory
+}
 
 import scala.collection.mutable
 
@@ -26,9 +31,9 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
   override def apply(e: SparkSessionExtensions): Unit = {
     TiSparkInfo.checkVersion()
 
-    e.injectParser(TiParser(getOrCreateTiContext))
-    e.injectResolutionRule(TiDDLRule(getOrCreateTiContext))
-    e.injectResolutionRule(TiResolutionRule(getOrCreateTiContext))
+    e.injectParser(new TiParserFactory(getOrCreateTiContext))
+    e.injectResolutionRule(new TiDDLRuleFactory(getOrCreateTiContext))
+    e.injectResolutionRule(new TiResolutionRuleFactory(getOrCreateTiContext))
     e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
 
@@ -48,6 +53,16 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 
 object TiExtensions {
   def enabled(sparkSession: SparkSession): Boolean = getTiContext(sparkSession).isDefined
+
+  def catalogPluginMode(sparkSession: SparkSession): Boolean = {
+    sparkSession.sparkContext.conf
+      .getAllWithPrefix("spark.sql.catalog.")
+      .toSeq
+      .find(pair => TiCatalog.className.equals(pair._2)) match {
+      case Some(_) => true
+      case None => false
+    }
+  }
 
   def getTiContext(sparkSession: SparkSession): Option[TiContext] = {
     if (sparkSession.sessionState.planner.extraPlanningStrategies.nonEmpty &&

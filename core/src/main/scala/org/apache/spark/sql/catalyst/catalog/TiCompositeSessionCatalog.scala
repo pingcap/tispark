@@ -140,11 +140,12 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
         .lookupRelation(name)
     }
 
-  override def listTables(db: String): Seq[TableIdentifier] = listTables(db, "*")
-
-  override def listTables(db: String, pattern: String): Seq[TableIdentifier] = {
+  override def listTables(
+      db: String,
+      pattern: String,
+      includeLocalTempViews: Boolean): Seq[TableIdentifier] = {
     val dbName = formatDatabaseName(db)
-    catalogOf(Some(dbName))
+    val dbTables = catalogOf(Some(dbName))
       .getOrElse(throw new NoSuchDatabaseException(dbName)) match {
       case _: TiSessionCatalog =>
         val tempViews = if (dbName == globalTempDB) {
@@ -159,6 +160,12 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
         tables ++ tempViews
       case catalog =>
         catalog.listTables(db, pattern)
+    }
+
+    if (includeLocalTempViews) {
+      dbTables ++ listLocalTempViews(pattern)
+    } else {
+      dbTables
     }
   }
 

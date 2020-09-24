@@ -24,6 +24,10 @@ class MultipleSparkSessionTestSuite extends BaseTiSparkTest {
   }
 
   test("Test multiple Spark Session with different catalog") {
+    if (catalogPluginMode) {
+      cancel
+    }
+
     val sparkSession1 = spark
     val sparkSession2 = sparkSession1.newSession()
     val db1 = s"${dbPrefix}tispark_test"

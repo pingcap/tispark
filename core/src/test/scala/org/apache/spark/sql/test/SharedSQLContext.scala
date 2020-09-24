@@ -26,6 +26,7 @@ import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql._
+import org.apache.spark.sql.catalyst.catalog.TiCatalog
 import org.apache.spark.sql.test.SharedSQLContext.timeZone
 import org.apache.spark.sql.test.TestConstants._
 import org.apache.spark.sql.test.Utils._
@@ -194,6 +195,8 @@ trait SharedSQLContext
   protected def tidbStmt: Statement = _statement
 
   protected def dbPrefix: String = SharedSQLContext.dbPrefix
+
+  protected def catalogPluginMode: Boolean = SharedSQLContext.catalogPluginMode
 
   protected def pdAddresses: String = SharedSQLContext.pdAddresses
 
@@ -416,6 +419,10 @@ trait SharedSQLContext
       conf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
       conf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
       conf.set(DB_PREFIX, dbPrefix)
+      if (catalogPluginMode) {
+        conf.set("spark.sql.catalog.tidb_catalog", TiCatalog.className)
+        conf.set("spark.sql.catalog.tidb_catalog.pd.address", pdAddresses)
+      }
     }
 
   private class TiContextCache {
@@ -473,6 +480,7 @@ object SharedSQLContext extends Logging {
   protected var tidbAddr: String = _
   protected var tidbPort: Int = _
   protected var pdAddresses: String = _
+  protected var tidb_catalog: String = _
   protected var tidbOptions: Map[String, String] = _
   protected var loadData: String = _
   protected var tpchDBName: String = _
@@ -480,6 +488,7 @@ object SharedSQLContext extends Logging {
   protected var runTPCH: Boolean = true
   protected var runTPCDS: Boolean = false
   protected var dbPrefix: String = _
+  protected var catalogPluginMode: Boolean = _
 
   readConf()
 
@@ -493,6 +502,7 @@ object SharedSQLContext extends Logging {
     if (confStream != null) {
       prop.load(confStream)
     }
+
     prop
   }
 
@@ -509,7 +519,9 @@ object SharedSQLContext extends Logging {
 
     pdAddresses = getOrElse(tidbConf, PD_ADDRESSES, "127.0.0.1:2379")
 
-    dbPrefix = getOrElse(tidbConf, DB_PREFIX, "tidb_")
+    catalogPluginMode = !"".equals(getOrElse(tidbConf, "spark.sql.catalog.tidb_catalog", ""))
+
+    dbPrefix = if (catalogPluginMode) "" else getOrElse(tidbConf, DB_PREFIX, "tidb_")
 
     // run TPC-H tests by default and disable TPC-DS tests by default
     tpchDBName = getOrElse(tidbConf, TPCH_DB_NAME, "tpch_test")

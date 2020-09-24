@@ -15,33 +15,36 @@
 package org.apache.spark.sql.execution.command
 
 import org.apache.spark.sql.{Row, SparkSession, TiContext}
+import org.apache.spark.sql.catalyst.plans.logical.{SetCatalogAndNamespace, ShowNamespaces}
 
 /**
- * CHECK Spark [[org.apache.spark.sql.execution.command.SetDatabaseCommand]]
+ * CHECK Spark [[org.apache.spark.sql.catalyst.plans.logical.SetCatalogAndNamespace]]
  *
  * @param tiContext tiContext which contains our catalog info
- * @param delegate original SetDatabaseCommand
+ * @param delegate original SetCatalogAndNamespace
  */
-case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetDatabaseCommand)
+case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetCatalogAndNamespace)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    tiCatalog.setCurrentDatabase(delegate.databaseName)
+    tiCatalog.setCurrentDatabase(delegate.namespace.get.head)
     Seq.empty[Row]
   }
 }
 
 /**
- * CHECK Spark [[org.apache.spark.sql.execution.command.ShowDatabasesCommand]]
+ * CHECK Spark [[org.apache.spark.sql.catalyst.plans.logical.ShowNamespaces]]
  *
  * @param tiContext tiContext which contains our catalog info
  * @param delegate original ShowDatabasesCommand
  */
-case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowDatabasesCommand)
+case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowNamespaces)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val databases =
       // Not leveraging catalog-specific db pattern, at least Hive and Spark behave different than each other.
-      delegate.databasePattern.fold(tiCatalog.listDatabases())(tiCatalog.listDatabases)
+      delegate.pattern
+        .map(tiCatalog.listDatabases)
+        .getOrElse(tiCatalog.listDatabases())
     databases.map { d =>
       Row(d)
     }

@@ -29,6 +29,8 @@ class TiDirectExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
   override def databaseExists(db: String): Boolean =
     meta.getDatabase(db).isDefined
 
+  private def meta = tiContext.meta
+
   override def listDatabases(pattern: String): Seq[String] =
     StringUtils.filterPattern(listDatabases(), pattern)
 
@@ -44,11 +46,8 @@ class TiDirectExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
       CatalogStorageFormat.empty,
       schema)
   }
-
   override def tableExists(db: String, table: String): Boolean =
     meta.getTable(db, table).isDefined
-
-  private def meta = tiContext.meta
 
   override def listTables(db: String, pattern: String): Seq[String] =
     StringUtils.filterPattern(listTables(db), pattern)
@@ -58,9 +57,38 @@ class TiDirectExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
       .getTables(meta.getDatabase(db).getOrElse(throw new NoSuchDatabaseException(db)))
       .map(_.getName)
 
+  // Following are unimplemented.
+  override def dropDatabase(db: String, ignoreIfNotExists: Boolean, cascade: Boolean): Unit = ???
+
+  override def dropTable(
+      db: String,
+      table: String,
+      ignoreIfNotExists: Boolean,
+      purge: Boolean): Unit = ???
+
+  override def createDatabase(dbDefinition: CatalogDatabase, ignoreIfExists: Boolean): Unit = ???
+
+  override def alterDatabase(dbDefinition: CatalogDatabase): Unit = ???
+
   override def getDatabase(db: String): CatalogDatabase = ???
 
   override def setCurrentDatabase(db: String): Unit = ???
+
+  override def createTable(tableDefinition: CatalogTable, ignoreIfExists: Boolean): Unit =
+    ???
+
+  override def renameTable(db: String, oldName: String, newName: String): Unit = ???
+
+  override def alterTable(tableDefinition: CatalogTable): Unit = ???
+
+  override def alterTableDataSchema(db: String, table: String, newDataSchema: StructType): Unit =
+    ???
+
+  override def alterTableStats(
+      db: String,
+      table: String,
+      stats: Option[CatalogStatistics]): Unit =
+    ???
 
   override def loadTable(
       db: String,
@@ -85,7 +113,6 @@ class TiDirectExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
       partition: TablePartitionSpec,
       replace: Boolean,
       numDP: Int): Unit = ???
-
   override def createPartitions(
       db: String,
       table: String,
@@ -139,54 +166,21 @@ class TiDirectExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
       predicates: Seq[Expression],
       defaultTimeZoneId: String): Seq[CatalogTablePartition] = ???
 
+  override def createFunction(db: String, funcDefinition: CatalogFunction): Unit = ???
+
+  override def dropFunction(db: String, funcName: String): Unit = ???
+
+  override def alterFunction(db: String, funcDefinition: CatalogFunction): Unit = ???
+
+  override def renameFunction(db: String, oldName: String, newName: String): Unit = ???
+
   override def getFunction(db: String, funcName: String): CatalogFunction = ???
 
   override def functionExists(db: String, funcName: String): Boolean = ???
 
   override def listFunctions(db: String, pattern: String): Seq[String] = ???
 
-  // Following are unimplemented.
-  override protected def doDropDatabase(
-      db: String,
-      ignoreIfNotExists: Boolean,
-      cascade: Boolean): Unit = ???
+  override def getTablesByName(db: String, tables: Seq[String]): Seq[CatalogTable] = ???
 
-  override protected def doDropTable(
-      db: String,
-      table: String,
-      ignoreIfNotExists: Boolean,
-      purge: Boolean): Unit = ???
-
-  override protected def doCreateDatabase(
-      dbDefinition: CatalogDatabase,
-      ignoreIfExists: Boolean): Unit = ???
-
-  override protected def doAlterDatabase(dbDefinition: CatalogDatabase): Unit = ???
-
-  override protected def doCreateTable(
-      tableDefinition: CatalogTable,
-      ignoreIfExists: Boolean): Unit = ???
-
-  override protected def doRenameTable(db: String, oldName: String, newName: String): Unit = ???
-
-  override protected def doAlterTable(tableDefinition: CatalogTable): Unit = ???
-
-  override protected def doAlterTableDataSchema(
-      db: String,
-      table: String,
-      newDataSchema: StructType): Unit = ???
-
-  override protected def doAlterTableStats(
-      db: String,
-      table: String,
-      stats: Option[CatalogStatistics]): Unit = ???
-
-  override protected def doCreateFunction(db: String, funcDefinition: CatalogFunction): Unit = ???
-
-  override protected def doDropFunction(db: String, funcName: String): Unit = ???
-
-  override protected def doAlterFunction(db: String, funcDefinition: CatalogFunction): Unit = ???
-
-  override protected def doRenameFunction(db: String, oldName: String, newName: String): Unit =
-    ???
+  override def listViews(db: String, pattern: String): Seq[String] = ???
 }
