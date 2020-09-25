@@ -17,19 +17,19 @@
 
 package com.pingcap.tikv.txn;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 public class ResolveLockResult {
   private final long msBeforeTxnExpired;
-  private final List<Long> resolvedLocks;
+  private final Set<Long> resolvedLocks;
 
   public ResolveLockResult(long msBeforeTxnExpired) {
     this.msBeforeTxnExpired = msBeforeTxnExpired;
-    this.resolvedLocks = new ArrayList<>();
+    this.resolvedLocks = new HashSet<>();
   }
 
-  public ResolveLockResult(long msBeforeTxnExpired, List<Long> resolvedLocks) {
+  public ResolveLockResult(long msBeforeTxnExpired, Set<Long> resolvedLocks) {
     this.msBeforeTxnExpired = msBeforeTxnExpired;
     this.resolvedLocks = resolvedLocks;
   }
@@ -38,7 +38,7 @@ public class ResolveLockResult {
     return msBeforeTxnExpired;
   }
 
-  public List<Long> getResolvedLocks() {
+  public Set<Long> getResolvedLocks() {
     return resolvedLocks;
   }
 }
