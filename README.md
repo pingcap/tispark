@@ -13,7 +13,7 @@ Read the [Quick Start](./docs/userguide.md).
 
 ## Getting TiSpark
 
-+ Currently, TiSpark 2.3.4 is the latest stable version, which is highly recommended. It is compatible with Spark 2.3.0+ and Spark 2.4.0+. It is also compatible with TiDB-2.x、TiDB-3.x and TiDB-4.x. Please follow the [document](./docs/userguide.md).
++ Currently, TiSpark 2.3.5 is the latest stable version, which is highly recommended. It is compatible with Spark 2.3.0+ and Spark 2.4.0+. It is also compatible with TiDB-2.x、TiDB-3.x and TiDB-4.x. Please follow the [document](./docs/userguide.md).
 
 + TiSpark 1.2.1 is the latest stable version compatible with Spark 2.1.0+.
   - When using TiSpark 1.2.1, follow the [document for Spark 2.1](./docs/userguide_spark2.1.md).
@@ -26,7 +26,7 @@ If you are using maven (recommended), add the following code to your `pom.xml`:
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-assembly</artifactId>
-      <version>2.3.4</version>
+      <version>2.3.5</version>
     </dependency>
 </dependencies>
 ```
@@ -47,7 +47,7 @@ For other build tools, visit <https://search.maven.org/> and search with GroupId
 
 ## How to build from sources
 
-TiSpark now supports Spark 2.3.0+ or 2.4.0+. The earlier TiSpark versions for Spark 2.1.0+ only contain bug-fixes. After these versions, you can still get support for Spark 2.1 until TiSpark 1.2.1.
+TiSpark now supports Spark 2.3.0+、2.4.0+ and 3.0.0+. The earlier TiSpark versions for Spark 2.1.0+ only contain bug-fixes. After these versions, you can still get support for Spark 2.1 until TiSpark 1.2.1.
 
 Currently `java8` is the only choice to build TiSpark, run `mvn -version` to check.
 
@@ -67,8 +67,9 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 
 | Spark Version | TiSpark Version              |
 | ------------- | ---------------------------- |
-| Spark-2.4.x   | TiSpark-2.3.4、TiSpark-2.1.9 |
-| Spark-2.3.x   | TiSpark-2.3.4、TiSpark-2.1.9 |
+| Spark-3.0.x   | TiSpark-2.4.0-SNAPSHOT       |
+| Spark-2.4.x   | TiSpark-2.3.5、TiSpark-2.1.9 |
+| Spark-2.3.x   | TiSpark-2.3.5、TiSpark-2.1.9 |
 | Spark-2.2.x   | TiSpark-1.2.1                |
 | Spark-2.1.x   | TiSpark-1.2.1                |
 
@@ -80,25 +81,23 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 | 1.2.x           | v2.1.x                      |
 | 2.1.x           | v3.0.2                      |
 | 2.3.x           | v4.0.x                      |
+| 2.4.x           | v4.0.x                      |
 
 ## Spark versions supported by TiSpark
 
 Although TiSpark provides backward compatibility to TiDB, it only guarantees the **restricted** support for the earlier Spark versions to follow the latest DataSource API changes.
 
-| TiSpark Version | Spark Version                |
-| --------------- | ---------------------------- |
-| 1.x             | Spark v2.1.0+                |
-| 2.0             | Spark v2.3.0+                |
-| 2.1.x           | Spark v2.3.0+, Spark v2.4.0+ |
-| 2.3.x           | Spark v2.3.0+, Spark v2.4.0+ |
+| TiSpark Version | Spark Version                | Scala Version |
+| --------------- | ---------------------------- | ------------- |
+| 1.x             | Spark v2.1.0+                | 2.11          |
+| 2.0             | Spark v2.3.0+                | 2.11          |
+| 2.1.x           | Spark v2.3.0+, Spark v2.4.0+ | 2.11          |
+| 2.3.x           | Spark v2.3.0+, Spark v2.4.0+ | 2.11          |
+| 2.4.x           | Spark v3.0.0+                | 2.12          |
 
 ## How to upgrade from Spark 2.1 to Spark 2.3/2.4
 
 For the users of Spark 2.1 who wish to upgrade to the latest TiSpark version on Spark 2.3/2.4, download or install Spark 2.3+/2.4+ by following the instructions on [Apache Spark Site](http://spark.apache.org/downloads.html) and overwrite the old spark version in `$SPARK_HOME`.
-
-## Scala Version
-
-TiSpark currently only supports `scala-2.11`.
 
 ## TiSpark Architecture
 
@@ -206,6 +205,13 @@ The configurations in the table below can be put together with `spark-defaults.c
 | `spark.tispark.request.isolation.level` |  `SI` | Isolation level means whether to resolve locks for the underlying TiDB clusters. When you use the "RC", you get the latest version of record smaller than your `tso` and ignore the locks. If you use "SI", you resolve the locks and get the records depending on whether the resolved lock is committed or aborted.  |
 | `spark.tispark.coprocessor.chunk_batch_size` | `1024` | How many rows fetched from Coprocessor |
 | `spark.tispark.isolation_read_engines` | `tikv,tiflash` | List of readable engines of TiSpark, comma separated, storage engines not listed will not be read |
+
+## Spark-3.0 Catalog
+Please use the following configuration to enable `Catalog` provided by `spark-3.0`.
+
+```
+spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
+```
 
 ## `Log4j` Configuration
 
