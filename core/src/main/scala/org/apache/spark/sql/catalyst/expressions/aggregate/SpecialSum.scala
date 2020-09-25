@@ -15,7 +15,6 @@
 
 package org.apache.spark.sql.catalyst.expressions.aggregate
 
-import com.pingcap.tispark.utils.ReflectionUtil._
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
 import org.apache.spark.sql.catalyst.expressions.{
   Add,
@@ -73,8 +72,13 @@ case class SpecialSum(child: Expression, retType: DataType, initVal: Any)
     extends DeclarativeAggregate {
 
   override lazy val aggBufferAttributes: Seq[AttributeReference] = sum :: Nil
-  override lazy val initialValues: Seq[Expression] = Seq(
-    /* sum = */ Literal.create(initVal, sumDataType))
+  override lazy val initialValues: Seq[Expression] = {
+    val longVal = initVal match {
+      case i: Integer => i.toLong
+      case other => other
+    }
+    Seq( /* sum = */ Literal.create(longVal, sumDataType))
+  }
   override lazy val updateExpressions: Seq[Expression] = {
     if (child.nullable) {
       Seq(
@@ -94,7 +98,7 @@ case class SpecialSum(child: Expression, retType: DataType, initVal: Any)
   override lazy val evaluateExpression: Expression = sum
   private lazy val resultType = retType
   private lazy val sumDataType = resultType
-  private lazy val sum = newAttributeReference("rewriteSum", sumDataType)
+  private lazy val sum = AttributeReference("rewriteSum", sumDataType)()
   private lazy val zero = Cast(Literal(0), sumDataType)
 
   override def children: Seq[Expression] = child :: Nil

@@ -16,7 +16,6 @@
 package org.apache.spark.sql
 
 import com.pingcap.tispark.TiDBRelation
-import com.pingcap.tispark.utils.ReflectionUtil
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
@@ -27,8 +26,7 @@ object TiAggregation {
   type ReturnType =
     (Seq[NamedExpression], Seq[AggregateExpression], Seq[NamedExpression], LogicalPlan)
 
-  def unapply(plan: LogicalPlan): Option[ReturnType] =
-    ReflectionUtil.callTiAggregationImplUnapply(plan)
+  def unapply(plan: LogicalPlan): Option[ReturnType] = TiAggregationImpl.unapply(plan)
 }
 
 object TiAggregationProjection {

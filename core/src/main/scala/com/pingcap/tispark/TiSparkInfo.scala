@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory
 object TiSparkInfo {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  val SUPPORTED_SPARK_VERSION: List[String] = "2.3" :: "2.4" :: Nil
+  val SUPPORTED_SPARK_VERSION: List[String] = "3.0" :: Nil
 
   val SPARK_VERSION: String = org.apache.spark.SPARK_VERSION
 

@@ -18,10 +18,9 @@ package com.pingcap.tispark
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.{TiBatchWriteException, TiClientInternalException}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
-import com.pingcap.tispark.utils.ReflectionUtil.newAttributeReference
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.write.{TiDBOptions, TiDBWriter}
-import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
@@ -88,12 +87,12 @@ case class TiDBRelation(
     val ids = dagRequest.getPrunedPhysicalIds.asScala
     var tiHandleRDDs = new ListBuffer[TiHandleRDD]()
     lazy val attributeRef = Seq(
-      newAttributeReference("RegionId", LongType, nullable = false, Metadata.empty),
-      newAttributeReference(
+      AttributeReference("RegionId", LongType, nullable = false, Metadata.empty)(),
+      AttributeReference(
         "Handles",
         ArrayType(LongType, containsNull = false),
         nullable = false,
-        Metadata.empty))
+        Metadata.empty)())
 
     val tiConf = session.getConf
     tiConf.setPartitionPerSplit(TiUtil.getPartitionPerSplit(sqlContext))

@@ -27,3 +27,5 @@
 # test.tiflash.enable=false
 # DB prefix for tidb databases in case it conflicts with hive database
 # spark.tispark.db_prefix=tidb_
+# Whether to use the new feature Catalog provided by spark-3.0
+#spark.sql.catalog.tidb_catalog=org.apache.spark.sql.catalyst.catalog.TiCatalog

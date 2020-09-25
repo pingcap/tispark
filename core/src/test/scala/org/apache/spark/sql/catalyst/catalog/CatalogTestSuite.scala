@@ -30,14 +30,23 @@ class CatalogTestSuite extends BaseTiSparkTest {
 
   test("test new catalog") {
     setCurrentDatabase("default")
+    val qSparkDatabase = if (catalogPluginMode) {
+      "tidb_catalog.tispark_test"
+    } else {
+      s"${dbPrefix}tispark_test"
+    }
     compSparkWithTiDB(
-      qSpark = s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table",
+      qSpark = s"select count(*) from $qSparkDatabase.full_data_type_table",
       qTiDB = s"select count(*) from tispark_test.full_data_type_table")
     setCurrentDatabase("tispark_test")
     runTest(s"select count(*) from full_data_type_table")
   }
 
   test("test db prefix") {
+    if (catalogPluginMode) {
+      cancel
+    }
+
     setCurrentDatabase("default")
     compSparkWithTiDB(
       qSpark = s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table",
@@ -90,15 +99,19 @@ class CatalogTestSuite extends BaseTiSparkTest {
         List("tp_time", "bigint", "true", null),
         List("tp_enum", "string", "true", null),
         List("tp_set", "string", "true", null))
+
     setCurrentDatabase("tispark_test")
     spark.sql("desc full_data_type_table").explain(true)
-    explainAndRunTest("desc full_data_type_table", skipJDBC = true, rTiDB = tidbDescTable)
     spark.sql("desc extended full_data_type_table").explain()
-    spark.sql("desc extended full_data_type_table").show(200, truncate = false)
-    spark.sql("desc formatted full_data_type_table").show(200, truncate = false)
-    spark.sql("drop view if exists v")
-    spark.sql("create temporary view v as select * from full_data_type_table")
-    explainAndRunTest("desc v", skipJDBC = true, rTiDB = tidbDescTable)
+
+    if (!catalogPluginMode) {
+      explainAndRunTest("desc full_data_type_table", skipJDBC = true, rTiDB = tidbDescTable)
+
+      spark.sql("drop view if exists v")
+      spark.sql("create temporary view v as select * from full_data_type_table")
+      explainAndRunTest("desc v", skipJDBC = true, rTiDB = tidbDescTable)
+    }
+
     refreshConnections(true)
     setCurrentDatabase("default")
     spark.sql("drop table if exists t")
@@ -128,6 +141,10 @@ class CatalogTestSuite extends BaseTiSparkTest {
   }
 
   test("test support show columns") {
+    if (catalogPluginMode) {
+      cancel("SHOW COLUMNS is only supported with temp views or v1 tables")
+    }
+
     val columnNames = List(
       List("id_dt"),
       List("tp_varchar"),
@@ -156,6 +173,18 @@ class CatalogTestSuite extends BaseTiSparkTest {
       List("tp_time"),
       List("tp_enum"),
       List("tp_set"))
+
+    spark.sql("create database d1")
+    spark.sql("use d1")
+    spark.sql("create table m(m1 int)")
+    spark.sql("show columns from m").show(200, truncate = false)
+
+    spark
+      .sql("show columns from tidb_tispark_test.full_data_type_table")
+      .show(200, truncate = false)
+    spark.sql("use tidb_tispark_test")
+    spark.sql("show columns from full_data_type_table").show(200, truncate = false)
+
     setCurrentDatabase("tispark_test")
     explainAndRunTest(
       "show columns from full_data_type_table",
@@ -168,6 +197,10 @@ class CatalogTestSuite extends BaseTiSparkTest {
   }
 
   test("test support create table like") {
+    if (catalogPluginMode) {
+      cancel
+    }
+
     setCurrentDatabase("default")
     spark.sql("drop table if exists t")
     spark.sql(s"create table t like ${dbPrefix}tpch_test.nation")
@@ -332,6 +365,10 @@ class CatalogTestSuite extends BaseTiSparkTest {
   }
 
   test("support desc table column") {
+    if (catalogPluginMode) {
+      cancel("Describing columns is not supported for v2 tables")
+    }
+
     val expectedDescTableColumn =
       List(List("col_name", "id"), List("data_type", "bigint"), List("comment", "NULL"))
     val expectedDescExtendedTableColumn =

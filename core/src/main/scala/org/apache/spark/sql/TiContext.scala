@@ -22,7 +22,6 @@ import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager
-import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
@@ -44,9 +43,9 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   final val tiSession: TiSession = TiSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
   lazy val tiConcreteCatalog: TiSessionCatalog =
-    new TiConcreteSessionCatalog(this)(newTiDirectExternalCatalog(this))
+    new TiConcreteSessionCatalog(this)(new TiDirectExternalCatalog(this))
   lazy val sessionCatalog: SessionCatalog = sqlContext.sessionState.catalog
-  lazy val tiCatalog: TiSessionCatalog = newTiCompositeSessionCatalog(this)
+  lazy val tiCatalog: TiSessionCatalog = new TiCompositeSessionCatalog(this)
 
   sparkSession.sparkContext.addSparkListener(new SparkListener() {
     override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {

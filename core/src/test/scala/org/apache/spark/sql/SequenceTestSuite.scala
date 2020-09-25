@@ -35,6 +35,12 @@ class SequenceTestSuite extends BaseTiSparkTest {
     judge(s"select * from $table")
 
     spark.sql("show tables").show(false)
+
+    val tableInfo = ti.meta.getTable(s"${dbPrefix}tispark_test", table).get
+    assert(table.equals(tableInfo.getName))
+
+    val sequenceInfo = ti.meta.getTable(s"${dbPrefix}tispark_test", "sq_test")
+    assert(sequenceInfo.isEmpty)
   }
 
   override def afterAll(): Unit = {

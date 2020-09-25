@@ -41,19 +41,18 @@ object TiAggregationImpl {
             child) =>
         // Rewrites all `Average`s into the form of `Divide(Sum / Count)` so that we can push the
         // converted `Sum`s and `Count`s down to TiKV.
-        val averages =
+        val (averages, averagesEliminated) =
           aggregateExpressions
             .map(_.asInstanceOf[AggregateExpression])
             .partition {
-              case AggregateExpression(_: Average, _, _, _) => true
+              case AggregateExpression(_: Average, _, _, _, _) => true
               case _ => false
             }
-            ._1
 
         val sums = aggregateExpressions
           .map(_.asInstanceOf[AggregateExpression])
           .partition {
-            case AggregateExpression(_: Sum, _, _, _) => true
+            case AggregateExpression(_: Sum, _, _, _, _) => true
             case _ => false
           }
           ._1
@@ -62,14 +61,14 @@ object TiAggregationImpl {
           aggregateExpressions
             .map(_.asInstanceOf[AggregateExpression])
             .partition {
-              case AggregateExpression(_: Sum, _, _, _) => false
-              case AggregateExpression(_: Average, _, _, _) => false
+              case AggregateExpression(_: Sum, _, _, _, _) => false
+              case AggregateExpression(_: Average, _, _, _, _) => false
               case _ => true
             }
             ._1
 
         val sumsRewriteMap = sums.map {
-          case s @ AggregateExpression(Sum(ref), _, _, _) =>
+          case s @ AggregateExpression(Sum(ref), _, _, _, _) =>
             // need cast long type to decimal type
             val sum =
               if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
@@ -79,7 +78,7 @@ object TiAggregationImpl {
         // An auxiliary map that maps result attribute IDs of all detected `Average`s to corresponding
         // converted `Sum`s and `Count`s.
         val avgRewriteMap = averages.map {
-          case a @ AggregateExpression(Average(ref), _, _, _) =>
+          case a @ AggregateExpression(Average(ref), _, _, _, _) =>
             // We need to do a type promotion on Sum(Long) to avoid LongType overflow in Average rewrite
             // scenarios to stay consistent with original spark's Average behaviour
             val sum =

@@ -70,10 +70,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-        <spark.version.compile>2.3.4</spark.version.compile>
-        <spark.version.test>2.4.4</spark.version.test>
-        <scala.binary.version>2.11</scala.binary.version>
-        <scala.version>2.11.12</scala.version>
+        <spark.version.compile>3.0.0</spark.version.compile>
+        <spark.version.test>3.0.1</spark.version.test>
+        <scala.binary.version>2.12</scala.binary.version>
+        <scala.version>2.12.10</scala.version>
         <!-- for now, not running scalafmt as part of default verify pipeline -->
         <scalafmt.skip>true</scalafmt.skip>
         <scalatest.version>3.0.8</scalatest.version>
@@ -161,8 +161,6 @@
     <modules>
         <module>tikv-client</module>
         <module>core</module>
-        <module>spark-wrapper/spark-2.3</module>
-        <module>spark-wrapper/spark-2.4</module>
         <module>assembly</module>
     </modules>
 
