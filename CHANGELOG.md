@@ -1,6 +1,13 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.5] 2020-09-25
+ ### Fixes
+- Fix scala match error when predicate includes boolean type conversion [#1620](https://github.com/pingcap/tispark/pull/1620)
+- Fix encoder v2 with type conversion and set default batch write version to v2 [#1623](https://github.com/pingcap/tispark/pull/1623)
+- Filter sequence table from catalog  [#1627](https://github.com/pingcap/tispark/pull/1627)
+- Fix batch write failed because of MetaCodec.hashGet failed [#1636](https://github.com/pingcap/tispark/pull/1636)
+
 ## [TiSpark 2.3.4] 2020-09-15
  ### Fixes
 - Filter Tombstone store [#1582](https://github.com/pingcap/tispark/pull/1595)
