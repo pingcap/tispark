@@ -20,6 +20,7 @@ package com.pingcap.tikv;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.GrpcException;
+import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
 import com.pingcap.tikv.region.RegionStoreClient;
@@ -80,7 +81,7 @@ public class KVClient implements AutoCloseable {
       RegionStoreClient client = clientBuilder.build(key);
       try {
         return client.get(backOffer, key, version);
-      } catch (final TiKVException e) {
+      } catch (final TiKVException | TiClientInternalException e) {
         backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
       }
     }
@@ -176,7 +177,7 @@ public class KVClient implements AutoCloseable {
       RegionStoreClient client = clientBuilder.build(batch.region);
       try {
         return client.batchGet(backOffer, batch.keys, version);
-      } catch (final TiKVException e) {
+      } catch (final TiKVException | TiClientInternalException e) {
         backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
         clientBuilder.getRegionManager().invalidateRegion(batch.region.getId());
         logger.warn("ReSplitting ranges for BatchGetRequest", e);
