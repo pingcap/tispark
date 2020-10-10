@@ -323,9 +323,8 @@ public class TiDAGRequest implements Serializable {
             }
           }
           // if a column of field is not contained in index selected,
-          // logically it must be the pk column and
-          // the pkIsHandle must be true. Extra check here.
-          else if (tableInfo.getColumn(col.getName()).isPrimaryKey() && tableInfo.isPkHandle()) {
+          // logically it must be the pk column. Extra check here.
+          else if (tableInfo.getColumn(col.getName()).isPrimaryKey()) {
             pkIsNeeded = true;
             // offset should be processed for each primary key encountered
             outputOffsets.add(colCount);
