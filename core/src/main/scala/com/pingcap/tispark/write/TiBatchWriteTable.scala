@@ -152,8 +152,13 @@ class TiBatchWriteTable(
             val colOffset = data._2
             if (colsMapInTiDB.contains(colsInDf(colOffset))) {
               if (colsMapInTiDB(colsInDf(colOffset)).isAutoIncrement) {
-                val index = row._2 + 1
-                rowIDAllocator.getShardRowId(index)
+                if (tiTableInfo.isPkHandle) {
+                  rowIDAllocator.getShardRowId(row._2 + 1)
+                } else {
+                  // indicates that this table is built with alter-primary-key feature
+                  // TODO: check overflow?
+                  row._2 + 1 + rowIDAllocator.getStart
+                }
               } else {
                 data._1
               }
