@@ -32,7 +32,7 @@ class BaseBatchWriteWithoutDropTableTest(
 
   override def afterAll(): Unit =
     try {
-      //dropTable()
+      dropTable()
     } finally {
       super.afterAll()
     }
