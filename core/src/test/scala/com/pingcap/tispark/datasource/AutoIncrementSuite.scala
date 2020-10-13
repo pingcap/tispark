@@ -95,6 +95,10 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("bigint signed tidb overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
+
     val schema = StructType(List(StructField("j", LongType)))
 
     jdbcUpdate(
@@ -122,6 +126,9 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("bigint signed tispark overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
 
     val schema = StructType(List(StructField("j", LongType)))
 
@@ -152,6 +159,9 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("bigint unsigned tidb overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
 
     val schema = StructType(List(StructField("j", LongType)))
 
@@ -179,6 +189,10 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("bigint unsigned tispark overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
+
     val schema = StructType(List(StructField("j", LongType)))
 
     jdbcUpdate(
@@ -208,6 +222,10 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("tinyint signed tidb overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
+
     val schema = StructType(List(StructField("j", LongType)))
 
     jdbcUpdate(
@@ -235,6 +253,10 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("tinyint signed tispark overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
+
     val schema = StructType(List(StructField("j", LongType)))
 
     jdbcUpdate(
@@ -263,6 +285,10 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("tinyint unsigned tidb overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
+
     val schema = StructType(List(StructField("j", LongType)))
 
     jdbcUpdate(
@@ -289,6 +315,10 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("tinyint unsigned tispark overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
+
     val schema = StructType(List(StructField("j", LongType)))
 
     jdbcUpdate(

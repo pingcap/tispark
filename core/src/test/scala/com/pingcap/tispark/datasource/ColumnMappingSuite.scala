@@ -69,6 +69,10 @@ class ColumnMappingSuite
   }
 
   test("Test different column order without auto increment column") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
+
     jdbcUpdate(
       s"create table $dbtable(i int primary key auto_increment, s varchar(128), c varchar(128))")
 
