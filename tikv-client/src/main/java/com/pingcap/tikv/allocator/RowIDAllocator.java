@@ -52,6 +52,10 @@ public final class RowIDAllocator implements Serializable {
     this.conf = conf;
   }
 
+  public long getAutoIncId(long index) {
+    return index + getStart();
+  }
+
   /**
    * @param index should >= 1
    * @return
