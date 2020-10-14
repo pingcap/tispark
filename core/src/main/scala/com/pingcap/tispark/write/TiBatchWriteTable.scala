@@ -153,7 +153,7 @@ class TiBatchWriteTable(
             if (colsMapInTiDB.contains(colsInDf(colOffset))) {
               if (colsMapInTiDB(colsInDf(colOffset)).isAutoIncrement) {
                 val index = row._2 + 1
-                rowIDAllocator.getShardRowId(index)
+                rowIDAllocator.getAutoIncId(index)
               } else {
                 data._1
               }

@@ -115,6 +115,12 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   def setLogLevel(level: String): Unit =
     spark.sparkContext.setLogLevel(level)
 
+  protected def isEnableAlterPrimaryKey: Boolean = {
+    val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
+    val tiDBJDBCClient = new TiDBJDBCClient(conn)
+    tiDBJDBCClient.isEnableAlterPrimaryKey
+  }
+
   protected def isEnableTableLock: Boolean = {
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     val tiDBJDBCClient = new TiDBJDBCClient(conn)

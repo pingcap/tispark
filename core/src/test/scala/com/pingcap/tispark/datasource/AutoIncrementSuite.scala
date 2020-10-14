@@ -21,6 +21,37 @@ import org.apache.spark.sql.types._
 
 class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increment") {
 
+  test("alter primary key + auto increment + shard row bits") {
+    if (!isEnableAlterPrimaryKey) {
+      cancel("enable alter-primary-key by changing tidb.toml")
+    }
+
+    val schema = StructType(List(StructField("j", LongType)))
+
+    jdbcUpdate(
+      s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i)) SHARD_ROW_ID_BITS=4")
+
+    val tiTableInfo = ti.tiSession.getCatalog.getTable(dbPrefix + database, table)
+    assert(!tiTableInfo.isPkHandle)
+
+    (1L until 10L).foreach { i =>
+      jdbcUpdate(s"insert into $dbtable (j) values(${i * 2 - 1})")
+
+      tidbWrite(List(Row(i * 2)), schema)
+    }
+
+    println(listToString(queryTiDBViaJDBC(s"select _tidb_rowid, i, j from $dbtable")))
+
+    spark.sql(s"select * from $table").show
+
+    val maxI = queryTiDBViaJDBC(s"select max(i) from $dbtable").head.head.toString.toLong
+    assert(maxI < 10000000)
+
+    val maxTiDBRowID =
+      queryTiDBViaJDBC(s"select max(_tidb_rowid) from $dbtable").head.head.toString.toLong
+    assert(maxTiDBRowID > 10000000)
+  }
+
   // Duplicate entry '2' for key 'PRIMARY'
   // currently user provided auto increment value is not supported!
   ignore("auto increment: user provide id") {
@@ -64,6 +95,10 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("bigint signed tidb overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
+
     val schema = StructType(List(StructField("j", LongType)))
 
     jdbcUpdate(
@@ -91,6 +126,9 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("bigint signed tispark overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
 
     val schema = StructType(List(StructField("j", LongType)))
 
@@ -121,6 +159,9 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("bigint unsigned tidb overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
 
     val schema = StructType(List(StructField("j", LongType)))
 
@@ -148,6 +189,10 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("bigint unsigned tispark overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
+
     val schema = StructType(List(StructField("j", LongType)))
 
     jdbcUpdate(
@@ -177,6 +222,10 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("tinyint signed tidb overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
+
     val schema = StructType(List(StructField("j", LongType)))
 
     jdbcUpdate(
@@ -204,6 +253,10 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("tinyint signed tispark overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
+
     val schema = StructType(List(StructField("j", LongType)))
 
     jdbcUpdate(
@@ -232,6 +285,10 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("tinyint unsigned tidb overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
+
     val schema = StructType(List(StructField("j", LongType)))
 
     jdbcUpdate(
@@ -258,6 +315,10 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
   }
 
   test("tinyint unsigned tispark overflow") {
+    if (isEnableAlterPrimaryKey) {
+      cancel()
+    }
+
     val schema = StructType(List(StructField("j", LongType)))
 
     jdbcUpdate(

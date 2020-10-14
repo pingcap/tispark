@@ -39,11 +39,18 @@ public class TiDBJDBCClient implements AutoCloseable {
   private static final int DELAY_CLEAN_TABLE_LOCK_DEFAULT = 0;
   private static final String TIDB_ROW_FORMAT_VERSION_SQL = "select @@tidb_row_format_version";
   private static final int TIDB_ROW_FORMAT_VERSION_DEFAULT = 1;
+  private static final String ALTER_PRIMARY_KEY_KEY = "alter-primary-key";
+  private static final Boolean ALTER_PRIMARY_KEY_DEFAULT = false;
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
   private final Connection connection;
 
   public TiDBJDBCClient(Connection connection) {
     this.connection = connection;
+  }
+
+  public boolean isEnableAlterPrimaryKey() throws IOException, SQLException {
+    Map<String, Object> configMap = readConfMapFromTiDB();
+    return (Boolean) configMap.getOrDefault(ALTER_PRIMARY_KEY_KEY, ALTER_PRIMARY_KEY_DEFAULT);
   }
 
   public boolean isEnableTableLock() throws IOException, SQLException {
