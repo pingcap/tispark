@@ -1,6 +1,11 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.6] 2020-10-16
+### Fixes
+- Fix covering index error when alter-primary-key is enabled [#1640](https://github.com/pingcap/tispark/pull/1640)
+- Fix alter primary key for write [#1644](https://github.com/pingcap/tispark/pull/1644)
+
 ## [TiSpark 2.3.5] 2020-09-25
 ### Fixes
 - Fix scala match error when predicate includes boolean type conversion [#1620](https://github.com/pingcap/tispark/pull/1620)

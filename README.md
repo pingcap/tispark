@@ -26,7 +26,7 @@ If you are using maven (recommended), add the following code to your `pom.xml`:
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-assembly</artifactId>
-      <version>2.3.5</version>
+      <version>2.3.6</version>
     </dependency>
 </dependencies>
 ```
@@ -68,8 +68,8 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 | Spark Version | TiSpark Version              |
 | ------------- | ---------------------------- |
 | Spark-3.0.x   | TiSpark-2.4.0-SNAPSHOT       |
-| Spark-2.4.x   | TiSpark-2.3.5、TiSpark-2.1.9 |
-| Spark-2.3.x   | TiSpark-2.3.5、TiSpark-2.1.9 |
+| Spark-2.4.x   | TiSpark-2.3.6、TiSpark-2.1.9 |
+| Spark-2.3.x   | TiSpark-2.3.6、TiSpark-2.1.9 |
 | Spark-2.2.x   | TiSpark-1.2.1                |
 | Spark-2.1.x   | TiSpark-1.2.1                |
 
