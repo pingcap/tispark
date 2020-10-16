@@ -399,6 +399,7 @@ public class TiKVScanAnalyzerTest {
               SchemaState.StatePublic.getStateCode(),
               "Test Index",
               IndexType.IndexTypeBtree.getTypeCode(),
+              false,
               false);
       boolean isCovering = scanBuilder.isCoveringIndex(columns, indexInfo, pkIsHandle);
       assertEquals(t.isCovering, isCovering);
