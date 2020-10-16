@@ -81,6 +81,7 @@ class TPCHQuerySuite extends BaseTiSparkTest {
     } catch {
       case e: Throwable =>
         println(s"TiSpark failed $name")
+        e.printStackTrace()
         fail(e)
     }
 
