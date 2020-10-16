@@ -118,6 +118,7 @@ public class MetaUtils {
               SchemaState.StatePublic.getStateCode(),
               "",
               IndexType.IndexTypeBtree.getTypeCode(),
+              false,
               false);
       indices.add(index);
       return this;
