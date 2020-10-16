@@ -65,35 +65,12 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 
 ## How to choose TiSpark Version
 
-| Spark Version | TiSpark Version              |
-| ------------- | ---------------------------- |
-| Spark-3.0.x   | TiSpark-2.5.0-SNAPSHOT       |
-| Spark-2.4.x   | TiSpark-2.3.6、TiSpark-2.1.9 |
-| Spark-2.3.x   | TiSpark-2.3.6、TiSpark-2.1.9 |
-| Spark-2.2.x   | TiSpark-1.2.1                |
-| Spark-2.1.x   | TiSpark-1.2.1                |
-
-## Latest TiDB/TiKV/PD versions supported by TiSpark
-
-| TiSpark Version | Latest TiDB/TiKV/PD Version |
-| --------------- | --------------------------- |
-| < 1.2           | v2.1.9                      |
-| 1.2.x           | v2.1.x                      |
-| 2.1.x           | v3.0.2                      |
-| 2.3.x           | v4.0.x                      |
-| 2.4.x           | v4.0.x                      |
-
-## Spark versions supported by TiSpark
-
-Although TiSpark provides backward compatibility to TiDB, it only guarantees the **restricted** support for the earlier Spark versions to follow the latest DataSource API changes.
-
-| TiSpark Version | Spark Version                | Scala Version |
-| --------------- | ---------------------------- | ------------- |
-| 1.x             | Spark v2.1.0+                | 2.11          |
-| 2.0             | Spark v2.3.0+                | 2.11          |
-| 2.1.x           | Spark v2.3.0+, Spark v2.4.0+ | 2.11          |
-| 2.3.x           | Spark v2.3.0+, Spark v2.4.0+ | 2.11          |
-| 2.4.x           | Spark v3.0.0+                | 2.12          |
+| TiSpark Version | TiDB/TiKV/PD Version | Spark Version | Scala Version |
+| --------------- | -------------------- | ------------- | ------------- |
+| 2.1.x           | <= 3.0.2             | 2.3.x, 2.4.x  | 2.11          |
+| 2.3.x           | <= 4.0.x             | 2.3.x, 2.4.x  | 2.11          |
+| 2.4.x           | <= 5.0.x             | 2.3.x, 2.4.x  | 2.11          |
+| 2.5.x           | <= 5.0.x             | 3.0.x         | 2.12          |
 
 ## How to upgrade from Spark 2.1 to Spark 2.3/2.4
 
