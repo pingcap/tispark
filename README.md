@@ -67,7 +67,7 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 
 | Spark Version | TiSpark Version              |
 | ------------- | ---------------------------- |
-| Spark-3.0.x   | TiSpark-2.4.0-SNAPSHOT       |
+| Spark-3.0.x   | TiSpark-2.5.0-SNAPSHOT       |
 | Spark-2.4.x   | TiSpark-2.3.6、TiSpark-2.1.9 |
 | Spark-2.3.x   | TiSpark-2.3.6、TiSpark-2.1.9 |
 | Spark-2.2.x   | TiSpark-1.2.1                |
