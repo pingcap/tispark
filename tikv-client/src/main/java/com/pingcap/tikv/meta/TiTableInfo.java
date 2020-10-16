@@ -201,7 +201,15 @@ public class TiTableInfo implements Serializable {
   }
 
   public List<TiIndexInfo> getIndices() {
-    return indices;
+    return getIndices(false);
+  }
+
+  public List<TiIndexInfo> getIndices(boolean includingInvisible) {
+    if (includingInvisible) {
+      return indices;
+    } else {
+      return indices.stream().filter(idx -> !idx.isInvisible()).collect(Collectors.toList());
+    }
   }
 
   public String getComment() {
