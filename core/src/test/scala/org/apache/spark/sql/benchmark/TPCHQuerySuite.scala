@@ -38,7 +38,8 @@ class TPCHQuerySuite extends BaseTiSparkTest {
     "q12",
     "q13",
     "q14",
-    "q15",
+    // https://github.com/pingcap/tispark/issues/1624
+    // "q15",
     "q16",
     "q17",
     "q18",
@@ -81,6 +82,7 @@ class TPCHQuerySuite extends BaseTiSparkTest {
     } catch {
       case e: Throwable =>
         println(s"TiSpark failed $name")
+        e.printStackTrace()
         fail(e)
     }
 
