@@ -30,7 +30,6 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 
 public abstract class AbstractDateTimeType extends DataType {
-  public static long MILLS_PER_DAY = 3600L * 24 * 1000;
 
   AbstractDateTimeType(InternalTypeHolder holder) {
     super(holder);
