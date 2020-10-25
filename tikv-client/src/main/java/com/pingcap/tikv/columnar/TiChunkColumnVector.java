@@ -144,7 +144,7 @@ public class TiChunkColumnVector extends TiColumnVector {
     }
     if (this.type instanceof DateType) {
       LocalDate date = new LocalDate(year, month, day);
-      return Math.floorDiv(date.toDate().getTime(), AbstractDateTimeType.MILLS_PER_DAY);
+      return DateType.getDays(date);
     } else if (type instanceof DateTimeType || type instanceof TimestampType) {
       // only return microsecond from epoch.
       Timestamp ts =
