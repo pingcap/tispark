@@ -64,6 +64,8 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   //20k
   val snapshotBatchGetSize: Int = getOrDefault(TIDB_SNAPSHOT_BATCH_GET_SIZE, "20480").toInt
   val batchGetBackOfferMS: Int = getOrDefault(TIDB_BATCH_GET_BACKOFFER_MS, "60000").toInt
+  val sleepBeforePrewritePrimaryKey: Long =
+    getOrDefault(TIDB_SLEEP_BEFORE_PREWRITE_PRIMARY_KEY, "0").toLong
   val sleepAfterPrewritePrimaryKey: Long =
     getOrDefault(TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY, "0").toLong
   val sleepAfterPrewriteSecondaryKey: Long =
@@ -217,6 +219,7 @@ object TiDBOptions {
   // ------------------------------------------------------------
   val TIDB_IS_TEST: String = newOption("isTest")
   val TIDB_LOCK_TTL_SECONDS: String = newOption("lockTTLSeconds")
+  val TIDB_SLEEP_BEFORE_PREWRITE_PRIMARY_KEY: String = newOption("sleepBeforePrewritePrimaryKey")
   val TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY: String = newOption("sleepAfterPrewritePrimaryKey")
   val TIDB_SLEEP_AFTER_PREWRITE_SECONDARY_KEY: String = newOption(
     "sleepAfterPrewriteSecondaryKey")
