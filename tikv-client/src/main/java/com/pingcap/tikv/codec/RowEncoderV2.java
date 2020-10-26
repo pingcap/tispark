@@ -125,7 +125,7 @@ public class RowEncoderV2 {
       for (int i = 0; i < len; i++) {
         idx[i] = i;
       }
-      Arrays.sort(idx, Comparator.comparingInt(o -> this.row.colIDs[o]));
+      Arrays.sort(idx, Comparator.comparingInt(o -> Byte.toUnsignedInt(this.row.colIDs[o])));
       for (int i = 0; i < len; i++) {
         this.row.colIDs[i] = temp[idx[i]];
         this.values[i] = valueList.get(idx[i]);
@@ -138,7 +138,8 @@ public class RowEncoderV2 {
         for (int i = 0; i < len; i++) {
           idx[i] = i;
         }
-        Arrays.sort(idx, Comparator.comparingInt(o -> this.row.colIDs[start + o]));
+        Arrays.sort(
+            idx, Comparator.comparingInt(o -> Byte.toUnsignedInt(this.row.colIDs[start + o])));
         for (int i = 0; i < len; i++) {
           // values should all be null
           this.row.colIDs[start + i] = temp[idx[i]];
@@ -163,13 +164,16 @@ public class RowEncoderV2 {
       if (this.row.large) {
         encodeValue(cdo, o, getColumnInfoByID(columnInfos, this.row.colIDs32[i]).getType());
       } else {
-        encodeValue(cdo, o, getColumnInfoByID(columnInfos, this.row.colIDs[i]).getType());
+        encodeValue(
+            cdo,
+            o,
+            getColumnInfoByID(columnInfos, Byte.toUnsignedInt(this.row.colIDs[i])).getType());
       }
       if (cdo.size() > 0xffff && !this.row.large) {
         // only initialize once
         this.row.initColIDs32();
         for (int j = 0; j < numCols; j++) {
-          this.row.colIDs32[j] = this.row.colIDs[j];
+          this.row.colIDs32[j] = Byte.toUnsignedInt(this.row.colIDs[j]);
         }
         this.row.initOffsets32();
         if (numCols >= 0) {
