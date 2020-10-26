@@ -89,9 +89,13 @@ public class TTLManager {
     }
   }
 
+  public static long calculateUptime(TxnKVClient kvClient, long startTS) {
+    return kvClient.getTimestamp().getPhysical() - TiTimestamp.extractPhysical(startTS);
+  }
+
   private void doKeepAlive() {
     BackOffer bo = ConcreteBackOffer.newCustomBackOff(MANAGED_LOCK_TTL);
-    long uptime = kvClient.getTimestamp().getPhysical() - TiTimestamp.extractPhysical(startTS);
+    long uptime = calculateUptime(kvClient, startTS);
     long ttl = uptime + MANAGED_LOCK_TTL;
 
     LOG.info("doKeepAlive key={} uptime={} ttl={}", KeyUtils.formatBytes(primaryLock), uptime, ttl);
