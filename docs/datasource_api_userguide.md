@@ -168,20 +168,21 @@ TiBatchWrite.write(
 
 The following table shows the TiDB-specific options, which can be passed in through `TiDBOptions` or `SparkConf`.
 
-| Key                | Required | Default                | Description                                              |
-| ------------------ | -------- | ---------------------- | -------------------------------------------------------- |
-| pd.addresses       | true     | -                      | The addresses of PD clusters, split by comma             |
-| tidb.addr          | true     | -                      | TiDB address, which currently only supports one instance |
-| tidb.port          | true     | -                      | TiDB Port                                                |
-| tidb.user          | true     | -                      | TiDB User                                                |
-| tidb.password      | true     | -                      | TiDB Password                                            |
-| database           | true     | -                      | TiDB Database                                            |
-| table              | true     | -                      | TiDB Table                                               |
-| replace            | false    | false                  | To define the behavior of append                         |
-| useTableLock       | false    | true (3.x) false (4.x) | Whether to lock the table during writing                 |
-| enableRegionSplit  | false    | true                   | To split Region to avoid hot Region during insertion     |
-| scatterWaitMS      | false    | 300000                 | Max time to wait scatter region                          |
-| writeThreadPerTask | false    | 1                      | Thread number each spark task use to write data to TiKV  |
+| Key                | Required | Default                | Description                                                                |
+| ------------------ | -------- | ---------------------- | -------------------------------------------------------------------------- |
+| pd.addresses       | true     | -                      | The addresses of PD clusters, split by comma                               |
+| tidb.addr          | true     | -                      | TiDB address, which currently only supports one instance                   |
+| tidb.port          | true     | -                      | TiDB Port                                                                  |
+| tidb.user          | true     | -                      | TiDB User                                                                  |
+| tidb.password      | true     | -                      | TiDB Password                                                              |
+| database           | true     | -                      | TiDB Database                                                              |
+| table              | true     | -                      | TiDB Table                                                                 |
+| replace            | false    | false                  | To define the behavior of append                                           |
+| useTableLock       | false    | true (3.x) false (4.x) | Whether to lock the table during writing                                   |
+| enableRegionSplit  | false    | true                   | To split Region to avoid hot Region during insertion                       |
+| scatterWaitMS      | false    | 300000                 | Max time to wait scatter region                                            |
+| writeThreadPerTask | false    | 1                      | Thread number each spark task use to write data to TiKV                    |
+| bytesPerRegion     | false    | 100663296 (96M)        | Decrease this parameter to split more regions (increase write concurrency) | 
 
 ## TiDB Version
 
