@@ -238,12 +238,18 @@ class TiBatchWrite(
       !keyValue._1.equals(primaryKey)
     }
 
+    // for test
+    if (options.sleepBeforePrewritePrimaryKey > 0) {
+      logger.info(s"sleep ${options.sleepBeforePrewritePrimaryKey} ms for test")
+      Thread.sleep(options.sleepBeforePrewritePrimaryKey)
+    }
     // driver primary pre-write
+    logger.info("start to prewritePrimaryKey")
     val ti2PCClient =
       new TwoPhaseCommitter(
         tiConf,
         startTs,
-        lockTTLSeconds * 1000,
+        lockTTLSeconds * 1000 + TTLManager.calculateUptime(tiSession.createTxnClient(), startTs),
         options.txnPrewriteBatchSize,
         options.txnCommitBatchSize,
         options.writeBufferSize,
@@ -252,7 +258,6 @@ class TiBatchWrite(
         options.prewriteMaxRetryTimes)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(options.prewriteBackOfferMS)
-    logger.info("start to prewritePrimaryKey")
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
     logger.info("prewritePrimaryKey success")
 
