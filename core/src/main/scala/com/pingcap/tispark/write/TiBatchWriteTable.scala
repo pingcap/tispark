@@ -71,6 +71,7 @@ class TiBatchWriteTable(
   private var uniqueIndices: Seq[TiIndexInfo] = _
   private var handleCol: TiColumnInfo = _
   private var tableLocked: Boolean = false
+  private var autoIncProvidedID: Boolean = false
 
   tiTableRef = options.getTiTableRef(tiConf)
   tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
@@ -121,23 +122,28 @@ class TiBatchWriteTable(
       // when auto increment column is provided but the corresponding column in df contains null,
       // we need throw exception
       if (isProvidedID) {
-        throw new TiBatchWriteException(
-          "currently user provided auto increment value is not supported!")
-        /*if (!df.columns.contains(autoIncrementColName)) {
+        autoIncProvidedID = true
+
+        if (!options.replace) {
+          throw new TiBatchWriteException(
+            "currently user provided auto increment value is only supported in update mode! please set parameter replace to true!")
+        }
+
+        if (!df.columns.contains(autoIncrementColName)) {
           throw new TiBatchWriteException(
             "Column size is matched but cannot find auto increment column by name")
         }
 
         val hasNullValue = !df
           .select(autoIncrementColName)
-          .filter(row => row.get(0) == null)
           .rdd
+          .filter { row => row.get(0) == null }
           .isEmpty()
         if (hasNullValue) {
           throw new TiBatchWriteException(
             "cannot allocate id on the condition of having null value and valid value on auto increment column")
         }
-        df.rdd*/
+        df.rdd
       } else {
         // if auto increment column is not provided, we need allocate id for it.
         // adding an auto increment column to df
@@ -201,6 +207,13 @@ class TiBatchWriteTable(
 
       if (!options.replace && !deletion.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
+      }
+
+      if (autoIncProvidedID) {
+        if (deletion.count() != count) {
+          throw new TiBatchWriteException(
+            "currently user provided auto increment value is only supported in update mode!")
+        }
       }
 
       val wrappedEncodedRecordRdd = generateRecordKV(distinctWrappedRowRdd, remove = false)
