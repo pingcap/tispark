@@ -25,11 +25,9 @@ import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.sql.Date;
 import org.joda.time.DateTimeZone;
-import org.joda.time.Days;
 import org.joda.time.LocalDate;
 
 public class DateType extends AbstractDateTimeType {
-  private static final LocalDate EPOCH = new LocalDate(0);
   public static final DateType DATE = new DateType(MySQLType.TypeDate);
   public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeDate};
 
@@ -92,10 +90,6 @@ public class DateType extends AbstractDateTimeType {
     return "DATE";
   }
 
-  public static int getDays(LocalDate d) {
-    return Days.daysBetween(EPOCH, d).getDays();
-  }
-
   /** {@inheritDoc} */
   @Override
   protected Long decodeNotNull(int flag, CodecDataInput cdi) {
@@ -104,8 +98,8 @@ public class DateType extends AbstractDateTimeType {
     if (date == null) {
       return null;
     }
-
-    return new Long(getDays(date));
+    // return how many days from EPOCH
+    return Math.floorDiv(date.toDate().getTime(), AbstractDateTimeType.MILLS_PER_DAY);
   }
 
   @Override
