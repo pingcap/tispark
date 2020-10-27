@@ -1,6 +1,12 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.7] 2020-10-27
+### Fixes
+- BatchWrite: enable user provided auto increment value in update mode [#1658](https://github.com/pingcap/tispark/pull/1658)
+- BatchWrite: fix initial ttl expired [#1660](https://github.com/pingcap/tispark/pull/1660)
+- BatchWrite: fix commit ts expired [#1661](https://github.com/pingcap/tispark/pull/1661)
+
 ## [TiSpark 2.3.6] 2020-10-16
 ### Fixes
 - Fix covering index error when alter-primary-key is enabled [#1640](https://github.com/pingcap/tispark/pull/1640)
