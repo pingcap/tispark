@@ -145,7 +145,7 @@ public class RowV2 {
       if (this.large) {
         v = this.colIDs32[h];
       } else {
-        v = this.colIDs[h];
+        v = Byte.toUnsignedLong(this.colIDs[h]);
       }
       if (v < colID) {
         i = h + 1;
