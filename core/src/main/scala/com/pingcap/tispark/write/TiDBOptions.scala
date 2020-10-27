@@ -64,6 +64,8 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   //20k
   val snapshotBatchGetSize: Int = getOrDefault(TIDB_SNAPSHOT_BATCH_GET_SIZE, "20480").toInt
   val batchGetBackOfferMS: Int = getOrDefault(TIDB_BATCH_GET_BACKOFFER_MS, "60000").toInt
+  val sleepBeforePrewritePrimaryKey: Long =
+    getOrDefault(TIDB_SLEEP_BEFORE_PREWRITE_PRIMARY_KEY, "0").toLong
   val sleepAfterPrewritePrimaryKey: Long =
     getOrDefault(TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY, "0").toLong
   val sleepAfterPrewriteSecondaryKey: Long =
@@ -82,6 +84,8 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val retryCommitSecondaryKey: Boolean =
     getOrDefault(TIDB_RETRY_COMMIT_SECONDARY_KEY, "true").toBoolean
   val prewriteMaxRetryTimes: Int = getOrDefault(TIDB_PREWRITE_MAX_RETRY_TIMES, "64").toInt
+  val commitPrimaryKeyBackOfferMS: Int =
+    getOrDefault(TIDB_COMMIT_PRIMARY_KEY_BACKOFFER_MS, "120000").toInt
 
   // region split
   val enableRegionSplit: Boolean = getOrDefault(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
@@ -197,6 +201,7 @@ object TiDBOptions {
   val TIDB_WRITE_THREAD_PER_TASK: String = newOption("writeThreadPerTask")
   val TIDB_RETRY_COMMIT_SECONDARY_KEY: String = newOption("retryCommitSecondaryKey")
   val TIDB_PREWRITE_MAX_RETRY_TIMES: String = newOption("prewriteMaxRetryTimes")
+  val TIDB_COMMIT_PRIMARY_KEY_BACKOFFER_MS: String = newOption("commitPrimaryKeyBackOfferMS")
 
   // region split
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
@@ -217,6 +222,7 @@ object TiDBOptions {
   // ------------------------------------------------------------
   val TIDB_IS_TEST: String = newOption("isTest")
   val TIDB_LOCK_TTL_SECONDS: String = newOption("lockTTLSeconds")
+  val TIDB_SLEEP_BEFORE_PREWRITE_PRIMARY_KEY: String = newOption("sleepBeforePrewritePrimaryKey")
   val TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY: String = newOption("sleepAfterPrewritePrimaryKey")
   val TIDB_SLEEP_AFTER_PREWRITE_SECONDARY_KEY: String = newOption(
     "sleepAfterPrewriteSecondaryKey")
