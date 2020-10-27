@@ -58,6 +58,7 @@ public class TiSession implements AutoCloseable {
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
   private boolean isClosed = false;
+  private int referenceCount = 1;
 
   private TiSession(TiConfiguration conf) {
     this.conf = conf;
@@ -70,12 +71,14 @@ public class TiSession implements AutoCloseable {
     synchronized (sessionCachedMap) {
       String key = conf.getPdAddrsString();
       if (sessionCachedMap.containsKey(key)) {
-        return sessionCachedMap.get(key);
+        TiSession tiSession = sessionCachedMap.get(key);
+        tiSession.referenceCount += 1;
+        return tiSession;
+      } else {
+        TiSession newSession = new TiSession(conf);
+        sessionCachedMap.put(key, newSession);
+        return newSession;
       }
-
-      TiSession newSession = new TiSession(conf);
-      sessionCachedMap.put(key, newSession);
-      return newSession;
     }
   }
 
@@ -297,28 +300,33 @@ public class TiSession implements AutoCloseable {
   }
 
   @Override
-  public synchronized void close() throws Exception {
-    if (isClosed) {
-      logger.warn("this TiSession is already closed!");
-      return;
-    }
-
-    isClosed = true;
+  public void close() throws Exception {
     synchronized (sessionCachedMap) {
-      sessionCachedMap.remove(conf.getPdAddrsString());
-    }
+      if (referenceCount > 1) {
+        referenceCount -= 1;
+      } else {
+        if (isClosed) {
+          logger.warn("this TiSession is already closed!");
+          return;
+        }
 
-    if (tableScanThreadPool != null) {
-      tableScanThreadPool.shutdownNow();
-    }
-    if (indexScanThreadPool != null) {
-      indexScanThreadPool.shutdownNow();
-    }
-    if (client != null) {
-      getPDClient().close();
-    }
-    if (catalog != null) {
-      getCatalog().close();
+        referenceCount -= 1;
+        sessionCachedMap.remove(conf.getPdAddrsString());
+        isClosed = true;
+
+        if (tableScanThreadPool != null) {
+          tableScanThreadPool.shutdownNow();
+        }
+        if (indexScanThreadPool != null) {
+          indexScanThreadPool.shutdownNow();
+        }
+        if (client != null) {
+          getPDClient().close();
+        }
+        if (catalog != null) {
+          getCatalog().close();
+        }
+      }
     }
   }
 }
