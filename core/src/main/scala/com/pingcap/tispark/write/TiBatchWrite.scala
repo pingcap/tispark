@@ -445,7 +445,7 @@ class TiBatchWrite(
     val sampleData = rdd.sample(false, sampleSize.toDouble / count).collect()
     logger.info(s"sampleData size=${sampleData.length}")
 
-    val finalRegionSplitPointNum = if (options.regionSplitUsingSize) {
+    val splitPointNumUsingSize = if (options.regionSplitUsingSize) {
       val avgSize = getAverageSizeInBytes(sampleData)
       logger.info(s"avgSize=$avgSize Bytes")
       if (avgSize <= options.bytesPerRegion / options.regionSplitKeys) {
@@ -457,6 +457,13 @@ class TiBatchWrite(
       }
     } else {
       regionSplitPointNum
+    }
+    logger.info(s"splitPointNumUsingSize=$splitPointNumUsingSize")
+
+    val finalRegionSplitPointNum = if (splitPointNumUsingSize < options.minRegionSplitNum) {
+      options.minRegionSplitNum
+    } else {
+      splitPointNumUsingSize
     }
     logger.info(s"finalRegionSplitPointNum=$finalRegionSplitPointNum")
 
