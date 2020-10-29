@@ -21,6 +21,20 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("Date type deals with timezone incorrectly") {
+    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute("""
+                       |CREATE TABLE `t` (
+                       |  `id` int(11) DEFAULT NULL,
+                       |  `d` date DEFAULT NULL
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+                       |""".stripMargin)
+
+    tidbStmt.execute("insert into t values(1, '2020-10-25'), (2, '2020-11-20')")
+
+    explainAndRunTest(s"SELECT * FROM t")
+  }
+
   test("Scala match error when predicate includes boolean type conversion") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("""
