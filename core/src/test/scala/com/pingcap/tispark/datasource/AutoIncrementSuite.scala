@@ -390,4 +390,23 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
       caught.getMessage.equals(
         "currently user provided auto increment value is only supported in update mode!"))
   }
+
+  test("auto increment but not primary key") {
+    val row3 = Row(3L, 33L)
+    val row4 = Row(4L, 44L)
+
+    val schema = StructType(List(StructField("j", LongType)))
+
+    jdbcUpdate(
+      s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, j int NOT NULL, unique key (i))")
+
+    jdbcUpdate(s"insert into $dbtable (j) values(1), (2)")
+
+    sql(s"select * from $dbtableWithPrefix").show()
+
+    tidbWrite(List(row3, row4), schema)
+
+    sql(s"select * from $dbtableWithPrefix").show()
+  }
+
 }
