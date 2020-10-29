@@ -135,18 +135,20 @@ public class TiTableInfo implements Serializable {
     return this.sequenceInfo != null;
   }
 
-  // auto increment column must be a primary key column
   public boolean hasAutoIncrementColumn() {
-    if (primaryKeyColumn != null) {
-      return primaryKeyColumn.isAutoIncrement();
+    for (TiColumnInfo tiColumnInfo : getColumns()) {
+      if (tiColumnInfo.isAutoIncrement()) {
+        return true;
+      }
     }
     return false;
   }
 
-  // auto increment column must be a primary key column
   public TiColumnInfo getAutoIncrementColInfo() {
-    if (hasAutoIncrementColumn()) {
-      return primaryKeyColumn;
+    for (TiColumnInfo tiColumnInfo : getColumns()) {
+      if (tiColumnInfo.isAutoIncrement()) {
+        return tiColumnInfo;
+      }
     }
     return null;
   }
