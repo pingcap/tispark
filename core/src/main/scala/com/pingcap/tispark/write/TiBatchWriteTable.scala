@@ -125,8 +125,22 @@ class TiBatchWriteTable(
         autoIncProvidedID = true
 
         if (!options.replace) {
+
+          val colNames = tiTableInfo.getColumns.asScala.map(col => col.getName).mkString(", ")
           throw new TiBatchWriteException(
-            "currently user provided auto increment value is only supported in update mode! please set parameter replace to true!")
+            s"""currently user provided auto increment value is only supported in update mode!
+              |please set parameter replace to true!
+              |
+              |colsInDf.length = ${colsInDf.length}
+              |
+              |df.schema = ${df.schema}
+              |
+              |tableColSize = $tableColSize
+              |
+              |colNames = $colNames
+              |
+              |tiTableInfo = $tiTableInfo
+            """.stripMargin)
         }
 
         if (!df.columns.contains(autoIncrementColName)) {
