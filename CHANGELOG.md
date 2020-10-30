@@ -1,6 +1,14 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.8] 2020-10-30
+### Fixes
+- Fix negative column id when there are more than 128 columns [#1673](https://github.com/pingcap/tispark/pull/1673)
+- Fix incorrect date type value when timezone is set [#1704](https://github.com/pingcap/tispark/pull/1704)
+- BatchWrite: fix auto increment column not primary key [#1694](https://github.com/pingcap/tispark/pull/1694)
+- Fix TiSession Close bug [#1677](https://github.com/pingcap/tispark/pull/1677)
+- Optimize region split number in small data size [#1681](https://github.com/pingcap/tispark/pull/1681)
+
 ## [TiSpark 2.3.7] 2020-10-27
 ### Fixes
 - BatchWrite: enable user provided auto increment value in update mode [#1658](https://github.com/pingcap/tispark/pull/1658)
