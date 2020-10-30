@@ -30,6 +30,7 @@ class LockTimeoutSuite extends BaseBatchWriteWithoutDropTableTest("test_lock_tim
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+    jdbcUpdate(s"drop table if exists $dbtable")
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
   }
 
@@ -59,6 +60,7 @@ class LockTimeoutSuite extends BaseBatchWriteWithoutDropTableTest("test_lock_tim
         .option("database", database)
         .option("table", table)
         .option("sleepAfterPrewritePrimaryKey", sleep2)
+        .option("commitPrimaryKeyRetryNumber", 1)
         .mode("append")
         .save()
     }
