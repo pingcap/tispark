@@ -60,10 +60,7 @@ public abstract class AbstractDateTimeType extends DataType {
     // nearest
     // value which is 0001-01-01.
     if (extendedDateTime == null) {
-      Timestamp ts =
-          DateTimeCodec.createExtendedDateTime(getTimezone(), 1, 1, 1, 0, 0, 0, 0).toTimeStamp();
-      // by dividing 1000 on milliseconds, we have eliminated fraction part of ts
-      return ts.getTime() / 1000 * 100000 + ts.getNanos() / 1000;
+      extendedDateTime = DateTimeCodec.createExtendedDateTime(getTimezone(), 1, 1, 1, 0, 0, 0, 0);
     }
     Timestamp ts = extendedDateTime.toTimeStamp();
     return ts.getTime() / 1000 * 1000000 + ts.getNanos() / 1000;
