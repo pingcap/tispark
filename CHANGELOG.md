@@ -1,6 +1,11 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.9] 2020-10-31
+### Fixes
+- Revert "fix TiSession Close bug" [#1713](https://github.com/pingcap/tispark/pull/1713)
+- Fix typo in DateTime calculation [#1710](https://github.com/pingcap/tispark/pull/1710)
+
 ## [TiSpark 2.3.8] 2020-10-30
 ### Fixes
 - Fix negative column id when there are more than 128 columns [#1673](https://github.com/pingcap/tispark/pull/1673)
