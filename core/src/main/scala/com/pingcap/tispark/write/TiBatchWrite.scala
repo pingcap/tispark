@@ -362,20 +362,22 @@ class TiBatchWrite(
       startTs: Long,
       primaryKey: SerializableKey,
       ti2PCClient: TwoPhaseCommitter): Long = {
-    val backoff = ConcreteBackOffer.newCustomBackOff(options.commitPrimaryKeyBackOfferMS)
-    while (true) {
+    var tryCount = 1
+    var error: Throwable = null
+    var break = false
+    while (!break && tryCount <= options.commitPrimaryKeyRetryNumber) {
+      tryCount += 1
       try {
         return commitPrimaryKey(startTs, primaryKey, ti2PCClient)
       } catch {
         case e: TiBatchWriteException =>
-          throw e
+          error = e
+          break = true
         case e: Throwable =>
-          backoff.doBackOff(
-            BackOffFunction.BackOffFuncType.BoRegionMiss,
-            new TiBatchWriteException("commit primary key error", e))
+          error = e
       }
     }
-    0L
+    throw error
   }
 
   private def commitPrimaryKey(
