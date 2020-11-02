@@ -96,7 +96,7 @@ public class StringType extends BytesType {
     }
 
     // check utf-8 length of result string
-    if (result.codePointCount(0, result.length() - 1) > this.getLength()) {
+    if (result.codePointCount(0, result.length()) > this.getLength()) {
       throw ConvertOverflowException.newMaxLengthException(result, this.getLength());
     }
 
