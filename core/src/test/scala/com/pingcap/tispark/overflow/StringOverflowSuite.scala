@@ -30,6 +30,40 @@ import org.apache.spark.sql.types.{StructField, _}
  */
 class StringOverflowSuite extends BaseBatchWriteTest("test_data_type_string_overflow") {
 
+  test("Test UTF-8 like emoji not overflow") {
+
+    compareTiDBWriteWithJDBC {
+      case (writeFunc, _) =>
+        jdbcUpdate(s"drop table if exists $dbtable")
+        jdbcUpdate(s"create table $dbtable(i int, c1 CHAR(1))")
+        val row = Row(1, "\uD83D\uDE09")
+        val schema =
+          StructType(List(StructField("i", IntegerType), StructField("c1", StringType)))
+        writeFunc(List(row), schema, None)
+        compareTiDBSelectWithJDBC(Seq(row), schema)
+    }
+  }
+
+  test("Test UTF-8 like emoji overflow") {
+
+    jdbcUpdate(s"drop table if exists $dbtable")
+    jdbcUpdate(s"create table $dbtable(c1 CHAR(1))")
+    val row = Row("\uD83D\uDE09\uD83D\uDE09")
+    val schema =
+      StructType(List(StructField("c1", StringType)))
+
+    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
+    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorMsg = "value \uD83D\uDE09\uD83D\uDE09 length > max length 1"
+
+    compareTiDBWriteFailureWithJDBC(
+      List(row),
+      schema,
+      jdbcErrorClass,
+      tidbErrorClass,
+      tidbErrorMsg)
+  }
+
   test("Test CHAR Overflow") {
     testCharOverflow(false)
   }
