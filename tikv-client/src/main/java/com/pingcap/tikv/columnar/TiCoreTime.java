@@ -73,7 +73,7 @@ public class TiCoreTime {
     return (int) ((coreTime & SECOND_BIT_FIELD_MASK) >>> SECOND_BIT_FIELD_OFFSET);
   }
 
-  public long getMicroSecond() {
-    return (coreTime & MICROSECOND_BIT_FIELD_MASK) >>> MICROSECOND_BIT_FIELD_OFFSET;
+  public int getMicroSecond() {
+    return (int) ((coreTime & MICROSECOND_BIT_FIELD_MASK) >>> MICROSECOND_BIT_FIELD_OFFSET);
   }
 }

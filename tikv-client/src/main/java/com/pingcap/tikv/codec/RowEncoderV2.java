@@ -32,7 +32,6 @@ import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
 public class RowEncoderV2 {
@@ -309,15 +308,11 @@ public class RowEncoderV2 {
 
   private void encodeTimestamp(CodecDataOutput cdo, Object value, DateTimeZone tz) {
     if (value instanceof Timestamp) {
-      Timestamp timestamp = (Timestamp) value;
-      DateTime dateTime = new DateTime(timestamp.getTime());
-      int nanos = timestamp.getNanos();
-      ExtendedDateTime extendedDateTime = new ExtendedDateTime(dateTime, (nanos / 1000) % 1000);
+      ExtendedDateTime extendedDateTime = Converter.convertToDateTime(value);
       long t = DateTimeCodec.toPackedLong(extendedDateTime, tz);
       encodeInt(cdo, t);
     } else if (value instanceof Date) {
-      ExtendedDateTime extendedDateTime =
-          new ExtendedDateTime(new DateTime(((Date) value).getTime()));
+      ExtendedDateTime extendedDateTime = Converter.convertToDateTime(value);
       long t = DateTimeCodec.toPackedLong(extendedDateTime, tz);
       encodeInt(cdo, t);
     } else {

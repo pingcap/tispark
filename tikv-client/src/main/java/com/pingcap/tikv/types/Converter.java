@@ -250,11 +250,12 @@ public class Converter {
       return new ExtendedDateTime(new DateTime((long) val));
     } else if (val instanceof Timestamp) {
       Timestamp timestamp = (Timestamp) val;
-      DateTime dateTime = new DateTime(timestamp.getTime());
+      DateTime dateTime = DateTime.parse(timestamp.toLocalDateTime().toString());
       int nanos = timestamp.getNanos();
       return new ExtendedDateTime(dateTime, (nanos / 1000) % 1000);
     } else if (val instanceof Date) {
-      return new ExtendedDateTime(new DateTime(((Date) val).getTime()));
+      return new ExtendedDateTime(
+          strToDateTime(((Date) val).toLocalDate().toString(), localDateFormatter));
     } else {
       throw new TypeException("Can not cast Object to LocalDateTime ");
     }
@@ -273,13 +274,13 @@ public class Converter {
       return (Date) val;
     } else if (val instanceof String) {
       try {
-        return new Date(DateTime.parse((String) val, localDateFormatter).toDate().getTime());
+        return new Date(strToDateTime((String) val, localDateFormatter).toDate().getTime());
       } catch (Exception e) {
         throw new TypeException(String.format("Error parsing string %s to date", val), e);
       }
     } else if (val instanceof Integer) {
       // when the val is a Integer, it is only have year part of a Date.
-      return new Date((Integer) val, 0, 0);
+      return new Date((Integer) val - 1970, 0, 0);
     } else if (val instanceof Long) {
       return new Date((long) val);
     } else if (val instanceof Timestamp) {
@@ -295,8 +296,10 @@ public class Converter {
     requireNonNull(val, "val is null");
     if (val instanceof BigDecimal) {
       return (BigDecimal) val;
-    } else if (val instanceof Double || val instanceof Float) {
-      return new BigDecimal((Double) val);
+    } else if (val instanceof Double) {
+      return BigDecimal.valueOf((Double) val);
+    } else if (val instanceof Float) {
+      return BigDecimal.valueOf((Float) val);
     } else if (val instanceof BigInteger) {
       return new BigDecimal((BigInteger) val);
     } else if (val instanceof Number) {
