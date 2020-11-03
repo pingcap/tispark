@@ -435,9 +435,11 @@ class TiBatchWrite(
     val regionSplitPointNum = if (options.regionSplitNum > 0) {
       options.regionSplitNum
     } else {
-      Math.max(
-        options.minRegionSplitNum,
-        Math.ceil(count.toDouble / options.regionSplitKeys).toInt)
+      Math.min(
+        Math.max(
+          options.minRegionSplitNum,
+          Math.ceil(count.toDouble / options.regionSplitKeys).toInt),
+        options.maxRegionSplitNum)
     }
     logger.info(s"regionSplitPointNum=$regionSplitPointNum")
 
@@ -462,11 +464,9 @@ class TiBatchWrite(
     }
     logger.info(s"splitPointNumUsingSize=$splitPointNumUsingSize")
 
-    val finalRegionSplitPointNum = if (splitPointNumUsingSize < options.minRegionSplitNum) {
-      options.minRegionSplitNum
-    } else {
-      splitPointNumUsingSize
-    }
+    val finalRegionSplitPointNum = Math.min(
+      Math.max(options.minRegionSplitNum, splitPointNumUsingSize),
+      options.maxRegionSplitNum)
     logger.info(s"finalRegionSplitPointNum=$finalRegionSplitPointNum")
 
     val sortedSampleData = sampleData
