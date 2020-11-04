@@ -64,7 +64,8 @@ object ReflectionUtil {
       classDir.toURI.toURL
     } else {
       new URL(
-        s"jar:$tisparkClassUrl!/resources/spark-wrapper-spark-${TiSparkInfo.SPARK_MAJOR_VERSION}/")
+        s"jar:$tisparkClassUrl!/resources/spark-wrapper-spark-${TiSparkInfo.SPARK_MAJOR_VERSION
+          .replace('.', '_')}/")
     }
     logger.info(s"spark wrapper class url: ${sparkWrapperClassURL.toString}")
 

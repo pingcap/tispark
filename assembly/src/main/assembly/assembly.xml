@@ -23,7 +23,7 @@
             <directory>
                 ${project.parent.basedir}/spark-wrapper/spark-2.3/target/classes/
             </directory>
-            <outputDirectory>resources/spark-wrapper-spark-2.3</outputDirectory>
+            <outputDirectory>resources/spark-wrapper-spark-2_3</outputDirectory>
             <includes>
                 <include>**/*</include>
             </includes>
@@ -32,7 +32,7 @@
             <directory>
                 ${project.parent.basedir}/spark-wrapper/spark-2.4/target/classes/
             </directory>
-            <outputDirectory>resources/spark-wrapper-spark-2.4</outputDirectory>
+            <outputDirectory>resources/spark-wrapper-spark-2_4</outputDirectory>
             <includes>
                 <include>**/*</include>
             </includes>
