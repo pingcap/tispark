@@ -32,7 +32,6 @@ import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -333,7 +332,7 @@ public class TwoPhaseCommitter {
     }
 
     // groups keys by region
-    GroupKeyResult groupResult = this.groupKeysByRegion(keys, size, backOffer);
+    GroupKeyResult groupResult = Utils.groupKeysByRegion(this.regionManager, keys, size, backOffer);
     List<BatchKeys> batchKeyList = new LinkedList<>();
     Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
 
@@ -568,7 +567,7 @@ public class TwoPhaseCommitter {
     }
 
     // groups keys by region
-    GroupKeyResult groupResult = this.groupKeysByRegion(keys, size, backOffer);
+    GroupKeyResult groupResult = Utils.groupKeysByRegion(this.regionManager, keys, size, backOffer);
     List<BatchKeys> batchKeyList = new ArrayList<>();
     Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
 
@@ -610,27 +609,6 @@ public class TwoPhaseCommitter {
         batchKeys.getKeys().size(),
         batchKeys.getSizeInKB(),
         batchKeys.getRegion().getId());
-  }
-
-  private GroupKeyResult groupKeysByRegion(ByteString[] keys, int size, BackOffer backOffer)
-      throws TiBatchWriteException {
-    Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groups = new HashMap<>();
-    int index = 0;
-    try {
-      for (; index < size; index++) {
-        ByteString key = keys[index];
-        Pair<TiRegion, Metapb.Store> pair =
-            this.regionManager.getRegionStorePairByKey(key, backOffer);
-        if (pair != null) {
-          groups.computeIfAbsent(pair, e -> new ArrayList<>()).add(key);
-        }
-      }
-    } catch (Exception e) {
-      throw new TiBatchWriteException("Txn groupKeysByRegion error", e);
-    }
-    GroupKeyResult result = new GroupKeyResult();
-    result.setGroupsResult(groups);
-    return result;
   }
 
   private long getTxnLockTTL(long startTime) {
