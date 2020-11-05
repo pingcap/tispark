@@ -20,8 +20,10 @@ import static junit.framework.TestCase.assertTrue;
 import static junit.framework.TestCase.fail;
 
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.StoreVersion;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.Version;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
@@ -89,6 +91,12 @@ abstract class LockResolverTest {
     }
   }
 
+  void putKV(String key, String value) {
+    long startTS = session.getTimestamp().getVersion();
+    long commitTS = session.getTimestamp().getVersion();
+    putKV(key, value, startTS, commitTS);
+  }
+
   void putKV(String key, String value, long startTS, long commitTS) {
     Mutation m =
         Mutation.newBuilder()
@@ -114,11 +122,40 @@ abstract class LockResolverTest {
     return prewriteString(Collections.singletonList(m), startTS, primaryKey, ttl);
   }
 
-  boolean prewriteString(List<Mutation> mutations, long startTS, String primary, long ttl) {
-    return prewrite(mutations, startTS, ByteString.copyFromUtf8(primary), ttl);
+  boolean prewriteStringUsingAsyncCommit(
+      String key,
+      String value,
+      long startTS,
+      String primaryKey,
+      long ttl,
+      Iterable<ByteString> secondaries) {
+    Mutation m =
+        Mutation.newBuilder()
+            .setKey(ByteString.copyFromUtf8(key))
+            .setOp(Op.Put)
+            .setValue(ByteString.copyFromUtf8(value))
+            .build();
+
+    return prewrite(
+        Collections.singletonList(m),
+        startTS,
+        ByteString.copyFromUtf8(primaryKey),
+        ttl,
+        true,
+        secondaries);
   }
 
-  boolean prewrite(List<Mutation> mutations, long startTS, ByteString primary, long ttl) {
+  boolean prewriteString(List<Mutation> mutations, long startTS, String primary, long ttl) {
+    return prewrite(mutations, startTS, ByteString.copyFromUtf8(primary), ttl, false, null);
+  }
+
+  boolean prewrite(
+      List<Mutation> mutations,
+      long startTS,
+      ByteString primary,
+      long ttl,
+      boolean useAsyncCommit,
+      Iterable<ByteString> secondaries) {
     if (mutations.size() == 0) return true;
     BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(1000);
 
@@ -127,7 +164,14 @@ abstract class LockResolverTest {
         try {
           TiRegion region = session.getRegionManager().getRegionByKey(m.getKey());
           RegionStoreClient client = builder.build(region);
-          client.prewrite(backOffer, primary, Collections.singletonList(m), startTS, ttl);
+          client.prewrite(
+              backOffer,
+              primary,
+              Collections.singletonList(m),
+              startTS,
+              ttl,
+              useAsyncCommit,
+              secondaries);
           break;
         } catch (RegionException e) {
           backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
@@ -302,7 +346,8 @@ abstract class LockResolverTest {
 
   String genRandomKey(int strLength) {
     Random rnd = ThreadLocalRandom.current();
-    StringBuilder ret = new StringBuilder("test-");
+    String prefix = rnd.nextInt(2) % 2 == 0 ? "a-test-" : "z-test-";
+    StringBuilder ret = new StringBuilder(prefix);
     for (int i = 0; i < strLength; i++) {
       boolean isChar = (rnd.nextInt(2) % 2 == 0);
       if (isChar) {
@@ -370,5 +415,9 @@ abstract class LockResolverTest {
 
   boolean isLockResolverClientV4() {
     return getRegionStoreClient("").lockResolverClient.getVersion().equals("V4");
+  }
+
+  boolean supportAsyncCommit() {
+    return StoreVersion.minTiKVVersion(Version.ASYNC_COMMIT, session.getPDClient());
   }
 }

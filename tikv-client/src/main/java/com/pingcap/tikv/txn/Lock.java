@@ -28,7 +28,9 @@ public class Lock {
   private final ByteString primary;
   private final long txnSize;
   private final Kvrpcpb.Op lockType;
+  private final boolean useAsyncCommit;
   private final long lockForUpdateTs;
+  private final long minCommitTS;
 
   public Lock(Kvrpcpb.LockInfo l) {
     txnID = l.getLockVersion();
@@ -37,7 +39,9 @@ public class Lock {
     ttl = l.getLockTtl() == 0 ? DEFAULT_LOCK_TTL : l.getLockTtl();
     txnSize = l.getTxnSize();
     lockType = l.getLockType();
+    useAsyncCommit = l.getUseAsyncCommit();
     lockForUpdateTs = l.getLockForUpdateTs();
+    minCommitTS = l.getMinCommitTs();
   }
 
   public long getTxnID() {
@@ -66,5 +70,13 @@ public class Lock {
 
   public long getLockForUpdateTs() {
     return lockForUpdateTs;
+  }
+
+  public boolean isUseAsyncCommit() {
+    return useAsyncCommit;
+  }
+
+  public long getMinCommitTS() {
+    return minCommitTS;
   }
 }
