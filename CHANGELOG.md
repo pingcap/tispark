@@ -1,6 +1,12 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.10] 2020-11-06
+### Fixes
+- Fix maven-shade-plugin relocation cannot handle folder name with dot [#1737](https://github.com/pingcap/tispark/pull/1737)
+- BatchWrite: add parameter maxRegionSplitNum [#1729](https://github.com/pingcap/tispark/pull/1729)
+- Fix string insert overflow check [#1727](https://github.com/pingcap/tispark/pull/1727)
+
 ## [TiSpark 2.3.9] 2020-10-31
 ### Fixes
 - Revert "fix TiSession Close bug" [#1713](https://github.com/pingcap/tispark/pull/1713)
