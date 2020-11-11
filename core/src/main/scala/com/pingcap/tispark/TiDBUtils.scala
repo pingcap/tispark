@@ -24,7 +24,7 @@ import org.apache.spark.sql.execution.datasources.jdbc.{DriverRegistry, DriverWr
 import scala.util.Try
 
 object TiDBUtils {
-  private val TIDB_DRIVER_CLASS = "com.mysql.jdbc.Driver"
+  val TIDB_DRIVER_CLASS = "com.mysql.jdbc.Driver"
 
   /**
    * Returns true if the table already exists in the TiDB.

@@ -19,10 +19,11 @@ import java.util.Objects
 
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.meta.TiColumnInfo
-import com.pingcap.tispark.TiConfigConst
+import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import org.apache.spark.SparkException
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{BaseTiSparkTest, DataFrame, Row}
 
@@ -149,9 +150,10 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
     val df = sqlContext.createDataFrame(data, schema)
     df.write
       .format("jdbc")
-      .option("url", jdbcUrl)
-      .option("dbtable", dbtable)
-      .option("isolationLevel", "REPEATABLE_READ")
+      .option(JDBCOptions.JDBC_URL, jdbcUrl)
+      .option(JDBCOptions.JDBC_DRIVER_CLASS, TiDBUtils.TIDB_DRIVER_CLASS)
+      .option(JDBCOptions.JDBC_TABLE_NAME, dbtable)
+      .option(JDBCOptions.JDBC_TXN_ISOLATION_LEVEL, "REPEATABLE_READ")
       .mode("append")
       .save()
   }
@@ -163,7 +165,7 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
   }
 
   protected def compareTiDBSelectWithJDBC(
-      expectedAnswer: Seq[Row],
+      expectedAnswer: List[Row],
       schema: StructType,
       sortCol: String = "i",
       skipTiDBAndExpectedAnswerCheck: Boolean = false,

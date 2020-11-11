@@ -66,7 +66,7 @@ class ToDateTimeSuite extends BaseBatchWriteTest("test_data_type_convert_to_date
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2), readSchema)
     }
   }
 
@@ -94,7 +94,7 @@ class ToDateTimeSuite extends BaseBatchWriteTest("test_data_type_convert_to_date
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2), schema)
     }
   }
 
@@ -122,7 +122,7 @@ class ToDateTimeSuite extends BaseBatchWriteTest("test_data_type_convert_to_date
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2), schema)
     }
   }
 

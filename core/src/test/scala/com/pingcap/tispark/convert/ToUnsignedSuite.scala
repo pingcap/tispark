@@ -71,7 +71,7 @@ class ToUnsignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_unsi
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
           readSchema)
     }
   }
@@ -107,7 +107,7 @@ class ToUnsignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_unsi
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -144,7 +144,7 @@ class ToUnsignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_unsi
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -182,7 +182,7 @@ class ToUnsignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_unsi
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -221,7 +221,7 @@ class ToUnsignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_unsi
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -276,7 +276,7 @@ class ToUnsignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_unsi
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
           readSchema)
     }
   }
@@ -331,7 +331,7 @@ class ToUnsignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_unsi
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
           readSchema)
     }
   }
@@ -386,7 +386,7 @@ class ToUnsignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_unsi
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
           readSchema)
     }
   }
