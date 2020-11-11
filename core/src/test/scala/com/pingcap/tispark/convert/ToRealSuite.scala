@@ -66,7 +66,7 @@ class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4), readSchema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2, readRow3, readRow4), readSchema)
     }
   }
 
@@ -95,7 +95,7 @@ class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4), schema)
     }
   }
 
@@ -124,7 +124,7 @@ class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4), schema)
     }
   }
 
@@ -156,7 +156,7 @@ class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4), readSchema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2, readRow3, readRow4), readSchema)
     }
   }
 
@@ -182,7 +182,7 @@ class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4), schema)
     }
   }
 
@@ -221,7 +221,7 @@ class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
         // TODO: TiSpark transforms FLOAT to Double, which will cause precision problem,
         //  so we just set skipTiDBAndExpectedAnswerCheck = true
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
           readSchema,
           skipTiDBAndExpectedAnswerCheck = true)
     }
@@ -260,7 +260,7 @@ class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
           readSchema)
     }
   }
@@ -297,7 +297,7 @@ class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
           readSchema)
     }
   }

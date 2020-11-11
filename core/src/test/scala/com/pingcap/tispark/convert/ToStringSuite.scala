@@ -79,7 +79,7 @@ class ToStringSuite extends BaseBatchWriteTest("test_data_type_convert_to_string
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -127,7 +127,7 @@ class ToStringSuite extends BaseBatchWriteTest("test_data_type_convert_to_string
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -175,7 +175,7 @@ class ToStringSuite extends BaseBatchWriteTest("test_data_type_convert_to_string
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -223,7 +223,7 @@ class ToStringSuite extends BaseBatchWriteTest("test_data_type_convert_to_string
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -271,7 +271,7 @@ class ToStringSuite extends BaseBatchWriteTest("test_data_type_convert_to_string
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -323,7 +323,7 @@ class ToStringSuite extends BaseBatchWriteTest("test_data_type_convert_to_string
         //  so we just set skipTiDBAndExpectedAnswerCheck = true
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
           skipTiDBAndExpectedAnswerCheck = true)
     }
@@ -361,7 +361,7 @@ class ToStringSuite extends BaseBatchWriteTest("test_data_type_convert_to_string
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5), schema)
     }
   }
 
@@ -396,7 +396,7 @@ class ToStringSuite extends BaseBatchWriteTest("test_data_type_convert_to_string
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5), schema)
     }
   }
 
@@ -443,7 +443,7 @@ class ToStringSuite extends BaseBatchWriteTest("test_data_type_convert_to_string
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -491,7 +491,7 @@ class ToStringSuite extends BaseBatchWriteTest("test_data_type_convert_to_string
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -539,7 +539,7 @@ class ToStringSuite extends BaseBatchWriteTest("test_data_type_convert_to_string
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }

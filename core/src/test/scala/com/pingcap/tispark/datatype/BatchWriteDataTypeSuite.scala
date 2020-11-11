@@ -547,4 +547,12 @@ class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test
       tidbWrite(data, schema)
     }
   }
+
+  test("Test enum with trailing spaces") {
+    jdbcUpdate(s"create table $dbtable(a enum('a','b '))")
+
+    val schema = StructType(List(StructField("a", StringType)))
+    tidbWrite(List(Row("b")), schema, None)
+    compareTiDBSelectWithJDBC(List(Row("b ")), schema, sortCol = "a")
+  }
 }
