@@ -83,7 +83,7 @@ class ToBytesSuite extends BaseBatchWriteTest("test_data_type_convert_to_bytes")
         // TODO: skipTiDBAndExpectedAnswerCheck because spark returns WrappedArray Type
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
           skipTiDBAndExpectedAnswerCheck = true)
     }
@@ -142,7 +142,7 @@ class ToBytesSuite extends BaseBatchWriteTest("test_data_type_convert_to_bytes")
         // TODO: skipTiDBAndExpectedAnswerCheck because spark returns WrappedArray Type
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
           skipTiDBAndExpectedAnswerCheck = true)
     }
@@ -201,7 +201,7 @@ class ToBytesSuite extends BaseBatchWriteTest("test_data_type_convert_to_bytes")
         // TODO: skipTiDBAndExpectedAnswerCheck because spark returns WrappedArray Type
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
           skipTiDBAndExpectedAnswerCheck = true)
     }
@@ -260,7 +260,7 @@ class ToBytesSuite extends BaseBatchWriteTest("test_data_type_convert_to_bytes")
         // TODO: skipTiDBAndExpectedAnswerCheck because spark returns WrappedArray Type
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
           skipTiDBAndExpectedAnswerCheck = true)
     }
@@ -319,7 +319,7 @@ class ToBytesSuite extends BaseBatchWriteTest("test_data_type_convert_to_bytes")
         // TODO: skipTiDBAndExpectedAnswerCheck because spark returns WrappedArray Type
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
           skipTiDBAndExpectedAnswerCheck = true)
     }
@@ -378,7 +378,7 @@ class ToBytesSuite extends BaseBatchWriteTest("test_data_type_convert_to_bytes")
         // TODO: skipTiDBAndExpectedAnswerCheck because spark returns WrappedArray Type
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
           skipTiDBAndExpectedAnswerCheck = true)
     }

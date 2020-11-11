@@ -57,7 +57,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           .format("jdbc")
           .option(JDBCOptions.JDBC_URL, jdbcUrl)
           .option(JDBCOptions.JDBC_TABLE_NAME, "information_schema.tables")
-          .option(JDBCOptions.JDBC_DRIVER_CLASS, "com.mysql.jdbc.Driver")
+          .option(JDBCOptions.JDBC_DRIVER_CLASS, TiDBUtils.TIDB_DRIVER_CLASS)
           .load()
           .filter(s"table_schema = '$dbName'")
           .select("TABLE_NAME")
@@ -80,7 +80,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       .format("jdbc")
       .option(JDBCOptions.JDBC_URL, jdbcUrl)
       .option(JDBCOptions.JDBC_TABLE_NAME, s"`$dbName`.`$viewName`")
-      .option(JDBCOptions.JDBC_DRIVER_CLASS, "com.mysql.jdbc.Driver")
+      .option(JDBCOptions.JDBC_DRIVER_CLASS, TiDBUtils.TIDB_DRIVER_CLASS)
       .load()
       .createOrReplaceTempView(s"`$viewName$postfix`")
 

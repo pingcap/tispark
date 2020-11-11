@@ -59,7 +59,7 @@ class ToTimestampSuite extends BaseBatchWriteTest("test_data_type_convert_to_tim
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2), readSchema)
       case (writeFunc, "jdbcWrite") =>
       // TODO: ignored, because of this error
       //java.sql.BatchUpdateException: Data truncation: invalid time format: '34'
@@ -91,7 +91,7 @@ class ToTimestampSuite extends BaseBatchWriteTest("test_data_type_convert_to_tim
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2), readSchema)
       case (writeFunc, "jdbcWrite") =>
       // ignored because spark jdbc write does not use local time zone
     }
@@ -125,7 +125,7 @@ class ToTimestampSuite extends BaseBatchWriteTest("test_data_type_convert_to_tim
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2), readSchema)
 
       case (writeFunc, "jdbcWrite") =>
       // ignored because spark jdbc write does not use local time zone
@@ -154,7 +154,7 @@ class ToTimestampSuite extends BaseBatchWriteTest("test_data_type_convert_to_tim
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2), readSchema)
+        compareTiDBSelectWithJDBC(List(row1, row2), readSchema)
 
       case (writeFunc, "jdbcWrite") =>
       // ignored because spark jdbc write does not use local time zone

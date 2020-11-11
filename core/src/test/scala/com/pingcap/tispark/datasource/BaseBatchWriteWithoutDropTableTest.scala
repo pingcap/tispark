@@ -23,6 +23,11 @@ class BaseBatchWriteWithoutDropTableTest(
     override val database: String = "tispark_test")
     extends BaseDataSourceTest(table, database) {
 
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    setCurrentDatabase(database)
+  }
+
   override def beforeEach(): Unit = {
     super.beforeEach()
     if (!supportBatchWrite) {
