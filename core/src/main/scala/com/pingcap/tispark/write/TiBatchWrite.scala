@@ -16,8 +16,8 @@
 package com.pingcap.tispark.write
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.util.ConcreteBackOffer
-import com.pingcap.tikv.{TTLManager, TiDBJDBCClient, _}
+import com.pingcap.tikv.util.{BackOffFunction, BackOffer, ConcreteBackOffer}
+import com.pingcap.tikv.{TTLManager, TiDBJDBCClient, TwoPhaseCommitter, _}
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkConf
@@ -238,12 +238,18 @@ class TiBatchWrite(
       !keyValue._1.equals(primaryKey)
     }
 
+    // for test
+    if (options.sleepBeforePrewritePrimaryKey > 0) {
+      logger.info(s"sleep ${options.sleepBeforePrewritePrimaryKey} ms for test")
+      Thread.sleep(options.sleepBeforePrewritePrimaryKey)
+    }
     // driver primary pre-write
+    logger.info("start to prewritePrimaryKey")
     val ti2PCClient =
       new TwoPhaseCommitter(
         tiConf,
         startTs,
-        lockTTLSeconds * 1000,
+        lockTTLSeconds * 1000 + TTLManager.calculateUptime(tiSession.createTxnClient(), startTs),
         options.txnPrewriteBatchSize,
         options.txnCommitBatchSize,
         options.writeBufferSize,
@@ -252,7 +258,6 @@ class TiBatchWrite(
         options.prewriteMaxRetryTimes)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(options.prewriteBackOfferMS)
-    logger.info("start to prewritePrimaryKey")
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
     logger.info("prewritePrimaryKey success")
 
@@ -301,43 +306,7 @@ class TiBatchWrite(
     logger.info("prewriteSecondaryKeys success")
 
     // driver primary commit
-    val commitTs = tiSession.getTimestamp.getVersion
-    // check commitTS
-    if (commitTs <= startTs) {
-      throw new TiBatchWriteException(
-        s"invalid transaction tso with startTs=$startTs, commitTs=$commitTs")
-    }
-
-    // for test
-    if (options.sleepAfterPrewriteSecondaryKey > 0) {
-      logger.info(s"sleep ${options.sleepAfterPrewriteSecondaryKey} ms for test")
-      Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
-    }
-
-    // check schema change
-    if (!useTableLock) {
-      tiBatchWriteTables.foreach(_.checkSchemaChange())
-    }
-
-    // for test
-    if (options.sleepAfterGetCommitTS > 0) {
-      logger.info(s"sleep ${options.sleepAfterGetCommitTS} ms for test")
-      Thread.sleep(options.sleepAfterGetCommitTS)
-    }
-
-    val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(PRIMARY_KEY_COMMIT_BACKOFF)
-
-    // check connection lost if using lock table
-    checkConnectionLost()
-
-    logger.info("start to commitPrimaryKey")
-    ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
-    try {
-      ti2PCClient.close()
-    } catch {
-      case _: Throwable =>
-    }
-    logger.info("commitPrimaryKey success")
+    val commitTs = commitPrimaryKeyWithRetry(startTs, primaryKey, ti2PCClient)
 
     // stop primary key ttl update
     if (isTTLUpdate) {
@@ -389,6 +358,72 @@ class TiBatchWrite(
     logger.info(s"batch write cost ${(endMS - startMS) / 1000} seconds")
   }
 
+  private def commitPrimaryKeyWithRetry(
+      startTs: Long,
+      primaryKey: SerializableKey,
+      ti2PCClient: TwoPhaseCommitter): Long = {
+    var tryCount = 1
+    var error: Throwable = null
+    var break = false
+    while (!break && tryCount <= options.commitPrimaryKeyRetryNumber) {
+      tryCount += 1
+      try {
+        return commitPrimaryKey(startTs, primaryKey, ti2PCClient)
+      } catch {
+        case e: TiBatchWriteException =>
+          error = e
+          break = true
+        case e: Throwable =>
+          error = e
+      }
+    }
+    throw error
+  }
+
+  private def commitPrimaryKey(
+      startTs: Long,
+      primaryKey: SerializableKey,
+      ti2PCClient: TwoPhaseCommitter): Long = {
+    val commitTsAttempt = tiSession.getTimestamp.getVersion
+    // check commitTS
+    if (commitTsAttempt <= startTs) {
+      throw new TiBatchWriteException(
+        s"invalid transaction tso with startTs=$startTs, commitTsAttempt=$commitTsAttempt")
+    }
+
+    // for test
+    if (options.sleepAfterPrewriteSecondaryKey > 0) {
+      logger.info(s"sleep ${options.sleepAfterPrewriteSecondaryKey} ms for test")
+      Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
+    }
+
+    // check schema change
+    if (!useTableLock) {
+      tiBatchWriteTables.foreach(_.checkSchemaChange())
+    }
+
+    // for test
+    if (options.sleepAfterGetCommitTS > 0) {
+      logger.info(s"sleep ${options.sleepAfterGetCommitTS} ms for test")
+      Thread.sleep(options.sleepAfterGetCommitTS)
+    }
+
+    val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(PRIMARY_KEY_COMMIT_BACKOFF)
+
+    // check connection lost if using lock table
+    checkConnectionLost()
+
+    logger.info(s"start to commitPrimaryKey, commitTsAttempt=$commitTsAttempt")
+    ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTsAttempt)
+    try {
+      ti2PCClient.close()
+    } catch {
+      case _: Throwable =>
+    }
+    logger.info("commitPrimaryKey success")
+    commitTsAttempt
+  }
+
   private def getRegionSplitPoints(
       rdd: RDD[(SerializableKey, Array[Byte])]): List[SerializableKey] = {
     val count = rdd.count()
@@ -400,9 +435,11 @@ class TiBatchWrite(
     val regionSplitPointNum = if (options.regionSplitNum > 0) {
       options.regionSplitNum
     } else {
-      Math.max(
-        options.minRegionSplitNum,
-        Math.ceil(count.toDouble / options.regionSplitKeys).toInt)
+      Math.min(
+        Math.max(
+          options.minRegionSplitNum,
+          Math.ceil(count.toDouble / options.regionSplitKeys).toInt),
+        options.maxRegionSplitNum)
     }
     logger.info(s"regionSplitPointNum=$regionSplitPointNum")
 
@@ -412,7 +449,7 @@ class TiBatchWrite(
     val sampleData = rdd.sample(false, sampleSize.toDouble / count).collect()
     logger.info(s"sampleData size=${sampleData.length}")
 
-    val finalRegionSplitPointNum = if (options.regionSplitUsingSize) {
+    val splitPointNumUsingSize = if (options.regionSplitUsingSize) {
       val avgSize = getAverageSizeInBytes(sampleData)
       logger.info(s"avgSize=$avgSize Bytes")
       if (avgSize <= options.bytesPerRegion / options.regionSplitKeys) {
@@ -425,6 +462,11 @@ class TiBatchWrite(
     } else {
       regionSplitPointNum
     }
+    logger.info(s"splitPointNumUsingSize=$splitPointNumUsingSize")
+
+    val finalRegionSplitPointNum = Math.min(
+      Math.max(options.minRegionSplitNum, splitPointNumUsingSize),
+      options.maxRegionSplitNum)
     logger.info(s"finalRegionSplitPointNum=$finalRegionSplitPointNum")
 
     val sortedSampleData = sampleData

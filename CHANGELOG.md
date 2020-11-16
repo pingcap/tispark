@@ -1,6 +1,31 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.10] 2020-11-06
+### Fixes
+- Fix maven-shade-plugin relocation cannot handle folder name with dot [#1737](https://github.com/pingcap/tispark/pull/1737)
+- BatchWrite: add parameter maxRegionSplitNum [#1729](https://github.com/pingcap/tispark/pull/1729)
+- Fix string insert overflow check [#1727](https://github.com/pingcap/tispark/pull/1727)
+
+## [TiSpark 2.3.9] 2020-10-31
+### Fixes
+- Revert "fix TiSession Close bug" [#1713](https://github.com/pingcap/tispark/pull/1713)
+- Fix typo in DateTime calculation [#1710](https://github.com/pingcap/tispark/pull/1710)
+
+## [TiSpark 2.3.8] 2020-10-30
+### Fixes
+- Fix negative column id when there are more than 128 columns [#1673](https://github.com/pingcap/tispark/pull/1673)
+- Fix incorrect date type value when timezone is set [#1704](https://github.com/pingcap/tispark/pull/1704)
+- BatchWrite: fix auto increment column not primary key [#1694](https://github.com/pingcap/tispark/pull/1694)
+- Fix TiSession Close bug [#1677](https://github.com/pingcap/tispark/pull/1677)
+- Optimize region split number in small data size [#1681](https://github.com/pingcap/tispark/pull/1681)
+
+## [TiSpark 2.3.7] 2020-10-27
+### Fixes
+- BatchWrite: enable user provided auto increment value in update mode [#1658](https://github.com/pingcap/tispark/pull/1658)
+- BatchWrite: fix initial ttl expired [#1660](https://github.com/pingcap/tispark/pull/1660)
+- BatchWrite: fix commit ts expired [#1661](https://github.com/pingcap/tispark/pull/1661)
+
 ## [TiSpark 2.3.6] 2020-10-16
 ### Fixes
 - Fix covering index error when alter-primary-key is enabled [#1640](https://github.com/pingcap/tispark/pull/1640)

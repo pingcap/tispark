@@ -345,4 +345,68 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
     assert(caught.getCause.isInstanceOf[ConvertOverflowException])
     assert(caught.getCause.getMessage.equals("value 256 > upperBound 255"))
   }
+
+  test("auto increment: user provide id, update") {
+    val row1 = Row(1L, 1L)
+    val row2 = Row(2L, 22L)
+    val row3 = Row(3L, 33L)
+    val row4 = Row(4L, 44L)
+
+    val schema = StructType(List(StructField("i", LongType), StructField("j", LongType)))
+
+    jdbcUpdate(
+      s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i), key (j))")
+
+    jdbcUpdate(s"insert into $dbtable (j) values(1), (2), (3), (4)")
+
+    sql(s"select * from $dbtableWithPrefix").show()
+
+    tidbWrite(List(row2, row3, row4), schema, Some(Map("replace" -> "true")))
+
+    sql(s"select * from $dbtableWithPrefix").show()
+
+    testTiDBSelect(Seq(row1, row2, row3, row4))
+  }
+
+  test("auto increment: user provide id, update+insert") {
+    val row1 = Row(1L, 1L)
+    val row2 = Row(2L, 22L)
+    val row3 = Row(3L, 33L)
+    val row4 = Row(4L, 44L)
+
+    val schema = StructType(List(StructField("i", LongType), StructField("j", LongType)))
+
+    jdbcUpdate(
+      s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i))")
+
+    jdbcUpdate(s"insert into $dbtable (j) values(1), (2), (3)")
+
+    sql(s"select * from $dbtableWithPrefix").show()
+
+    val caught = intercept[com.pingcap.tikv.exception.TiBatchWriteException] {
+      tidbWrite(List(row2, row3, row4), schema, Some(Map("replace" -> "true")))
+    }
+    assert(
+      caught.getMessage.equals(
+        "currently user provided auto increment value is only supported in update mode!"))
+  }
+
+  test("auto increment but not primary key") {
+    val row3 = Row(3L, 33L)
+    val row4 = Row(4L, 44L)
+
+    val schema = StructType(List(StructField("j", LongType)))
+
+    jdbcUpdate(
+      s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, j int NOT NULL, unique key (i))")
+
+    jdbcUpdate(s"insert into $dbtable (j) values(1), (2)")
+
+    sql(s"select * from $dbtableWithPrefix").show()
+
+    tidbWrite(List(row3, row4), schema)
+
+    sql(s"select * from $dbtableWithPrefix").show()
+  }
+
 }
