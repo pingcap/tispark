@@ -308,14 +308,14 @@ public class RowEncoderV2 {
   private void encodeTimestamp(CodecDataOutput cdo, Object value, DateTimeZone tz) {
     if (value instanceof Timestamp) {
       Timestamp timestamp = (Timestamp) value;
-      DateTime dateTime = new DateTime(timestamp.getTime());
+      DateTime dateTime = DateTime.parse(timestamp.toLocalDateTime().toString());
       int nanos = timestamp.getNanos();
       ExtendedDateTime extendedDateTime = new ExtendedDateTime(dateTime, (nanos / 1000) % 1000);
       long t = DateTimeCodec.toPackedLong(extendedDateTime, tz);
       encodeInt(cdo, t);
     } else if (value instanceof Date) {
       ExtendedDateTime extendedDateTime =
-          new ExtendedDateTime(new DateTime(((Date) value).getTime()));
+          new ExtendedDateTime(DateTime.parse(((Date) value).toLocalDate().toString()));
       long t = DateTimeCodec.toPackedLong(extendedDateTime, tz);
       encodeInt(cdo, t);
     } else {

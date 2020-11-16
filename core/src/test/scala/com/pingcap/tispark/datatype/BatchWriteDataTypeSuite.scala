@@ -547,4 +547,30 @@ class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test
       tidbWrite(data, schema)
     }
   }
+
+  test("Test datetime") {
+
+    compareTiDBWriteWithJDBC {
+      case (writeFunc, _) =>
+        jdbcUpdate(s"drop table if exists $dbtable")
+        jdbcUpdate(s"""
+                      |create table $dbtable(
+                      |id varchar(10),
+                      |dt datetime
+                      |)
+      """.stripMargin)
+
+        val row1 = Row("test1", Timestamp.valueOf("2020-10-10 05:12:03"))
+        val row2 = Row("test1", Timestamp.valueOf("2020-10-10 19:12:03"))
+        val row3 = Row("test2", Timestamp.valueOf("1000-01-01 05:12:03"))
+        val row4 = Row("test2", Timestamp.valueOf("1000-01-01 19:12:03"))
+        val row5 = Row("test3", Timestamp.valueOf("1000-01-01 00:00:00"))
+
+        val schema =
+          StructType(List(StructField("id", StringType), StructField("dt", TimestampType)))
+
+        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema, sortCol = "id")
+    }
+  }
 }
