@@ -25,7 +25,6 @@ class BaseBatchWriteWithoutDropTableTest(
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    setCurrentDatabase(database)
   }
 
   override def beforeEach(): Unit = {
