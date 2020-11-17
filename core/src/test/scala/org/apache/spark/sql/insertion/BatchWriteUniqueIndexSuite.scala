@@ -28,7 +28,7 @@ class BatchWriteUniqueIndexSuite
   override def dataTypes: List[ReflectedDataType] =
     integers ::: decimals ::: doubles ::: charCharset
   override def unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
-  override val dbName = "batch_write_test_index"
+  override val dbName: String = database
   override val testDesc =
     "Test for single and multiple unique index type in batch-write insertion"
 

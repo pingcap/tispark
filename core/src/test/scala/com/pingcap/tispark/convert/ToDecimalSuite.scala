@@ -84,7 +84,7 @@ class ToDecimalSuite extends BaseBatchWriteTest("test_data_type_convert_to_decim
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -120,7 +120,7 @@ class ToDecimalSuite extends BaseBatchWriteTest("test_data_type_convert_to_decim
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5), schema)
     }
   }
 
@@ -155,7 +155,7 @@ class ToDecimalSuite extends BaseBatchWriteTest("test_data_type_convert_to_decim
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5), schema)
     }
   }
 
@@ -190,7 +190,7 @@ class ToDecimalSuite extends BaseBatchWriteTest("test_data_type_convert_to_decim
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5), schema)
     }
   }
 
@@ -225,7 +225,7 @@ class ToDecimalSuite extends BaseBatchWriteTest("test_data_type_convert_to_decim
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5), schema)
     }
   }
 
@@ -269,7 +269,7 @@ class ToDecimalSuite extends BaseBatchWriteTest("test_data_type_convert_to_decim
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2), readSchema)
     }
   }
 
@@ -312,7 +312,7 @@ class ToDecimalSuite extends BaseBatchWriteTest("test_data_type_convert_to_decim
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2), readSchema)
     }
   }
 
@@ -352,7 +352,7 @@ class ToDecimalSuite extends BaseBatchWriteTest("test_data_type_convert_to_decim
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2), readSchema)
     }
   }
 
@@ -387,7 +387,7 @@ class ToDecimalSuite extends BaseBatchWriteTest("test_data_type_convert_to_decim
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5), schema)
     }
   }
 
