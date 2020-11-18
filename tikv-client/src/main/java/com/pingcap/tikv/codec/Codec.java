@@ -689,11 +689,15 @@ public class Codec {
 
   public static class EnumCodec {
 
+    public static boolean equals(String a, String b) {
+      return a.trim().equalsIgnoreCase(b.trim());
+    }
+
     public static Integer parseEnumName(String name, List<String> elems)
         throws ConvertOverflowException {
       int i = 0;
       while (i < elems.size()) {
-        if (elems.get(i).equals(name)) {
+        if (equals(elems.get(i), name)) {
           return i + 1;
         }
         i = i + 1;

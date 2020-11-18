@@ -75,7 +75,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
           readSchema)
     }
   }
@@ -114,7 +114,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -155,7 +155,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -198,7 +198,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -243,7 +243,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -289,7 +289,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -332,7 +332,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -393,7 +393,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
           readSchema)
     }
   }

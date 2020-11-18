@@ -28,7 +28,7 @@ class BatchWritePkSuite
   override def dataTypes: List[ReflectedDataType] =
     integers ::: decimals ::: doubles ::: charCharset
   override def unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
-  override val dbName = "batch_write_test_pk"
+  override val dbName: String = database
   override val testDesc = "Test for single PK column in batch-write insertion"
 
   override def beforeAll(): Unit = {

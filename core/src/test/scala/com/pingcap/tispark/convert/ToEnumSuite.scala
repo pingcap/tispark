@@ -81,7 +81,7 @@ class ToEnumSuite extends BaseBatchWriteTest("test_data_type_convert_to_enum") {
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -120,7 +120,7 @@ class ToEnumSuite extends BaseBatchWriteTest("test_data_type_convert_to_enum") {
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -159,7 +159,7 @@ class ToEnumSuite extends BaseBatchWriteTest("test_data_type_convert_to_enum") {
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -198,7 +198,7 @@ class ToEnumSuite extends BaseBatchWriteTest("test_data_type_convert_to_enum") {
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -237,7 +237,7 @@ class ToEnumSuite extends BaseBatchWriteTest("test_data_type_convert_to_enum") {
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -276,7 +276,7 @@ class ToEnumSuite extends BaseBatchWriteTest("test_data_type_convert_to_enum") {
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -315,7 +315,7 @@ class ToEnumSuite extends BaseBatchWriteTest("test_data_type_convert_to_enum") {
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -354,7 +354,7 @@ class ToEnumSuite extends BaseBatchWriteTest("test_data_type_convert_to_enum") {
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }

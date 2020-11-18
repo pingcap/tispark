@@ -66,7 +66,7 @@ class ToDateSuite extends BaseBatchWriteTest("test_data_type_convert_to_date") {
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2), readSchema)
       case (writeFunc, "jdbcWrite") =>
       //ignored, because of this error
       //java.sql.BatchUpdateException: Data truncation: invalid time format: '34'
@@ -95,7 +95,7 @@ class ToDateSuite extends BaseBatchWriteTest("test_data_type_convert_to_date") {
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2), readSchema)
     }
   }
 
@@ -121,7 +121,7 @@ class ToDateSuite extends BaseBatchWriteTest("test_data_type_convert_to_date") {
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2), schema)
     }
   }
 
@@ -147,7 +147,7 @@ class ToDateSuite extends BaseBatchWriteTest("test_data_type_convert_to_date") {
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2), readSchema)
     }
   }
 
