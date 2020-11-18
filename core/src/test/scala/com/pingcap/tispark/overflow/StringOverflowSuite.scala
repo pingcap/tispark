@@ -40,7 +40,7 @@ class StringOverflowSuite extends BaseBatchWriteTest("test_data_type_string_over
         val schema =
           StructType(List(StructField("i", IntegerType), StructField("c1", StringType)))
         writeFunc(List(row), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row), schema)
+        compareTiDBSelectWithJDBC(List(row), schema)
     }
   }
 

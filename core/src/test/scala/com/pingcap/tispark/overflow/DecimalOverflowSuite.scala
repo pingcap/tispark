@@ -66,7 +66,7 @@ class DecimalOverflowSuite extends BaseBatchWriteTest("test_data_type_decimal_ov
               StructField("c1", DecimalType(testData.length, testData.precision))))
 
           writeFunc(List(row1), schema, None)
-          compareTiDBSelectWithJDBC(Seq(readRow1), readSchema)
+          compareTiDBSelectWithJDBC(List(readRow1), readSchema)
       }
     }
   }

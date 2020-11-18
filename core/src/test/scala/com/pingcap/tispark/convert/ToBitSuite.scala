@@ -78,7 +78,7 @@ class ToBitSuite extends BaseBatchWriteTest("test_data_type_convert_to_bit") {
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -113,7 +113,7 @@ class ToBitSuite extends BaseBatchWriteTest("test_data_type_convert_to_bit") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5), schema)
     }
   }
 
@@ -147,7 +147,7 @@ class ToBitSuite extends BaseBatchWriteTest("test_data_type_convert_to_bit") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5), schema)
     }
   }
 
@@ -181,7 +181,7 @@ class ToBitSuite extends BaseBatchWriteTest("test_data_type_convert_to_bit") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5), schema)
     }
   }
 
@@ -215,7 +215,7 @@ class ToBitSuite extends BaseBatchWriteTest("test_data_type_convert_to_bit") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5), schema)
     }
   }
 
@@ -250,7 +250,7 @@ class ToBitSuite extends BaseBatchWriteTest("test_data_type_convert_to_bit") {
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
@@ -306,7 +306,7 @@ class ToBitSuite extends BaseBatchWriteTest("test_data_type_convert_to_bit") {
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
         compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          List(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema)
     }
   }
