@@ -548,7 +548,7 @@ class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test
     }
   }
 
-  test("Test enum with trailing spaces") {
+  ignore("Test enum with trailing spaces") {
     jdbcUpdate(s"create table $dbtable(a enum('a','b '))")
 
     val schema = StructType(List(StructField("a", StringType)))
