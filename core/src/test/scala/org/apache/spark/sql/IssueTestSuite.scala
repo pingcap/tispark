@@ -338,7 +338,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     judge("select c3, c4 from single_read")
   }
 
-  test("test sum rewriting logic") {
+  ignore("test sum rewriting logic") {
     // only test numeric types. Spark will raise analysis exception if we
     // perform sum aggregation over non-numeric types.
     judge("select sum(tp_decimal) from full_data_type_table")

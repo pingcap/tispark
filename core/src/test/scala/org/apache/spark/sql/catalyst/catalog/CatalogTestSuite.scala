@@ -72,7 +72,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
         List("tp_timestamp", "timestamp", "false", null),
         List("tp_year", "bigint", "true", null),
         List("tp_bigint", "bigint", "true", null),
-        List("tp_decimal", "decimal(11,0)", "true", null),
+        List("tp_decimal", "decimal(38,18)", "true", null),
         List("tp_double", "double", "true", null),
         List("tp_float", "float", "true", null),
         List("tp_int", "bigint", "true", null),
