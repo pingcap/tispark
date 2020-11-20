@@ -178,10 +178,21 @@ public class TxnKVClient implements AutoCloseable {
   // mysql client.
   // TODO: check this logic to see are we satisfied?
   private boolean retryableException(Exception e) {
-    return e instanceof TiClientInternalException
-        || e instanceof KeyException
+    if (e instanceof TiClientInternalException
         || e instanceof RegionException
-        || e instanceof StatusRuntimeException;
+        || e instanceof StatusRuntimeException) return true;
+    if (e instanceof KeyException) {
+      Kvrpcpb.KeyError ke = ((KeyException) e).getKeyError();
+      if (ke == null) return true;
+      if (!ke.getAbort().isEmpty()
+          || ke.hasConflict()
+          || ke.hasAlreadyExist()
+          || ke.hasDeadlock()
+          || ke.hasCommitTsExpired()
+          || ke.hasTxnNotFound()) return false;
+      return true;
+    }
+    return false;
   }
 
   @Override
