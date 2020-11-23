@@ -143,7 +143,7 @@ class TiBatchWriteTable(
             """.stripMargin)
         }
 
-        if (!df.columns.contains(autoIncrementColName)) {
+        if (!colsInDf.contains(autoIncrementColName)) {
           throw new TiBatchWriteException(
             "Column size is matched but cannot find auto increment column by name")
         }
