@@ -409,4 +409,22 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
     sql(s"select * from $dbtableWithPrefix").show()
   }
 
+  test("auto increment column name compare") {
+    val row3 = Row(3L, 33L)
+    val row4 = Row(4L, 44L)
+
+    val schema = StructType(List(StructField("I", LongType), StructField("j", LongType)))
+
+    jdbcUpdate(
+      s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, j int NOT NULL, unique key (i))")
+
+    jdbcUpdate(s"insert into $dbtable values (3, 0), (4, 0)")
+
+    sql(s"select * from $dbtableWithPrefix").show()
+
+    tidbWrite(List(row3, row4), schema, Some(Map("replace" -> "true")))
+
+    sql(s"select * from $dbtableWithPrefix").show()
+  }
+
 }
