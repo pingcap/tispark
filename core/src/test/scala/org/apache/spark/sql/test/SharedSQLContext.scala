@@ -421,7 +421,7 @@ trait SharedSQLContext
       conf.set(DB_PREFIX, dbPrefix)
       if (catalogPluginMode) {
         conf.set("spark.sql.catalog.tidb_catalog", TiCatalog.className)
-        conf.set("spark.sql.catalog.tidb_catalog.pd.address", pdAddresses)
+        conf.set("spark.sql.catalog.tidb_catalog.pd.addresses", pdAddresses)
       }
     }
 

@@ -184,10 +184,11 @@ The configurations in the table below can be put together with `spark-defaults.c
 | `spark.tispark.isolation_read_engines` | `tikv,tiflash` | List of readable engines of TiSpark, comma separated, storage engines not listed will not be read |
 
 ## Spark-3.0 Catalog
-Please use the following configuration to enable `Catalog` provided by `spark-3.0`.
+Please use the following configurations to enable `Catalog` provided by `spark-3.0`.
 
 ```
 spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
+spark.sql.catalog.tidb_catalog.pd.addresses 127.0.0.1:2379
 ```
 
 ## `Log4j` Configuration
