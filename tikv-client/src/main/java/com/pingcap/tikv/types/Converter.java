@@ -72,6 +72,8 @@ public class Converter {
       result = doubleToLong((Double) value);
     } else if (value instanceof String) {
       result = stringToLong((String) value);
+    } else if (value instanceof java.math.BigDecimal) {
+      result = ((java.math.BigDecimal) value).longValueExact();
     } else {
       throw new ConvertNotSupportException(value.getClass().getName(), "SIGNED");
     }
@@ -110,6 +112,8 @@ public class Converter {
     } else if (value instanceof String) {
       UnsignedLong unsignedLong = stringToUnsignedLong((String) value);
       result = unsignedLong.longValue();
+    } else if (value instanceof java.math.BigDecimal) {
+      result = ((java.math.BigDecimal) value).longValueExact();
     } else {
       throw new ConvertNotSupportException(value.getClass().getName(), "UNSIGNED");
     }
