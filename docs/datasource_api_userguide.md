@@ -182,7 +182,7 @@ The following table shows the TiDB-specific options, which can be passed in thro
 | enableRegionSplit  | false    | true                   | To split Region to avoid hot Region during insertion                       |
 | scatterWaitMS      | false    | 300000                 | Max time to wait scatter region                                            |
 | writeThreadPerTask | false    | 1                      | Thread number each spark task use to write data to TiKV                    |
-| bytesPerRegion     | false    | 100663296 (96M)        | Decrease this parameter to split more regions (increase write concurrency) | 
+| bytesPerRegion     | false    | 100663296 (96M)        | Decrease this parameter to split more regions (increase write concurrency) |
 
 ## TiDB Version
 
@@ -248,6 +248,7 @@ The complete conversion metrics are as follows.
 | LONGBLOB   | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :x:                | :x:                | :x:                |
 | ENUM       | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
 | SET        | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                |
+| JSON       | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                |
 
 ## Write Benchmark
 
