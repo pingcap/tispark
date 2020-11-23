@@ -27,6 +27,28 @@ import org.apache.spark.sql.types.{
 
 class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
 
+  test("integer conversion test") {
+    jdbcUpdate(s"drop table if exists t")
+    jdbcUpdate(s"create table t(a int)")
+
+    spark.sql(s"""
+                      |CREATE TABLE default.st1
+                      |USING tidb
+                      |OPTIONS (
+                      |  database '$database',
+                      |  table 't',
+                      |  tidb.addr '$tidbAddr',
+                      |  tidb.password '$tidbPassword',
+                      |  tidb.port '$tidbPort',
+                      |  tidb.user '$tidbUser',
+                      |  spark.tispark.pd.addresses '$pdAddresses'
+                      |)
+       """.stripMargin)
+
+    // spark-2.x do not check data conversion error
+    spark.sql(s"""insert into default.st1 select "g"""")
+  }
+
   test("Combine unique index with null value test") {
     doTestNullValues(s"create table $dbtable(a int, b varchar(64), CONSTRAINT ab UNIQUE (a, b))")
   }
