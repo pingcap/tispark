@@ -44,6 +44,7 @@ import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
+import com.pingcap.tikv.types.MySQLType;
 import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -168,11 +169,13 @@ public class TiKVScanAnalyzer {
       minPlan.getFilters().forEach(dagRequest::addDowngradeFilter);
       double minCost = minPlan.getCost();
       for (TiIndexInfo index : table.getIndices()) {
-        TiKVScanPlan plan =
-            buildIndexScan(columnList, conditions, index, table, tableStatistics, false);
-        if (plan.getCost() < minCost) {
-          minPlan = plan;
-          minCost = plan.getCost();
+        if (supportIndexScan(index, table)) {
+          TiKVScanPlan plan =
+              buildIndexScan(columnList, conditions, index, table, tableStatistics, false);
+          if (plan.getCost() < minCost) {
+            minPlan = plan;
+            minCost = plan.getCost();
+          }
         }
       }
     }
@@ -651,5 +654,16 @@ public class TiKVScanAnalyzer {
         return this;
       }
     }
+  }
+
+  private boolean supportIndexScan(TiIndexInfo index, TiTableInfo table) {
+    // YEAR TYPE index scan is disabled, https://github.com/pingcap/tispark/issues/1789
+    for (TiIndexColumn tiIndexColumn : index.getIndexColumns()) {
+      TiColumnInfo tiColumnInfo = table.getColumn(tiIndexColumn.getName());
+      if (tiColumnInfo.getType().getType() == MySQLType.TypeYear) {
+        return false;
+      }
+    }
+    return true;
   }
 }
