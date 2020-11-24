@@ -116,8 +116,27 @@ class TiBatchWriteTable(
 
     // auto increment
     val rdd = if (tiTableInfo.hasAutoIncrementColumn) {
-      val isProvidedID = tableColSize == colsInDf.length
       val autoIncrementColName = tiTableInfo.getAutoIncrementColInfo.getName
+
+      def allNullOnAutoIncrement: Boolean = {
+        df.select(autoIncrementColName)
+          .rdd
+          .filter { row => row.get(0) != null }
+          .isEmpty()
+      }
+
+      def isProvidedID: Boolean = {
+        if (tableColSize != colsInDf.length) {
+          false
+        } else {
+          if (allNullOnAutoIncrement) {
+            df = df.drop(autoIncrementColName)
+            false
+          } else {
+            true
+          }
+        }
+      }
 
       // when auto increment column is provided but the corresponding column in df contains null,
       // we need throw exception
