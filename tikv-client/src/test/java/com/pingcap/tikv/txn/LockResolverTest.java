@@ -170,6 +170,7 @@ abstract class LockResolverTest {
               Collections.singletonList(m),
               startTS,
               ttl,
+              false,
               useAsyncCommit,
               secondaries);
           break;

@@ -395,19 +395,6 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     this.prewrite(backOffer, primary, mutations, startTs, lockTTL, false, false, null);
   }
 
-  public void prewrite(
-      BackOffer backOffer,
-      ByteString primary,
-      Iterable<Mutation> mutations,
-      long startTs,
-      long lockTTL,
-      boolean useAsyncCommit,
-      Iterable<ByteString> secondaries)
-      throws TiClientInternalException, KeyException, RegionException {
-    this.prewrite(
-        backOffer, primary, mutations, startTs, lockTTL, false, useAsyncCommit, secondaries);
-  }
-
   /**
    * Prewrite batch keys
    *
