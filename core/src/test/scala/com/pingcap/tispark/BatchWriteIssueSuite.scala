@@ -31,6 +31,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
     jdbcUpdate(s"drop table if exists t")
     jdbcUpdate(s"create table t(a bigint unsigned)")
 
+    spark.sql("drop table if exists default.st1")
     spark.sql(s"""
                  |CREATE TABLE default.st1
                  |USING tidb
@@ -54,6 +55,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
     jdbcUpdate(s"drop table if exists t")
     jdbcUpdate(s"create table t(a int)")
 
+    spark.sql("drop table if exists default.st1")
     spark.sql(s"""
                  |CREATE TABLE default.st1
                  |USING tidb
