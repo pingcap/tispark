@@ -31,6 +31,11 @@ public class KeyException extends TiKVException {
     this.keyError = keyErr;
   }
 
+  public KeyException(Kvrpcpb.KeyError keyErr, String errMsg) {
+    super(errMsg);
+    this.keyError = keyErr;
+  }
+
   public Kvrpcpb.KeyError getKeyError() {
     return keyError;
   }
