@@ -25,6 +25,7 @@ import com.pingcap.tikv.types.BytesType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
+import com.pingcap.tikv.util.LogDesensitization;
 
 public class TypedKey extends Key {
   private final DataType type;
@@ -118,11 +119,11 @@ public class TypedKey extends Key {
       CodecDataInput cdi = new CodecDataInput(value);
       Object val = type.decode(cdi);
       if (val instanceof byte[]) {
-        return KeyUtils.formatBytes(value);
+        return LogDesensitization.hide(KeyUtils.formatBytes(value));
       }
       return val.toString();
     } catch (Exception e) {
-      return "raw value:" + KeyUtils.formatBytesUTF8(value);
+      return "raw value:" + LogDesensitization.hide(KeyUtils.formatBytesUTF8(value));
     }
   }
 }
