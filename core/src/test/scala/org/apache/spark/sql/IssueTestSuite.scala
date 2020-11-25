@@ -21,6 +21,19 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("year type index plan") {
+    tidbStmt.execute("drop table if exists t1")
+    tidbStmt.execute("create table t1(id varchar(10),a year, index idx_a (a))")
+    tidbStmt.execute(
+      "insert into t1 values('ab',1970), ('ab',2010), ('ab',2012), ('ab',2014), ('ab',2018)")
+
+    val query = "select * from t1 where a>2010 and a<2015"
+    spark.sql(s"explain $query").show(false)
+    spark.sql(query).show()
+
+    assert(spark.sql(query).collect().length == 2)
+  }
+
   test("Date type deals with timezone incorrectly") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("""
