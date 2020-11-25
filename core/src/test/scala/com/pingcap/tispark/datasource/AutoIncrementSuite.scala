@@ -427,4 +427,45 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
     sql(s"select * from $dbtableWithPrefix").show()
   }
 
+  test("auto increment column insert null") {
+    val row3 = Row(null, 33L)
+    val row4 = Row(null, 44L)
+
+    val schema = StructType(List(StructField("i", LongType), StructField("j", LongType)))
+
+    jdbcUpdate(
+      s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, j int NOT NULL, unique key (i))")
+
+    tidbWrite(List(row3, row4), schema)
+
+    sql(s"select * from $dbtableWithPrefix").show()
+  }
+
+  // spark-3.0 throws the following error
+  // Cannot write nullable values to non-null column
+  ignore("auto increment column insert null by sql") {
+    jdbcUpdate(s"drop table if exists t")
+    jdbcUpdate(s"create table t(a int auto_increment primary key)")
+
+    spark.sql("drop table if exists default.st1")
+    spark.sql(s"""
+                 |CREATE TABLE default.st1
+                 |USING tidb
+                 |OPTIONS (
+                 |  database '$database',
+                 |  table 't',
+                 |  tidb.addr '$tidbAddr',
+                 |  tidb.password '$tidbPassword',
+                 |  tidb.port '$tidbPort',
+                 |  tidb.user '$tidbUser',
+                 |  spark.tispark.pd.addresses '$pdAddresses'
+                 |)
+       """.stripMargin)
+
+    spark.sql("insert into default.st1 values(null)")
+
+    sql(s"select * from $databaseWithPrefix.t").show()
+
+    assert(queryTiDBViaJDBC(s"select count(*) from $database.t").head.head.toString.equals("1"))
+  }
 }
