@@ -29,6 +29,7 @@ import com.pingcap.tikv.txn.type.GroupKeyResult;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import com.pingcap.tikv.util.LogDesensitization;
 import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -183,7 +184,8 @@ public class TwoPhaseCommitter {
       }
     }
 
-    LOG.info("prewrite primary key {} successfully", KeyUtils.formatBytes(key));
+    LOG.info(
+        "prewrite primary key {} successfully", LogDesensitization.hide(KeyUtils.formatBytes(key)));
   }
 
   /**
@@ -223,7 +225,8 @@ public class TwoPhaseCommitter {
       }
     }
 
-    LOG.info("commit primary key {} successfully", KeyUtils.formatBytes(key));
+    LOG.info(
+        "commit primary key {} successfully", LogDesensitization.hide(KeyUtils.formatBytes(key)));
   }
 
   /**

@@ -211,6 +211,7 @@ public class TiRegion implements Serializable {
 
   @Override
   public String toString() {
+    // LogDesensitization: show region key range in log
     return String.format(
         "{Region[%d] ConfVer[%d] Version[%d] Store[%d] KeyRange[%s]:[%s]}",
         getId(),

@@ -264,6 +264,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         // key requested is not in current region
         // should not happen here.
         ByteString invalidKey = error.getKeyNotInRegion().getKey();
+        // LogDesensitization: show region key range in log
         logger.error(
             String.format(
                 "Key not in region [%s] for key [%s], this error should not happen here.",

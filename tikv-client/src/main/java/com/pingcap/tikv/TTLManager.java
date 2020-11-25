@@ -27,6 +27,7 @@ import com.pingcap.tikv.txn.type.ClientRPCResult;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import com.pingcap.tikv.util.LogDesensitization;
 import com.pingcap.tikv.util.Pair;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -85,7 +86,10 @@ public class TTLManager {
       scheduler.scheduleAtFixedRate(
           this::doKeepAlive, SCHEDULER_INITIAL_DELAY, SCHEDULER_PERIOD, TimeUnit.MILLISECONDS);
     } else {
-      LOG.warn("keepAlive failed state={} key={}", state.get(), KeyUtils.formatBytes(primaryLock));
+      LOG.warn(
+          "keepAlive failed state={} key={}",
+          state.get(),
+          LogDesensitization.hide(KeyUtils.formatBytes(primaryLock)));
     }
   }
 
@@ -98,7 +102,11 @@ public class TTLManager {
     long uptime = calculateUptime(kvClient, startTS);
     long ttl = uptime + MANAGED_LOCK_TTL;
 
-    LOG.info("doKeepAlive key={} uptime={} ttl={}", KeyUtils.formatBytes(primaryLock), uptime, ttl);
+    LOG.info(
+        "doKeepAlive key={} uptime={} ttl={}",
+        LogDesensitization.hide(KeyUtils.formatBytes(primaryLock)),
+        uptime,
+        ttl);
 
     try {
       sendTxnHeartBeat(bo, ttl);
@@ -138,7 +146,9 @@ public class TTLManager {
     }
 
     LOG.debug(
-        "sendTxnHeartBeat success key={} ttl={} success", KeyUtils.formatBytes(primaryLock), ttl);
+        "sendTxnHeartBeat success key={} ttl={} success",
+        LogDesensitization.hide(KeyUtils.formatBytes(primaryLock)),
+        ttl);
   }
 
   public void close() throws InterruptedException {
