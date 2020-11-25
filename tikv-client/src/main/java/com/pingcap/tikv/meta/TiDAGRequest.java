@@ -973,6 +973,7 @@ public class TiDAGRequest implements Serializable {
                 (key, value) -> {
                   for (Coprocessor.KeyRange v : value) {
                     sb.append(" partition: ").append(getPrunedPartName(key));
+                    // LogDesensitization: show key range in coprocessor request in log
                     sb.append(KeyUtils.formatBytesUTF8(v));
                   }
                 });
@@ -982,6 +983,7 @@ public class TiDAGRequest implements Serializable {
             .forEach(
                 vList -> {
                   for (Coprocessor.KeyRange range : vList) {
+                    // LogDesensitization: show key range in coprocessor request in log
                     sb.append(KeyUtils.formatBytesUTF8(range));
                   }
                 });
