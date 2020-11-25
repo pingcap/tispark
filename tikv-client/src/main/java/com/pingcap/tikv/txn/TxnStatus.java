@@ -30,29 +30,41 @@ public class TxnStatus {
   private long ttl;
   private long commitTS;
   private Kvrpcpb.Action action;
+  private Kvrpcpb.LockInfo primaryLock;
 
   public TxnStatus() {
     this.ttl = 0L;
     this.commitTS = 0L;
     this.action = Kvrpcpb.Action.UNRECOGNIZED;
+    this.primaryLock = null;
   }
 
   public TxnStatus(long ttl) {
     this.ttl = ttl;
     this.commitTS = 0L;
     this.action = Kvrpcpb.Action.UNRECOGNIZED;
+    this.primaryLock = null;
   }
 
   public TxnStatus(long ttl, long commitTS) {
     this.ttl = ttl;
     this.commitTS = commitTS;
     this.action = Kvrpcpb.Action.UNRECOGNIZED;
+    this.primaryLock = null;
   }
 
   public TxnStatus(long ttl, long commitTS, Kvrpcpb.Action action) {
     this.ttl = ttl;
     this.commitTS = commitTS;
     this.action = action;
+    this.primaryLock = null;
+  }
+
+  public TxnStatus(long ttl, long commitTS, Kvrpcpb.Action action, Kvrpcpb.LockInfo primaryLock) {
+    this.ttl = ttl;
+    this.commitTS = commitTS;
+    this.action = action;
+    this.primaryLock = primaryLock;
   }
 
   public long getTtl() {
@@ -81,5 +93,13 @@ public class TxnStatus {
 
   public void setAction(Kvrpcpb.Action action) {
     this.action = action;
+  }
+
+  public Kvrpcpb.LockInfo getPrimaryLock() {
+    return primaryLock;
+  }
+
+  public void setPrimaryLock(Kvrpcpb.LockInfo primaryLock) {
+    this.primaryLock = primaryLock;
   }
 }

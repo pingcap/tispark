@@ -392,7 +392,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       long startTs,
       long lockTTL)
       throws TiClientInternalException, KeyException, RegionException {
-    this.prewrite(backOffer, primary, mutations, startTs, lockTTL, false);
+    this.prewrite(backOffer, primary, mutations, startTs, lockTTL, false, false, null);
   }
 
   /**
@@ -406,33 +406,37 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       Iterable<Mutation> mutations,
       long startTs,
       long ttl,
-      boolean skipConstraintCheck)
+      boolean skipConstraintCheck,
+      boolean useAsyncCommit,
+      Iterable<ByteString> secondaries)
       throws TiClientInternalException, KeyException, RegionException {
     boolean forWrite = true;
     while (true) {
       Supplier<PrewriteRequest> factory =
-          () ->
-              getIsV4()
-                  ? PrewriteRequest.newBuilder()
-                      .setContext(region.getContext())
-                      .setStartVersion(startTs)
-                      .setPrimaryLock(primaryLock)
-                      .addAllMutations(mutations)
-                      .setLockTtl(ttl)
-                      .setSkipConstraintCheck(skipConstraintCheck)
-                      .setMinCommitTs(startTs)
-                      .setTxnSize(16)
-                      .build()
-                  : PrewriteRequest.newBuilder()
-                      .setContext(region.getContext())
-                      .setStartVersion(startTs)
-                      .setPrimaryLock(primaryLock)
-                      .addAllMutations(mutations)
-                      .setLockTtl(ttl)
-                      .setSkipConstraintCheck(skipConstraintCheck)
-                      // v3 does not support setMinCommitTs(startTs)
-                      .setTxnSize(16)
-                      .build();
+          () -> {
+            PrewriteRequest.Builder builder =
+                PrewriteRequest.newBuilder()
+                    .setContext(region.getContext())
+                    .setStartVersion(startTs)
+                    .setPrimaryLock(primaryLock)
+                    .addAllMutations(mutations)
+                    .setLockTtl(ttl)
+                    .setSkipConstraintCheck(skipConstraintCheck)
+                    .setTxnSize(16);
+
+            if (getIsV4()) {
+              builder.setMinCommitTs(startTs);
+            }
+
+            if (useAsyncCommit) {
+              builder.setUseAsyncCommit(true);
+
+              if (secondaries != null) {
+                builder.addAllSecondaries(secondaries);
+              }
+            }
+            return builder.build();
+          };
       KVErrorHandler<PrewriteResponse> handler =
           new KVErrorHandler<>(
               regionManager,

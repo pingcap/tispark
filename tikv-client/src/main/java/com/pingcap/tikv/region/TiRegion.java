@@ -90,7 +90,7 @@ public class TiRegion implements Serializable {
   public List<Peer> getLearnerList() {
     List<Peer> peers = new ArrayList<>();
     for (Peer peer : getMeta().getPeersList()) {
-      if (peer.getIsLearner()) {
+      if (peer.getRole().equals(Metapb.PeerRole.Learner)) {
         peers.add(peer);
       }
     }
