@@ -484,7 +484,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
         Lock lock = new Lock(err.getLocked());
         locks.add(lock);
       } else {
-        throw new KeyException(err.toString());
+        throw new KeyException(err, err.toString());
       }
     }
     if (isSuccess) {
