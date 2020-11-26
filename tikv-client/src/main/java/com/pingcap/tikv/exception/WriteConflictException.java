@@ -16,12 +16,13 @@
 package com.pingcap.tikv.exception;
 
 import com.pingcap.tikv.codec.KeyUtils;
+import com.pingcap.tikv.util.LogDesensitization;
 
 public class WriteConflictException extends RuntimeException {
   public WriteConflictException(long callerStartTS, long txnID, long commitTS, byte[] key) {
     super(
         String.format(
             "callerStartTS=%d txnID=%d commitTS=%d key=%s",
-            callerStartTS, txnID, commitTS, KeyUtils.formatBytes(key)));
+            callerStartTS, txnID, commitTS, LogDesensitization.hide(KeyUtils.formatBytes(key))));
   }
 }
