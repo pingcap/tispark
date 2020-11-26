@@ -19,12 +19,12 @@ import java.util
 
 import com.pingcap.tikv.codec.KeyUtils
 import com.pingcap.tikv.key.Key
-import com.pingcap.tikv.util.FastByteComparisons
+import com.pingcap.tikv.util.{FastByteComparisons, LogDesensitization}
 
 class SerializableKey(val bytes: Array[Byte])
     extends Comparable[SerializableKey]
     with Serializable {
-  override def toString: String = KeyUtils.formatBytes(bytes)
+  override def toString: String = LogDesensitization.hide(KeyUtils.formatBytes(bytes))
 
   override def equals(that: Any): Boolean =
     that match {
