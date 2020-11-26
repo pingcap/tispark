@@ -1,5 +1,4 @@
 /*
- *
  * Copyright 2020 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,21 +11,20 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package com.pingcap.tikv;
+package com.pingcap.tikv.exception;
 
-public class Version {
-  public static final String RESOLVE_LOCK_V2 = "2.0.0";
+public class ResolveLockException extends RuntimeException {
+  public ResolveLockException(Exception e) {
+    super(e);
+  }
 
-  public static final String RESOLVE_LOCK_V3 = "3.0.5";
+  public ResolveLockException(String msg) {
+    super(msg);
+  }
 
-  public static final String RESOLVE_LOCK_V4 = "4.0.0";
-
-  public static final String BATCH_WRITE = "3.0.14";
-
-  public static final String NEW_ROW_FORMAT = "4.0.0";
-
-  public static final String ASYNC_COMMIT = "4.1.0";
+  public ResolveLockException(String msg, Exception e) {
+    super(msg, e);
+  }
 }

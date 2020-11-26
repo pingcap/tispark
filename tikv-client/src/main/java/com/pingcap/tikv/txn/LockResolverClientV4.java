@@ -20,12 +20,15 @@ package com.pingcap.tikv.txn;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnNotFound;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.TiConfiguration;
+import com.pingcap.tikv.Utils;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.exception.TxnNotFoundException;
 import com.pingcap.tikv.exception.WriteConflictException;
 import com.pingcap.tikv.operation.KVErrorHandler;
@@ -34,9 +37,12 @@ import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.region.TiRegion.RegionVerID;
+import com.pingcap.tikv.txn.type.GroupKeyResult;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
+import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.util.TsoUtils;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -44,17 +50,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import org.tikv.kvproto.TikvGrpc.TikvStub;
 
-/** Since v4.0.0 TiDB write will not block read (update MinCommitTS). */
+/**
+ * Since v4.0.0 TiDB write will not block read (update MinCommitTS). Since v5.0.0 TiDB supports
+ * Async-Commit.
+ */
 public class LockResolverClientV4 extends AbstractRegionStoreClient
     implements AbstractLockResolverClient {
   private static final Logger logger = LoggerFactory.getLogger(LockResolverClientV4.class);
@@ -118,7 +132,9 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
         Set<RegionVerID> cleanRegion =
             cleanTxns.computeIfAbsent(l.getTxnID(), k -> new HashSet<>());
 
-        if (l.getLockType() == org.tikv.kvproto.Kvrpcpb.Op.PessimisticLock) {
+        if (status.getPrimaryLock() != null && status.getPrimaryLock().getUseAsyncCommit()) {
+          resolveLockAsync(bo, l, status);
+        } else if (l.getLockType() == org.tikv.kvproto.Kvrpcpb.Op.PessimisticLock) {
           resolvePessimisticLock(bo, l, cleanRegion);
         } else {
           resolveLock(bo, l, status, cleanRegion);
@@ -215,7 +231,12 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
   private TxnStatus getTxnStatusFromLock(BackOffer bo, Lock lock, long callerStartTS) {
     long currentTS;
 
-    if (lock.getTtl() == 0) {
+    if (lock.isUseAsyncCommit()) {
+      // Async commit doesn't need the current ts since it uses the minCommitTS.
+      currentTS = 0;
+      // Set to 0 so as not to push forward min commit ts.
+      callerStartTS = 0;
+    } else if (lock.getTtl() == 0) {
       // NOTE: l.TTL = 0 is a special protocol!!!
       // When the pessimistic txn prewrite meets locks of a txn, it should resolve the lock
       // **unconditionally**.
@@ -240,7 +261,10 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
         // getTxnStatus() returns it when the secondary locks exist while the primary lock doesn't.
         // This is likely to happen in the concurrently prewrite when secondary regions
         // success before the primary region.
-        bo.doBackOff(BoTxnNotFound, e);
+        try {
+          bo.doBackOff(BoTxnNotFound, e);
+        } catch (Throwable ignored) {
+        }
       }
 
       if (TsoUtils.untilExpired(lock.getTxnID(), lock.getTtl()) <= 0) {
@@ -342,15 +366,233 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
         throw new KeyException(keyError);
       }
 
-      if (resp.getLockTtl() != 0) {
-        status = new TxnStatus(resp.getLockTtl(), 0L, resp.getAction());
+      status = new TxnStatus();
+      status.setAction(resp.getAction());
+      status.setPrimaryLock(resp.getLockInfo());
+
+      if (status.getPrimaryLock() != null && status.getPrimaryLock().getUseAsyncCommit()) {
+        if (!TsoUtils.isExpired(txnID, resp.getLockTtl())) {
+          status.setTtl(resp.getLockTtl());
+        }
+      } else if (resp.getLockTtl() != 0) {
+        status.setTtl(resp.getLockTtl());
       } else {
-        status = new TxnStatus(0L, resp.getCommitVersion(), resp.getAction());
+        status.setCommitTS(resp.getCommitVersion());
         saveResolved(txnID, status);
       }
 
       return status;
     }
+  }
+
+  /** resolveLockAsync resolves lock assuming it was locked using the async commit protocol. */
+  private void resolveLockAsync(BackOffer bo, Lock lock, TxnStatus status) {
+    AsyncResolveData resolveData = checkAllSecondaries(bo, lock, status);
+
+    status.setCommitTS(resolveData.getCommitTs());
+
+    resolveData.appendKey(lock.getPrimary());
+
+    GroupKeyResult groupResult =
+        Utils.groupKeysByRegion(this.regionManager, resolveData.getKeys(), bo);
+
+    logger.info(
+        String.format(
+            "resolve async commit, startTS=%d, commitTS=%d",
+            lock.getTxnID(), status.getCommitTS()));
+
+    ExecutorService executorService =
+        Executors.newFixedThreadPool(
+            conf.getKvClientConcurrency(), new ThreadFactoryBuilder().setDaemon(true).build());
+    ExecutorCompletionService<Boolean> completionService =
+        new ExecutorCompletionService<>(executorService);
+
+    for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry :
+        groupResult.getGroupsResult().entrySet()) {
+      TiRegion tiRegion = entry.getKey().first;
+      List<ByteString> keys = entry.getValue();
+      completionService.submit(() -> resolveRegionLocks(bo, lock, tiRegion, keys, status));
+    }
+
+    try {
+      for (int i = 0; i < groupResult.getGroupsResult().size(); i++) {
+        completionService.take().get();
+      }
+    } catch (InterruptedException e) {
+      logger.info("async commit recovery (sending ResolveLock) finished with errors", e);
+      Thread.currentThread().interrupt();
+      throw new TiKVException("Current thread interrupted.", e);
+    } catch (ExecutionException e) {
+      logger.info("async commit recovery (sending ResolveLock) finished with errors", e);
+      throw new TiKVException("Execution exception met.", e);
+    } catch (Throwable e) {
+      logger.info("async commit recovery (sending ResolveLock) finished with errors", e);
+      throw e;
+    } finally {
+      executorService.shutdownNow();
+    }
+  }
+
+  /**
+   * checkAllSecondaries checks the secondary locks of an async commit transaction to find out the
+   * final status of the transaction
+   */
+  private AsyncResolveData checkAllSecondaries(BackOffer bo, Lock lock, TxnStatus status) {
+    AsyncResolveData shared =
+        new AsyncResolveData(status.getPrimaryLock().getMinCommitTs(), new ArrayList<>(), false);
+
+    GroupKeyResult groupResult =
+        Utils.groupKeysByRegion(
+            this.regionManager, status.getPrimaryLock().getSecondariesList(), bo);
+
+    ExecutorService executorService =
+        Executors.newFixedThreadPool(
+            conf.getKvClientConcurrency(), new ThreadFactoryBuilder().setDaemon(true).build());
+    ExecutorCompletionService<Boolean> completionService =
+        new ExecutorCompletionService<>(executorService);
+
+    for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry :
+        groupResult.getGroupsResult().entrySet()) {
+      TiRegion tiRegion = entry.getKey().first;
+      List<ByteString> keys = entry.getValue();
+      completionService.submit(() -> checkSecondaries(bo, lock.getTxnID(), keys, tiRegion, shared));
+    }
+
+    try {
+      for (int i = 0; i < groupResult.getGroupsResult().size(); i++) {
+        completionService.take().get();
+      }
+      return shared;
+    } catch (InterruptedException e) {
+      logger.info("async commit recovery (sending CheckSecondaryLocks) finished with errors", e);
+      Thread.currentThread().interrupt();
+      throw new TiKVException("Current thread interrupted.", e);
+    } catch (ExecutionException e) {
+      logger.info("async commit recovery (sending CheckSecondaryLocks) finished with errors", e);
+      throw new TiKVException("Execution exception met.", e);
+    } catch (Throwable e) {
+      logger.info("async commit recovery (sending CheckSecondaryLocks) finished with errors", e);
+      throw e;
+    } finally {
+      executorService.shutdownNow();
+    }
+  }
+
+  private boolean checkSecondaries(
+      BackOffer bo,
+      long txnID,
+      List<ByteString> curKeys,
+      TiRegion tiRegion,
+      AsyncResolveData shared) {
+    RegionStoreClient regionStoreClient = clientBuilder.build(tiRegion);
+
+    Supplier<Kvrpcpb.CheckSecondaryLocksRequest> factory =
+        () ->
+            Kvrpcpb.CheckSecondaryLocksRequest.newBuilder()
+                .setContext(tiRegion.getContext())
+                .setStartVersion(txnID)
+                .addAllKeys(curKeys)
+                .build();
+
+    KVErrorHandler<Kvrpcpb.CheckSecondaryLocksResponse> handler =
+        new KVErrorHandler<>(
+            regionManager,
+            regionStoreClient,
+            regionStoreClient.lockResolverClient,
+            tiRegion,
+            resp -> null,
+            resp -> null,
+            resolveLockResult -> null,
+            0L,
+            false);
+
+    Kvrpcpb.CheckSecondaryLocksResponse resp =
+        regionStoreClient.callWithRetry(
+            bo, TikvGrpc.getKvCheckSecondaryLocksMethod(), factory, handler);
+
+    if (resp == null) {
+      logger.error("getKvCheckSecondaryLocksMethod failed without a cause");
+      regionManager.onRequestFail(tiRegion);
+      bo.doBackOff(
+          BoRegionMiss,
+          new TiClientInternalException("getKvCheckSecondaryLocksMethod failed without a cause"));
+
+      logger.debug(
+          String.format(
+              "checkSecondaries: region error, regrouping, txnID=%d, regionId=%d",
+              txnID, tiRegion.getId()));
+      // If regions have changed, then we might need to regroup the keys. Since this should be rare
+      // and for the sake of simplicity, we will resolve regions sequentially.
+      GroupKeyResult groupResult = Utils.groupKeysByRegion(this.regionManager, curKeys, bo);
+      for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry :
+          groupResult.getGroupsResult().entrySet()) {
+        TiRegion region = entry.getKey().first;
+        List<ByteString> keys = entry.getValue();
+        checkSecondaries(bo, txnID, keys, region, shared);
+      }
+    }
+
+    shared.addKeys(resp.getLocksList(), curKeys.size(), txnID, resp.getCommitTs());
+    return true;
+  }
+
+  /**
+   * resolveRegionLocks is essentially the same as resolveLock, but we resolve all keys in the same
+   * region at the same time.
+   */
+  private boolean resolveRegionLocks(
+      BackOffer bo, Lock lock, TiRegion tiRegion, List<ByteString> keys, TxnStatus status) {
+    RegionStoreClient regionStoreClient = clientBuilder.build(tiRegion);
+
+    Supplier<Kvrpcpb.ResolveLockRequest> factory =
+        () ->
+            Kvrpcpb.ResolveLockRequest.newBuilder()
+                .setContext(tiRegion.getContext())
+                .setStartVersion(lock.getTxnID())
+                .setCommitVersion(status.getCommitTS())
+                .addAllKeys(keys)
+                .build();
+
+    KVErrorHandler<Kvrpcpb.ResolveLockResponse> handler =
+        new KVErrorHandler<>(
+            regionManager,
+            regionStoreClient,
+            regionStoreClient.lockResolverClient,
+            tiRegion,
+            resp -> null,
+            resp -> null,
+            resolveLockResult -> null,
+            0L,
+            false);
+
+    Kvrpcpb.ResolveLockResponse resp =
+        regionStoreClient.callWithRetry(bo, TikvGrpc.getKvResolveLockMethod(), factory, handler);
+
+    if (resp == null || resp.hasRegionError()) {
+      logger.error("getKvResolveLockMethod failed without a cause");
+      regionManager.onRequestFail(tiRegion);
+      bo.doBackOff(
+          BoRegionMiss,
+          new TiClientInternalException("getKvResolveLockMethod failed without a cause"));
+
+      logger.debug(
+          String.format(
+              "resolveRegionLocks region error, regrouping lock=%s region=%d",
+              lock, tiRegion.getId()));
+
+      // Regroup locks.
+      GroupKeyResult groupResult = Utils.groupKeysByRegion(this.regionManager, keys, bo);
+      for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry :
+          groupResult.getGroupsResult().entrySet()) {
+        TiRegion region = entry.getKey().first;
+        resolveRegionLocks(bo, lock, region, entry.getValue(), status);
+      }
+    } else if (resp.hasError()) {
+      logger.error(
+          String.format("unexpected resolveLock err: %s, lock: %s", resp.getError(), lock));
+      throw new KeyException(resp.getError());
+    }
+    return true;
   }
 
   private void resolveLock(
