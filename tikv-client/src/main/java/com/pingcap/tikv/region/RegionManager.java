@@ -30,6 +30,7 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import com.pingcap.tikv.util.LogDesensitization;
 import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -99,7 +100,8 @@ public class RegionManager {
       ByteString key, TiStoreType storeType, BackOffer backOffer) {
     TiRegion region = cache.getRegionByKey(key, backOffer);
     if (region == null) {
-      throw new TiClientInternalException("Region not exist for key:" + formatBytesUTF8(key));
+      throw new TiClientInternalException(
+          "Region not exist for key:" + LogDesensitization.hide(formatBytesUTF8(key)));
     }
     if (!region.isValid()) {
       throw new TiClientInternalException("Region invalid: " + region.toString());
@@ -203,11 +205,14 @@ public class RegionManager {
       regionId = keyToRegionIdCache.get(Key.toRawKey(key));
       if (logger.isDebugEnabled()) {
         logger.debug(
-            String.format("getRegionByKey key[%s] -> ID[%s]", formatBytesUTF8(key), regionId));
+            String.format(
+                "getRegionByKey key[%s] -> ID[%s]",
+                LogDesensitization.hide(formatBytesUTF8(key)), regionId));
       }
 
       if (regionId == null) {
-        logger.debug("Key not find in keyToRegionIdCache:" + formatBytesUTF8(key));
+        logger.debug(
+            "Key not find in keyToRegionIdCache:" + LogDesensitization.hide(formatBytesUTF8(key)));
         TiRegion region = pdClient.getRegionByKey(backOffer, key);
         if (!putRegion(region)) {
           throw new TiClientInternalException("Invalid Region: " + region.toString());

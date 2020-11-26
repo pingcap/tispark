@@ -47,7 +47,7 @@ class StatisticsTestSuite extends BasePlanTest {
   protected var fDataTbl: TiTableInfo = _
   protected var fDataIdxTbl: TiTableInfo = _
 
-  test("Test fixed table size estimation") {
+  ignore("Test fixed table size estimation") {
     tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_float`")
     tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_int`")
     tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_time`")
@@ -93,7 +93,8 @@ class StatisticsTestSuite extends BasePlanTest {
     assert(timeBytes >= 19 * 2)
   }
 
-  test("select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
+  ignore(
+    "select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
     val indexes = fDataIdxTbl.getIndices.asScala
     val idx = indexes.filter(_.getIndexColumns.asScala.exists(_.matchName("tp_int"))).head
 
@@ -107,7 +108,7 @@ class StatisticsTestSuite extends BasePlanTest {
     testSelectRowCount(expressions, idx, 46)
   }
 
-  test(
+  ignore(
     "select tp_int from full_data_type_table_idx where tp_int < 5390653 and tp_int > -46759812") {
     val indexes = fDataIdxTbl.getIndices.asScala
     val idx = indexes.filter(_.getIndexColumns.asScala.exists(_.matchName("tp_int"))).head
@@ -157,7 +158,7 @@ class StatisticsTestSuite extends BasePlanTest {
   tableScanCases.foreach { query =>
     {
       val tableName = "full_data_type_table_idx"
-      test(query) {
+      ignore(query) {
         if (isEnableAlterPrimaryKey) {
           cancel()
         }
@@ -170,7 +171,7 @@ class StatisticsTestSuite extends BasePlanTest {
   indexScanCases.foreach {
     case (query, idxName) =>
       val tableName = "full_data_type_table_idx"
-      test(query) {
+      ignore(query) {
         val df = spark.sql(query)
         checkIsIndexScan(df, tableName)
         checkIndex(df, idxName)
@@ -180,7 +181,7 @@ class StatisticsTestSuite extends BasePlanTest {
   coveringIndexScanCases.foreach {
     case (query, idxName) =>
       val tableName = "full_data_type_table_idx"
-      test(query) {
+      ignore(query) {
         if (isEnableAlterPrimaryKey) {
           cancel()
         }

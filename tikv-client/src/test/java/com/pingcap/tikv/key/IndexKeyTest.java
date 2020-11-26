@@ -15,6 +15,7 @@
 
 package com.pingcap.tikv.key;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -51,6 +52,8 @@ public class IndexKeyTest {
     Key k1 = Key.toRawKey(new byte[] {1, 2, 3, 4});
     TypedKey k2 = TypedKey.toTypedKey(666, IntegerType.INT);
     IndexKey ik = IndexKey.toIndexKey(0, 0, k1, Key.NULL, k2);
-    assertEquals("[{1,2,3,4},null,666]", ik.toString());
+    assertArrayEquals(ik.getDataKeys()[0].getBytes(), new byte[] {1, 2, 3, 4});
+    assertArrayEquals(ik.getDataKeys()[1].getBytes(), new byte[] {0});
+    assertArrayEquals(ik.getDataKeys()[2].getBytes(), new byte[] {3, -128, 0, 0, 0, 0, 0, 2, -102});
   }
 }
