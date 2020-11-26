@@ -23,6 +23,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.FastByteComparisons;
+import com.pingcap.tikv.util.LogDesensitization;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 
@@ -201,7 +202,7 @@ public class Key implements Comparable<Key> {
     } else if (infFlag > 0) {
       return "+INF";
     } else {
-      return String.format("{%s}", formatBytes(value));
+      return String.format("{%s}", LogDesensitization.hide(formatBytes(value)));
     }
   }
 }

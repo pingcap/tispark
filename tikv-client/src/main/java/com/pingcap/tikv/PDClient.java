@@ -164,6 +164,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
           backOffer.doBackOff(
               BackOffFuncType.BoRegionMiss, new GrpcException("waiting scatter region"));
           logger.info(
+              // LogDesensitization: show region key range in log
               String.format(
                   "wait scatter region %d at key %s is %s",
                   region.getId(),
