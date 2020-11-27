@@ -20,6 +20,7 @@ package com.pingcap.tikv.row;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.util.LogDesensitization;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Time;
@@ -189,7 +190,7 @@ public class ObjectRowImpl implements Row {
     for (int i = 0; i < values.length; i++) {
       if (values[i] instanceof byte[]) {
         builder.append("[");
-        builder.append(KeyUtils.formatBytes(((byte[]) values[i])));
+        builder.append(LogDesensitization.hide(KeyUtils.formatBytes(((byte[]) values[i]))));
         builder.append("]");
       } else if (values[i] instanceof BigDecimal) {
         builder.append(((BigDecimal) values[i]).toPlainString());
