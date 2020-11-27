@@ -57,6 +57,12 @@ public class TiTableInfo implements Serializable {
   private final long maxShardRowIDBits;
   private final TiSequenceInfo sequenceInfo;
 
+  /** without hiden column */
+  private final List<TiColumnInfo> columnsWithoutHidden;
+
+  /** without invisible index & hidden column's index */
+  private final List<TiIndexInfo> indicesWithoutHiddenAndInvisible;
+
   @JsonCreator
   @JsonIgnoreProperties(ignoreUnknown = true)
   public TiTableInfo(
@@ -85,6 +91,8 @@ public class TiTableInfo implements Serializable {
     this.collate = collate;
     if (sequenceInfo == null) {
       this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
+      this.columnsWithoutHidden =
+          columns.stream().filter(col -> !col.isHidden()).collect(Collectors.toList());
       this.columnsMap = new HashMap<>();
       for (TiColumnInfo col : this.columns) {
         this.columnsMap.put(col.getName(), col);
@@ -92,6 +100,7 @@ public class TiTableInfo implements Serializable {
       this.rowSize = columns.stream().mapToLong(TiColumnInfo::getSize).sum();
     } else {
       this.columns = null;
+      this.columnsWithoutHidden = null;
       this.columnsMap = null;
       // 9 is the rowSize for type bigint
       this.rowSize = 9;
@@ -99,6 +108,22 @@ public class TiTableInfo implements Serializable {
     // TODO: Use more precise predication according to types
     this.pkIsHandle = pkIsHandle;
     this.indices = indices != null ? ImmutableList.copyOf(indices) : ImmutableList.of();
+    this.indicesWithoutHiddenAndInvisible =
+        this.indices
+            .stream()
+            .filter(
+                idx -> {
+                  if (idx.isInvisible()) {
+                    return false;
+                  }
+                  for (TiIndexColumn idc : idx.getIndexColumns()) {
+                    if (getColumn(idc.getName()).isHidden()) {
+                      return false;
+                    }
+                  }
+                  return true;
+                })
+            .collect(Collectors.toList());
     if (this.columns != null) {
       this.indices.forEach(x -> x.calculateIndexSize(columns));
     }
@@ -136,7 +161,7 @@ public class TiTableInfo implements Serializable {
   }
 
   public boolean hasAutoIncrementColumn() {
-    for (TiColumnInfo tiColumnInfo : getColumns()) {
+    for (TiColumnInfo tiColumnInfo : getColumns(true)) {
       if (tiColumnInfo.isAutoIncrement()) {
         return true;
       }
@@ -145,7 +170,7 @@ public class TiTableInfo implements Serializable {
   }
 
   public TiColumnInfo getAutoIncrementColInfo() {
-    for (TiColumnInfo tiColumnInfo : getColumns()) {
+    for (TiColumnInfo tiColumnInfo : getColumns(true)) {
       if (tiColumnInfo.isAutoIncrement()) {
         return tiColumnInfo;
       }
@@ -180,7 +205,15 @@ public class TiTableInfo implements Serializable {
   }
 
   public List<TiColumnInfo> getColumns() {
-    return columns;
+    return getColumns(false);
+  }
+
+  public List<TiColumnInfo> getColumns(boolean includingAll) {
+    if (includingAll) {
+      return this.columns;
+    } else {
+      return this.columnsWithoutHidden;
+    }
   }
 
   public long getEstimatedRowSizeInByte() {
@@ -192,10 +225,15 @@ public class TiTableInfo implements Serializable {
   }
 
   public TiColumnInfo getColumn(int offset) {
-    if (offset < 0 || offset >= columns.size()) {
+    return getColumn(offset, false);
+  }
+
+  public TiColumnInfo getColumn(int offset, boolean includingHidden) {
+    List<TiColumnInfo> tiColumnList = getColumns(includingHidden);
+    if (offset < 0 || offset >= tiColumnList.size()) {
       throw new TiClientInternalException(String.format("Column offset %d out of bound", offset));
     }
-    return columns.get(offset);
+    return tiColumnList.get(offset);
   }
 
   public boolean isPkHandle() {
@@ -206,11 +244,11 @@ public class TiTableInfo implements Serializable {
     return getIndices(false);
   }
 
-  public List<TiIndexInfo> getIndices(boolean includingInvisible) {
-    if (includingInvisible) {
-      return indices;
+  public List<TiIndexInfo> getIndices(boolean includingAll) {
+    if (includingAll) {
+      return this.indices;
     } else {
-      return indices.stream().filter(idx -> !idx.isInvisible()).collect(Collectors.toList());
+      return this.indicesWithoutHiddenAndInvisible;
     }
   }
 
@@ -258,7 +296,7 @@ public class TiTableInfo implements Serializable {
   // and there exists only one PK column
   public TiColumnInfo getPKIsHandleColumn() {
     if (isPkHandle()) {
-      for (TiColumnInfo col : getColumns()) {
+      for (TiColumnInfo col : getColumns(true)) {
         if (col.isPrimaryKey()) {
           return col;
         }
@@ -283,17 +321,18 @@ public class TiTableInfo implements Serializable {
             col.getDefaultValueBit(),
             col.getComment(),
             col.getVersion(),
-            col.getGeneratedExprString())
+            col.getGeneratedExprString(),
+            col.isHidden())
         .copyWithoutPrimaryKey();
   }
 
   public TiTableInfo copyTableWithRowId() {
     if (!isPkHandle()) {
       ImmutableList.Builder<TiColumnInfo> newColumns = ImmutableList.builder();
-      for (TiColumnInfo col : getColumns()) {
+      for (TiColumnInfo col : getColumns(true)) {
         newColumns.add(copyColumn(col));
       }
-      newColumns.add(TiColumnInfo.getRowIdColumn(getColumns().size()));
+      newColumns.add(TiColumnInfo.getRowIdColumn(getColumns(true).size()));
       return new TiTableInfo(
           getId(),
           CIStr.newCIStr(getName()),
@@ -301,7 +340,7 @@ public class TiTableInfo implements Serializable {
           getCollate(),
           true,
           newColumns.build(),
-          getIndices(),
+          getIndices(true),
           getComment(),
           getAutoIncId(),
           getMaxColumnId(),
@@ -330,7 +369,7 @@ public class TiTableInfo implements Serializable {
   }
 
   public boolean hasGeneratedColumn() {
-    for (TiColumnInfo col : getColumns()) {
+    for (TiColumnInfo col : getColumns(true)) {
       if (col.isGeneratedColumn()) {
         return true;
       }

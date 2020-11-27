@@ -219,7 +219,7 @@ Do not use `spark.sql.session.timeZone`.
 
 For how TiSpark can benefit from TiDB's statistic information, see [here](./docs/userguide.md).
 
-## Compatibility with TiDB 3.0
+## Compatibility with TiDB
 
 ### View
 
@@ -234,6 +234,12 @@ TiSpark currently **does not support** `view`. Users are not be able to observe 
 TiSpark currently supports `Range Partition` and `Hash Partition`. Users can select data from the `Range Partition` table and the `Hash Partition` table through TiSpark.
 
 In most cases, TiSpark use a full table scan on partition tables. Only in certain cases, TiSpark applies partition pruning. For more details, see [here](./docs/userguide.md).
+
+### Expression Index
+
+`tidb-5.0` supports `Expression Index`.
+
+TiSpark currently supports retrieving data from table with `Expression Index`, but the `Expression Index` will not be used by the planner of TiSpark.
 
 ## Upgrade from TiDB-2.x to TiDB-3.x
 When upgrading from TiDB-2.x to TiDB-3.x,
