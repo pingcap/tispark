@@ -22,7 +22,7 @@ import org.apache.spark.sql.functions._
 class LineItemSuite extends BaseTiSparkEnableBatchWriteTest {
 
   private val table = "LINEITEM"
-  private val where = "where L_PARTKEY < 100000"
+  private val where = "where L_PARTKEY < 10"
   private val batchWriteTablePrefix = "BATCH.WRITE"
   private val isPkHandlePrefix = "isPkHandle"
   private val replacePKHandlePrefix = "replacePKHandle"
