@@ -546,4 +546,17 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected case class TestTables(dbName: String, tables: String*)
 
+  protected lazy val supportExpressionIndex: Boolean = {
+    var result = true
+    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute("create table t (name varchar(64));")
+    try {
+      tidbStmt.execute("CREATE INDEX idx ON t ((lower(name)));")
+    } catch {
+      case e: Throwable => result = false
+    } finally {
+      tidbStmt.execute("drop table if exists t")
+    }
+    result
+  }
 }

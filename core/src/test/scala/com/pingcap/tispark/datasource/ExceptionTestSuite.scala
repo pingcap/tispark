@@ -86,4 +86,27 @@ class ExceptionTestSuite extends BaseBatchWriteTest("test_datasource_exception_t
           .equals("Insert null value to not null column! rows contain illegal null values!"))
     }
   }
+
+  test("Insert to table with expression index") {
+    if (!supportExpressionIndex) {
+      cancel("current version of TiDB does not support expression index!")
+    }
+
+    val row1 = Row("a")
+    val row2 = Row("PingCAP")
+
+    val schema = StructType(List(StructField("name", StringType)))
+
+    jdbcUpdate(s"create table $dbtable(name varchar(64))")
+    jdbcUpdate(s"CREATE INDEX idx ON $dbtable ((lower(name)));")
+
+    {
+      val caught = intercept[TiBatchWriteException] {
+        tidbWrite(List(row1, row2), schema)
+      }
+      assert(
+        caught.getMessage.equals(
+          "tispark currently does not support write data to table with generated column!"))
+    }
+  }
 }
