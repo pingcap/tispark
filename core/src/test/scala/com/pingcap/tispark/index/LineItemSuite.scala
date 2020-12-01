@@ -38,7 +38,7 @@ class LineItemSuite extends BaseTiSparkEnableBatchWriteTest {
     tidbStmt.execute(s"create table if not exists `$tableToWrite` like $table ")
   }
 
-  test("ti batch write: lineitem") {
+  ignore("ti batch write: lineitem") {
     val tableToWrite = s"${batchWriteTablePrefix}_$table"
 
     // select
@@ -67,7 +67,7 @@ class LineItemSuite extends BaseTiSparkEnableBatchWriteTest {
     assert(count == originCount)
   }
 
-  test("ti batch write: isPkHandle: lineitem") {
+  ignore("ti batch write: isPkHandle: lineitem") {
     val tableToWrite = s"${batchWriteTablePrefix}_${isPkHandlePrefix}_$table"
     tidbStmt.execute(s"drop table if exists `$tableToWrite`")
     val createTableSQL =
@@ -128,7 +128,7 @@ class LineItemSuite extends BaseTiSparkEnableBatchWriteTest {
     assert(diff.isEmpty)
   }
 
-  test("ti batch write: replace + isPkHandle: lineitem") {
+  ignore("ti batch write: replace + isPkHandle: lineitem") {
     val tableToWrite = s"${batchWriteTablePrefix}_${replacePKHandlePrefix}_$table"
     tidbStmt.execute(s"drop table if exists `$tableToWrite`")
     val createTableSQL =
@@ -202,7 +202,7 @@ class LineItemSuite extends BaseTiSparkEnableBatchWriteTest {
     assert(diff.lengthCompare(dfCount2 * 2) == 0)
   }
 
-  test("ti batch write: replace + uniqueKey: lineitem") {
+  ignore("ti batch write: replace + uniqueKey: lineitem") {
     val tableToWrite = s"${batchWriteTablePrefix}_${replaceUniquePrefix}_$table"
     tidbStmt.execute(s"drop table if exists `$tableToWrite`")
     val createTableSQL =
