@@ -357,7 +357,7 @@ Q: How to use SparkR with TiSpark?
 
 A: Follow [TiSpark on SparkR](../R/README.md).
 
-##14. Errors and Exceptions
+## 14. Errors and Exceptions
 
 ### Netty OutOfDirectMemoryError
 
