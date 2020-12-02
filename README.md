@@ -162,6 +162,8 @@ You can read more about test [here](./core/src/test/Readme.md).
 
 1. Spark config `spark.sql.runSQLOnFiles` should not be set to `false`, or you may got `Error in query: Table or view not found` error.
 
+2. Spark command `show create table` can't display tables in TiDB.
+
 ## Follow us
 
 ### Twitter
