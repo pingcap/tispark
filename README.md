@@ -281,6 +281,10 @@ For the former method, you can use `docker-compose up -d` to launch TiDB cluster
 
 For more details about the test, see [here](./core/src/test/Readme.md).
 
+## Limitations
+
+1. Spark config `spark.sql.runSQLOnFiles` should not be set to `false`, or you may got `Error in query: Table or view not found` error.
+
 ## Follow us
 
 ### Twitter
