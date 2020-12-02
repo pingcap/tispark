@@ -287,6 +287,8 @@ For more details about the test, see [here](./core/src/test/Readme.md).
 
 2. Spark command `show create table` can't display tables in TiDB.
 
+3. Using the style of "{db}.{table}.{colname}" in the condition is not supported, e.g. `select * from t where db.t.col1 = 1`.
+
 ## Follow us
 
 ### Twitter
