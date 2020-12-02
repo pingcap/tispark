@@ -356,3 +356,20 @@ A: Follow [TiSpark on PySpark](../python/README.md).
 Q: How to use SparkR with TiSpark?
 
 A: Follow [TiSpark on SparkR](../R/README.md).
+
+##14. Errors and Exceptions
+
+### Netty OutOfDirectMemoryError
+
+Netty's `PoolThreadCache` may hold some unused memory, which may cause the following error.
+
+```
+Caused by: shade.io.netty.handler.codec.DecoderException: shade.io.netty.util.internal.OutOfDirectMemoryError
+```
+
+The following configurations can be used to avoid the error.
+
+```
+--conf "spark.driver.extraJavaOptions=-Dshade.io.netty.allocator.type=unpooled"
+--conf "spark.executor.extraJavaOptions=-Dshade.io.netty.allocator.type=unpooled"
+```
