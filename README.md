@@ -158,6 +158,10 @@ If you prefer the docker way, you can use `docker-compose up -d` to launch tidb 
 
 You can read more about test [here](./core/src/test/Readme.md).
 
+## Limitations
+
+1. Spark config `spark.sql.runSQLOnFiles` should not be set to `false`, or you may got `Error in query: Table or view not found` error.
+
 ## Follow us
 
 ### Twitter
