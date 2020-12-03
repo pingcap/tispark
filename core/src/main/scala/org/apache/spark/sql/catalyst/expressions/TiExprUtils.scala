@@ -174,8 +174,7 @@ object TiExprUtils {
       tiDBRelation: TiDBRelation,
       blocklist: ExpressionBlocklist): Boolean =
     aggExpr.aggregateFunction match {
-      case Average(_) | Sum(_) | SumNotNullable(_) | PromotedSum(_) | Count(_) | Min(_) | Max(
-            _) =>
+      case Average(_) | Sum(_) | SumNotNullable(_) | PromotedSum(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
             .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))
