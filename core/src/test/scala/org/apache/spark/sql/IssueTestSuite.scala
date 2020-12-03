@@ -25,7 +25,18 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute("drop table if exists t1")
     tidbStmt.execute("create table t1(a int)")
     tidbStmt.execute("insert into t1 values (1), (null)")
-    spark.sql("select count(*) from t1").show()
+
+    spark.sql("explain select count(*) from t1").show(false)
+    spark.sql("select count(*) from t1").show(false)
+    assert(2 == spark.sql("select count(*) from t1").collect().head.get(0))
+
+    spark.sql("explain select count(*) from t1 where isnull(a)").show(false)
+    spark.sql("select count(*) from t1 where isnull(a)").show(false)
+    assert(1 == spark.sql("select count(*) from t1 where isnull(a)").collect().head.get(0))
+
+    spark.sql("explain select count(*) from t1 where !isnull(a)").show(false)
+    spark.sql("select count(*) from t1 where !isnull(a)").show(false)
+    assert(1 == spark.sql("select count(*) from t1 where !isnull(a)").collect().head.get(0))
   }
 
   test("year type index plan") {
