@@ -316,6 +316,12 @@ class TiBatchWriteTable(
   }
 
   def checkUnsupported(): Unit = {
+    // write to table with auto random column
+    if (tiTableInfo.hasAutoRandomColumn) {
+      throw new TiBatchWriteException(
+        "tispark currently does not support write data to table with auto random column!")
+    }
+
     // write to partition table
     if (tiTableInfo.isPartitionEnabled) {
       throw new TiBatchWriteException(
