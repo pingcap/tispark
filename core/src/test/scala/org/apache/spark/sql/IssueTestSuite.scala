@@ -21,6 +21,13 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("count(*) with null values") {
+    tidbStmt.execute("drop table if exists t1")
+    tidbStmt.execute("create table t1(a int)")
+    tidbStmt.execute("insert into t1 values (1), (null)")
+    spark.sql("select count(*) from t1").show()
+  }
+
   test("year type index plan") {
     tidbStmt.execute("drop table if exists t1")
     tidbStmt.execute("create table t1(id varchar(10),a year, index idx_a (a))")
