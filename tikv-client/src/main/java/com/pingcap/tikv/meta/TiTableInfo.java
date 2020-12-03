@@ -56,6 +56,7 @@ public class TiTableInfo implements Serializable {
   private final long updateTimestamp;
   private final long maxShardRowIDBits;
   private final TiSequenceInfo sequenceInfo;
+  private final long autoRandomBits;
 
   /** without hiden column */
   private final List<TiColumnInfo> columnsWithoutHidden;
@@ -84,7 +85,8 @@ public class TiTableInfo implements Serializable {
       @JsonProperty("version") long version,
       @JsonProperty("update_timestamp") long updateTimestamp,
       @JsonProperty("max_shard_row_id_bits") long maxShardRowIDBits,
-      @JsonProperty("sequence") TiSequenceInfo sequenceInfo) {
+      @JsonProperty("sequence") TiSequenceInfo sequenceInfo,
+      @JsonProperty("auto_random_bits") long autoRandomBits) {
     this.id = id;
     this.name = name.getL();
     this.charset = charset;
@@ -139,6 +141,7 @@ public class TiTableInfo implements Serializable {
     this.updateTimestamp = updateTimestamp;
     this.maxShardRowIDBits = maxShardRowIDBits;
     this.sequenceInfo = sequenceInfo;
+    this.autoRandomBits = autoRandomBits;
 
     TiColumnInfo primaryKey = null;
     if (sequenceInfo == null) {
@@ -276,6 +279,14 @@ public class TiTableInfo implements Serializable {
     return partitionInfo;
   }
 
+  public long getAutoRandomBits() {
+    return autoRandomBits;
+  }
+
+  public boolean hasAutoRandomColumn() {
+    return autoRandomBits > 0;
+  }
+
   public TiFlashReplicaInfo getTiflashReplicaInfo() {
     return tiflashReplicaInfo;
   }
@@ -352,7 +363,8 @@ public class TiTableInfo implements Serializable {
           version,
           updateTimestamp,
           maxShardRowIDBits,
-          null);
+          null,
+          autoRandomBits);
     } else {
       return this;
     }

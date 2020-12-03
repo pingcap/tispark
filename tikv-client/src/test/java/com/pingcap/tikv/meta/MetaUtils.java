@@ -44,6 +44,7 @@ public class MetaUtils {
     private long version = 0L;
     private final long updateTimestamp = 0L;
     private final long maxShardRowIDBits = 0L;
+    private final long autoRandomBits = 0L;
 
     public TableBuilder() {}
 
@@ -164,7 +165,8 @@ public class MetaUtils {
           version,
           updateTimestamp,
           maxShardRowIDBits,
-          null);
+          null,
+          autoRandomBits);
     }
   }
 
