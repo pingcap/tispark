@@ -166,6 +166,8 @@ You can read more about test [here](./core/src/test/Readme.md).
 
 3. Using the style of "{db}.{table}.{colname}" in the condition is not supported, e.g. `select * from t where db.t.col1 = 1`.
 
+4. `Null in aggregration` is not supported, e.g. `select sum(null) from t group by col1`.
+
 ## Follow us
 
 ### Twitter
