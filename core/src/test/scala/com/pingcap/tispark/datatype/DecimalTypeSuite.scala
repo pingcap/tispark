@@ -18,7 +18,7 @@ package com.pingcap.tispark.datatype
 import org.apache.spark.sql.BaseTiSparkTest
 
 class DecimalTypeSuite extends BaseTiSparkTest {
-  ignore("test decimal reading logic") {
+  test("test decimal reading logic") {
     judge("select tp_decimal from full_data_type_table_idx")
     judge("select tp_decimal from full_data_type_table")
   }

@@ -31,7 +31,7 @@ class Between0Suite extends BaseInitialOnceTest {
     "select tp_real from full_data_type_table_idx  where tp_real between 4.44 and 0.5194052764001038 order by id_dt",
     "select tp_real from full_data_type_table_idx  where tp_real between 0.5194052764001038 and 4.44 order by id_dt ")
 
-  ignore("Test index Between") {
+  test("Test index Between") {
     allCases.foreach { query =>
       runTest(query)
     }

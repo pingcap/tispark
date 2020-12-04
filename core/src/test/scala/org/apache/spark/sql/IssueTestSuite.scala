@@ -268,7 +268,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     }
   }
 
-  ignore("cannot resolve column name when specifying table.column") {
+  test("cannot resolve column name when specifying table.column") {
     spark.sql("select full_data_type_table.id_dt from full_data_type_table").explain(true)
     judge("select full_data_type_table.id_dt from full_data_type_table")
     spark
@@ -279,7 +279,7 @@ class IssueTestSuite extends BaseTiSparkTest {
       "select full_data_type_table.id_dt from full_data_type_table join full_data_type_table_idx on full_data_type_table.id_dt = full_data_type_table_idx.id_dt")
   }
 
-  ignore("test date") {
+  test("test date") {
     judge("select tp_date from full_data_type_table where tp_date >= date '2065-04-19'")
     judge(
       "select tp_date, tp_datetime, id_dt from full_data_type_table where tp_date <= date '2065-04-19' order by id_dt limit 10")
@@ -334,7 +334,7 @@ class IssueTestSuite extends BaseTiSparkTest {
       prevRegionIndexScanDowngradeThreshold)
   }
 
-  ignore("Test index task batch size") {
+  test("Test index task batch size") {
     val tiConf = ti.tiConf
     val prevIndexScanBatchSize = tiConf.getIndexScanBatchSize
     tiConf.setIndexScanBatchSize(5)
@@ -485,7 +485,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     judge("select cast(count(1) as char(20)) from `tmp_empty_tbl`")
   }
 
-  ignore("test push down filters when using index double read") {
+  test("test push down filters when using index double read") {
     if (enableTiFlashTest) {
       cancel("ignored in tiflash test")
     }
