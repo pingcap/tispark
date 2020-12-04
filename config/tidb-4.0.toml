@@ -14,3 +14,6 @@ enable-table-lock = true
 # If it is true, we can add the primary key by "alter table", but we may not be able to drop the primary key.
 # In order to support "drop primary key" operation , this flag must be true and the table does not have the pkIsHandle flag.
 alter-primary-key = true
+
+# index-limit is used to deal with compatibility issues. It can only be in [64, 64*8].
+index-limit = 512
