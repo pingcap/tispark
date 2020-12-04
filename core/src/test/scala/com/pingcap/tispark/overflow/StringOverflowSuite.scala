@@ -130,11 +130,13 @@ class StringOverflowSuite extends BaseBatchWriteTest("test_data_type_string_over
       tidbErrorMsg)
   }
 
-  test("Test TEXT Overflow") {
+  // length is 255 for type TEXT(8) in tidb master branch
+  ignore("Test TEXT Overflow") {
     testTextOverflow(false)
   }
 
-  test("Test TEXT as key Overflow") {
+  // length is 255 for type TEXT(8) in tidb master branch
+  ignore("Test TEXT as key Overflow") {
     testTextOverflow(true)
   }
 
