@@ -19,22 +19,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 
 class WriteWriteConflictSuite extends ConcurrencyTest {
-
-  test("Concurrent Insert") {
-      if(blockingRead) {
-        cancel
-      }
-
-    jdbcUpdate(s"create table $dbtable(i int primary key)")
-    (1 to 100).foreach(i => jdbcUpdate(s"insert into $dbtable values ($i)"))
-
-    spark.sql(s"select count(*) from $dbtableWithPrefix").show(false)
-
-
-  }
-
-  private def runTiSparkInsert()
-
   test("write write conflict using TableLock & jdbc") {
     if (!isEnableTableLock) {
       cancel
