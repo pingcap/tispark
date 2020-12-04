@@ -93,8 +93,7 @@ class StatisticsTestSuite extends BasePlanTest {
     assert(timeBytes >= 19 * 2)
   }
 
-  ignore(
-    "select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
+  test("select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
     val indexes = fDataIdxTbl.getIndices.asScala
     val idx = indexes.filter(_.getIndexColumns.asScala.exists(_.matchName("tp_int"))).head
 
@@ -108,7 +107,7 @@ class StatisticsTestSuite extends BasePlanTest {
     testSelectRowCount(expressions, idx, 46)
   }
 
-  ignore(
+  test(
     "select tp_int from full_data_type_table_idx where tp_int < 5390653 and tp_int > -46759812") {
     val indexes = fDataIdxTbl.getIndices.asScala
     val idx = indexes.filter(_.getIndexColumns.asScala.exists(_.matchName("tp_int"))).head

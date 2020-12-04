@@ -78,7 +78,7 @@ class Special0Suite extends BaseInitialOnceTest {
     "select * from full_data_type_table_idx where tp_timestamp <> timestamp(timestamp '2017-11-02 08:47:43')",
     "select * from full_data_type_table_idx where tp_timestamp <> timestamp(timestamp '2017-09-07 11:11:11')")
 
-  ignore("Test index - Date/Timestamp") {
+  test("Test index - Date/Timestamp") {
     allCases.foreach { query =>
       runTest(query)
     }

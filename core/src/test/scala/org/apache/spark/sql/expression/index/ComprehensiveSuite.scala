@@ -50,7 +50,7 @@ class ComprehensiveSuite extends BaseInitialOnceTest {
     """select id_dt from full_data_type_table_idx
       | where (tp_int is null or tp_int = 4355836469450447576) and tp_tinyint < 100 order by 1""".stripMargin)
 
-  ignore("Test index - Comprehensive") {
+  test("Test index - Comprehensive") {
     allCases.foreach { query =>
       runTest(query)
     }
