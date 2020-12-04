@@ -67,7 +67,8 @@ class TiFlashSuite extends BaseTiSparkTest {
     explainAndRunTest("select * from quarterly_report_status", canTestTiFlash = true)
   }
 
-  test("lock on tiflash: not expired") {
+  // ignore https://github.com/pingcap/tispark/issues/1811
+  ignore("lock on tiflash: not expired") {
     cancelIfTiFlashDisabled()
 
     dropTable()
