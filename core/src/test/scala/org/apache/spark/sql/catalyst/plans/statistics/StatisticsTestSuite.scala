@@ -47,7 +47,7 @@ class StatisticsTestSuite extends BasePlanTest {
   protected var fDataTbl: TiTableInfo = _
   protected var fDataIdxTbl: TiTableInfo = _
 
-  ignore("Test fixed table size estimation") {
+  test("Test fixed table size estimation") {
     tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_float`")
     tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_int`")
     tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_time`")
@@ -158,7 +158,7 @@ class StatisticsTestSuite extends BasePlanTest {
   tableScanCases.foreach { query =>
     {
       val tableName = "full_data_type_table_idx"
-      ignore(query) {
+      test(query) {
         if (isEnableAlterPrimaryKey) {
           cancel()
         }
@@ -171,7 +171,7 @@ class StatisticsTestSuite extends BasePlanTest {
   indexScanCases.foreach {
     case (query, idxName) =>
       val tableName = "full_data_type_table_idx"
-      ignore(query) {
+      test(query) {
         val df = spark.sql(query)
         checkIsIndexScan(df, tableName)
         checkIndex(df, idxName)
@@ -181,7 +181,7 @@ class StatisticsTestSuite extends BasePlanTest {
   coveringIndexScanCases.foreach {
     case (query, idxName) =>
       val tableName = "full_data_type_table_idx"
-      ignore(query) {
+      test(query) {
         if (isEnableAlterPrimaryKey) {
           cancel()
         }
