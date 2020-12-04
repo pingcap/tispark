@@ -19,6 +19,7 @@ import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+import org.slf4j.LoggerFactory
 
 case class ConcurrencyTestResult(
     var hasError: Boolean = false,
@@ -27,6 +28,8 @@ case class ConcurrencyTestResult(
     var obj: String = null)
 
 class ConcurrencyTest extends BaseBatchWriteTest("test_concurrency_write_read") {
+
+  override protected val logger = LoggerFactory.getLogger(getClass.getName)
 
   protected val row1 = Row(1, "Value1")
   protected val row2 = Row(2, "Value2")
