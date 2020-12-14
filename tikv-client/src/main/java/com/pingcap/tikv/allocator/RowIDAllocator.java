@@ -14,6 +14,8 @@
  */
 package com.pingcap.tikv.allocator;
 
+import static com.pingcap.tikv.util.BackOffer.ROW_ID_ALLOCATOR_BACKOFF;
+
 import com.google.common.primitives.UnsignedLongs;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.Snapshot;
@@ -26,11 +28,14 @@ import com.pingcap.tikv.codec.MetaCodec;
 import com.pingcap.tikv.exception.AllocateRowIDOverflowException;
 import com.pingcap.tikv.exception.TiBatchWriteException;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.function.Function;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * RowIDAllocator read current start from TiKV and write back 'start+step' back to TiKV. It designs
@@ -44,6 +49,8 @@ public final class RowIDAllocator implements Serializable {
   private final TiConfiguration conf;
   private final long step;
   private long end;
+
+  private static final Logger LOG = LoggerFactory.getLogger(RowIDAllocator.class);
 
   private RowIDAllocator(long maxShardRowIDBits, long dbId, long step, TiConfiguration conf) {
     this.maxShardRowIDBits = maxShardRowIDBits;
@@ -76,6 +83,19 @@ public final class RowIDAllocator implements Serializable {
   }
 
   public static RowIDAllocator create(
+      long dbId, TiTableInfo table, TiConfiguration conf, boolean unsigned, long step) {
+    BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(ROW_ID_ALLOCATOR_BACKOFF);
+    while (true) {
+      try {
+        return doCreate(dbId, table, conf, unsigned, step);
+      } catch (Exception e) {
+        LOG.warn("error during allocating row id", e);
+        backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoServerBusy, e);
+      }
+    }
+  }
+
+  private static RowIDAllocator doCreate(
       long dbId, TiTableInfo table, TiConfiguration conf, boolean unsigned, long step) {
     RowIDAllocator allocator = new RowIDAllocator(table.getMaxShardRowIDBits(), dbId, step, conf);
     if (unsigned) {
