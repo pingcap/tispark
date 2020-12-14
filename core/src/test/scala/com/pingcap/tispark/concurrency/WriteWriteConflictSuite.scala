@@ -17,8 +17,49 @@ package com.pingcap.tispark.concurrency
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 
 class WriteWriteConflictSuite extends ConcurrencyTest {
+  test("write write conflict") {
+    if (blockingRead) {
+      cancel
+    }
+
+    val schema: StructType = StructType(List(StructField("i", IntegerType)))
+
+    jdbcUpdate(s"create table $dbtable(i int primary key)")
+
+    new Thread(new Runnable {
+      override def run(): Unit = {
+        logger.info("start doBatchWriteInBackground")
+        val data: RDD[Row] =
+          sc.makeRDD(List(Row(1001), Row(1002), Row(1003), Row(1004), Row(1005)))
+        val df = sqlContext.createDataFrame(data, schema)
+        df.write
+          .format("tidb")
+          .options(tidbOptions)
+          .option("database", database)
+          .option("table", table)
+          .option("sleepAfterPrewritePrimaryKey", "5000")
+          .option("replace", "true")
+          .mode("append")
+          .save()
+      }
+    }).start()
+
+    val data: RDD[Row] = sc.makeRDD(List(Row(2001), Row(2002), Row(2003), Row(2004), Row(2005)))
+    val df = sqlContext.createDataFrame(data, schema)
+    df.write
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", database)
+      .option("table", table)
+      .mode("append")
+      .save()
+
+    spark.sql(s"select * from $dbtableWithPrefix").show(false)
+  }
+
   test("write write conflict using TableLock & jdbc") {
     if (!isEnableTableLock) {
       cancel
