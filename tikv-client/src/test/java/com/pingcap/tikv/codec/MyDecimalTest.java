@@ -20,6 +20,7 @@ package com.pingcap.tikv.codec;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
@@ -104,6 +105,17 @@ public class MyDecimalTest {
           0x7E, 0xF2, 0x04, 0xC7, 0x2D, 0xFB, 0x2D,
         };
     assertArrayEquals(expected, data);
+  }
+
+  // https://github.com/pingcap/tispark/issues/1864
+  @Test
+  public void toBigDecimalOverflowTest() {
+    int[] wordBuf = new int[9];
+    wordBuf[0] = 24;
+    wordBuf[1] = 375218000;
+    MyDecimal dec = new MyDecimal(14, 2, false, wordBuf);
+    BigDecimal result = dec.toBigDecimal();
+    assertEquals("24375218000.00", result.toPlainString());
   }
 
   // MyDecimalTestStruct is only used for simplifying testing.
