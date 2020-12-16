@@ -791,7 +791,7 @@ public class MyDecimal implements Serializable {
     return x;
   }
 
-  public long toLong() {
+  private long toLong() {
     long x = 0;
     int wordIdx = 0;
     for (int i = this.digitsInt; i > 0; i -= digitsPerWord) {
@@ -818,7 +818,9 @@ public class MyDecimal implements Serializable {
     // 19 is the length of digits of Long.MAX_VALUE
     // If a decimal can be expressed as a long value, we should use toLong method which has
     // better performance than toBigInteger.
-    if (digitsInt + digitsFrac < 19) {
+    if ((digitsInt + digitsPerWord - 1) / digitsPerWord
+            + (digitsFrac + digitsPerWord - 1) / digitsPerWord
+        < (19 + digitsPerWord - 1) / digitsPerWord) {
       return new BigDecimal(BigInteger.valueOf(toLong()), digitsFrac);
     }
     return new BigDecimal(toBigInteger(), digitsFrac);
