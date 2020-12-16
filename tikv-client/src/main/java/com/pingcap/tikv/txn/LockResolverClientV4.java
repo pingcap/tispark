@@ -251,7 +251,13 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     while (true) {
       try {
         return getTxnStatus(
-            bo, lock.getTxnID(), lock.getPrimary(), callerStartTS, currentTS, rollbackIfNotExist);
+            bo,
+            lock.getTxnID(),
+            lock.getPrimary(),
+            callerStartTS,
+            currentTS,
+            rollbackIfNotExist,
+            lock);
       } catch (TxnNotFoundException e) {
         // If the error is something other than txnNotFoundErr, throw the error (network
         // unavailable, tikv down, backoff timeout etc) to the caller.
@@ -294,7 +300,8 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
       ByteString primary,
       Long callerStartTS,
       Long currentTS,
-      boolean rollbackIfNotExist) {
+      boolean rollbackIfNotExist,
+      Lock lock) {
     TxnStatus status = getResolved(txnID);
     if (status != null) {
       return status;
@@ -378,7 +385,25 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
         status.setTtl(resp.getLockTtl());
       } else {
         status.setCommitTS(resp.getCommitVersion());
-        saveResolved(txnID, status);
+
+        // If the transaction is still valid with ttl greater than zero, do nothing.
+        // If its status is certain:
+        //     If transaction is already committed, the result could be cached.
+        //     Otherwise:
+        //       If l.LockType is pessimistic lock type:
+        //           - if its primary lock is pessimistic too, the check txn status result should
+        // not be cached.
+        //           - if its primary lock is prewrite lock type, the check txn status could be
+        // cached, todo.
+        //       If l.lockType is prewrite lock type:
+        //           - always cache the check txn status result.
+        // For prewrite locks, their primary keys should ALWAYS be the correct one and will NOT
+        // change.
+        if (status.isCommitted()
+            || (lock != null
+                && lock.getLockType() != org.tikv.kvproto.Kvrpcpb.Op.PessimisticLock)) {
+          saveResolved(txnID, status);
+        }
       }
 
       return status;
