@@ -1,6 +1,20 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.11] 2020-12-17
+### Fixes
+- Fix the resolved txn status cache for pessimistic txn [#1868](https://github.com/pingcap/tispark/pull/1868)
+- Fix overflow when convert big MyDecimal to BigDecimal [#1869](https://github.com/pingcap/tispark/pull/1869)
+- Add retry in RowIDAllocator [#1856](https://github.com/pingcap/tispark/pull/1856)
+- Fix select count where values contains null [#1841](https://github.com/pingcap/tispark/pull/1841)
+- Do not retry for some key error [#1799](https://github.com/pingcap/tispark/pull/1799)
+- Disable year type index scan [#1790](https://github.com/pingcap/tispark/pull/1790)
+
+### New Features
+- Support auto_random column [#1838](https://github.com/pingcap/tispark/pull/1838)
+- Support log desensitization [#1805](https://github.com/pingcap/tispark/pull/1805)
+- Support insert null on auto increment column [#1786](https://github.com/pingcap/tispark/pull/1786)
+
 ## [TiSpark 2.3.10] 2020-11-06
 ### Fixes
 - Fix maven-shade-plugin relocation cannot handle folder name with dot [#1737](https://github.com/pingcap/tispark/pull/1737)
