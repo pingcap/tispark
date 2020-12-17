@@ -20,7 +20,7 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 
 class WriteWriteConflictSuite extends ConcurrencyTest {
-  test("write write conflict") {
+  ignore("write write conflict") {
     if (blockingRead) {
       cancel
     }

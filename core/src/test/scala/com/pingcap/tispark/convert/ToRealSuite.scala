@@ -191,7 +191,7 @@ class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
     // java.lang.Float -> FLOAT
     // java.lang.Float -> DOUBLE
     compareTiDBWriteWithJDBC {
-      case (writeFunc, _) =>
+      case (writeFunc, "tidbWrite") =>
         val row1 = Row(1, null, null)
         val row2 = Row(2, 22.2f, 33.3f)
         val row3 = Row(3, maxFloat, maxFloat)
@@ -224,6 +224,8 @@ class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
           List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
           readSchema,
           skipTiDBAndExpectedAnswerCheck = true)
+
+      case (_, "jdbcWrite") =>
     }
   }
 
@@ -270,7 +272,7 @@ class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
     // String -> FLOAT
     // String -> DOUBLE
     compareTiDBWriteWithJDBC {
-      case (writeFunc, _) =>
+      case (writeFunc, "tidbWrite") =>
         val row1 = Row(1, null, null)
         val row2 = Row(2, "2.2", "-3.3")
         val row3 = Row(3, minFloat.toString, minDouble.toString)
@@ -299,6 +301,8 @@ class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
         compareTiDBSelectWithJDBC(
           List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
           readSchema)
+
+      case (_, "jdbcWrite") =>
     }
   }
 
