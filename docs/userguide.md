@@ -373,3 +373,12 @@ The following configurations can be used to avoid the error.
 --conf "spark.driver.extraJavaOptions=-Dshade.io.netty.allocator.type=unpooled"
 --conf "spark.executor.extraJavaOptions=-Dshade.io.netty.allocator.type=unpooled"
 ```
+
+### Chinese characters are garbled
+
+The following configurations can be used to avoid the garbled chinese characters problem.
+
+```
+--conf "spark.driver.extraJavaOptions=-Dfile.encoding=UTF-8"
+--conf "spark.executor.extraJavaOptions=-Dfile.encoding=UTF-8"
+```
