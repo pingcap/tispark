@@ -35,11 +35,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Metapb;
 
 public class RangeSplitter {
   private final RegionManager regionManager;
+
+  private static final Logger LOG = LoggerFactory.getLogger(RangeSplitter.class);
 
   private RangeSplitter(RegionManager regionManager) {
     this.regionManager = regionManager;
@@ -171,13 +175,23 @@ public class RangeSplitter {
     Map<Long, Pair<TiRegion, Metapb.Store>> idToRegion = new HashMap<>();
 
     while (true) {
-      Pair<TiRegion, Metapb.Store> regionStorePair =
-          regionManager.getRegionStorePairByKey(range.getStart(), storeType);
+      Pair<TiRegion, Metapb.Store> regionStorePair = null;
 
-      if (regionStorePair == null) {
-        throw new NullPointerException(
-            "fail to get region/store pair by key " + formatByteString(range.getStart()));
+      BackOffer bo = ConcreteBackOffer.newGetBackOff();
+      while (regionStorePair == null) {
+        try {
+          regionStorePair = regionManager.getRegionStorePairByKey(range.getStart(), storeType, bo);
+
+          if (regionStorePair == null) {
+            throw new NullPointerException(
+                "fail to get region/store pair by key " + formatByteString(range.getStart()));
+          }
+        } catch (Exception e) {
+          LOG.warn("getRegionStorePairByKey error", e);
+          bo.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
+        }
       }
+
       TiRegion region = regionStorePair.first;
       idToRegion.putIfAbsent(region.getId(), regionStorePair);
 
