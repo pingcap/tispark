@@ -298,7 +298,7 @@ public class RangeSplitterTest {
 
     @Override
     public Pair<TiRegion, Metapb.Store> getRegionStorePairByKey(
-        ByteString key, TiStoreType storeType) {
+        ByteString key, TiStoreType storeType, BackOffer backOffer) {
       for (Map.Entry<KeyRange, TiRegion> entry : mockRegionMap.entrySet()) {
         KeyRange range = entry.getKey();
         if (KeyRangeUtils.makeRange(range.getStart(), range.getEnd()).contains(Key.toRawKey(key))) {
