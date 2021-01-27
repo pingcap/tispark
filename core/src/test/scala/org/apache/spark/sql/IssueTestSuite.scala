@@ -21,6 +21,20 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("partition table with date partition column name") {
+    tidbStmt.execute("drop table if exists t1")
+    tidbStmt.execute("""
+        |CREATE TABLE t1 (
+        |date date NOT NULL,
+        |cost bigint(20) DEFAULT NULL)
+        |PARTITION BY RANGE COLUMNS(date) (
+        |PARTITION p20200404 VALUES LESS THAN ("2020-04-05"),
+        |PARTITION p20200418 VALUES LESS THAN ("2020-04-19")
+        |)
+        |""".stripMargin)
+    spark.sql("select `date`, sum(cost) from t1 where group by `date`").show()
+  }
+
   test("count(a, b) with null values") {
     tidbStmt.execute("drop table if exists t1")
     tidbStmt.execute("create table t1(a int, b int)")
