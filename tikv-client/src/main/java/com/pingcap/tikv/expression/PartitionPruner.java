@@ -80,13 +80,13 @@ public class PartitionPruner {
       if (current.equals("MAXVALUE")) {
         leftHand = "true";
       } else {
-        leftHand = String.format("%s < %s", partExprStr, current);
+        leftHand = String.format("`%s` < %s", partExprStr, current);
       }
       if (i == 0) {
         partExprs.add(parser.parseExpression(leftHand));
       } else {
         String previous = partInfo.getDefs().get(i - 1).getLessThan().get(lessThanIdx);
-        String and = String.format("%s and %s", partExprStr + ">=" + previous, leftHand);
+        String and = String.format("`%s` >= %s and %s", partExprStr, previous, leftHand);
         partExprs.add(parser.parseExpression(and));
       }
     }
