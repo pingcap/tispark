@@ -923,6 +923,10 @@ public class TiDAGRequest implements Serializable {
 
   @Override
   public String toString() {
+    return this.copy().toStringInternal();
+  }
+
+  private String toStringInternal() {
     init();
     StringBuilder sb = new StringBuilder();
     if (tableInfo != null) {
