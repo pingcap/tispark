@@ -96,6 +96,9 @@ public class PartitionPruner {
   private static String wrapColumnName(String columnName) {
     if (columnName.startsWith("`") && columnName.endsWith("`")) {
       return columnName;
+    } else if (columnName.contains("(") && columnName.contains(")")) {
+      // function not column name, e.g. year(columnName)
+      return columnName;
     } else {
       return String.format("`%s`", columnName);
     }
