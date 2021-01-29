@@ -80,15 +80,27 @@ public class PartitionPruner {
       if (current.equals("MAXVALUE")) {
         leftHand = "true";
       } else {
-        leftHand = String.format("%s < %s", partExprStr, current);
+        leftHand = String.format("%s < %s", wrapColumnName(partExprStr), current);
       }
       if (i == 0) {
         partExprs.add(parser.parseExpression(leftHand));
       } else {
         String previous = partInfo.getDefs().get(i - 1).getLessThan().get(lessThanIdx);
-        String and = String.format("%s and %s", partExprStr + ">=" + previous, leftHand);
+        String and =
+            String.format("%s >= %s and %s", wrapColumnName(partExprStr), previous, leftHand);
         partExprs.add(parser.parseExpression(and));
       }
+    }
+  }
+
+  private static String wrapColumnName(String columnName) {
+    if (columnName.startsWith("`") && columnName.endsWith("`")) {
+      return columnName;
+    } else if (columnName.contains("(") && columnName.contains(")")) {
+      // function not column name, e.g. year(columnName)
+      return columnName;
+    } else {
+      return String.format("`%s`", columnName);
     }
   }
 }
