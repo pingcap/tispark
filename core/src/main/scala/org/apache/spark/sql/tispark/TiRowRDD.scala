@@ -51,6 +51,7 @@ class TiRowRDD(
       checkTimezone()
 
       private val tiPartition = split.asInstanceOf[TiPartition]
+      // TODO: mars
       private val session = TiSession.getInstance(tiConf)
       session.injectCallBackFunc(callBackFunc)
       private val snapshot = session.createSnapshot(dagRequest.getStartTs)

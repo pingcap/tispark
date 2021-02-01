@@ -100,7 +100,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   }
 
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
-    val ts = tiContext.tiSession.getTimestamp
+    var ts = tiContext.tiSession.getTiDBDSnapshot
+    if (ts == null) {
+      ts = tiContext.tiSession.getTimestamp
+    }
 
     if (plan.isStreaming) {
       // We should use a new timestamp for next batch execution.

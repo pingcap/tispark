@@ -64,12 +64,12 @@ public class TTLManager {
   private final ScheduledExecutorService scheduler;
   private final AtomicInteger state;
 
-  public TTLManager(TiConfiguration conf, long startTS, byte[] primaryKey) {
+  public TTLManager(TiSession session, long startTS, byte[] primaryKey) {
     this.startTS = startTS;
     this.primaryLock = ByteString.copyFrom(primaryKey);
     this.state = new AtomicInteger(STATE_UNINITIALIZED);
 
-    this.kvClient = TiSession.getInstance(conf).createTxnClient();
+    this.kvClient = session.createTxnClient();
     this.regionManager = kvClient.getRegionManager();
 
     scheduler =

@@ -269,7 +269,7 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
     RowIDAllocator.create(
       tiDBInfo.getId,
       tiTableInfo,
-      ti.tiSession.getConf,
+      ti.tiSession,
       tiTableInfo.isAutoIncColUnsigned,
       size)
   }

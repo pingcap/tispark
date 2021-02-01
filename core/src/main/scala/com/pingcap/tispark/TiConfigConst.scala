@@ -55,4 +55,7 @@ object TiConfigConst {
 
   val CHUNK_CODEC_FORMAT: String = "chunk"
   val DEFAULT_CODEC_FORMAT: String = "chblock"
+
+  val TIDB_SNAPSHOT: String = "spark.tispark.tidb_snapshot"
+  val DEFAULT_TIDB_SNAPSHOT: String = ""
 }

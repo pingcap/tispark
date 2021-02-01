@@ -71,8 +71,10 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
       }
   }
 
-  override def parsePlan(sqlText: String): LogicalPlan =
+  override def parsePlan(sqlText: String): LogicalPlan = {
+    tiContext.updateTiDBSnapshot()
     internal.parsePlan(sqlText).transform(qualifyTableIdentifier)
+  }
 
   override def parseExpression(sqlText: String): Expression =
     internal.parseExpression(sqlText)

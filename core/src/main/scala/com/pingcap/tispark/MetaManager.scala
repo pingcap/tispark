@@ -22,7 +22,12 @@ import scala.collection.JavaConversions._
 
 // Likely this needs to be merge to client project
 // and serving inside metastore if any
-class MetaManager(catalog: Catalog) {
+class MetaManager(var catalog: Catalog) {
+
+  def updateCatalog(newCatalog: Catalog): Unit = {
+    this.catalog = newCatalog
+  }
+
   def getDatabases: List[TiDBInfo] =
     catalog.listDatabases().toList
 

@@ -16,10 +16,10 @@
 package com.pingcap.tispark.utils
 
 import java.util.concurrent.TimeUnit
-
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.datatype.TypeMapping
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
+import com.pingcap.tikv.exception.InvalidParameterException
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tikv.region.TiStoreType
 import com.pingcap.tikv.types._
 import com.pingcap.tispark.{TiConfigConst, _}
@@ -28,9 +28,12 @@ import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{SparkConf, sql}
+import org.slf4j.LoggerFactory
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 object TiUtil {
+  private final val logger = LoggerFactory.getLogger(getClass.getName)
+
   def getSchemaFromTable(table: TiTableInfo): StructType = {
     val fields = new Array[StructField](table.getColumns.size())
     for (i <- 0 until table.getColumns.size()) {
@@ -161,6 +164,32 @@ object TiUtil {
     getIsolationReadEnginesFromString(
       sqlContext
         .getConf(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.DEFAULT_STORAGE_ENGINES))
+
+  def getTiDBSnapshot(sqlContext: SQLContext): TiTimestamp = {
+    val str = sqlContext.getConf(TiConfigConst.TIDB_SNAPSHOT, TiConfigConst.DEFAULT_TIDB_SNAPSHOT)
+    logger.info(s"${TiConfigConst.TIDB_SNAPSHOT} = $str")
+    if (str.isEmpty) {
+      null
+    } else {
+      parseTimestamp(str)
+    }
+  }
+
+  private def parseTimestamp(str: String): TiTimestamp = {
+    try {
+      val t = java.sql.Timestamp.valueOf(str)
+      new TiTimestamp(t.getTime, 0L)
+    } catch {
+      case _: Throwable =>
+        try {
+          val l = java.lang.Long.parseLong(str)
+          new TiTimestamp(l, 0L)
+        } catch {
+          case _: Throwable =>
+            throw new InvalidParameterException(TiConfigConst.TIDB_SNAPSHOT, str)
+        }
+    }
+  }
 
   def registerUDFs(sparkSession: SparkSession): Unit = {
     val timeZoneStr: String = "TimeZone: " + Converter.getLocalTimezone.toString

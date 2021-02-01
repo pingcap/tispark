@@ -18,7 +18,7 @@ package com.pingcap.tispark.write
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.util.{BackOffFunction, BackOffer, ConcreteBackOffer}
 import com.pingcap.tikv.{TTLManager, TiDBJDBCClient, TwoPhaseCommitter, _}
-import com.pingcap.tispark.TiDBUtils
+import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
@@ -147,6 +147,7 @@ class TiBatchWrite(
     }
 
     // check unsupported
+    checkConfig()
     tiBatchWriteTables.foreach(_.checkUnsupported())
 
     // cache data
@@ -247,7 +248,7 @@ class TiBatchWrite(
     logger.info("start to prewritePrimaryKey")
     val ti2PCClient =
       new TwoPhaseCommitter(
-        tiConf,
+        tiSession,
         startTs,
         lockTTLSeconds * 1000 + TTLManager.calculateUptime(tiSession.createTxnClient(), startTs),
         options.txnPrewriteBatchSize,
@@ -269,7 +270,7 @@ class TiBatchWrite(
 
     // start primary key ttl update
     if (isTTLUpdate) {
-      ttlManager = new TTLManager(tiConf, startTs, primaryKey.bytes)
+      ttlManager = new TTLManager(tiSession, startTs, primaryKey.bytes)
       ttlManager.keepAlive()
     }
 
@@ -278,7 +279,7 @@ class TiBatchWrite(
     secondaryKeysRDD.foreachPartition { iterator =>
       val ti2PCClientOnExecutor =
         new TwoPhaseCommitter(
-          tiConf,
+          TiSession.getInstance(tiConf),
           startTs,
           lockTTLSeconds * 1000,
           options.txnPrewriteBatchSize,
@@ -321,7 +322,7 @@ class TiBatchWrite(
       logger.info("start to commitSecondaryKeys")
       secondaryKeysRDD.foreachPartition { iterator =>
         val ti2PCClientOnExecutor = new TwoPhaseCommitter(
-          tiConf,
+          TiSession.getInstance(tiConf),
           startTs,
           lockTTLSeconds * 1000,
           options.txnPrewriteBatchSize,
@@ -529,6 +530,14 @@ class TiBatchWrite(
       if (tiDBJDBCClient.isClosed) {
         throw new TiBatchWriteException("tidb's jdbc connection is lost!")
       }
+    }
+  }
+
+  private def checkConfig(): Unit = {
+    tiContext.updateTiDBSnapshot()
+    if (tiSession.getTiDBDSnapshot != null) {
+      throw new TiBatchWriteException(
+        s"can not execute batch write when '${TiConfigConst.TIDB_SNAPSHOT}' is set");
     }
   }
 }

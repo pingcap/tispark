@@ -57,6 +57,7 @@ class TiHandleRDD(
       checkTimezone()
 
       private val tiPartition = split.asInstanceOf[TiPartition]
+      // TODO: mars
       private val session = TiSession.getInstance(tiConf)
       private val snapshot = session.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks

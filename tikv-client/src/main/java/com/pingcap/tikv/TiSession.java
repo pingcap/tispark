@@ -53,17 +53,23 @@ public class TiSession implements AutoCloseable {
   // below object creation is either heavy or making connection (pd), pending for lazy loading
   private volatile PDClient client;
   private volatile Catalog catalog;
+  private volatile Catalog snapshotCatalog;
   private volatile ExecutorService indexScanThreadPool;
   private volatile ExecutorService tableScanThreadPool;
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
   private boolean isClosed = false;
+  private TiTimestamp tidbSnapshot = null;
 
   private TiSession(TiConfiguration conf) {
     this.conf = conf;
     this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
     this.regionManager = null;
     this.clientBuilder = null;
+  }
+
+  public static TiSession create(TiConfiguration conf) {
+    return new TiSession(conf);
   }
 
   public static TiSession getInstance(TiConfiguration conf) {
@@ -102,16 +108,42 @@ public class TiSession implements AutoCloseable {
     return conf;
   }
 
+  // TODO: mars need refactor
+  public void initTiDBSnapshot(TiTimestamp tidbSnapshot) {
+    if (this.tidbSnapshot != tidbSnapshot) {
+      this.tidbSnapshot = tidbSnapshot;
+      synchronized (this) {
+        if (snapshotCatalog != null) {
+          snapshotCatalog.close();
+        }
+        snapshotCatalog = null;
+      }
+    }
+  }
+
+  public TiTimestamp getTiDBDSnapshot() {
+    return tidbSnapshot;
+  }
+
   public TiTimestamp getTimestamp() {
+    // TODO: mars
     return getPDClient().getTimestamp(ConcreteBackOffer.newTsoBackOff());
   }
 
+  private Snapshot createSnapshotInternal() {
+    if (tidbSnapshot == null) {
+      return new Snapshot(getTimestamp(), this);
+    } else {
+      return new Snapshot(tidbSnapshot, this);
+    }
+  }
+
   public Snapshot createSnapshot() {
-    return new Snapshot(getTimestamp(), this.conf);
+    return new Snapshot(getTimestamp(), this);
   }
 
   public Snapshot createSnapshot(TiTimestamp ts) {
-    return new Snapshot(ts, conf);
+    return new Snapshot(ts, this);
   }
 
   public PDClient getPDClient() {
@@ -127,14 +159,24 @@ public class TiSession implements AutoCloseable {
     return res;
   }
 
+  // TODO: mars need refactor
   public Catalog getCatalog() {
-    Catalog res = catalog;
+    Catalog res = tidbSnapshot == null ? catalog : snapshotCatalog;
     if (res == null) {
       synchronized (this) {
-        if (catalog == null) {
-          catalog = new Catalog(this::createSnapshot, conf.ifShowRowId(), conf.getDBPrefix());
+        if (tidbSnapshot == null) {
+          if (catalog == null) {
+            catalog =
+                new Catalog(this::createSnapshotInternal, conf.ifShowRowId(), conf.getDBPrefix());
+          }
+          res = catalog;
+        } else {
+          if (snapshotCatalog == null) {
+            snapshotCatalog =
+                new Catalog(this::createSnapshotInternal, conf.ifShowRowId(), conf.getDBPrefix());
+          }
+          res = snapshotCatalog;
         }
-        res = catalog;
       }
     }
     return res;
@@ -318,7 +360,10 @@ public class TiSession implements AutoCloseable {
       getPDClient().close();
     }
     if (catalog != null) {
-      getCatalog().close();
+      catalog.close();
+    }
+    if (snapshotCatalog != null) {
+      snapshotCatalog.close();
     }
   }
 }

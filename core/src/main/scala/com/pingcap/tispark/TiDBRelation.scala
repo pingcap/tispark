@@ -118,7 +118,6 @@ case class TiDBRelation(
       TiUtil.getChunkBatchSize(sqlContext),
       dagRequest,
       session.getConf,
-      session.getTimestamp,
       session,
       sqlContext.sparkSession)
   }

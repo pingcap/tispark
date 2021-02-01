@@ -19,7 +19,6 @@ import static com.pingcap.tikv.util.BackOffer.ROW_ID_ALLOCATOR_BACKOFF;
 import com.google.common.primitives.UnsignedLongs;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.Snapshot;
-import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.TwoPhaseCommitter;
 import com.pingcap.tikv.codec.CodecDataInput;
@@ -46,17 +45,17 @@ import org.slf4j.LoggerFactory;
 public final class RowIDAllocator implements Serializable {
   private final long maxShardRowIDBits;
   private final long dbId;
-  private final TiConfiguration conf;
+  private final transient TiSession session;
   private final long step;
   private long end;
 
   private static final Logger LOG = LoggerFactory.getLogger(RowIDAllocator.class);
 
-  private RowIDAllocator(long maxShardRowIDBits, long dbId, long step, TiConfiguration conf) {
+  private RowIDAllocator(long maxShardRowIDBits, long dbId, long step, TiSession session) {
     this.maxShardRowIDBits = maxShardRowIDBits;
     this.dbId = dbId;
     this.step = step;
-    this.conf = conf;
+    this.session = session;
   }
 
   public long getAutoIncId(long index) {
@@ -83,11 +82,11 @@ public final class RowIDAllocator implements Serializable {
   }
 
   public static RowIDAllocator create(
-      long dbId, TiTableInfo table, TiConfiguration conf, boolean unsigned, long step) {
+      long dbId, TiTableInfo table, TiSession session, boolean unsigned, long step) {
     BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(ROW_ID_ALLOCATOR_BACKOFF);
     while (true) {
       try {
-        return doCreate(dbId, table, conf, unsigned, step);
+        return doCreate(dbId, table, session, unsigned, step);
       } catch (AllocateRowIDOverflowException | IllegalArgumentException e) {
         throw e;
       } catch (Exception e) {
@@ -98,18 +97,13 @@ public final class RowIDAllocator implements Serializable {
   }
 
   private static RowIDAllocator doCreate(
-      long dbId, TiTableInfo table, TiConfiguration conf, boolean unsigned, long step) {
-    RowIDAllocator allocator = new RowIDAllocator(table.getMaxShardRowIDBits(), dbId, step, conf);
+      long dbId, TiTableInfo table, TiSession session, boolean unsigned, long step) {
+    RowIDAllocator allocator =
+        new RowIDAllocator(table.getMaxShardRowIDBits(), dbId, step, session);
     if (unsigned) {
-      allocator.initUnsigned(
-          TiSession.getInstance(conf).createSnapshot(),
-          table.getId(),
-          table.getMaxShardRowIDBits());
+      allocator.initUnsigned(session.createSnapshot(), table.getId(), table.getMaxShardRowIDBits());
     } else {
-      allocator.initSigned(
-          TiSession.getInstance(conf).createSnapshot(),
-          table.getId(),
-          table.getMaxShardRowIDBits());
+      allocator.initSigned(session.createSnapshot(), table.getId(), table.getMaxShardRowIDBits());
     }
 
     return allocator;
@@ -125,9 +119,8 @@ public final class RowIDAllocator implements Serializable {
 
   // set key value pair to tikv via two phase committer protocol.
   private void set(ByteString key, byte[] value) {
-    TiSession session = TiSession.getInstance(conf);
     TwoPhaseCommitter twoPhaseCommitter =
-        new TwoPhaseCommitter(conf, session.getTimestamp().getVersion());
+        new TwoPhaseCommitter(session, session.getTimestamp().getVersion());
 
     twoPhaseCommitter.prewritePrimaryKey(
         ConcreteBackOffer.newCustomBackOff(BackOffer.PREWRITE_MAX_BACKOFF),

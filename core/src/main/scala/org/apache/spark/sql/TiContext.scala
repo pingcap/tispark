@@ -41,7 +41,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   final val version: String = TiSparkVersion.version
   final val conf: SparkConf = sparkSession.sparkContext.conf
   final val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(conf)
-  final val tiSession: TiSession = TiSession.getInstance(tiConf)
+  final val tiSession: TiSession = TiSession.create(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
   lazy val tiConcreteCatalog: TiSessionCatalog =
     new TiConcreteSessionCatalog(this)(newTiDirectExternalCatalog(this))
@@ -69,6 +69,12 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   val debug: DebugTool = new DebugTool
   val autoLoad: Boolean =
     conf.getBoolean(TiConfigConst.ENABLE_AUTO_LOAD_STATISTICS, defaultValue = true)
+
+  def updateTiDBSnapshot(): Unit = {
+    val ts = TiUtil.getTiDBSnapshot(sqlContext)
+    tiSession.initTiDBSnapshot(ts)
+    meta.updateCatalog(tiSession.getCatalog)
+  }
 
   // tidbMapTable does not do any check any meta information
   // it just register table for later use

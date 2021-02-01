@@ -352,7 +352,7 @@ class TiBatchWriteTable(
     RowIDAllocator.create(
       tiDBInfo.getId,
       tiTableInfo,
-      tiConf,
+      tiSession,
       tiTableInfo.isAutoIncColUnsigned,
       step)
   }

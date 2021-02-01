@@ -81,8 +81,8 @@ public class TwoPhaseCommitter {
   private final int prewriteMaxRetryTimes;
   private final ExecutorService executorService;
 
-  public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
-    this.kvClient = TiSession.getInstance(conf).createTxnClient();
+  public TwoPhaseCommitter(TiSession session, long startTime) {
+    this.kvClient = session.createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = DEFAULT_BATCH_WRITE_LOCK_TTL;
@@ -96,7 +96,7 @@ public class TwoPhaseCommitter {
   }
 
   public TwoPhaseCommitter(
-      TiConfiguration conf,
+      TiSession session,
       long startTime,
       long lockTTL,
       long txnPrewriteBatchSize,
@@ -105,7 +105,7 @@ public class TwoPhaseCommitter {
       int writeThreadPerTask,
       boolean retryCommitSecondaryKeys,
       int prewriteMaxRetryTimes) {
-    this.kvClient = TiSession.getInstance(conf).createTxnClient();
+    this.kvClient = session.createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = lockTTL;

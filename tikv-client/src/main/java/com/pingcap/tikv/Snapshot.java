@@ -42,10 +42,10 @@ public class Snapshot {
   private final TiSession session;
   private final TiConfiguration conf;
 
-  public Snapshot(@Nonnull TiTimestamp timestamp, TiConfiguration conf) {
+  public Snapshot(@Nonnull TiTimestamp timestamp, TiSession session) {
     this.timestamp = timestamp;
-    this.conf = conf;
-    this.session = TiSession.getInstance(conf);
+    this.conf = session.getConf();
+    this.session = session;
   }
 
   public TiSession getSession() {

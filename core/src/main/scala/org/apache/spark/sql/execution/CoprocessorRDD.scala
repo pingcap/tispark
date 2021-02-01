@@ -112,7 +112,6 @@ case class ColumnarRegionTaskExec(
     chunkBatchSize: Int,
     dagRequest: TiDAGRequest,
     tiConf: TiConfiguration,
-    ts: TiTimestamp,
     @transient private val session: TiSession,
     @transient private val sparkSession: SparkSession)
     extends UnaryExecNode
@@ -185,6 +184,7 @@ case class ColumnarRegionTaskExec(
       : (Int, Iterator[InternalRow]) => Iterator[InternalRow] = { (_, iter) =>
     // For each partition, we do some initialization work
     val logger = LoggerFactory.getLogger(getClass.getName)
+    // TODO: mars
     val session = TiSession.getInstance(tiConf)
     session.injectCallBackFunc(callBackFunc)
     val batchSize = tiConf.getIndexScanBatchSize
