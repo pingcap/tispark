@@ -1,6 +1,12 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.12] 2021-02-01
+### Fixes
+- Add retry in `RangeSplitter` [#1886](https://github.com/pingcap/tispark/pull/1886)
+- Fix `TiDAGRequest` concurrent visit [#1893](https://github.com/pingcap/tispark/pull/1893)
+- Fix partition table with partition column name `date` [#1892](https://github.com/pingcap/tispark/pull/1892)
+
 ## [TiSpark 2.3.11] 2020-12-17
 ### Fixes
 - Fix the resolved txn status cache for pessimistic txn [#1868](https://github.com/pingcap/tispark/pull/1868)
