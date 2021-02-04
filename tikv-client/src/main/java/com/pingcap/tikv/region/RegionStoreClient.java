@@ -242,7 +242,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     }
   }
 
-  public List<KvPair> batchGet(BackOffer backOffer, Iterable<ByteString> keys, long version) {
+  public List<KvPair> batchGet(BackOffer backOffer, List<ByteString> keys, long version) {
     boolean forWrite = false;
     Supplier<BatchGetRequest> request =
         () ->
@@ -264,7 +264,17 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
             forWrite);
     BatchGetResponse resp =
         callWithRetry(backOffer, TikvGrpc.getKvBatchGetMethod(), request, handler);
-    return handleBatchGetResponse(backOffer, resp, version);
+
+    try {
+      return handleBatchGetResponse(backOffer, resp, version);
+    } catch (TiKVException e) {
+      if ("locks not resolved, retry".equals(e.getMessage())) {
+        backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoTxnLock, e);
+        return batchGet(backOffer, keys, version);
+      } else {
+        throw e;
+      }
+    }
   }
 
   private List<KvPair> handleBatchGetResponse(
