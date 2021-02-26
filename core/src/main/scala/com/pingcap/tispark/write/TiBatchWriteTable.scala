@@ -16,7 +16,6 @@
 package com.pingcap.tispark.write
 
 import java.util
-
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
 import com.pingcap.tikv.exception.{
@@ -24,7 +23,7 @@ import com.pingcap.tikv.exception.{
   TiBatchWriteException,
   TiDBConvertException
 }
-import com.pingcap.tikv.key.{IndexKey, RowKey}
+import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta._
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
@@ -72,6 +71,7 @@ class TiBatchWriteTable(
   private var handleCol: TiColumnInfo = _
   private var tableLocked: Boolean = false
   private var autoIncProvidedID: Boolean = false
+  private var isCommonHandle: Boolean = _
 
   tiTableRef = options.getTiTableRef(tiConf)
   tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
@@ -81,6 +81,7 @@ class TiBatchWriteTable(
     throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
   }
 
+  isCommonHandle = tiTableInfo.isCommonHandle
   colsMapInTiDB = tiTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
   colsInDf = df.columns.toList.map(_.toLowerCase())
   uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique)
@@ -219,14 +220,14 @@ class TiBatchWriteTable(
     val keyValueRDD = if (constraintCheckIsNeeded) {
       val wrappedRowRdd = if (tiTableInfo.isPkHandle) {
         tiRowRdd.map { row =>
-          WrappedRow(row, extractHandleId(row))
+          WrappedRow(row, new IntHandle(extractHandleId(row)))
         }
       } else {
         val rowIDAllocator = getRowIDAllocator(count)
         tiRowRdd.zipWithIndex.map { row =>
           val index = row._2 + 1
           val rowId = rowIDAllocator.getShardRowId(index)
-          WrappedRow(row._1, rowId)
+          WrappedRow(row._1, new IntHandle(rowId))
         }
       }
 
@@ -284,7 +285,7 @@ class TiBatchWriteTable(
       val wrappedRowRdd = tiRowRdd.zipWithIndex.map { row =>
         val index = row._2 + 1
         val rowId = rowIDAllocator.getShardRowId(index)
-        WrappedRow(row._1, rowId)
+        WrappedRow(row._1, new IntHandle(rowId))
       }
 
       val wrappedEncodedRecordRdd = generateRecordKV(wrappedRowRdd, remove = false)
@@ -384,7 +385,7 @@ class TiBatchWriteTable(
             if (!keyInfo._2) {
               val oldValue = snapshot.get(keyInfo._1.bytes)
               if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
-                val oldHandle = TableCodec.decodeHandle(oldValue)
+                val oldHandle = TableCodec.decodeHandle(oldValue, isCommonHandle)
                 val oldRowValue = snapshot.get(buildRowKey(wrappedRow.row, oldHandle).bytes)
                 val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
                 rowBuf += WrappedRow(oldRow, oldHandle)
@@ -441,9 +442,9 @@ class TiBatchWriteTable(
         }
 
         def genNextHandleBatch(
-            batch: List[WrappedRow]): (util.List[Array[Byte]], util.List[Long]) = {
+            batch: List[WrappedRow]): (util.List[Array[Byte]], util.List[Handle]) = {
           val list = new util.ArrayList[Array[Byte]]()
-          val handles = new util.ArrayList[Long]()
+          val handles = new util.ArrayList[Handle]()
           batch.foreach { wrappedRow =>
             val bytes = buildRowKey(wrappedRow.row, wrappedRow.handle).bytes
             list.add(bytes)
@@ -470,13 +471,13 @@ class TiBatchWriteTable(
           (keyList, rowList)
         }
 
-        def decodeHandle(row: Array[Byte]): Long = {
+        def decodeHandle(row: Array[Byte]): Handle = {
           RowKey.decode(row).getHandle
         }
 
         def processHandleDelete(
             oldValueList: java.util.List[BytePairWrapper],
-            handleList: java.util.List[Long]): Unit = {
+            handleList: java.util.List[Handle]): Unit = {
           for (i <- 0 until oldValueList.size) {
             val oldValuePair = oldValueList.get(i)
             val oldValue = oldValuePair.getValue
@@ -508,7 +509,7 @@ class TiBatchWriteTable(
               val oldValuePair = oldValueList.get(i)
               val oldValue = oldValuePair.getValue
               if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
-                val oldHandle = TableCodec.decodeHandle(oldValue)
+                val oldHandle = TableCodec.decodeHandle(oldValue, isCommonHandle)
                 val tiRow = rowList.get(i)
 
                 oldIndicesBatch.add(buildRowKey(tiRow, oldHandle).bytes)
@@ -654,7 +655,7 @@ class TiBatchWriteTable(
   //      index encoded handle to value.
   private def generateUniqueIndexKey(
       row: TiRow,
-      handle: Long,
+      handle: Handle,
       index: TiIndexInfo,
       remove: Boolean): (SerializableKey, Array[Byte]) = {
     val encodeResult = buildUniqueIndexKey(row, handle, index)
@@ -668,7 +669,7 @@ class TiBatchWriteTable(
         value
       } else {
         val cdo = new CodecDataOutput()
-        cdo.writeLong(handle)
+        cdo.writeLong(handle.intValue())
         cdo.toBytes
       }
     }
@@ -678,7 +679,7 @@ class TiBatchWriteTable(
 
   private def generateSecondaryIndexKey(
       row: TiRow,
-      handle: Long,
+      handle: Handle,
       index: TiIndexInfo,
       remove: Boolean): (SerializableKey, Array[Byte]) = {
     val keys =
@@ -696,13 +697,13 @@ class TiBatchWriteTable(
     (new SerializableKey(cdo.toBytes), value)
   }
 
-  private def buildRowKey(row: TiRow, handle: Long): SerializableKey = {
+  private def buildRowKey(row: TiRow, handle: Handle): SerializableKey = {
     new SerializableKey(RowKey.toRowKey(locatePhysicalTable(row), handle).getBytes)
   }
 
   private def buildUniqueIndexKey(
       row: TiRow,
-      handle: Long,
+      handle: Handle,
       index: TiIndexInfo): (SerializableKey, Boolean) = {
     // NULL is only allowed in unique key, primary key does not allow NULL value
     val encodeResult = IndexKey.encodeIndexDataValues(
@@ -719,7 +720,7 @@ class TiBatchWriteTable(
 
   private def generateRowKey(
       row: TiRow,
-      handle: Long,
+      handle: Handle,
       remove: Boolean): (SerializableKey, Array[Byte]) = {
     if (remove) {
       (buildRowKey(row, handle), new Array[Byte](0))

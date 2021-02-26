@@ -18,6 +18,7 @@ package com.pingcap.tikv.codec;
 import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
@@ -85,7 +86,7 @@ public class TableCodecV1Test {
     for (int i = 0; i < 4; i++) {
       byte[] bytes = TableCodecV1.encodeRow(tblInfo.getColumns(), values, tblInfo.isPkHandle());
       // testing the correctness via decodeRow
-      Row row = TableCodecV1.decodeRow(bytes, 1L, tblInfo);
+      Row row = TableCodecV1.decodeRow(bytes, new IntHandle(1L), tblInfo);
       for (int j = 0; j < tblInfo.getColumns().size(); j++) {
         assertEquals(row.get(j, null), values[j]);
       }

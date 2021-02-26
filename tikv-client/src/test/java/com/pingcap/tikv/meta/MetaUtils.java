@@ -36,6 +36,7 @@ public class MetaUtils {
   public static class TableBuilder {
     long autoId = 1;
     private boolean pkHandle;
+    private boolean isCommonHandle;
     private String name;
     private final List<TiColumnInfo> columns = new ArrayList<>();
     private final List<TiIndexInfo> indices = new ArrayList<>();
@@ -134,6 +135,11 @@ public class MetaUtils {
       return this;
     }
 
+    public TableBuilder setIsCommonHandle(boolean isCommonHandle) {
+      this.isCommonHandle = isCommonHandle;
+      return this;
+    }
+
     public TableBuilder version(long version) {
       this.version = version;
       return this;
@@ -152,6 +158,7 @@ public class MetaUtils {
           "",
           "",
           pkHandle,
+          isCommonHandle,
           columns,
           indices,
           "",
