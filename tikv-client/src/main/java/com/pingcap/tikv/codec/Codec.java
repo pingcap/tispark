@@ -18,9 +18,17 @@ package com.pingcap.tikv.codec;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.pingcap.tikv.ExtendedDateTime;
+import com.pingcap.tikv.exception.CodecException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import com.pingcap.tikv.exception.TypeException;
+import com.pingcap.tikv.types.BytesType;
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DecimalType;
+import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.JsonType;
+import com.pingcap.tikv.types.RealType;
+import com.pingcap.tikv.types.TimeType;
 import gnu.trove.list.array.TIntArrayList;
 import java.math.BigDecimal;
 import java.sql.Date;
@@ -51,6 +59,37 @@ public class Codec {
 
   public static boolean isNullFlag(int flag) {
     return flag == NULL_FLAG;
+  }
+
+  public static Object decodeOne(byte[] colData) {
+    if (colData.length <= 1) {
+      throw new CodecException("invalid encoded column data, length <=1");
+    }
+    byte flag = colData[0];
+    DataType tp;
+    switch (flag) {
+      case INT_FLAG | UINT_FLAG | VARINT_FLAG | UVARINT_FLAG:
+        tp = IntegerType.BIGINT;
+        break;
+      case FLOATING_FLAG:
+        tp = RealType.DOUBLE;
+        break;
+      case BYTES_FLAG | COMPACT_BYTES_FLAG:
+        tp = BytesType.TEXT;
+        break;
+      case DECIMAL_FLAG:
+        tp = DecimalType.DECIMAL;
+        break;
+      case DURATION_FLAG:
+        tp = TimeType.TIME;
+        break;
+      case JSON_FLAG:
+        tp = JsonType.JSON;
+        break;
+      default:
+        throw new CodecException("Unknown type");
+    }
+    return tp.decode(new CodecDataInput(colData));
   }
 
   public static class IntegerCodec {

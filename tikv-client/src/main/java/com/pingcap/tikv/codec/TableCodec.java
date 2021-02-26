@@ -16,6 +16,9 @@
 package com.pingcap.tikv.codec;
 
 import com.pingcap.tikv.exception.CodecException;
+import com.pingcap.tikv.key.CommonHandle;
+import com.pingcap.tikv.key.Handle;
+import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
@@ -40,7 +43,7 @@ public class TableCodec {
     return TableCodecV1.encodeRow(columnInfos, values, isPkHandle);
   }
 
-  public static Row decodeRow(byte[] value, Long handle, TiTableInfo tableInfo) {
+  public static Row decodeRow(byte[] value, Handle handle, TiTableInfo tableInfo) {
     if (value.length == 0) {
       throw new CodecException("Decode fails: value length is zero");
     }
@@ -50,7 +53,10 @@ public class TableCodec {
     return TableCodecV1.decodeRow(value, handle, tableInfo);
   }
 
-  public static long decodeHandle(byte[] value) {
-    return new CodecDataInput(value).readLong();
+  public static Handle decodeHandle(byte[] value, boolean isCommonHandle) {
+    if (isCommonHandle) {
+      return new CommonHandle(value);
+    }
+    return new IntHandle(new CodecDataInput(value).readLong());
   }
 }

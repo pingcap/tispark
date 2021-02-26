@@ -29,6 +29,8 @@ import com.pingcap.tikv.columnar.TiChunkColumnVector;
 import com.pingcap.tikv.columnar.TiColumnVector;
 import com.pingcap.tikv.columnar.TiRowColumnVector;
 import com.pingcap.tikv.columnar.datatypes.CHType;
+import com.pingcap.tikv.key.Handle;
+import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.row.Row;
@@ -202,13 +204,13 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
    * @param session TiSession
    * @return a DAGIterator to be processed
    */
-  public static CoprocessorIterator<Long> getHandleIterator(
+  public static CoprocessorIterator<Handle> getHandleIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     TiDAGRequest dagRequest = req.copy();
     // set encode type to TypeDefault because currently, only
     // CoprocessorIterator<TiChunk> support TypeChunk and TypeCHBlock encode type
     dagRequest.setEncodeType(EncodeType.TypeDefault);
-    return new DAGIterator<Long>(
+    return new DAGIterator<Handle>(
         dagRequest.buildIndexScan(),
         regionTasks,
         session,
@@ -217,8 +219,13 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         dagRequest.getStoreType(),
         dagRequest.getStartTs().getVersion()) {
       @Override
-      public Long next() {
-        return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);
+      public Handle next() {
+        Row row = rowReader.readRow(handleTypes);
+        Object[] data = new Object[handleTypes.length];
+        for (int i = 0; i < handleTypes.length; i++) {
+          data[i] = row.get(i, handleTypes[i]);
+        }
+        return new IntHandle((long) data[handleTypes.length - 1]);
       }
     };
   }

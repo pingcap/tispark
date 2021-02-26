@@ -42,6 +42,7 @@ public class TiTableInfo implements Serializable {
   private final Map<String, TiColumnInfo> columnsMap;
   private final List<TiIndexInfo> indices;
   private final boolean pkIsHandle;
+  private final boolean isCommonHandle;
   private final String comment;
   private final long autoIncId;
   private final long maxColumnId;
@@ -72,6 +73,7 @@ public class TiTableInfo implements Serializable {
       @JsonProperty("charset") String charset,
       @JsonProperty("collate") String collate,
       @JsonProperty("pk_is_handle") boolean pkIsHandle,
+      @JsonProperty("is_common_handle") boolean isCommonHandle,
       @JsonProperty("cols") List<TiColumnInfo> columns,
       @JsonProperty("index_info") List<TiIndexInfo> indices,
       @JsonProperty("comment") String comment,
@@ -109,6 +111,7 @@ public class TiTableInfo implements Serializable {
     }
     // TODO: Use more precise predication according to types
     this.pkIsHandle = pkIsHandle;
+    this.isCommonHandle = isCommonHandle;
     this.indices = indices != null ? ImmutableList.copyOf(indices) : ImmutableList.of();
     this.indicesWithoutHiddenAndInvisible =
         this.indices
@@ -243,6 +246,10 @@ public class TiTableInfo implements Serializable {
     return pkIsHandle;
   }
 
+  public boolean isCommonHandle() {
+    return isCommonHandle;
+  }
+
   public List<TiIndexInfo> getIndices() {
     return getIndices(false);
   }
@@ -253,6 +260,15 @@ public class TiTableInfo implements Serializable {
     } else {
       return this.indicesWithoutHiddenAndInvisible;
     }
+  }
+
+  public TiIndexInfo getPrimaryKey() {
+    for (TiIndexInfo index : getIndices()) {
+      if (index.isPrimary()) {
+        return index;
+      }
+    }
+    return null;
   }
 
   public String getComment() {
@@ -350,6 +366,7 @@ public class TiTableInfo implements Serializable {
           getCharset(),
           getCollate(),
           true,
+          isCommonHandle,
           newColumns.build(),
           getIndices(true),
           getComment(),

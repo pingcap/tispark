@@ -20,6 +20,22 @@ import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
+  
+  test("test clustered index read with common handle") {
+    tidbStmt.execute("SET tidb_enable_clustered_index = 1")
+    tidbStmt.execute("drop table if exists t1")
+    tidbStmt.execute("create table t1(a varchar(10), b int, primary key (a))")
+    tidbStmt.execute("insert into t1 values ('a', 1), ('b', null), ('c', 3)")
+    runTest("select * from t1 where b < 2")
+  }
+
+  test("test clustered index read with int handle") {
+    tidbStmt.execute("SET tidb_enable_clustered_index = 1")
+    tidbStmt.execute("drop table if exists t1")
+    tidbStmt.execute("create table t1(a int, b int, index idx(a))")
+    tidbStmt.execute("insert into t1 values (2, 1), (3, null), (4, 3)")
+    runTest("select * from t1 where a < 4")
+  }
 
   test("partition table with date partition column name") {
     tidbStmt.execute("drop table if exists t1")
