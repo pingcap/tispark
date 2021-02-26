@@ -30,6 +30,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.meta.CIStr;
 import com.pingcap.tikv.meta.IndexType;
@@ -293,7 +294,8 @@ public class TiKVScanAnalyzerTest {
         scanBuilder.buildIndexScan(
             ImmutableList.of(), ImmutableList.of(), index, table, null, false);
 
-    ByteString startKey = RowKey.toRowKey(table.getId(), Long.MIN_VALUE).toByteString();
+    ByteString startKey =
+        RowKey.toRowKey(table.getId(), new IntHandle(Long.MIN_VALUE)).toByteString();
     ByteString endKey = RowKey.createBeyondMax(table.getId()).toByteString();
 
     assertEquals(1, scanPlan.getKeyRanges().size());

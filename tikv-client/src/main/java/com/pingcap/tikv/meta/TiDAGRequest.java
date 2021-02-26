@@ -192,6 +192,10 @@ public class TiDAGRequest implements Serializable {
     this.encodeType = encodeType;
   }
 
+  public boolean isCommonHandle() {
+    return tableInfo.isCommonHandle();
+  }
+
   public DAGRequest buildIndexScan() {
     List<Integer> outputOffsets = new ArrayList<>();
     DAGRequest.Builder builder = buildScan(true, outputOffsets);
