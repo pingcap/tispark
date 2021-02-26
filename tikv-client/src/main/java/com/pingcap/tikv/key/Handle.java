@@ -15,7 +15,9 @@
 
 package com.pingcap.tikv.key;
 
-public interface Handle {
+import java.io.Serializable;
+
+public interface Handle extends Serializable {
 
   boolean isInt();
 
