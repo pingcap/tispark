@@ -80,10 +80,11 @@ public class TableCodecV2 {
       }
     }
 
-    for (TiColumnInfo col : tableInfo.getColumns()) {}
-
     for (TiColumnInfo col : tableInfo.getColumns()) {
       if (decodedDataMap.containsKey(col.getId())) {
+        continue;
+      } else if (col.isPrimaryKey() && tableInfo.isPkHandle()) {
+        decodedDataMap.put(col.getId(), handle);
         continue;
       }
       RowV2.ColIDSearchResult searchResult = rowV2.findColID(col.getId());
