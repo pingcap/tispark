@@ -17,7 +17,6 @@ package com.pingcap.tikv.key;
 
 import static com.pingcap.tikv.codec.Codec.IntegerCodec.writeLong;
 
-import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -84,7 +83,7 @@ public class RowKey extends Key implements Serializable {
   private static byte[] encode(long tableId, Handle handle) {
     CodecDataOutput cdo = new CodecDataOutput();
     encodePrefix(cdo, tableId);
-    BytesCodec.writeBytes(cdo, handle.encoded());
+    cdo.write(handle.encoded());
     return cdo.toBytes();
   }
 

@@ -58,7 +58,7 @@ public class TableCodecV1Test {
 
   private void makeValues() {
     List<Object> values = new ArrayList<>();
-    values.add(1L);
+    values.add(new IntHandle(1L));
     values.add(1L);
     DateTime dateTime = DateTime.parse("1995-10-10");
     // values.add(new Timestamp(dateTime.getMillis()));

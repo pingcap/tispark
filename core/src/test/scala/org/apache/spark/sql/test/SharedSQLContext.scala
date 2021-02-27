@@ -301,7 +301,7 @@ trait SharedSQLContext
       if (shouldLoadData(loadData) && !forceNotLoad) {
         logger.info("Loading TiSparkTestData")
         // Load index test data
-        //loadSQLFile("tispark-test", "IndexTest")
+        loadSQLFile("tispark-test", "IndexTest")
         // Load expression test data
         loadSQLFile("tispark-test", "TiSparkTest")
         // Load TPC-H test data
@@ -329,8 +329,8 @@ trait SharedSQLContext
   private def initStatistics(): Unit = {
     _tidbConnection.setCatalog("tispark_test")
     initializeStatement()
-    //logger.info("Analyzing table tispark_test.full_data_type_table_idx...")
-    //_statement.execute("analyze table tispark_test.full_data_type_table_idx")
+    logger.info("Analyzing table tispark_test.full_data_type_table_idx...")
+    _statement.execute("analyze table tispark_test.full_data_type_table_idx")
     logger.info("Analyzing table tispark_test.full_data_type_table...")
     _statement.execute("analyze table tispark_test.full_data_type_table")
     logger.info("Analyzing table finished.")

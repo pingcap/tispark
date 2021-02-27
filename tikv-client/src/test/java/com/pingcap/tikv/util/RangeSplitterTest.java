@@ -227,6 +227,8 @@ public class RangeSplitterTest {
     handles.add(new IntHandle(4));
     handles.add(new IntHandle(3));
     handles.add(new IntHandle(10));
+    handles.add(new IntHandle(11));
+    handles.add(new IntHandle(12));
     handles.add(new IntHandle(2));
     handles.add(new IntHandle(100));
     handles.add(new IntHandle(101));

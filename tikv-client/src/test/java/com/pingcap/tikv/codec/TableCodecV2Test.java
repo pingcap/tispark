@@ -219,7 +219,7 @@ public class TableCodecV2Test {
                 .setPkHandle(true)
                 .build(),
             new IntHandle(10000L),
-            new Object[] {10000L, 1L});
+            new Object[] {new IntHandle(10000L), 1L});
     testCase.test();
   }
 
