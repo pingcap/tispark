@@ -17,8 +17,8 @@ package org.apache.spark.sql.execution
 
 import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
-
 import com.pingcap.tikv.columnar.{TiChunk, TiColumnarBatchHelper}
+import com.pingcap.tikv.key.{Handle, IntHandle}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.iterator.CoprocessorIterator
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
@@ -35,6 +35,7 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
 import org.apache.spark.sql.tispark.TiRDD
+import org.apache.spark.sql.types.ObjectType
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.slf4j.LoggerFactory
 import org.tikv.kvproto.Coprocessor.KeyRange
@@ -189,8 +190,11 @@ case class ColumnarRegionTaskExec(
     val downgradeThreshold = tiConf.getDowngradeThreshold
 
     iter.flatMap { row =>
-      val handles = row.getArray(1).toLongArray()
-      val handleIterator: util.Iterator[Long] = handles.iterator
+      val handles = new util.ArrayList[Handle]()
+      var handleIdx = 0
+      for (i <- row.getArray(1).array) {
+        handles.add(i.asInstanceOf[IntHandle])
+      }
       var taskCount = 0
       numRegions += 1
 
@@ -199,7 +203,7 @@ case class ColumnarRegionTaskExec(
       var rowIterator: util.Iterator[TiChunk] = null
 
       // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
-      def generateIndexTasks(handles: TLongArrayList): util.List[RegionTask] = {
+      def generateIndexTasks(handles: util.ArrayList[Handle]): util.List[RegionTask] = {
         val indexTasks: util.List[RegionTask] = new util.ArrayList[RegionTask]()
         indexTasks.addAll(
           RangeSplitter
@@ -210,7 +214,7 @@ case class ColumnarRegionTaskExec(
 
       // indexTasks was made to be used later to determine whether we should downgrade to
       // table scan or not.
-      val indexTasks: util.List[RegionTask] = generateIndexTasks(new TLongArrayList(handles))
+      val indexTasks: util.List[RegionTask] = generateIndexTasks(handles)
       val indexTaskRanges = indexTasks.flatMap {
         _.getRanges
       }
@@ -220,7 +224,7 @@ case class ColumnarRegionTaskExec(
       // returns true if the number of handle ranges retrieved exceeds
       // the `downgradeThreshold` after handle merge, false otherwise.
       def satisfyDowngradeThreshold: Boolean =
-        indexTaskRanges.size > downgradeThreshold
+        indexTaskRanges.lengthCompare(downgradeThreshold) > 0
 
       def isTaskRangeSizeInvalid(task: RegionTask): Boolean =
         task == null ||
@@ -262,22 +266,24 @@ case class ColumnarRegionTaskExec(
         finalTasks
       }
 
-      def feedBatch(): TLongArrayList = {
-        val handles = new array.TLongArrayList(512)
-        while (handleIterator.hasNext &&
-          handles.size() < batchSize) {
-          handles.add(handleIterator.next())
+      def feedBatch(): util.ArrayList[Handle] = {
+        val tmpHandles = new util.ArrayList[Handle](512)
+        while (handleIdx < handles.length &&
+          tmpHandles.size() < batchSize) {
+          tmpHandles.add(handles.get(handleIdx))
+          handleIdx += 1
         }
-        handles
+        tmpHandles
       }
 
       def doIndexScan(): Unit =
-        while (handleIterator.hasNext) {
-          val handleList: TLongArrayList = feedBatch()
-          numHandles += handleList.size()
-          logger.debug("Single batch handles size:" + handleList.size())
+        while (handleIdx < handles.length) {
+          val tmpHandles: util.ArrayList[Handle] =
+            feedBatch().clone().asInstanceOf[util.ArrayList[Handle]]
+          numHandles += tmpHandles.size()
+          logger.debug("Single batch handles size:" + tmpHandles.size())
 
-          val indexTasks: util.List[RegionTask] = generateIndexTasks(handleList)
+          val indexTasks: util.List[RegionTask] = generateIndexTasks(tmpHandles)
 
           indexTasks.foreach { task =>
             val tasks = splitTasks(task)

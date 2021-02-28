@@ -22,13 +22,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.key.Handle;
+import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.RowKey.DecodeResult.Status;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.region.TiStoreType;
-import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,7 +83,7 @@ public class RangeSplitterTest {
 
   private static ByteString handleToByteString(long tableId, Long k) {
     if (k != null) {
-      return RowKey.toRowKey(tableId, k).toByteString();
+      return RowKey.toRowKey(tableId, new IntHandle(k)).toByteString();
     }
     return ByteString.EMPTY;
   }
@@ -133,30 +134,27 @@ public class RangeSplitterTest {
   @Test
   public void splitAndSortHandlesByRegionTest() {
     final long tableId = 1;
-    TLongArrayList handles = new TLongArrayList();
-    handles.add(
-        new long[] {
-          1,
-          5,
-          4,
-          3,
-          10,
-          2,
-          100,
-          101,
-          99,
-          88,
-          -1,
-          -255,
-          -100,
-          -99,
-          -98,
-          Long.MIN_VALUE,
-          8960,
-          8959,
-          19999,
-          15001
-        });
+    List<Handle> handles = new ArrayList<>();
+    handles.add(new IntHandle(1));
+    handles.add(new IntHandle(5));
+    handles.add(new IntHandle(4));
+    handles.add(new IntHandle(3));
+    handles.add(new IntHandle(10));
+    handles.add(new IntHandle(2));
+    handles.add(new IntHandle(100));
+    handles.add(new IntHandle(101));
+    handles.add(new IntHandle(99));
+    handles.add(new IntHandle(88));
+    handles.add(new IntHandle(-1));
+    handles.add(new IntHandle(-255));
+    handles.add(new IntHandle(-100));
+    handles.add(new IntHandle(-99));
+    handles.add(new IntHandle(-98));
+    handles.add(new IntHandle(Long.MIN_VALUE));
+    handles.add(new IntHandle(8960));
+    handles.add(new IntHandle(8959));
+    handles.add(new IntHandle(19999));
+    handles.add(new IntHandle(15001));
 
     MockRegionManager mgr =
         new MockRegionManager(
@@ -223,34 +221,31 @@ public class RangeSplitterTest {
   @Test
   public void groupByAndSortHandlesByRegionIdTest() {
     final long tableId = 1;
-    TLongArrayList handles = new TLongArrayList();
-    handles.add(
-        new long[] {
-          1,
-          5,
-          4,
-          3,
-          10,
-          11,
-          12,
-          2,
-          100,
-          101,
-          99,
-          88,
-          -1,
-          -255,
-          -100,
-          -99,
-          -98,
-          Long.MIN_VALUE,
-          8960,
-          8959,
-          19999,
-          15001,
-          99999999999L,
-          Long.MAX_VALUE
-        });
+    List<Handle> handles = new ArrayList<>();
+    handles.add(new IntHandle(1));
+    handles.add(new IntHandle(5));
+    handles.add(new IntHandle(4));
+    handles.add(new IntHandle(3));
+    handles.add(new IntHandle(10));
+    handles.add(new IntHandle(11));
+    handles.add(new IntHandle(12));
+    handles.add(new IntHandle(2));
+    handles.add(new IntHandle(100));
+    handles.add(new IntHandle(101));
+    handles.add(new IntHandle(99));
+    handles.add(new IntHandle(88));
+    handles.add(new IntHandle(-1));
+    handles.add(new IntHandle(-255));
+    handles.add(new IntHandle(-100));
+    handles.add(new IntHandle(-99));
+    handles.add(new IntHandle(-98));
+    handles.add(new IntHandle(Long.MIN_VALUE));
+    handles.add(new IntHandle(8960));
+    handles.add(new IntHandle(8959));
+    handles.add(new IntHandle(19999));
+    handles.add(new IntHandle(15001));
+    handles.add(new IntHandle(99999999999L));
+    handles.add(new IntHandle(Long.MAX_VALUE));
 
     MockRegionManager mgr =
         new MockRegionManager(
@@ -263,7 +258,7 @@ public class RangeSplitterTest {
                 keyRangeByHandle(tableId, 0x2300L /*8960*/, Status.LESS, 16000L, Status.EQUAL),
                 keyRangeByHandle(tableId, 16000L, Status.EQUAL, null, Status.EQUAL)));
 
-    TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
+    TLongObjectHashMap<List<Handle>> result = new TLongObjectHashMap<>();
     RangeSplitter.newSplitter(mgr)
         .groupByAndSortHandlesByRegionId(tableId, handles)
         .forEach((k, v) -> result.put(k.first.getId(), v));

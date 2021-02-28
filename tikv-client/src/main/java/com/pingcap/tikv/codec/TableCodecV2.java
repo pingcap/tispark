@@ -15,7 +15,10 @@
 
 package com.pingcap.tikv.codec;
 
+import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.meta.TiIndexColumn;
+import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.ObjectRowImpl;
 import com.pingcap.tikv.row.Row;
@@ -49,7 +52,7 @@ public class TableCodecV2 {
     return encoder.encode(columnInfoList, valueList);
   }
 
-  protected static Row decodeRow(byte[] value, Long handle, TiTableInfo tableInfo) {
+  protected static Row decodeRow(byte[] value, Handle handle, TiTableInfo tableInfo) {
     if (handle == null && tableInfo.isPkHandle()) {
       throw new IllegalArgumentException("when pk is handle, handle cannot be null");
     }
@@ -58,8 +61,29 @@ public class TableCodecV2 {
     HashMap<Long, Object> decodedDataMap = new HashMap<>(colSize);
     RowV2 rowV2 = RowV2.createNew(value);
 
+    TiIndexInfo pk = tableInfo.getPrimaryKey();
+
+    if (pk != null) {
+      List<TiColumnInfo> cols = new ArrayList<>();
+      for (TiIndexColumn indexColumn : pk.getIndexColumns()) {
+        TiColumnInfo col = tableInfo.getColumn(indexColumn.getOffset());
+        cols.add(col);
+      }
+      if (tableInfo.isPkHandle()) {
+        assert cols.size() == 1;
+        decodedDataMap.put(cols.get(0).getId(), handle.data()[0]);
+      }
+      if (tableInfo.isCommonHandle()) {
+        for (int i = 0; i < cols.size(); i++) {
+          decodedDataMap.put(cols.get(i).getId(), handle.data()[i]);
+        }
+      }
+    }
+
     for (TiColumnInfo col : tableInfo.getColumns()) {
-      if (col.isPrimaryKey() && tableInfo.isPkHandle()) {
+      if (decodedDataMap.containsKey(col.getId())) {
+        continue;
+      } else if (col.isPrimaryKey() && tableInfo.isPkHandle()) {
         decodedDataMap.put(col.getId(), handle);
         continue;
       }
