@@ -448,7 +448,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
         }
       }
 
-      if (skipJDBC || !compSqlResult(qSpark, r1, r2, checkLimit)) {
+      if (skipJDBC || compSqlResult(qSpark, r1, r2, checkLimit)) {
         if (!skipTiDB && r3 == null) {
           try {
             r3 = queryTiDBViaJDBC(qSpark)
