@@ -270,6 +270,12 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
                 "Key not in region [%s] for key [%s], this error should not happen here.",
                 ctxRegion, KeyUtils.formatBytesUTF8(invalidKey)));
         throw new StatusRuntimeException(Status.UNKNOWN.withDescription(error.toString()));
+      } else if (error.hasRegionNotFound()) {
+        // region not found, maybe merged
+        logger.warn(String.format("Region Not Found Error for region [%s]", ctxRegion));
+        this.regionManager.onRegionStale(ctxRegion.getId());
+        notifyRegionCacheInvalidate(ctxRegion.getId());
+        return false;
       }
 
       logger.warn(String.format("Unknown error %s for region [%s]", error.toString(), ctxRegion));
