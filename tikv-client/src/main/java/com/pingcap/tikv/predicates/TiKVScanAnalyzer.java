@@ -169,6 +169,9 @@ public class TiKVScanAnalyzer {
       minPlan.getFilters().forEach(dagRequest::addDowngradeFilter);
       double minCost = minPlan.getCost();
       for (TiIndexInfo index : table.getIndices()) {
+        if (table.isCommonHandle()) {
+          continue;
+        }
         if (supportIndexScan(index, table)) {
           TiKVScanPlan plan =
               buildIndexScan(columnList, conditions, index, table, tableStatistics, false);
