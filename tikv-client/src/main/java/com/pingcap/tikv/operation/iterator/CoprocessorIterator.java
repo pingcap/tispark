@@ -29,6 +29,7 @@ import com.pingcap.tikv.columnar.TiChunkColumnVector;
 import com.pingcap.tikv.columnar.TiColumnVector;
 import com.pingcap.tikv.columnar.TiRowColumnVector;
 import com.pingcap.tikv.columnar.datatypes.CHType;
+import com.pingcap.tikv.key.CommonHandle;
 import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.meta.TiDAGRequest;
@@ -37,6 +38,7 @@ import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.CHTypeMapping;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.nio.charset.StandardCharsets;
@@ -225,7 +227,12 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         for (int i = 0; i < handleTypes.length; i++) {
           data[i] = row.get(i, handleTypes[i]);
         }
-        return new IntHandle((long) data[handleTypes.length - 1]);
+
+        if (handleTypes.length == 1 && handleTypes[0] == IntegerType.BIGINT) {
+          return new IntHandle((long) data[0]);
+        } else {
+          return CommonHandle.newCommonHandle(handleTypes, data);
+        }
       }
     };
   }

@@ -206,30 +206,36 @@ public class CodecDataInput implements DataInput {
       throw new CodecException("invalid encoded key");
     }
     int flag = readByte();
-    int l;
+    int a1 = this.available();
+
     switch (flag) {
       case NULL_FLAG:
-      case INT_FLAG | UINT_FLAG | FLOATING_FLAG | DURATION_FLAG:
-        l = 8;
+      case INT_FLAG:
+      case UINT_FLAG:
+      case FLOATING_FLAG:
+      case DURATION_FLAG:
+        RealCodec.readDouble(this);
         break;
       case BYTES_FLAG:
-        l = readByte();
+        readByte();
         break;
-        //      case COMPACT_BYTES_FLAG:
-        //        l = peekCompactBytes(b);
-        //      case DECIMAL_FLAG:
-        //        l = types.DecimalPeak(b);
-        //      case VARINT_FLAG:
-        //        l = peekVarint(b);
-        //      case UVARINT_FLAG:
+      case COMPACT_BYTES_FLAG:
+        BytesCodec.readCompactBytes(this);
+        break;
+      case DECIMAL_FLAG:
+        DecimalCodec.readDecimal(this);
+        break;
+        // case VARINT_FLAG:
+        //      l = peekVarint(b);
+        // case UVARINT_FLAG:
         //        l = peekUvarint(b);
-        //      case JSON_FLAG:
+        // case JSON_FLAG:
         //        l = json.PeekBytesAsJSON(b);
       default:
         throw new CodecException("invalid encoded key flag " + flag);
     }
-    reset();
-    return l + 1;
+    int a2 = this.available();
+    return a1 - a2 + 1;
   }
 
   public int peekByte() {
