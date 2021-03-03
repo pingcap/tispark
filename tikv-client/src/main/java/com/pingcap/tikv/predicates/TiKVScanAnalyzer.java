@@ -167,17 +167,18 @@ public class TiKVScanAnalyzer {
       }
     } else if (canUseTiKV && allowIndexScan) {
       minPlan.getFilters().forEach(dagRequest::addDowngradeFilter);
-      double minCost = minPlan.getCost();
-      for (TiIndexInfo index : table.getIndices()) {
-        if (table.isCommonHandle()) {
-          continue;
-        }
-        if (supportIndexScan(index, table)) {
-          TiKVScanPlan plan =
-              buildIndexScan(columnList, conditions, index, table, tableStatistics, false);
-          if (plan.getCost() < minCost) {
-            minPlan = plan;
-            minCost = plan.getCost();
+      if (table.isPartitionEnabled()) {
+        // disable index scan
+      } else {
+        double minCost = minPlan.getCost();
+        for (TiIndexInfo index : table.getIndices()) {
+          if (supportIndexScan(index, table)) {
+            TiKVScanPlan plan =
+                buildIndexScan(columnList, conditions, index, table, tableStatistics, false);
+            if (plan.getCost() < minCost) {
+              minPlan = plan;
+              minCost = plan.getCost();
+            }
           }
         }
       }
