@@ -60,6 +60,15 @@ public class TiDBJDBCClient implements AutoCloseable {
     return (Boolean) enableTableLock;
   }
 
+  public boolean supportClusteredIndex() throws IOException, SQLException {
+    try {
+      queryTiDBViaJDBC("select @@tidb_enable_clustered_index");
+    } catch (SQLException e) {
+      return false;
+    }
+    return true;
+  }
+
   /**
    * get enable-table-lock config from tidb
    *

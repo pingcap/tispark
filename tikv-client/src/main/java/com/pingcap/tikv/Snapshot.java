@@ -21,6 +21,7 @@ import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getTiChunk
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.columnar.TiChunk;
+import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTimestamp;
@@ -124,7 +125,7 @@ public class Snapshot {
    */
   private Iterator<Row> tableReadRow(TiDAGRequest dagRequest, List<RegionTask> tasks) {
     if (dagRequest.isDoubleRead()) {
-      Iterator<Long> iter = getHandleIterator(dagRequest, tasks, getSession());
+      Iterator<Handle> iter = getHandleIterator(dagRequest, tasks, getSession());
       return new IndexScanIterator(this, dagRequest, iter);
     } else {
       return getRowIterator(dagRequest, tasks, getSession());
@@ -139,7 +140,7 @@ public class Snapshot {
    * @param tasks RegionTask of the coprocessor request to send
    * @return Row iterator to iterate over resulting rows
    */
-  public Iterator<Long> indexHandleRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
+  public Iterator<Handle> indexHandleRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
     return getHandleIterator(dagRequest, tasks, session);
   }
 

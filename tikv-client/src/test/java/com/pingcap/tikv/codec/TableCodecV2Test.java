@@ -18,6 +18,8 @@ package com.pingcap.tikv.codec;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.key.Handle;
+import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
@@ -67,7 +69,7 @@ public class TableCodecV2Test {
                 .name("t")
                 .addColumn("c1", StringType.CHAR, 300)
                 .build(),
-            300L,
+            new IntHandle(300L),
             new Object[] {""});
     testCase.test();
   }
@@ -216,8 +218,8 @@ public class TableCodecV2Test {
                 .addColumn("c1", IntegerType.BIGINT, false, 10)
                 .setPkHandle(true)
                 .build(),
-            10000L,
-            new Object[] {10000L, 1L});
+            new IntHandle(10000L),
+            new Object[] {new IntHandle(10000L), 1L});
     testCase.test();
   }
 
@@ -310,10 +312,10 @@ public class TableCodecV2Test {
   public static class TestCase {
     private final byte[] bytes;
     private final TiTableInfo tableInfo;
-    private final Long handle;
+    private final Handle handle;
     private final Object[] value;
 
-    private TestCase(int[] unsignedBytes, TiTableInfo tableInfo, Long handle, Object[] value) {
+    private TestCase(int[] unsignedBytes, TiTableInfo tableInfo, Handle handle, Object[] value) {
       this.bytes = new byte[unsignedBytes.length];
       for (int i = 0; i < unsignedBytes.length; i++) {
         this.bytes[i] = (byte) (unsignedBytes[i] & 0xff);
@@ -324,12 +326,12 @@ public class TableCodecV2Test {
     }
 
     public static TestCase createNew(
-        int[] unsignedBytes, TiTableInfo tableInfo, Long handle, Object[] value) {
+        int[] unsignedBytes, TiTableInfo tableInfo, Handle handle, Object[] value) {
       return new TestCase(unsignedBytes, tableInfo, handle, value);
     }
 
     public static TestCase createNew(int[] unsignedBytes, TiTableInfo tableInfo, Object[] value) {
-      return new TestCase(unsignedBytes, tableInfo, -1L, value);
+      return new TestCase(unsignedBytes, tableInfo, new IntHandle(-1L), value);
     }
 
     private static boolean equals(byte[] a1, byte[] a2) {
