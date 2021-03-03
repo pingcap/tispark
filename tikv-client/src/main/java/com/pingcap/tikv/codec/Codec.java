@@ -65,16 +65,20 @@ public class Codec {
     if (colData.length <= 1) {
       throw new CodecException("invalid encoded column data, length <=1");
     }
-    byte flag = colData[0];
+    int flag = colData[0];
     DataType tp;
     switch (flag) {
-      case INT_FLAG | UINT_FLAG | VARINT_FLAG | UVARINT_FLAG:
+      case INT_FLAG:
+      case UINT_FLAG:
+      case VARINT_FLAG:
+      case UVARINT_FLAG:
         tp = IntegerType.BIGINT;
         break;
       case FLOATING_FLAG:
         tp = RealType.DOUBLE;
         break;
-      case BYTES_FLAG | COMPACT_BYTES_FLAG:
+      case BYTES_FLAG:
+      case COMPACT_BYTES_FLAG:
         tp = BytesType.TEXT;
         break;
       case DECIMAL_FLAG:

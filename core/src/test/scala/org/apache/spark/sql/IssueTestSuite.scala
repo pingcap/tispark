@@ -25,33 +25,25 @@ class IssueTestSuite extends BaseTiSparkTest {
     if (!supportClusteredIndex) {
       cancel("currently tidb instance does not support clustered index")
     }
-    tidbStmt.execute("SET tidb_enable_clustered_index = 1")
-    tidbStmt.execute("drop table if exists t1")
-    tidbStmt.execute("create table t1(a varchar(10), b int, primary key (a), unique key(b))")
-    tidbStmt.execute("insert into t1 values ('a', 1), ('b', null), ('c', 3)")
-    runTest("select * from t1 where b < 2", skipJDBC = true)
-  }
-
-  test("test clustered index read with common handle") {
-    if (!supportClusteredIndex) {
-      cancel("currently tidb instance does not support clustered index")
-    }
-    tidbStmt.execute("SET tidb_enable_clustered_index = 1")
-    tidbStmt.execute("drop table if exists t1")
-    tidbStmt.execute("create table t1(a varchar(10), b int, primary key (a))")
-    tidbStmt.execute("insert into t1 values ('a', 1), ('b', null), ('c', 3)")
-    runTest("select * from t1 where b < 2", skipJDBC = true)
-  }
-
-  test("test clustered index read with int handle") {
-    if (!supportClusteredIndex) {
-      cancel("currently tidb instance does not support clustered index")
-    }
-    tidbStmt.execute("SET tidb_enable_clustered_index = 1")
-    tidbStmt.execute("drop table if exists t1")
-    tidbStmt.execute("create table t1(a int, b int, index idx(a))")
-    tidbStmt.execute("insert into t1 values (2, 1), (3, null), (4, 3)")
-    runTest("select * from t1 where a < 4", skipJDBC = true)
+    spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "true")
+    tidbStmt.execute("""
+        |SET tidb_enable_clustered_index = 1;
+        |drop table if exists `tispark_test`.`clustered0`;
+        |CREATE TABLE `tispark_test`.`clustered0` (
+        |  `col_bit0` bit(1) not null,
+        |  `col_bit1` bit(1) not null,
+        |  `col_int0` int(11) not null,
+        |  `col_int1` int(11) not null,
+        |  UNIQUE KEY (`col_int0`),
+        |  PRIMARY KEY (`col_bit1`,`col_bit0`)
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+        |INSERT INTO `tispark_test`.`clustered0` VALUES (b'1',b'0',-1,-1);
+        |""".stripMargin)
+    val sql = "select * from clustered0"
+    spark.sql(s"explain $sql").show(200, false)
+    spark.sql(s"$sql").show(200, false)
+    runTest(sql, skipJDBC = true)
+    spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "false")
   }
 
   test("partition table with date partition column name") {

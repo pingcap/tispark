@@ -17,8 +17,13 @@ package com.pingcap.tikv.key;
 
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.CodecException;
+import com.pingcap.tikv.types.Converter;
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.MySQLType;
 import com.pingcap.tikv.util.FastByteComparisons;
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -28,13 +33,33 @@ public class CommonHandle implements Handle {
   private final byte[] encoded;
   private final int[] colEndOffsets;
 
+  private static final int MIN_ENCODE_LEN = 9;
+
+  public static CommonHandle newCommonHandle(DataType[] dataTypes, Object[] data) {
+    CodecDataOutput cdo = new CodecDataOutput();
+    for (int i = 0; i < data.length; i++) {
+      if (dataTypes[i].getType().equals(MySQLType.TypeTimestamp)) {
+        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, ((long) data[i]) / 1000);
+      } else if (dataTypes[i].getType().equals(MySQLType.TypeDate)) {
+        long days = (long) data[i];
+        if (Converter.getLocalTimezone().getOffset(0) < 0) {
+          days += 1;
+        }
+        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, new Date((days) * 24 * 3600 * 1000));
+      } else {
+        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, data[i]);
+      }
+    }
+    return new CommonHandle(cdo.toBytes());
+  }
+
   public CommonHandle(byte[] encoded) {
-    int len = encoded.length;
-    if (len < 9) {
-      this.encoded = Arrays.copyOf(encoded, 9);
+    if (encoded.length < MIN_ENCODE_LEN) {
+      this.encoded = Arrays.copyOf(encoded, MIN_ENCODE_LEN);
     } else {
       this.encoded = encoded;
     }
+
     int endOffset = 0;
     CodecDataInput cdi = new CodecDataInput(encoded);
     List<Integer> offsets = new ArrayList<>();
@@ -50,7 +75,11 @@ public class CommonHandle implements Handle {
   }
 
   public CommonHandle(byte[] encoded, int[] colEndOffsets) {
-    this.encoded = encoded;
+    if (encoded.length < MIN_ENCODE_LEN) {
+      this.encoded = Arrays.copyOf(encoded, MIN_ENCODE_LEN);
+    } else {
+      this.encoded = encoded;
+    }
     this.colEndOffsets = colEndOffsets;
   }
 
@@ -106,7 +135,7 @@ public class CommonHandle implements Handle {
     if (idx > 0) {
       start = colEndOffsets[idx - 1];
     }
-    return Arrays.copyOfRange(encoded, start, end);
+    return Arrays.copyOfRange(encoded, start, end + 1);
   }
 
   @Override
