@@ -1,6 +1,12 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.13] 2021-03-05
+### Fixes
+- Disable index scan on partition table [#1923](https://github.com/pingcap/tispark/pull/1923)
+- Fix jackson-databind [#1910](https://github.com/pingcap/tispark/pull/1910)
+- Fix BatchGet retry [#1907](https://github.com/pingcap/tispark/pull/1907)
+
 ## [TiSpark 2.3.12] 2021-02-01
 ### Fixes
 - Add retry in `RangeSplitter` [#1886](https://github.com/pingcap/tispark/pull/1886)
