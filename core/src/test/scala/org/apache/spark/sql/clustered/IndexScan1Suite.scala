@@ -30,7 +30,7 @@ class IndexScan1Suite extends ClusteredIndexTest {
     super.afterAll()
   }
 
-  ignore("index scan 1: primary key has two columns") {
+  test("index scan 1: primary key has two columns") {
     for (dataType1 <- testDataTypes) {
       for (dataType2 <- testDataTypes) {
         val schemas = genSchema(List(dataType2, dataType1, INT, INT), tablePrefix)

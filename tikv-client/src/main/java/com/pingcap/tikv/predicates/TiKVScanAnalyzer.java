@@ -178,9 +178,6 @@ public class TiKVScanAnalyzer {
           if (table.isCommonHandle() && table.getPrimaryKey().equals(index)) {
             continue;
           }
-          if (table.isCommonHandle() && table.getPrimaryKey().getIndexColumns().size() >= 2) {
-            continue;
-          }
 
           if (supportIndexScan(index, table)) {
             TiKVScanPlan plan =

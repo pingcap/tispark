@@ -36,8 +36,8 @@ class IssueTestSuite extends BaseTiSparkTest {
         |  `col_int1` int(11) not null,
         |  UNIQUE KEY (`col_int0`),
         |  PRIMARY KEY (`col_bit1`,`col_bit0`)
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
-        |INSERT INTO `tispark_test`.`clustered0` VALUES (b'1',b'0',-1,-1);
+        |  );
+        |  INSERT INTO `tispark_test`.`clustered0` VALUES (b'1',b'0',-1,-1);
         |""".stripMargin)
     val sql = "select * from clustered0"
     spark.sql(s"explain $sql").show(200, false)
