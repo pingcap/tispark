@@ -140,12 +140,14 @@ public class TiKVScanAnalyzer {
       TiTableInfo table,
       TiTimestamp ts,
       TiDAGRequest dagRequest) {
-    return buildTiDAGReq(true, true, false, columnList, conditions, table, null, ts, dagRequest);
+    return buildTiDAGReq(
+        true, false, true, false, columnList, conditions, table, null, ts, dagRequest);
   }
 
   // Build scan plan picking access path with lowest cost by estimation
   public TiDAGRequest buildTiDAGReq(
       boolean allowIndexScan,
+      boolean useIndexScanFirst,
       boolean canUseTiKV,
       boolean canUseTiFlash,
       List<TiColumnInfo> columnList,
@@ -170,19 +172,27 @@ public class TiKVScanAnalyzer {
       if (table.isPartitionEnabled()) {
         // disable index scan
       } else {
-        double minCost = minPlan.getCost();
+        TiKVScanPlan minIndexPlan = null;
+        double minIndexCost = Double.MAX_VALUE;
         for (TiIndexInfo index : table.getIndices()) {
-          if (table.isCommonHandle()) {
+          if (table.isCommonHandle() && table.getPrimaryKey().equals(index)) {
             continue;
           }
+          if (table.isCommonHandle() && table.getPrimaryKey().getIndexColumns().size() >= 2) {
+            continue;
+          }
+
           if (supportIndexScan(index, table)) {
             TiKVScanPlan plan =
                 buildIndexScan(columnList, conditions, index, table, tableStatistics, false);
-            if (plan.getCost() < minCost) {
-              minPlan = plan;
-              minCost = plan.getCost();
+            if (plan.getCost() < minIndexCost) {
+              minIndexPlan = plan;
+              minIndexCost = plan.getCost();
             }
           }
+        }
+        if (minIndexPlan != null && (minIndexCost < minPlan.getCost() || useIndexScanFirst)) {
+          minPlan = minIndexPlan;
         }
       }
     }

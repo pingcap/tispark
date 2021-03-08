@@ -27,6 +27,7 @@ object TiConfigConst {
   val REQUEST_COMMAND_PRIORITY: String = "spark.tispark.request.command.priority"
   val REQUEST_ISOLATION_LEVEL: String = "spark.tispark.request.isolation.level"
   val ALLOW_INDEX_READ: String = "spark.tispark.plan.allow_index_read"
+  val USE_INDEX_SCAN_FIRST: String = "spark.tispark.plan.use_index_scan_first"
   val COPROCESS_STREAMING: String = "spark.tispark.coprocess.streaming"
   val CODEC_FORMAT: String = "spark.tispark.coprocess.codec_format"
   val UNSUPPORTED_PUSHDOWN_EXPR: String = "spark.tispark.plan.unsupported_pushdown_exprs"

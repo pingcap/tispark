@@ -171,6 +171,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def allowAggregationPushDown(): Boolean =
     sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toLowerCase.toBoolean
 
+  private def useIndexScanFirst(): Boolean =
+    sqlConf.getConfString(TiConfigConst.USE_INDEX_SCAN_FIRST, "false").toLowerCase.toBoolean
+
   private def allowIndexRead(): Boolean =
     sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "true").toLowerCase.toBoolean
 
@@ -290,6 +293,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     scanBuilder.buildTiDAGReq(
       allowIndexRead(),
+      useIndexScanFirst(),
       engines.contains(TiStoreType.TiKV),
       engines.contains(TiStoreType.TiFlash),
       tiColumns.map { colRef =>

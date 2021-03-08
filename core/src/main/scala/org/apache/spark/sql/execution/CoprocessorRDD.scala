@@ -193,7 +193,7 @@ case class ColumnarRegionTaskExec(
       val handles = new util.ArrayList[Handle]()
       var handleIdx = 0
       for (i <- row.getArray(1).array) {
-        handles.add(i.asInstanceOf[IntHandle])
+        handles.add(i.asInstanceOf[Handle])
       }
       var taskCount = 0
       numRegions += 1
