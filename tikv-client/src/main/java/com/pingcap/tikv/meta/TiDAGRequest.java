@@ -303,7 +303,13 @@ public class TiDAGRequest implements Serializable {
         // double read case
         if (!hasPk) {
           // add handle column
-          indexScanBuilder.addColumns(handleColumn);
+          if (!tableInfo.isCommonHandle()) {
+            indexScanBuilder.addColumns(handleColumn);
+          } else {
+            for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
+              indexScanBuilder.addColumns(tableInfo.getColumn(col.getName()).toProto(tableInfo));
+            }
+          }
           ++colCount;
           addRequiredIndexDataType();
         }
@@ -342,12 +348,21 @@ public class TiDAGRequest implements Serializable {
         }
         // pk is not included in index but still needed
         if (pkIsNeeded) {
-          indexScanBuilder.addColumns(handleColumn);
+          if (!tableInfo.isCommonHandle()) {
+            indexScanBuilder.addColumns(handleColumn);
+          }
         }
       }
       executorBuilder.setTp(ExecType.TypeIndexScan);
 
       indexScanBuilder.setTableId(id).setIndexId(indexInfo.getId());
+
+      if (tableInfo.isCommonHandle()) {
+        for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
+          indexScanBuilder.addPrimaryColumnIds(tableInfo.getColumn(col.getName()).getId());
+        }
+      }
+
       dagRequestBuilder.addExecutors(executorBuilder.setIdxScan(indexScanBuilder).build());
     } else {
       // TableScan
@@ -732,7 +747,15 @@ public class TiDAGRequest implements Serializable {
 
   /** Required index columns for double read */
   private void addRequiredIndexDataType() {
-    indexDataTypes.add(requireNonNull(IntegerType.BIGINT, "dataType is null"));
+    if (!tableInfo.isCommonHandle()) {
+      indexDataTypes.add(requireNonNull(IntegerType.BIGINT, "dataType is null"));
+    } else {
+      for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
+        String c = col.getName();
+        ColumnRef cr = ColumnRef.create(c, tableInfo.getColumn(c));
+        indexDataTypes.add(cr.getDataType());
+      }
+    }
   }
 
   public List<DataType> getIndexDataTypes() {
