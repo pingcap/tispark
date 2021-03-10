@@ -16,6 +16,7 @@
 package com.pingcap.tikv.codec;
 
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
+import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.ObjectRowImpl;
@@ -49,7 +50,7 @@ public class TableCodecV1 {
     return cdo.toBytes();
   }
 
-  protected static Row decodeRow(byte[] value, Long handle, TiTableInfo tableInfo) {
+  protected static Row decodeRow(byte[] value, Handle handle, TiTableInfo tableInfo) {
     if (handle == null && tableInfo.isPkHandle()) {
       throw new IllegalArgumentException("when pk is handle, handle cannot be null");
     }

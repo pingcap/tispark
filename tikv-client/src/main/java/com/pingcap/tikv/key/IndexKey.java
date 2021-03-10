@@ -57,7 +57,7 @@ public class IndexKey extends Key {
   public static EncodeIndexDataResult encodeIndexDataValues(
       Row row,
       List<TiIndexColumn> indexColumns,
-      long handle,
+      Handle handle,
       boolean appendHandleIfContainsNull,
       TiTableInfo tableInfo) {
     // when appendHandleIfContainsNull is true, append handle column if any of the index column is

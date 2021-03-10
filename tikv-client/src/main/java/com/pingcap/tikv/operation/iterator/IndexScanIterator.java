@@ -19,11 +19,11 @@ import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
-import gnu.trove.list.array.TLongArrayList;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -31,7 +31,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutorCompletionService;
 
 public class IndexScanIterator implements Iterator<Row> {
-  private final Iterator<Long> handleIterator;
+  private final Iterator<Handle> handleIterator;
   private final TiDAGRequest dagReq;
   private final Snapshot snapshot;
   private final ExecutorCompletionService<Iterator<Row>> completionService;
@@ -39,7 +39,7 @@ public class IndexScanIterator implements Iterator<Row> {
   private Iterator<Row> rowIterator;
   private int batchCount = 0;
 
-  public IndexScanIterator(Snapshot snapshot, TiDAGRequest req, Iterator<Long> handleIterator) {
+  public IndexScanIterator(Snapshot snapshot, TiDAGRequest req, Iterator<Handle> handleIterator) {
     TiSession session = snapshot.getSession();
     TiConfiguration conf = session.getConf();
     this.dagReq = req;
@@ -49,8 +49,8 @@ public class IndexScanIterator implements Iterator<Row> {
     this.completionService = new ExecutorCompletionService<>(session.getThreadPoolForIndexScan());
   }
 
-  private TLongArrayList feedBatch() {
-    TLongArrayList handles = new TLongArrayList(512);
+  private List<Handle> feedBatch() {
+    List<Handle> handles = new ArrayList<>(512);
     while (handleIterator.hasNext()) {
       handles.add(handleIterator.next());
       if (batchSize <= handles.size()) {
@@ -66,7 +66,7 @@ public class IndexScanIterator implements Iterator<Row> {
       if (rowIterator == null) {
         TiSession session = snapshot.getSession();
         while (handleIterator.hasNext()) {
-          TLongArrayList handles = feedBatch();
+          List<Handle> handles = feedBatch();
           batchCount++;
           completionService.submit(
               () -> {

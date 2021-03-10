@@ -13,21 +13,27 @@
  * limitations under the License.
  */
 
-package com.pingcap.tispark.write
+package com.pingcap.tikv.key;
 
-import com.pingcap.tikv.key.Handle
-import com.pingcap.tispark.write.TiBatchWrite.TiRow
+import java.io.Serializable;
 
-case class WrappedEncodedRow(
-    row: TiRow,
-    handle: Handle,
-    encodedKey: SerializableKey,
-    encodedValue: Array[Byte],
-    isIndex: Boolean,
-    indexId: Long,
-    remove: Boolean)
-    extends Ordered[WrappedEncodedRow] {
-  override def compare(that: WrappedEncodedRow): Int = this.handle.compare(that.handle)
+public interface Handle extends Serializable {
 
-  override def hashCode(): Int = encodedKey.hashCode()
+  boolean isInt();
+
+  long intValue();
+
+  Handle next();
+
+  int compare(Handle h);
+
+  byte[] encoded();
+
+  int len();
+
+  int numCols();
+
+  byte[] encodedCol(int idx);
+
+  Object[] data();
 }
