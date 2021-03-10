@@ -28,6 +28,7 @@ import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
+import com.pingcap.tikv.key.Handle;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -155,6 +156,8 @@ public class Converter {
       return ((Number) val).longValue();
     } else if (val instanceof String) {
       return Long.parseLong(val.toString());
+    } else if (val instanceof Handle) {
+      return ((Handle) val).intValue();
     }
     throw new TypeException(
         String.format("Cannot cast %s to long", val.getClass().getSimpleName()));

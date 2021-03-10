@@ -96,6 +96,7 @@ class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
     judge("select * from enum_t where priority = 'High'")
   }
 
+  // https://github.com/pingcap/tispark/issues/1916
   test("adding json support") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("create table t(json_doc json)")
@@ -110,7 +111,6 @@ class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
           ('-2147483648'),
           ('9223372036854775807'),
           ('-9223372036854775808'),
-          ('9223372036854775808'),
           ('0.5'),
           ('-0.5'),
           ('""'),
@@ -139,7 +139,6 @@ class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
         List(-2147483648),
         List(9223372036854775807L),
         List(-9223372036854775808L),
-        List(9.223372036854776e18),
         List(0.5),
         List(-0.5),
         List("\"\""),

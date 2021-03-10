@@ -127,6 +127,12 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     tiDBJDBCClient.isEnableTableLock
   }
 
+  protected def supportClusteredIndex: Boolean = {
+    val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
+    val tiDBJDBCClient = new TiDBJDBCClient(conn)
+    tiDBJDBCClient.supportClusteredIndex
+  }
+
   protected def supportTTLUpdate: Boolean = {
     StoreVersion.minTiKVVersion(Version.RESOLVE_LOCK_V3, this.ti.tiSession.getPDClient)
   }

@@ -192,6 +192,10 @@ public class TiDAGRequest implements Serializable {
     this.encodeType = encodeType;
   }
 
+  public boolean isCommonHandle() {
+    return tableInfo.isCommonHandle();
+  }
+
   public DAGRequest buildIndexScan() {
     List<Integer> outputOffsets = new ArrayList<>();
     DAGRequest.Builder builder = buildScan(true, outputOffsets);
@@ -349,6 +353,13 @@ public class TiDAGRequest implements Serializable {
       // TableScan
       executorBuilder.setTp(ExecType.TypeTableScan);
       tblScanBuilder.setTableId(id);
+
+      if (tableInfo.isCommonHandle()) {
+        for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
+          tblScanBuilder.addPrimaryColumnIds(tableInfo.getColumn(col.getName()).getId());
+        }
+      }
+
       // Step1. Add columns to first executor
       int lastOffset = 0;
       for (ColumnRef col : getFields()) {

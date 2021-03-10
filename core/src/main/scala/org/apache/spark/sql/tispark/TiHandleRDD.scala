@@ -15,6 +15,7 @@
 
 package org.apache.spark.sql.tispark
 
+import com.pingcap.tikv.key.{Handle, TypedKey}
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.{TiConfiguration, TiSession}
@@ -26,6 +27,7 @@ import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 
+import java.util
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 
@@ -64,7 +66,7 @@ class TiHandleRDD(
       private val handleIterator = snapshot.indexHandleRead(dagRequest, tasks)
       private val regionManager = session.getRegionManager
       private lazy val handleList = {
-        val lst = new TLongArrayList()
+        val lst = new util.ArrayList[Handle]()
         handleIterator.asScala.foreach {
           // Kill the task in case it has been marked as killed. This logic is from
           // InterruptedIterator, but we inline it here instead of wrapping the iterator in order
@@ -72,7 +74,7 @@ class TiHandleRDD(
           if (context.isInterrupted()) {
             throw new TaskKilledException
           }
-          lst.add(_)
+          lst.add
         }
         lst
       }

@@ -15,10 +15,10 @@
 
 package org.apache.spark.sql.expression.index
 
-import java.nio.charset.Charset
-
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.catalyst.util.resourceToString
+
+import java.nio.charset.Charset
 
 class PrefixIndexTestSuite extends BaseTiSparkTest {
   // https://github.com/pingcap/tispark/issues/272
