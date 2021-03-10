@@ -305,12 +305,13 @@ public class TiDAGRequest implements Serializable {
           // add handle column
           if (!tableInfo.isCommonHandle()) {
             indexScanBuilder.addColumns(handleColumn);
+            ++colCount;
           } else {
             for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
               indexScanBuilder.addColumns(tableInfo.getColumn(col.getName()).toProto(tableInfo));
+              ++colCount;
             }
           }
-          ++colCount;
           addRequiredIndexDataType();
         }
 
@@ -318,7 +319,14 @@ public class TiDAGRequest implements Serializable {
           throw new DAGRequestException("Incorrect index scan with zero column count");
         }
 
-        outputOffsets.add(colCount - 1);
+        if (!tableInfo.isCommonHandle()) {
+          outputOffsets.add(colCount - 1);
+        } else {
+          int idxColSize = tableInfo.getPrimaryKey().getIndexColumns().size();
+          for (int i = idxColSize; i >= 1; i--) {
+            outputOffsets.add(colCount - i);
+          }
+        }
       } else {
         boolean pkIsNeeded = false;
         // =================== IMPORTANT ======================

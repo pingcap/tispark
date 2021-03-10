@@ -217,7 +217,7 @@ public class CodecDataInput implements DataInput {
         RealCodec.readDouble(this);
         break;
       case BYTES_FLAG:
-        readByte();
+        BytesCodec.readBytes(this);
         break;
       case COMPACT_BYTES_FLAG:
         BytesCodec.readCompactBytes(this);
