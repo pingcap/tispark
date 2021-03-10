@@ -17,7 +17,7 @@ package org.apache.spark.sql.clustered
 
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.insertion.BaseEnumerateDataTypesTestSpec
-import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
+import org.apache.spark.sql.test.generator.DataType.{BIT, BOOLEAN, ReflectedDataType}
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 import org.apache.spark.sql.test.generator._
 
@@ -30,7 +30,7 @@ trait ClusteredIndexTest extends BaseTiSparkTest with BaseEnumerateDataTypesTest
 
   override def dbName: String = "tispark_test"
 
-  override def rowCount = 1
+  override def rowCount = 10
 
   override def dataTypes: List[ReflectedDataType] = ???
 
@@ -47,10 +47,11 @@ trait ClusteredIndexTest extends BaseTiSparkTest with BaseEnumerateDataTypesTest
 
   override def genIndex(dataTypes: List[ReflectedDataType], r: Random): List[List[Index]] = {
     val size = dataTypes.length
-    var keys: List[Index] = Nil
+    var keys1: List[Index] = Nil
+    var keys2: List[Index] = Nil
 
     if (size <= 2) {
-      return List(keys)
+      return List(Nil)
     }
 
     val primaryKeyList = 0 until size - 2
@@ -66,19 +67,22 @@ trait ClusteredIndexTest extends BaseTiSparkTest with BaseEnumerateDataTypesTest
         }
       }
 
-      keys = PrimaryKey(pkCol) :: keys
+      keys1 = PrimaryKey(pkCol) :: keys1
+      keys2 = PrimaryKey(pkCol) :: keys2
     }
 
     {
-      val ukCol = if (isStringType(dataTypes(uniqueKey))) {
+      val keyCol = if (isStringType(dataTypes(uniqueKey))) {
         PrefixColumn(uniqueKey + 1, r.nextInt(4) + 2) :: Nil
       } else {
         DefaultColumn(uniqueKey + 1) :: Nil
       }
 
-      keys = UniqueKey(ukCol) :: keys
+      keys1 = UniqueKey(keyCol) :: keys1
+      keys2 = Key(keyCol) :: keys2
     }
-    List(keys)
+
+    List(keys1, keys2)
   }
 
   protected def test(schema: Schema): Unit = {
@@ -86,8 +90,20 @@ trait ClusteredIndexTest extends BaseTiSparkTest with BaseEnumerateDataTypesTest
     executeTiDBSQL(s"drop table if exists `$dbName`.`${schema.tableName}`;")
     executeTiDBSQL(schema.toString)
 
-    val insert = toInsertSQL(schema, generateRandomRows(schema, rowCount, r)) + ";"
-    executeTiDBSQL(insert)
+    var rc = rowCount
+    schema.columnInfo.foreach { columnInfo =>
+      if (columnInfo.dataType.equals(BIT) || columnInfo.dataType.equals(BOOLEAN)) {
+        rc = 2
+      }
+    }
+
+    for (insert <- toInsertSQL(schema, generateRandomRows(schema, rc, r))) {
+      try {
+        executeTiDBSQL(insert)
+      } catch {
+        case _: Throwable => println("insert fail")
+      }
+    }
 
     val sql = s"select * from `${schema.tableName}`"
     spark.sql(s"explain $sql").show(200, false)
@@ -100,19 +116,19 @@ trait ClusteredIndexTest extends BaseTiSparkTest with BaseEnumerateDataTypesTest
     tidbStmt.execute(sql)
   }
 
-  private def toInsertSQL(schema: Schema, data: List[TiRow]): String = {
-    val text =
-      data
-        .map { row =>
-          (0 until row.fieldCount())
-            .map { idx =>
-              val value = row.get(idx, schema.columnInfo(idx).generator.tiDataType)
-              toOutput(value)
-            }
-            .mkString("(", ",", ")")
-        }
-        .mkString(",")
-    s"INSERT INTO `$dbName`.`${schema.tableName}` VALUES $text;\n"
+  private def toInsertSQL(schema: Schema, data: List[TiRow]): List[String] = {
+    data
+      .map { row =>
+        (0 until row.fieldCount())
+          .map { idx =>
+            val value = row.get(idx, schema.columnInfo(idx).generator.tiDataType)
+            toOutput(value)
+          }
+          .mkString("(", ",", ")")
+      }
+      .map { text =>
+        s"INSERT INTO `$dbName`.`${schema.tableName}` VALUES $text;"
+      }
   }
 
   private def toOutput(value: Any): String =
