@@ -129,7 +129,8 @@ class IssueTestSuite extends BaseTiSparkTest {
     explainAndRunTest(s"SELECT * FROM t WHERE FLAG = 'true' and SUBSTR(ID, 1, 2) = '1'")
   }
 
-  test("large column number + double read") {
+  // ignored because of https://github.com/pingcap/tispark/issues/1942
+  ignore("large column number + double read") {
     tidbStmt.execute(
       resourceToString(
         s"issue/LargeColumn.sql",
