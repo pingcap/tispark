@@ -31,6 +31,9 @@ class IndexScan0Suite extends ClusteredIndexTest {
   }
 
   test("index scan 0: primary key has one column") {
+    if (!supportClusteredIndex) {
+      cancel("currently tidb instance does not support clustered index")
+    }
     for (dataType1 <- testDataTypes) {
       for (dataType2 <- testDataTypes) {
         val schemas = genSchema(List(dataType2, dataType1, INT), tablePrefix)
