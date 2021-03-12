@@ -40,13 +40,14 @@ class WriteWriteConflictSuite extends ConcurrencyTest {
           .options(tidbOptions)
           .option("database", database)
           .option("table", table)
-          .option("sleepAfterPrewritePrimaryKey", "5000")
+          .option("sleepAfterPrewritePrimaryKey", "20000")
           .option("replace", "true")
           .mode("append")
           .save()
       }
     }).start()
 
+    Thread.sleep(10000)
     val data: RDD[Row] = sc.makeRDD(List(Row(2001), Row(2002), Row(2003), Row(2004), Row(2005)))
     val df = sqlContext.createDataFrame(data, schema)
     df.write
