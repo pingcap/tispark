@@ -166,10 +166,14 @@ class ToRealSuite extends BaseBatchWriteTest("test_data_type_convert_to_real") {
     // java.lang.Long -> DOUBLE
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
+        val factor = 0.00000000001
+        val max = (factor * java.lang.Long.MAX_VALUE).toLong
+        val min = (factor * java.lang.Long.MIN_VALUE).toLong
+
         val row1 = Row(1, null, null)
         val row2 = Row(2, 22L, 33L)
-        val row3 = Row(3, java.lang.Long.MAX_VALUE, java.lang.Long.MIN_VALUE)
-        val row4 = Row(4, java.lang.Long.MIN_VALUE, java.lang.Long.MAX_VALUE)
+        val row3 = Row(3, max, min)
+        val row4 = Row(4, min, max)
 
         val schema = StructType(
           List(
