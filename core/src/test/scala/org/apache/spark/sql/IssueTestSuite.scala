@@ -454,20 +454,6 @@ class IssueTestSuite extends BaseTiSparkTest {
     project_df.show
   }
 
-  // https://github.com/pingcap/tispark/issues/262
-  // https://github.com/pingcap/tispark/issues/1794
-  ignore("NPE when decoding datetime,date,timestamp") {
-    if (enableTiFlashTest) {
-      cancel("ignored in tiflash test")
-    }
-    tidbStmt.execute("DROP TABLE IF EXISTS `tmp_debug`")
-    tidbStmt.execute(
-      "CREATE TABLE `tmp_debug` (\n  `tp_datetime` datetime DEFAULT NULL, `tp_date` date DEFAULT NULL, `tp_timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
-    tidbStmt.execute(
-      "INSERT INTO `tmp_debug` VALUES ('0000-00-00 00:00:00','0000-00-00','0000-00-00 00:00:00')")
-    spark.sql("select * from tmp_debug").collect().foreach(println)
-  }
-
   // https://github.com/pingcap/tispark/issues/255
   test("Group by with first") {
     setCurrentDatabase(tpchDBName)
