@@ -92,9 +92,30 @@ public class DateType extends AbstractDateTimeType {
     return "DATE";
   }
 
-  public int getDays(LocalDate d) {
+  /**
+   * In Spark 3.0, Proleptic Gregorian calendar is used in parsing, formatting, and converting dates
+   * and timestamps as well as in extracting sub-components like years, days and so on. Spark 3.0
+   * uses Java 8 API classes from the java.time packages that are based on ISO chronology. In Spark
+   * version 2.4 and below, those operations are performed using the hybrid calendar (Julian +
+   * Gregorian. The changes impact on the results for dates before October 15, 1582 (Gregorian) and
+   * affect on the following Spark 3.0 API.
+   *
+   * @param d
+   * @return
+   */
+  public int getDaysUsingJulianGregorianCalendar(LocalDate d) {
     // count how many days from EPOCH
     int days = Days.daysBetween(EPOCH, d).getDays();
+
+    // missing 1582-10-05 to 1582-10-14
+    if (days < -141436) {
+      // < 1582-10-05
+      days = days + 10;
+    } else if (days <= -141427) {
+      // <= 1582-10-14
+      days = days + 10;
+    }
+
     // if the timezone has negative offset, minus one day.
     if (getTimezone().getOffset(0) < 0) {
       days -= 1;
@@ -111,7 +132,7 @@ public class DateType extends AbstractDateTimeType {
       return null;
     }
 
-    return (long) getDays(date);
+    return (long) getDaysUsingJulianGregorianCalendar(date);
   }
 
   @Override
