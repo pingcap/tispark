@@ -21,6 +21,23 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("test GregorianCalendar") {
+    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute("""
+                       |CREATE TABLE t (c1 date,c2 bigint(20) DEFAULT NULL);
+                       |insert into t values ('1582-10-04', 1);
+                       |insert into t values ('1582-10-15', 2);
+                       |insert into t values ('1582-10-05', 11);
+                       |insert into t values ('1582-10-06', 12);
+                       |insert into t values ('1582-10-14', 13);
+                       |""".stripMargin)
+
+    val query = "select * from t"
+    spark.sql(s"explain $query").show(false)
+    spark.sql(query).show(false)
+    runTest(query, skipJDBC = true)
+  }
+
   test("test clustered index read") {
     if (!supportClusteredIndex) {
       cancel("currently tidb instance does not support clustered index")
