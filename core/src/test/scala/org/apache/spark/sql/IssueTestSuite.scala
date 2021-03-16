@@ -25,11 +25,47 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("""
                        |CREATE TABLE t (c1 date,c2 bigint(20) DEFAULT NULL);
-                       |insert into t values ('1582-10-04', 1);
-                       |insert into t values ('1582-10-15', 2);
-                       |insert into t values ('1582-10-05', 11);
-                       |insert into t values ('1582-10-06', 12);
-                       |insert into t values ('1582-10-14', 13);
+                       |insert into t values ('1582-10-15', 1);
+                       |insert into t values ('1582-10-14', 2);
+                       |insert into t values ('1582-10-13', 3);
+                       |insert into t values ('1582-10-05', 4);
+                       |insert into t values ('1582-10-04', 5);
+                       |insert into t values ('1500-03-02', 11);
+                       |insert into t values ('1500-03-01', 12);
+                       |insert into t values ('1500-02-28', 13);
+                       |insert into t values ('1400-03-02', 21);
+                       |insert into t values ('1400-03-01', 22);
+                       |insert into t values ('1400-02-28', 23);
+                       |insert into t values ('1300-03-02', 31);
+                       |insert into t values ('1300-03-01', 32);
+                       |insert into t values ('1300-02-28', 33);
+                       |insert into t values ('1100-03-02', 41);
+                       |insert into t values ('1100-03-01', 42);
+                       |insert into t values ('1100-02-28', 43);
+                       |insert into t values ('1000-03-02', 51);
+                       |insert into t values ('1000-03-01', 52);
+                       |insert into t values ('1000-02-28', 53);
+                       |insert into t values ('900-03-02', 61);
+                       |insert into t values ('900-03-01', 62);
+                       |insert into t values ('900-02-28', 63);
+                       |insert into t values ('700-03-02', 71);
+                       |insert into t values ('700-03-01', 72);
+                       |insert into t values ('700-02-28', 73);
+                       |insert into t values ('600-03-02', 81);
+                       |insert into t values ('600-03-01', 82);
+                       |insert into t values ('600-02-28', 83);
+                       |insert into t values ('500-03-02', 91);
+                       |insert into t values ('500-03-01', 92);
+                       |insert into t values ('500-02-28', 93);
+                       |insert into t values ('300-03-02', 101);
+                       |insert into t values ('300-03-01', 102);
+                       |insert into t values ('300-02-28', 103);
+                       |insert into t values ('200-03-02', 111);
+                       |insert into t values ('200-03-01', 112);
+                       |insert into t values ('200-02-28', 113);
+                       |insert into t values ('100-03-02', 121);
+                       |insert into t values ('100-03-01', 122);
+                       |insert into t values ('100-02-28', 123);
                        |""".stripMargin)
 
     val query = "select * from t"
