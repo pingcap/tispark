@@ -17,15 +17,14 @@ package org.apache.spark.sql.clustered
 
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.insertion.BaseEnumerateDataTypesTestSpec
-import org.apache.spark.sql.test.generator.DataType.{BIT, BOOLEAN, DATE, ReflectedDataType}
+import org.apache.spark.sql.test.generator.DataType.{BIT, BOOLEAN, ReflectedDataType}
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 import org.apache.spark.sql.test.generator._
 
 import scala.util.Random
 
 trait ClusteredIndexTest extends BaseTiSparkTest with BaseEnumerateDataTypesTestSpec {
-  // https://github.com/pingcap/tispark/issues/1939
-  protected val testDataTypes: List[ReflectedDataType] = baseDataTypes.filter(!_.equals(DATE))
+  protected val testDataTypes: List[ReflectedDataType] = baseDataTypes
 
   protected val tablePrefix: String = "clustered"
 
