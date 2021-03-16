@@ -120,30 +120,30 @@ public class DateType extends AbstractDateTimeType {
     // 1300-02-28 ~ 1400-02-28 => +8
     // 1400-03-01 ~ 1500-02-28 => +9
     // 1500-03-01 ~ 1582-10-14 => +10
-    if(days < -141426) {
-      if(days < -682943) {
+    if (days < -141426) {
+      if (days < -682943) {
         days = days - 2;
-      } else if(days < -646419) {
+      } else if (days < -646419) {
         days = days - 1;
-      } else if(days < -609895) {
-        //days = days;
-      } else if(days < -536846) {
+      } else if (days < -609895) {
+        // days = days;
+      } else if (days < -536846) {
         days = days + 1;
-      } else if(days < -500322) {
+      } else if (days < -500322) {
         days = days + 2;
-      } else if(days < -463798) {
+      } else if (days < -463798) {
         days = days + 3;
-      } else if(days < -390749) {
+      } else if (days < -390749) {
         days = days + 4;
-      } else if(days <-354225) {
+      } else if (days < -354225) {
         days = days + 5;
-      } else if(days <-317701) {
+      } else if (days < -317701) {
         days = days + 6;
-      } else if(days < -244652) {
+      } else if (days < -244652) {
         days = days + 7;
-      } else if(days < -208128) {
+      } else if (days < -208128) {
         days = days + 8;
-      } else if(days < -171604) {
+      } else if (days < -171604) {
         days = days + 9;
       } else if (days < -141426) {
         days = days + 10;
