@@ -107,13 +107,47 @@ public class DateType extends AbstractDateTimeType {
     // count how many days from EPOCH
     int days = Days.daysBetween(EPOCH, d).getDays();
 
-    // missing 1582-10-05 to 1582-10-14
-    if (days < -141436) {
-      // < 1582-10-05
-      days = days + 10;
-    } else if (days <= -141427) {
-      // <= 1582-10-14
-      days = days + 10;
+    //  ~100-02-28 => -2
+    // 100-03-01 ~200-02-28 => -1
+    // 200-03-01 ~300-02-28 => +0
+    // 300-03-01 ~500-02-28 => +1
+    // 500-03-01 ~600-02-28 => +2
+    // 600-03-01 ~700-02-28 => +3
+    // 700-03-01 ~900-02-28 => +4
+    // 900-03-01 ~1000-02-28 => +5
+    // 1000-03-01 ~1100-02-28 => +6
+    // 1100-03-01 ~ 1300-02-28 => +7
+    // 1300-02-28 ~ 1400-02-28 => +8
+    // 1400-03-01 ~ 1500-02-28 => +9
+    // 1500-03-01 ~ 1582-10-14 => +10
+    if(days < -141426) {
+      if(days < -682943) {
+        days = days - 2;
+      } else if(days < -646419) {
+        days = days - 1;
+      } else if(days < -609895) {
+        //days = days;
+      } else if(days < -536846) {
+        days = days + 1;
+      } else if(days < -500322) {
+        days = days + 2;
+      } else if(days < -463798) {
+        days = days + 3;
+      } else if(days < -390749) {
+        days = days + 4;
+      } else if(days <-354225) {
+        days = days + 5;
+      } else if(days <-317701) {
+        days = days + 6;
+      } else if(days < -244652) {
+        days = days + 7;
+      } else if(days < -208128) {
+        days = days + 8;
+      } else if(days < -171604) {
+        days = days + 9;
+      } else if (days < -141426) {
+        days = days + 10;
+      }
     }
 
     // if the timezone has negative offset, minus one day.
