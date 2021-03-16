@@ -197,7 +197,7 @@ public class TiBlockColumnVector extends TiColumnVector {
     int month = (int) (ym % 13);
     int day = (int) (ymd & ((1 << 5) - 1));
     LocalDate date = new LocalDate(year, month, day);
-    return ((DateType) type).getDays(date);
+    return ((DateType) type).getDaysUsingJulianGregorianCalendar(date);
   }
   /**
    * Returns the long type value for rowId. The return value is undefined and can be anything, if
