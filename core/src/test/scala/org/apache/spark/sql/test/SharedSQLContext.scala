@@ -394,6 +394,15 @@ trait SharedSQLContext
 
         conf = new SparkConf(false)
 
+        val propertyNames = _tidbConf.propertyNames()
+        while (propertyNames.hasMoreElements) {
+          val key: String = propertyNames.nextElement().asInstanceOf[String]
+          if (key.startsWith("spark.")) {
+            val value = _tidbConf.getProperty(key)
+            conf.set(key, value)
+          }
+        }
+
         conf.set("spark.tispark.write.allow_spark_sql", "true")
         conf.set("spark.tispark.write.without_lock_table", "true")
         conf.set("spark.tispark.tikv.region_split_size_in_mb", "1")
