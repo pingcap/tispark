@@ -21,6 +21,22 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("test tiflash timestamp < 1970") {
+    if (!enableTiFlashTest) {
+      cancel("tiflash test not enabled")
+    }
+
+    tidbStmt.execute(s"""
+         |DROP TABLE IF EXISTS `t`;
+         |CREATE TABLE `t` (`col_timestamp0` timestamp,`col_bit` bit(1));
+         |INSERT INTO `t` VALUES ('1969-12-31 17:00:01.0',b'0');
+         |ALTER TABLE `t` SET TIFLASH REPLICA 1;
+         |""".stripMargin)
+
+    assert(checkLoadTiFlashWithRetry("t", Some("tispark_test")))
+    explainAndRunTest("select col_timestamp0 from t where col_bit < 1", canTestTiFlash = true)
+  }
+
   test("test GregorianCalendar") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("""
