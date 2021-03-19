@@ -317,6 +317,11 @@ class TiBatchWriteTable(
   }
 
   def checkUnsupported(): Unit = {
+    if (tiTableInfo.isCommonHandle) {
+      throw new TiBatchWriteException(
+        "tispark currently does not support write data to table with clustered index!")
+    }
+
     // write to table with auto random column
     if (tiTableInfo.hasAutoRandomColumn) {
       throw new TiBatchWriteException(
