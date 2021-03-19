@@ -95,8 +95,8 @@ class IssueTestSuite extends BaseTiSparkTest {
       cancel("currently tidb instance does not support clustered index")
     }
     spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "true")
+    enableClusteredIndex()
     tidbStmt.execute("""
-        |SET tidb_enable_clustered_index = 1;
         |drop table if exists `tispark_test`.`clustered0`;
         |CREATE TABLE `tispark_test`.`clustered0` (
         |  `col_bit0` bit(1) not null,
@@ -113,6 +113,8 @@ class IssueTestSuite extends BaseTiSparkTest {
     spark.sql(s"$sql").show(200, false)
     runTest(sql, skipJDBC = true)
     spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "false")
+
+    disableClusteredIndex()
   }
 
   test("partition table with date partition column name") {

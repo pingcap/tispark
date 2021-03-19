@@ -174,6 +174,19 @@ trait SharedSQLContext
 
   protected def initializeStatement(): Unit = {
     _statement = _tidbConnection.createStatement()
+    disableClusteredIndex()
+  }
+
+  protected def enableClusteredIndex(): Unit = {
+    _statement.execute("SET GLOBAL tidb_enable_clustered_index = 1")
+    _statement.close()
+    _statement = _tidbConnection.createStatement()
+  }
+
+  protected def disableClusteredIndex(): Unit = {
+    _statement.execute("SET GLOBAL tidb_enable_clustered_index = 0")
+    _statement.close()
+    _statement = _tidbConnection.createStatement()
   }
 
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
