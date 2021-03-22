@@ -20,8 +20,7 @@ package org.apache.spark.sql.test
 import java.io.File
 import java.sql.{Connection, Date, Statement}
 import java.util.{Locale, Properties, TimeZone}
-
-import com.pingcap.tikv.{StoreVersion, Version}
+import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient, Version}
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
@@ -175,7 +174,15 @@ trait SharedSQLContext
 
   protected def initializeStatement(): Unit = {
     _statement = _tidbConnection.createStatement()
-    disableClusteredIndex()
+    if (supportClusteredIndex) {
+      disableClusteredIndex()
+    }
+  }
+
+  protected def supportClusteredIndex: Boolean = {
+    val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
+    val tiDBJDBCClient = new TiDBJDBCClient(conn)
+    tiDBJDBCClient.supportClusteredIndex
   }
 
   protected def enableClusteredIndex(): Unit = {
