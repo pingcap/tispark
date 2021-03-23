@@ -25,10 +25,8 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.util.FastByteComparisons;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import org.tikv.kvproto.Metapb;
@@ -37,59 +35,57 @@ import org.tikv.kvproto.Metapb.Region;
 
 public class TiRegion implements Serializable {
   private final Region meta;
-  private final Set<Long> unreachableStores;
-  private Peer peer;
   private final IsolationLevel isolationLevel;
   private final Kvrpcpb.CommandPri commandPri;
+  private final Peer leader;
 
   public TiRegion(
-      Region meta, Peer peer, IsolationLevel isolationLevel, Kvrpcpb.CommandPri commandPri) {
+      Region meta, Peer leader, IsolationLevel isolationLevel, Kvrpcpb.CommandPri commandPri) {
     Objects.requireNonNull(meta, "meta is null");
-    this.meta = decodeRegion(meta);
-    if (peer == null || peer.getId() == 0) {
+    this.meta = decodeRegion(meta, false);
+    if (leader == null || leader.getId() == 0) {
       if (meta.getPeersCount() == 0) {
         throw new TiClientInternalException("Empty peer list for region " + meta.getId());
       }
-      this.peer = meta.getPeers(0);
+      // region's first peer is leader.
+      this.leader = meta.getPeers(0);
     } else {
-      this.peer = peer;
+      this.leader = leader;
     }
-    this.unreachableStores = new HashSet<>();
     this.isolationLevel = isolationLevel;
     this.commandPri = commandPri;
   }
 
-  private Region decodeRegion(Region region) {
+  private Region decodeRegion(Region region, boolean isRawRegion) {
     Region.Builder builder =
         Region.newBuilder()
             .setId(region.getId())
             .setRegionEpoch(region.getRegionEpoch())
             .addAllPeers(region.getPeersList());
 
-    if (region.getStartKey().isEmpty()) {
+    if (region.getStartKey().isEmpty() || isRawRegion) {
       builder.setStartKey(region.getStartKey());
     } else {
-      byte[] decodecStartKey = BytesCodec.readBytes(new CodecDataInput(region.getStartKey()));
-      builder.setStartKey(ByteString.copyFrom(decodecStartKey));
+      byte[] decodedStartKey = BytesCodec.readBytes(new CodecDataInput(region.getStartKey()));
+      builder.setStartKey(ByteString.copyFrom(decodedStartKey));
     }
 
-    if (region.getEndKey().isEmpty()) {
+    if (region.getEndKey().isEmpty() || isRawRegion) {
       builder.setEndKey(region.getEndKey());
     } else {
-      byte[] decodecEndKey = BytesCodec.readBytes(new CodecDataInput(region.getEndKey()));
-      builder.setEndKey(ByteString.copyFrom(decodecEndKey));
+      byte[] decodedEndKey = BytesCodec.readBytes(new CodecDataInput(region.getEndKey()));
+      builder.setEndKey(ByteString.copyFrom(decodedEndKey));
     }
 
     return builder.build();
   }
 
   public Peer getLeader() {
-    return peer;
+    return leader;
   }
 
   public List<Peer> getLearnerList() {
-    int peerCnt = getMeta().getPeersCount();
-    List<Peer> peers = new ArrayList<Peer>();
+    List<Peer> peers = new ArrayList<>();
     for (Peer peer : getMeta().getPeersList()) {
       if (peer.getIsLearner()) {
         peers.add(peer);
@@ -114,8 +110,101 @@ public class TiRegion implements Serializable {
     Kvrpcpb.Context.Builder builder = Kvrpcpb.Context.newBuilder();
     builder.setIsolationLevel(this.isolationLevel);
     builder.setPriority(this.commandPri);
-    builder.setRegionId(meta.getId()).setPeer(this.peer).setRegionEpoch(this.meta.getRegionEpoch());
+    builder
+        .setRegionId(meta.getId())
+        .setPeer(this.leader)
+        .setRegionEpoch(this.meta.getRegionEpoch());
     return builder.build();
+  }
+
+  // getVerID returns the Region's RegionVerID.
+  public RegionVerID getVerID() {
+    return new RegionVerID(
+        meta.getId(), meta.getRegionEpoch().getConfVer(), meta.getRegionEpoch().getVersion());
+  }
+
+  /**
+   * switches current peer to the one on specific store. It return false if no peer matches the
+   * storeID.
+   *
+   * @param leaderStoreID is leader peer id.
+   * @return null if no peers matches the store id.
+   */
+  public TiRegion switchPeer(long leaderStoreID) {
+    List<Peer> peers = meta.getPeersList();
+    for (Peer p : peers) {
+      if (p.getStoreId() == leaderStoreID) {
+        return new TiRegion(this.meta, p, this.isolationLevel, this.commandPri);
+      }
+    }
+    return null;
+  }
+
+  public boolean isMoreThan(ByteString key) {
+    return FastByteComparisons.compareTo(
+            meta.getStartKey().toByteArray(),
+            0,
+            meta.getStartKey().size(),
+            key.toByteArray(),
+            0,
+            key.size())
+        > 0;
+  }
+
+  public boolean isLessThan(ByteString key) {
+    return FastByteComparisons.compareTo(
+            meta.getEndKey().toByteArray(),
+            0,
+            meta.getEndKey().size(),
+            key.toByteArray(),
+            0,
+            key.size())
+        <= 0;
+  }
+
+  public boolean contains(ByteString key) {
+    return !isMoreThan(key) && !isLessThan(key);
+  }
+
+  public boolean isValid() {
+    return leader != null && meta != null;
+  }
+
+  public Metapb.RegionEpoch getRegionEpoch() {
+    return this.meta.getRegionEpoch();
+  }
+
+  public Region getMeta() {
+    return meta;
+  }
+
+  @Override
+  public boolean equals(final Object another) {
+    if (!(another instanceof TiRegion)) {
+      return false;
+    }
+    TiRegion anotherRegion = ((TiRegion) another);
+    return anotherRegion.meta.equals(this.meta)
+        && anotherRegion.leader.equals(this.leader)
+        && anotherRegion.commandPri.equals(this.commandPri)
+        && anotherRegion.isolationLevel.equals(this.isolationLevel);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(meta, leader, isolationLevel, commandPri);
+  }
+
+  @Override
+  public String toString() {
+    return String.format(
+        "{Region[%d] ConfVer[%d] Version[%d] Store[%d] KeyRange[%s]:[%s]}",
+        getId(),
+        getRegionEpoch().getConfVer(),
+        getRegionEpoch().getVersion(),
+        getLeader().getStoreId(),
+        KeyUtils.formatBytesUTF8(getStartKey()),
+        KeyUtils.formatBytesUTF8(getEndKey()));
   }
 
   public class RegionVerID {
@@ -149,88 +238,5 @@ public class TiRegion implements Serializable {
       hash = hash * 31 + Long.hashCode(ver);
       return hash;
     }
-  }
-
-  // getVerID returns the Region's RegionVerID.
-  public RegionVerID getVerID() {
-    return new RegionVerID(
-        meta.getId(), meta.getRegionEpoch().getConfVer(), meta.getRegionEpoch().getVersion());
-  }
-
-  /**
-   * switches current peer to the one on specific store. It return false if no peer matches the
-   * storeID.
-   *
-   * @param leaderStoreID is leader peer id.
-   * @return false if no peers matches the store id.
-   */
-  boolean switchPeer(long leaderStoreID) {
-    List<Peer> peers = meta.getPeersList();
-    for (Peer p : peers) {
-      if (p.getStoreId() == leaderStoreID) {
-        this.peer = p;
-        return true;
-      }
-    }
-    return false;
-  }
-
-  public boolean contains(ByteString key) {
-    return (FastByteComparisons.compareTo(
-                meta.getStartKey().toByteArray(),
-                0,
-                meta.getStartKey().size(),
-                key.toByteArray(),
-                0,
-                key.size())
-            <= 0)
-        && (meta.getEndKey().isEmpty()
-            || FastByteComparisons.compareTo(
-                    meta.getEndKey().toByteArray(),
-                    0,
-                    meta.getEndKey().size(),
-                    key.toByteArray(),
-                    0,
-                    key.size())
-                > 0);
-  }
-
-  public boolean isValid() {
-    return peer != null && meta != null;
-  }
-
-  public Metapb.RegionEpoch getRegionEpoch() {
-    return this.meta.getRegionEpoch();
-  }
-
-  public Region getMeta() {
-    return meta;
-  }
-
-  @Override
-  public boolean equals(final Object another) {
-    if (!(another instanceof TiRegion)) return false;
-    TiRegion anotherRegion = ((TiRegion) another);
-    return anotherRegion.meta.equals(this.meta)
-        && anotherRegion.peer.equals(this.peer)
-        && anotherRegion.commandPri.equals(this.commandPri)
-        && anotherRegion.isolationLevel.equals(this.isolationLevel);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(meta, peer, isolationLevel, commandPri);
-  }
-
-  @Override
-  public String toString() {
-    return String.format(
-        "{Region[%d] ConfVer[%d] Version[%d] Store[%d] KeyRange[%s]:[%s]}",
-        getId(),
-        getRegionEpoch().getConfVer(),
-        getRegionEpoch().getVersion(),
-        getLeader().getStoreId(),
-        KeyUtils.formatBytesUTF8(getStartKey()),
-        KeyUtils.formatBytesUTF8(getEndKey()));
   }
 }

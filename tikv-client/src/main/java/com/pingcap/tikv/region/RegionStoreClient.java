@@ -759,19 +759,17 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
    * @param newStore the new store presented by NotLeader Error
    * @return false when re-split is needed.
    */
-  @Override
-  public boolean onNotLeader(Store newStore) {
+  public boolean onNotLeader(Store newStore, TiRegion newRegion) {
     if (logger.isDebugEnabled()) {
       logger.debug(region + ", new leader = " + newStore.getId());
     }
-    TiRegion cachedRegion = regionManager.getRegionById(region.getId());
-    // When switch leader fails or the region changed its key range,
+    // When switch leader fails or the region changed its region epoch,
     // it would be necessary to re-split task's key range for new region.
-    if (!region.getStartKey().equals(cachedRegion.getStartKey())
-        || !region.getEndKey().equals(cachedRegion.getEndKey())) {
+    if (!region.getRegionEpoch().equals(newRegion.getRegionEpoch())) {
+      regionManager.invalidateRegion(newRegion);
       return false;
     }
-    region = cachedRegion;
+    region = newRegion;
     String addressStr = regionManager.getStoreById(region.getLeader().getStoreId()).getAddress();
     ManagedChannel channel = channelFactory.getChannel(addressStr);
     blockingStub = TikvGrpc.newBlockingStub(channel);
@@ -785,8 +783,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     ManagedChannel channel = channelFactory.getChannel(addressStr);
     blockingStub = TikvGrpc.newBlockingStub(channel);
     asyncStub = TikvGrpc.newStub(channel);
-    if (logger.isDebugEnabled() && region.getLeader().getStoreId() != store.getId()) {
-      logger.debug(
+    if (region.getLeader().getStoreId() != store.getId()) {
+      logger.warn(
           "store_not_match may occur? "
               + region
               + ", original store = "
