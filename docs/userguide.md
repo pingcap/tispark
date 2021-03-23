@@ -309,7 +309,7 @@ Currently, you can adjust these configurations in your `spark.conf` file.
 
 TiSpark reads the range and hash partition table from TiDB.
 
-Currently, TiSpark don't support a MySQL/TiDB partition table syntax `select col_name from table_name partition(partition_name)`, but you can still use `where` condition to filter the partitions.
+Currently, TiSpark doesn't support a MySQL/TiDB partition table syntax `select col_name from table_name partition(partition_name)`, but you can still use `where` condition to filter the partitions.
 
 TiSpark decides whether to apply partition pruning according to the partition type and the partition expression associated with the table.
 
