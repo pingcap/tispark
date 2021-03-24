@@ -173,8 +173,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
 
         if (!retry) {
           this.regionManager.invalidateRegion(region);
-          notifyRegionStoreCacheInvalidate(
-            region.getId(), newStoreId, CacheInvalidateEvent.CacheType.LEADER);
+          notifyRegionCacheInvalidate(region.getId());
         }
 
         backOffer.doBackOff(backOffFuncType, new GrpcException(error.toString()));
@@ -191,8 +190,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
                 "Store Not Match happened with region id %d, store id %d, actual store id %d",
                 region.getId(), storeId, actualStoreId));
 
-        this.regionManager.invalidateRegion(region);
-        this.regionManager.invalidateStore(storeId);
+        invalidateRegionStoreCache(region);
         // recv.onStoreNotMatch(this.regionManager.getStoreById(storeId));
         // assume this is a low probability error, do not retry, just re-split the request by
         // throwing it out.
