@@ -209,7 +209,6 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         cp .ci/log4j-ci.properties core/src/test/resources/log4j.properties
                         bash core/scripts/version.sh
                         bash core/scripts/fetch-test-data.sh
-                        mv core/src/test core-test/src/
                         bash tikv-client/scripts/proto.sh
                         """
                         }
