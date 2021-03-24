@@ -200,6 +200,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         // region has outdated version，please try later.
         logger.warn(String.format("Stale Epoch encountered for region [%s]", region));
         this.regionManager.onRegionStale(region);
+        notifyRegionCacheInvalidate(region.getId());
         return false;
       } else if (error.hasServerIsBusy()) {
         // this error is reported from kv:
