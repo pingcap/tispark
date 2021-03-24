@@ -60,7 +60,6 @@ import org.apache.log4j.Logger;
 import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Coprocessor.Request;
-import org.tikv.kvproto.Coprocessor.Response;
 import org.tikv.kvproto.Errorpb;
 import org.tikv.kvproto.Kvrpcpb.BatchGetRequest;
 import org.tikv.kvproto.Kvrpcpb.BatchGetResponse;
@@ -159,10 +158,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
       KVErrorHandler<GetResponse> handler =
           new KVErrorHandler<>(
-              regionManager,
-              this,
-              region,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+              regionManager, this, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
 
       GetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_GET, factory, handler);
 
@@ -209,10 +205,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
                 .build();
     KVErrorHandler<BatchGetResponse> handler =
         new KVErrorHandler<>(
-            regionManager,
-            this,
-            region,
-            resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+            regionManager, this, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
     BatchGetResponse resp =
         callWithRetry(backOffer, TikvGrpc.METHOD_KV_BATCH_GET, request, handler);
     return doBatchGet(resp, backOffer);
@@ -270,10 +263,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
       KVErrorHandler<ScanResponse> handler =
           new KVErrorHandler<>(
-              regionManager,
-              this,
-              region,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+              regionManager, this, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
       ScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_SCAN, request, handler);
       if (isScanSuccess(backOffer, resp)) {
         return doScan(resp);
@@ -400,10 +390,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
                   .build();
       KVErrorHandler<PrewriteResponse> handler =
           new KVErrorHandler<>(
-              regionManager,
-              this,
-              region,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+              regionManager, this, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
       PrewriteResponse resp = callWithRetry(bo, TikvGrpc.METHOD_KV_PREWRITE, factory, handler);
       if (isPrewriteSuccess(bo, resp)) {
         return;
@@ -425,7 +412,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       throws TiClientInternalException, KeyException, RegionException {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
-      throw new TiClientInternalException("PrewriteResponse failed without a cause");
+      throw new TiClientInternalException("Prewrite Response failed without a cause");
     }
     if (resp.hasRegionError()) {
       throw new RegionException(resp.getRegionError());
@@ -471,10 +458,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
                   .build();
       KVErrorHandler<CommitResponse> handler =
           new KVErrorHandler<>(
-              regionManager,
-              this,
-              region,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+              regionManager, this, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
       CommitResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
       if (isCommitSuccess(backOffer, resp)) {
         break;
@@ -524,7 +508,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       List<KeyRange> ranges,
       Queue<SelectResponse> responseQueue) {
     if (req == null || ranges == null || req.getExecutorsCount() < 1) {
-      throw new IllegalArgumentException("Invalid coprocess argument!");
+      throw new IllegalArgumentException("Invalid coprocessor argument!");
     }
 
     Supplier<Coprocessor.Request> reqToSend =
@@ -539,10 +523,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     // we should handle the region error ourselves
     KVErrorHandler<Coprocessor.Response> handler =
         new KVErrorHandler<>(
-            regionManager,
-            this,
-            region,
-            resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+            regionManager, this, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
     Coprocessor.Response resp =
         callWithRetry(backOffer, TikvGrpc.METHOD_COPROCESSOR, reqToSend, handler);
     return handleCopResponse(backOffer, resp, ranges, responseQueue);
@@ -592,7 +573,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
 
     String otherError = response.getOtherError();
-    if (otherError != null && !otherError.isEmpty()) {
+    if (!otherError.isEmpty()) {
       logger.warn(String.format("Other error occurred, message: %s", otherError));
       throw new GrpcException(otherError);
     }
@@ -602,7 +583,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   private Iterator<SelectResponse> doCoprocessor(StreamingResponse response) {
-    Iterator<Response> responseIterator = response.iterator();
+    Iterator<Coprocessor.Response> responseIterator = response.iterator();
     // If we got nothing to handle, return null
     if (!responseIterator.hasNext()) {
       return null;
@@ -622,7 +603,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     };
   }
 
-  private SelectResponse doCoprocessor(Response resp) {
+  private SelectResponse doCoprocessor(Coprocessor.Response resp) {
     try {
       SelectResponse selectResp = SelectResponse.parseFrom(resp.getData());
       if (selectResp.hasError()) {
@@ -653,7 +634,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
         new KVErrorHandler<>(
             regionManager,
             this,
-            region,
             StreamingResponse::getFirstRegionError // TODO: handle all errors in streaming respinse
             );
 

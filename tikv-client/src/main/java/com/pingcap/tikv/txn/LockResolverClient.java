@@ -82,6 +82,10 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
   private TiRegion region;
   private final RegionManager regionManager;
 
+  public TiRegion getRegion() {
+    return region;
+  }
+
   public LockResolverClient(
       TiConfiguration conf,
       TikvBlockingStub blockingStub,
@@ -144,10 +148,7 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
                   .build();
       KVErrorHandler<CleanupResponse> handler =
           new KVErrorHandler<>(
-              regionManager,
-              this,
-              region,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+              regionManager, this, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
 
       CleanupResponse resp = callWithRetry(bo, TikvGrpc.METHOD_KV_CLEANUP, factory, handler);
 
@@ -241,10 +242,7 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
 
       KVErrorHandler<ResolveLockResponse> handler =
           new KVErrorHandler<>(
-              regionManager,
-              this,
-              region,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+              regionManager, this, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
 
       ResolveLockResponse resp =
           callWithRetry(bo, TikvGrpc.METHOD_KV_RESOLVE_LOCK, factory, handler);
@@ -285,19 +283,18 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
    * @return false when re-split is needed.
    */
   @Override
-  public boolean onNotLeader(Store newStore) {
+  public boolean onNotLeader(Store newStore, TiRegion newRegion) {
     if (logger.isDebugEnabled()) {
       logger.debug(region + ", new leader = " + newStore.getId());
     }
-    TiRegion cachedRegion = regionManager.getRegionById(region.getId());
-    // When switch leader fails or the region changed its key range,
+    // When switch leader fails or the region changed its region epoch,
     // it would be necessary to re-split task's key range for new region.
-    if (!region.getStartKey().equals(cachedRegion.getStartKey())
-        || !region.getEndKey().equals(cachedRegion.getEndKey())) {
+    if (!region.getRegionEpoch().equals(newRegion.getRegionEpoch())) {
+      regionManager.invalidateRegion(newRegion);
       return false;
     }
-    region = cachedRegion;
-    String addressStr = newStore.getAddress();
+    region = newRegion;
+    String addressStr = regionManager.getStoreById(region.getLeader().getStoreId()).getAddress();
     ManagedChannel channel = channelFactory.getChannel(addressStr);
     blockingStub = TikvGrpc.newBlockingStub(channel);
     asyncStub = TikvGrpc.newStub(channel);
@@ -310,5 +307,14 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
     ManagedChannel channel = channelFactory.getChannel(addressStr);
     blockingStub = TikvGrpc.newBlockingStub(channel);
     asyncStub = TikvGrpc.newStub(channel);
+    if (region.getLeader().getStoreId() != store.getId()) {
+      logger.warn(
+          "store_not_match may occur? "
+              + region
+              + ", original store = "
+              + store.getId()
+              + " address = "
+              + addressStr);
+    }
   }
 }

@@ -96,7 +96,6 @@ public class LockResolverTest {
           new KVErrorHandler<>(
               session.getRegionManager(),
               client,
-              region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
 
       PrewriteResponse resp =
@@ -202,7 +201,6 @@ public class LockResolverTest {
           new KVErrorHandler<>(
               session.getRegionManager(),
               client,
-              tiRegion,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
 
       CommitResponse resp =
