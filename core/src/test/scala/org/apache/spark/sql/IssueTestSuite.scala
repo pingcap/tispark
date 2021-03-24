@@ -42,10 +42,11 @@ class IssueTestSuite extends BaseTiSparkTest {
       cancel("currently tidb instance does not support clustered index")
     }
     spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "true")
-    enableClusteredIndex()
-    tidbStmt.execute("""
-        |drop table if exists `tispark_test`.`clustered0`;
-        |CREATE TABLE `tispark_test`.`clustered0` (
+
+    tidbStmt.execute("drop table if exists `tispark_test`.`clustered0`")
+
+    createTableWithClusteredIndex("""
+        CREATE TABLE `tispark_test`.`clustered0` (
         |  `col_bit0` bit(1) not null,
         |  `col_bit1` bit(1) not null,
         |  `col_int0` int(11) not null,
@@ -53,15 +54,14 @@ class IssueTestSuite extends BaseTiSparkTest {
         |  UNIQUE KEY (`col_int0`),
         |  PRIMARY KEY (`col_bit1`,`col_bit0`)
         |  );
-        |  INSERT INTO `tispark_test`.`clustered0` VALUES (b'1',b'0',-1,-1);
         |""".stripMargin)
+
+    tidbStmt.execute("INSERT INTO `tispark_test`.`clustered0` VALUES (b'1',b'0',-1,-1)")
     val sql = "select * from clustered0"
     spark.sql(s"explain $sql").show(200, false)
     spark.sql(s"$sql").show(200, false)
     runTest(sql, skipJDBC = true)
     spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "false")
-
-    disableClusteredIndex()
   }
 
   test("partition table with date partition column name") {

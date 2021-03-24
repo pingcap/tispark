@@ -41,9 +41,6 @@ trait ClusteredIndexTest extends BaseTiSparkTest with BaseEnumerateDataTypesTest
   override def test(): Unit = ???
 
   override def afterAll(): Unit = {
-    if (supportClusteredIndex) {
-      disableClusteredIndex()
-    }
     super.afterAll()
   }
 
@@ -88,9 +85,8 @@ trait ClusteredIndexTest extends BaseTiSparkTest with BaseEnumerateDataTypesTest
   }
 
   protected def test(schema: Schema): Unit = {
-    enableClusteredIndex()
     executeTiDBSQL(s"drop table if exists `$dbName`.`${schema.tableName}`;")
-    executeTiDBSQL(schema.toString)
+    createTableWithClusteredIndex(schema.toString)
 
     var rc = rowCount
     schema.columnInfo.foreach { columnInfo =>
