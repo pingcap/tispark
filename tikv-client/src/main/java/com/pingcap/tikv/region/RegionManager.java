@@ -54,7 +54,7 @@ public class RegionManager {
   // To avoid double retrieval, we used the async version of grpc
   // When rpc not returned, instead of call again, it wait for previous one done
   public RegionManager(
-    ReadOnlyPDClient pdClient, Function<CacheInvalidateEvent, Void> cacheInvalidateCallback) {
+      ReadOnlyPDClient pdClient, Function<CacheInvalidateEvent, Void> cacheInvalidateCallback) {
     this.cache = new RegionCache(pdClient);
     this.cacheInvalidateCallback = cacheInvalidateCallback;
   }
@@ -88,7 +88,7 @@ public class RegionManager {
       }
       if (logger.isDebugEnabled()) {
         logger.debug(
-          String.format("getRegionByKey key[%s] -> ID[%s]", formatBytesUTF8(key), regionId));
+            String.format("getRegionByKey key[%s] -> ID[%s]", formatBytesUTF8(key), regionId));
       }
 
       if (regionId == null) {
