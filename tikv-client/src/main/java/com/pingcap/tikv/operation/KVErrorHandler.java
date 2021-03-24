@@ -64,6 +64,10 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private void invalidateRegionStoreCache(TiRegion ctxRegion) {
     regionManager.invalidateRegion(ctxRegion);
     regionManager.invalidateStore(ctxRegion.getLeader().getStoreId());
+    notifyRegionStoreCacheInvalidate(
+      ctxRegion.getId(),
+      ctxRegion.getLeader().getStoreId(),
+      CacheInvalidateEvent.CacheType.REGION_STORE);
   }
 
   /** Used for notifying Spark driver to invalidate cache from Spark workers. */
@@ -169,6 +173,8 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
 
         if (!retry) {
           this.regionManager.invalidateRegion(region);
+          notifyRegionStoreCacheInvalidate(
+            region.getId(), newStoreId, CacheInvalidateEvent.CacheType.LEADER);
         }
 
         backOffer.doBackOff(backOffFuncType, new GrpcException(error.toString()));
