@@ -69,7 +69,7 @@ class ColumnMappingSuite
   }
 
   test("Test different column order without auto increment column") {
-    if (isEnableAlterPrimaryKey) {
+    if (isEnableAlterPrimaryKey || supportClusteredIndex) {
       cancel()
     }
 
