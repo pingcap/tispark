@@ -158,7 +158,7 @@ class StatisticsTestSuite extends BasePlanTest {
     {
       val tableName = "full_data_type_table_idx"
       test(query) {
-        if (isEnableAlterPrimaryKey) {
+        if (isEnableAlterPrimaryKey || supportClusteredIndex) {
           cancel()
         }
         val df = spark.sql(query)
@@ -181,7 +181,7 @@ class StatisticsTestSuite extends BasePlanTest {
     case (query, idxName) =>
       val tableName = "full_data_type_table_idx"
       test(query) {
-        if (isEnableAlterPrimaryKey) {
+        if (isEnableAlterPrimaryKey || supportClusteredIndex) {
           cancel()
         }
         val df = spark.sql(query)

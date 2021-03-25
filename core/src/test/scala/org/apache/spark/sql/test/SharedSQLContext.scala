@@ -184,16 +184,34 @@ trait SharedSQLContext
     tiDBJDBCClient.supportClusteredIndex
   }
 
-  protected def enableClusteredIndex(): Unit = {
-    _statement.execute("SET GLOBAL tidb_enable_clustered_index = 1")
-    _statement.close()
-    _statement = _tidbConnection.createStatement()
+  protected def createTableWithClusteredIndex(sql: String): Unit = {
+    enableClusteredIndex()
+    val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
+    val stmt = conn.createStatement()
+    stmt.execute(sql)
+    stmt.close()
+    conn.close()
+    disableClusteredIndex()
   }
 
-  protected def disableClusteredIndex(): Unit = {
-    _statement.execute("SET GLOBAL tidb_enable_clustered_index = 0")
-    _statement.close()
-    _statement = _tidbConnection.createStatement()
+  private def enableClusteredIndex(): Unit = {
+    if (supportClusteredIndex) {
+      val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
+      val stmt = conn.createStatement()
+      stmt.execute("SET GLOBAL tidb_enable_clustered_index = 1")
+      stmt.close()
+      conn.close()
+    }
+  }
+
+  private def disableClusteredIndex(): Unit = {
+    if (supportClusteredIndex) {
+      val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
+      val stmt = conn.createStatement()
+      stmt.execute("SET GLOBAL tidb_enable_clustered_index = 0")
+      stmt.close()
+      conn.close()
+    }
   }
 
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
@@ -341,6 +359,8 @@ trait SharedSQLContext
         s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=round&useSSL=false" +
         s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
         s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}&sessionVariables=time_zone='$timeZoneOffset'"
+
+    disableClusteredIndex()
 
     _tidbConnection = TiDBUtils.createConnectionFactory(jdbcUrl)()
     initializeStatement()
