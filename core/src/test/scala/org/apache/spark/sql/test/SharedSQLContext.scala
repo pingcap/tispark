@@ -189,6 +189,7 @@ trait SharedSQLContext
     enableClusteredIndex()
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     val stmt = conn.createStatement()
+    println(sql)
     stmt.execute(sql)
     stmt.close()
     conn.close()
