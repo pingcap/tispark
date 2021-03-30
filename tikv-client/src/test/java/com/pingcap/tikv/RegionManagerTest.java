@@ -132,7 +132,7 @@ public class RegionManagerTest extends PDMockServerTest {
     TiRegion regionToSearch = mgr.getRegionById(regionId);
     assertEquals(region, regionToSearch);
 
-    mgr.invalidateRegion(regionId);
+    mgr.invalidateRegion(region);
 
     // This will in turn invoke rpc and results in an error
     // since we set just one rpc response

@@ -29,7 +29,6 @@ import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import java.util.List;
 import org.tikv.kvproto.Kvrpcpb;
-import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.TikvGrpc;
 
 public interface AbstractLockResolverClient {
@@ -47,7 +46,6 @@ public interface AbstractLockResolverClient {
     if (keyError.hasConflict()) {
       Kvrpcpb.WriteConflict conflict = keyError.getConflict();
       throw new KeyException(
-          keyError,
           String.format(
               "scan meet key conflict on primary key %s at commit ts %s",
               conflict.getPrimary(), conflict.getConflictTs()));
@@ -55,21 +53,20 @@ public interface AbstractLockResolverClient {
 
     if (!keyError.getRetryable().isEmpty()) {
       throw new KeyException(
-          keyError,
           String.format("tikv restart txn %s", keyError.getRetryableBytes().toStringUtf8()));
     }
 
     if (!keyError.getAbort().isEmpty()) {
       throw new KeyException(
-          keyError, String.format("tikv abort txn %s", keyError.getAbortBytes().toStringUtf8()));
+          String.format("tikv abort txn %s", keyError.getAbortBytes().toStringUtf8()));
     }
 
     throw new KeyException(
-        keyError, String.format("unexpected key error meets and it is %s", keyError.toString()));
+        String.format("unexpected key error meets and it is %s", keyError.toString()));
   }
 
   static AbstractLockResolverClient getInstance(
-      Metapb.Store store,
+      String storeVersion,
       TiConfiguration conf,
       TiRegion region,
       TikvGrpc.TikvBlockingStub blockingStub,
@@ -78,10 +75,10 @@ public interface AbstractLockResolverClient {
       RegionManager regionManager,
       PDClient pdClient,
       RegionStoreClient.RegionStoreClientBuilder clientBuilder) {
-    if (StoreVersion.compareTo(store.getVersion(), Version.RESOLVE_LOCK_V3) < 0) {
+    if (StoreVersion.compareTo(storeVersion, Version.RESOLVE_LOCK_V3) < 0) {
       return new LockResolverClientV2(
           conf, region, blockingStub, asyncStub, channelFactory, regionManager);
-    } else if (StoreVersion.compareTo(store.getVersion(), Version.RESOLVE_LOCK_V4) < 0) {
+    } else if (StoreVersion.compareTo(storeVersion, Version.RESOLVE_LOCK_V4) < 0) {
       return new LockResolverClientV3(
           conf,
           region,
