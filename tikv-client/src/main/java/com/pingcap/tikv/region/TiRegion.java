@@ -40,40 +40,52 @@ public class TiRegion implements Serializable {
   private final Region meta;
   private final IsolationLevel isolationLevel;
   private final Kvrpcpb.CommandPri commandPri;
-  private Peer peer;
+  private final Peer leader;
+
+  private TiRegion(
+      Region meta,
+      Peer leader,
+      IsolationLevel isolationLevel,
+      Kvrpcpb.CommandPri commandPri,
+      boolean isReplicaRead) {
+    this.meta = meta;
+    this.leader = leader;
+    this.isolationLevel = isolationLevel;
+    this.commandPri = commandPri;
+  }
 
   public TiRegion(
-      Region meta, Peer peer, IsolationLevel isolationLevel, Kvrpcpb.CommandPri commandPri) {
+      Region meta, Peer leader, IsolationLevel isolationLevel, Kvrpcpb.CommandPri commandPri) {
     Objects.requireNonNull(meta, "meta is null");
-    this.meta = decodeRegion(meta);
-    if (peer == null || peer.getId() == 0) {
+    this.meta = decodeRegion(meta, false);
+    if (leader == null || leader.getId() == 0) {
       if (meta.getPeersCount() == 0) {
         throw new TiClientInternalException("Empty peer list for region " + meta.getId());
       }
       // region's first peer is leader.
-      this.peer = meta.getPeers(0);
+      this.leader = meta.getPeers(0);
     } else {
-      this.peer = peer;
+      this.leader = leader;
     }
     this.isolationLevel = isolationLevel;
     this.commandPri = commandPri;
   }
 
-  private Region decodeRegion(Region region) {
+  private Region decodeRegion(Region region, boolean isRawRegion) {
     Region.Builder builder =
         Region.newBuilder()
             .setId(region.getId())
             .setRegionEpoch(region.getRegionEpoch())
             .addAllPeers(region.getPeersList());
 
-    if (region.getStartKey().isEmpty()) {
+    if (region.getStartKey().isEmpty() || isRawRegion) {
       builder.setStartKey(region.getStartKey());
     } else {
       byte[] decodedStartKey = BytesCodec.readBytes(new CodecDataInput(region.getStartKey()));
       builder.setStartKey(ByteString.copyFrom(decodedStartKey));
     }
 
-    if (region.getEndKey().isEmpty()) {
+    if (region.getEndKey().isEmpty() || isRawRegion) {
       builder.setEndKey(region.getEndKey());
     } else {
       byte[] decodedEndKey = BytesCodec.readBytes(new CodecDataInput(region.getEndKey()));
@@ -84,13 +96,17 @@ public class TiRegion implements Serializable {
   }
 
   public Peer getLeader() {
-    return peer;
+    return leader;
+  }
+
+  private boolean isValidFollower(Peer peer) {
+    return Metapb.PeerRole.valueOf(peer.getRole().getValueDescriptor()) == Metapb.PeerRole.Voter;
   }
 
   public List<Peer> getLearnerList() {
     List<Peer> peers = new ArrayList<>();
     for (Peer peer : getMeta().getPeersList()) {
-      if (peer.getRole().equals(Metapb.PeerRole.Learner)) {
+      if (isValidFollower(peer)) {
         peers.add(peer);
       }
     }
@@ -125,7 +141,10 @@ public class TiRegion implements Serializable {
     Kvrpcpb.Context.Builder builder = Kvrpcpb.Context.newBuilder();
     builder.setIsolationLevel(this.isolationLevel);
     builder.setPriority(this.commandPri);
-    builder.setRegionId(meta.getId()).setPeer(this.peer).setRegionEpoch(this.meta.getRegionEpoch());
+    builder
+        .setRegionId(meta.getId())
+        .setPeer(this.leader)
+        .setRegionEpoch(this.meta.getRegionEpoch());
     builder.addAllResolvedLocks(resolvedLocks);
     return builder.build();
   }
@@ -141,17 +160,16 @@ public class TiRegion implements Serializable {
    * storeID.
    *
    * @param leaderStoreID is leader peer id.
-   * @return false if no peers matches the store id.
+   * @return null if no peers matches the store id.
    */
-  boolean switchPeer(long leaderStoreID) {
+  public TiRegion switchPeer(long leaderStoreID) {
     List<Peer> peers = meta.getPeersList();
     for (Peer p : peers) {
       if (p.getStoreId() == leaderStoreID) {
-        this.peer = p;
-        return true;
+        return new TiRegion(this.meta, p, this.isolationLevel, this.commandPri);
       }
     }
-    return false;
+    return null;
   }
 
   public boolean isMoreThan(ByteString key) {
@@ -181,7 +199,7 @@ public class TiRegion implements Serializable {
   }
 
   public boolean isValid() {
-    return peer != null && meta != null;
+    return leader != null && meta != null;
   }
 
   public Metapb.RegionEpoch getRegionEpoch() {
@@ -199,19 +217,18 @@ public class TiRegion implements Serializable {
     }
     TiRegion anotherRegion = ((TiRegion) another);
     return anotherRegion.meta.equals(this.meta)
-        && anotherRegion.peer.equals(this.peer)
+        && anotherRegion.leader.equals(this.leader)
         && anotherRegion.commandPri.equals(this.commandPri)
         && anotherRegion.isolationLevel.equals(this.isolationLevel);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(meta, peer, isolationLevel, commandPri);
+    return Objects.hash(meta, leader, isolationLevel, commandPri);
   }
 
   @Override
   public String toString() {
-    // LogDesensitization: show region key range in log
     return String.format(
         "{Region[%d] ConfVer[%d] Version[%d] Store[%d] KeyRange[%s]:[%s]}",
         getId(),
