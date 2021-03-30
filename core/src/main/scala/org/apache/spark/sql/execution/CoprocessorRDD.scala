@@ -18,7 +18,7 @@ package org.apache.spark.sql.execution
 import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
 import com.pingcap.tikv.columnar.{TiChunk, TiColumnarBatchHelper}
-import com.pingcap.tikv.key.{Handle, IntHandle}
+import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.iterator.CoprocessorIterator
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
@@ -26,8 +26,6 @@ import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.TiUtil
-import gnu.trove.list.array
-import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
@@ -35,7 +33,6 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
 import org.apache.spark.sql.tispark.TiRDD
-import org.apache.spark.sql.types.ObjectType
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.slf4j.LoggerFactory
 import org.tikv.kvproto.Coprocessor.KeyRange
