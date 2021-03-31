@@ -17,6 +17,7 @@ package com.pingcap.tispark
 
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.{TiBatchWriteException, TiClientInternalException}
+import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.write.{TiDBOptions, TiDBWriter}
@@ -24,7 +25,7 @@ import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
-import org.apache.spark.sql.types.{ArrayType, LongType, Metadata, StructType}
+import org.apache.spark.sql.types.{ArrayType, LongType, Metadata, ObjectType, StructType}
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, execution}
 
 import scala.collection.mutable.ListBuffer
@@ -90,7 +91,7 @@ case class TiDBRelation(
       AttributeReference("RegionId", LongType, nullable = false, Metadata.empty)(),
       AttributeReference(
         "Handles",
-        ArrayType(LongType, containsNull = false),
+        ArrayType(ObjectType(classOf[Handle]), containsNull = false),
         nullable = false,
         Metadata.empty)())
 
