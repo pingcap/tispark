@@ -45,6 +45,8 @@ If you want to use TiSpark-2.1.x, please use the following configuration:
 
 For other build tools, visit <https://search.maven.org/> and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap). This search also lists all the available modules of TiSpark including tikv-client.
 
+You can download the nightly version (master branch) [here](https://download.pingcap.org/tispark-assembly-nightly-linux-amd64.tar.gz).
+
 ## How to build from sources
 
 TiSpark now supports Spark 2.3.0+、2.4.0+ and 3.0.0+. The earlier TiSpark versions for Spark 2.1.0+ only contain bug-fixes. After these versions, you can still get support for Spark 2.1 until TiSpark 1.2.1.
