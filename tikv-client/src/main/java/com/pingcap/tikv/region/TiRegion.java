@@ -99,14 +99,10 @@ public class TiRegion implements Serializable {
     return leader;
   }
 
-  private boolean isValidFollower(Peer peer) {
-    return Metapb.PeerRole.valueOf(peer.getRole().getValueDescriptor()) == Metapb.PeerRole.Voter;
-  }
-
   public List<Peer> getLearnerList() {
     List<Peer> peers = new ArrayList<>();
     for (Peer peer : getMeta().getPeersList()) {
-      if (isValidFollower(peer)) {
+      if (peer.getRole().equals(Metapb.PeerRole.Learner)) {
         peers.add(peer);
       }
     }
@@ -229,6 +225,7 @@ public class TiRegion implements Serializable {
 
   @Override
   public String toString() {
+    // LogDesensitization: show region key range in log
     return String.format(
         "{Region[%d] ConfVer[%d] Version[%d] Store[%d] KeyRange[%s]:[%s]}",
         getId(),
