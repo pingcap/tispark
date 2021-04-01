@@ -56,6 +56,13 @@ public class TiRegion implements Serializable {
     this.commandPri = commandPri;
   }
 
+  public TiRegion(TiRegion oldRegion, Peer newLeader) {
+    this.meta = oldRegion.getMeta();
+    this.isolationLevel = oldRegion.isolationLevel;
+    this.commandPri = oldRegion.commandPri;
+    this.leader = newLeader;
+  }
+
   private Region decodeRegion(Region region, boolean isRawRegion) {
     Region.Builder builder =
         Region.newBuilder()
@@ -134,7 +141,7 @@ public class TiRegion implements Serializable {
     List<Peer> peers = meta.getPeersList();
     for (Peer p : peers) {
       if (p.getStoreId() == leaderStoreID) {
-        return new TiRegion(this.meta, p, this.isolationLevel, this.commandPri);
+        return new TiRegion(this, p);
       }
     }
     return null;
