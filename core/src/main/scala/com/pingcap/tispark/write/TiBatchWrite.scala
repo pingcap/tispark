@@ -129,6 +129,7 @@ class TiBatchWrite(
     tiConf = mergeSparkConfWithDataSourceConf(tiContext.conf, options)
     tiSession = tiContext.tiSession
     val tikvSupportUpdateTTL = StoreVersion.minTiKVVersion("3.0.5", tiSession.getPDClient)
+    val isTiDBV4 = StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient)
     isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
     lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
     tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
@@ -142,7 +143,8 @@ class TiBatchWrite(
             tiContext,
             options.setDBTable(dbTable),
             tiConf,
-            tiDBJDBCClient)
+            tiDBJDBCClient,
+            isTiDBV4)
       }.toList
     }
 
@@ -169,7 +171,6 @@ class TiBatchWrite(
     if (useTableLock) {
       tiBatchWriteTables.foreach(_.lockTable())
     } else {
-      val isTiDBV4 = StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient)
       if (!isTiDBV4) {
         if (tiContext.tiConf.isWriteWithoutLockTable) {
           logger.warn("write tidb-2.x or 3.x without lock table enabled! only for test!")
