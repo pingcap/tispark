@@ -86,7 +86,7 @@ trait ClusteredIndexTest extends BaseTiSparkTest with BaseEnumerateDataTypesTest
 
   protected def test(schema: Schema): Unit = {
     executeTiDBSQL(s"drop table if exists `$dbName`.`${schema.tableName}`;")
-    createTableWithClusteredIndex(schema.toString)
+    executeTiDBSQL(schema.toString(isClusteredIndex = true))
 
     var rc = rowCount
     schema.columnInfo.foreach { columnInfo =>

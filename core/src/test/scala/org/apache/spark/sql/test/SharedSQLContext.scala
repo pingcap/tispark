@@ -173,26 +173,12 @@ trait SharedSQLContext
 
   protected def initializeStatement(): Unit = {
     _statement = _tidbConnection.createStatement()
-    if (supportClusteredIndex) {
-      disableClusteredIndex()
-    }
   }
 
   protected def supportClusteredIndex: Boolean = {
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     val tiDBJDBCClient = new TiDBJDBCClient(conn)
     tiDBJDBCClient.supportClusteredIndex
-  }
-
-  protected def createTableWithClusteredIndex(sql: String): Unit = {
-    enableClusteredIndex()
-    val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
-    val stmt = conn.createStatement()
-    println(sql)
-    stmt.execute(sql)
-    stmt.close()
-    conn.close()
-    disableClusteredIndex()
   }
 
   private def enableClusteredIndex(): Unit = {
