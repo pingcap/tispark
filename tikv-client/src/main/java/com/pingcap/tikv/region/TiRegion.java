@@ -42,18 +42,6 @@ public class TiRegion implements Serializable {
   private final Kvrpcpb.CommandPri commandPri;
   private final Peer leader;
 
-  private TiRegion(
-      Region meta,
-      Peer leader,
-      IsolationLevel isolationLevel,
-      Kvrpcpb.CommandPri commandPri,
-      boolean isReplicaRead) {
-    this.meta = meta;
-    this.leader = leader;
-    this.isolationLevel = isolationLevel;
-    this.commandPri = commandPri;
-  }
-
   public TiRegion(
       Region meta, Peer leader, IsolationLevel isolationLevel, Kvrpcpb.CommandPri commandPri) {
     Objects.requireNonNull(meta, "meta is null");
@@ -69,6 +57,13 @@ public class TiRegion implements Serializable {
     }
     this.isolationLevel = isolationLevel;
     this.commandPri = commandPri;
+  }
+
+  private TiRegion(TiRegion oldRegion, Peer leader) {
+    this.meta = oldRegion.getMeta();
+    this.isolationLevel = oldRegion.isolationLevel;
+    this.commandPri = oldRegion.commandPri;
+    this.leader = leader;
   }
 
   private Region decodeRegion(Region region, boolean isRawRegion) {
@@ -162,7 +157,7 @@ public class TiRegion implements Serializable {
     List<Peer> peers = meta.getPeersList();
     for (Peer p : peers) {
       if (p.getStoreId() == leaderStoreID) {
-        return new TiRegion(this.meta, p, this.isolationLevel, this.commandPri);
+        return new TiRegion(this, p);
       }
     }
     return null;
