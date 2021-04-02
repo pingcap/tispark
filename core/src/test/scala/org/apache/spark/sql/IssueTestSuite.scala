@@ -45,14 +45,14 @@ class IssueTestSuite extends BaseTiSparkTest {
 
     tidbStmt.execute("drop table if exists `tispark_test`.`clustered0`")
 
-    createTableWithClusteredIndex("""
+    tidbStmt.execute("""
         CREATE TABLE `tispark_test`.`clustered0` (
         |  `col_bit0` bit(1) not null,
         |  `col_bit1` bit(1) not null,
         |  `col_int0` int(11) not null,
         |  `col_int1` int(11) not null,
         |  UNIQUE KEY (`col_int0`),
-        |  PRIMARY KEY (`col_bit1`,`col_bit0`)
+        |  PRIMARY KEY (`col_bit1`,`col_bit0`) /*T![clustered_index] CLUSTERED */
         |  );
         |""".stripMargin)
 
