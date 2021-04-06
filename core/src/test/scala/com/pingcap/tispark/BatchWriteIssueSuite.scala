@@ -29,6 +29,41 @@ import org.apache.spark.sql.types.{
 
 class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
 
+  test("stats_meta update modify_count") {
+    if (!supportBatchWrite) {
+      cancel()
+    }
+
+    jdbcUpdate(s"drop table if exists $table")
+    jdbcUpdate(s"create table $table(c1 int, c2 int, unique key(c2))")
+
+    jdbcUpdate(s"insert into $table values(111, 111)")
+
+    val tiTable = ti.meta.getTable(databaseWithPrefix, table).get
+
+    val schema: StructType =
+      StructType(List(StructField("c1", LongType), StructField("c2", LongType)))
+
+    val size = 6L
+    val rows = (1L to size).map(i => Row(i, i)).toList
+    val data: RDD[Row] = sc.makeRDD(rows)
+    val df = sqlContext.createDataFrame(data, schema)
+    df.write
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", database)
+      .option("table", table)
+      .option("replace", "true")
+      .mode("append")
+      .save()
+
+    val result = queryTiDBViaJDBC(
+      s"select modify_count, count from mysql.stats_meta where table_id = ${tiTable.getId}").head
+
+    assert(size.toString.equals(result(0).toString))
+    assert(size.toString.equals(result(1).toString))
+  }
+
   test("batch get retry test") {
     if (blockingRead) {
       cancel()
