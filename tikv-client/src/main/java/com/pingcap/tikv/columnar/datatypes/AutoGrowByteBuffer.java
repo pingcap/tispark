@@ -20,12 +20,10 @@ import com.pingcap.tikv.util.MemoryUtil;
 import java.nio.ByteBuffer;
 
 public class AutoGrowByteBuffer {
-  private final ByteBuffer initBuf;
   private ByteBuffer buf;
 
   public AutoGrowByteBuffer(ByteBuffer initBuf) {
     initBuf.clear();
-    this.initBuf = initBuf;
     this.buf = initBuf;
   }
 
@@ -39,22 +37,12 @@ public class AutoGrowByteBuffer {
 
   private void beforeIncrease(int inc) {
     int minCap = buf.position() + inc;
-    if (minCap > buf.capacity()) {
-      int newCap = buf.capacity();
+    int newCap = buf.capacity();
+    if (minCap > newCap) {
       do {
         newCap = newCap << 1;
       } while (minCap > newCap);
-
-      ByteBuffer newBuf = MemoryUtil.allocateDirect(newCap);
-      MemoryUtil.copyMemory(
-          MemoryUtil.getAddress(buf), MemoryUtil.getAddress(newBuf), buf.position());
-      newBuf.position(buf.position());
-
-      if (buf != initBuf) {
-        MemoryUtil.free(buf);
-      }
-
-      buf = newBuf;
+      buf = MemoryUtil.copyOf(buf, newCap);
     }
   }
 

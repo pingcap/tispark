@@ -15,8 +15,7 @@
 
 package com.pingcap.tikv.columnar.datatypes;
 
-import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
-import static com.pingcap.tikv.util.MemoryUtil.allocateDirect;
+import static com.pingcap.tikv.util.MemoryUtil.allocate;
 
 import com.google.common.base.Preconditions;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
@@ -31,7 +30,7 @@ public class CHTypeString extends CHType {
   // Use to prevent frequently reallocate the chars buffer.
   // ClickHouse does not pass a total length at the beginning, so sad...
   private static final ThreadLocal<ByteBuffer> initBuffer =
-      ThreadLocal.withInitial(() -> allocateDirect(102400));
+      ThreadLocal.withInitial(() -> allocate(102400));
 
   public CHTypeString() {
     this.length = -1;
@@ -57,12 +56,12 @@ public class CHTypeString extends CHType {
     if (isNullable()) {
       nullMap = decodeNullMap(cdi, size);
     } else {
-      nullMap = EMPTY_BYTE_BUFFER_DIRECT;
+      nullMap = null;
     }
 
-    ByteBuffer offsets = allocateDirect(size << 3);
-    ByteBuffer initCharsBuf = initBuffer.get();
-    AutoGrowByteBuffer autoGrowCharsBuf = new AutoGrowByteBuffer(initCharsBuf);
+    ByteBuffer offsets = allocate(size << 3);
+    ByteBuffer initDataBuf = initBuffer.get();
+    AutoGrowByteBuffer autoGrowDataBuf = new AutoGrowByteBuffer(initDataBuf);
 
     int offset = 0;
     for (int i = 0; i < size; i++) {
@@ -71,20 +70,18 @@ public class CHTypeString extends CHType {
       offset += valueSize + 1;
       offsets.putLong(offset);
 
-      autoGrowCharsBuf.put(cdi, valueSize);
-      autoGrowCharsBuf.putByte((byte) 0); // terminating zero byte
+      autoGrowDataBuf.put(cdi, valueSize);
+      autoGrowDataBuf.putByte((byte) 0); // terminating zero byte
     }
 
-    Preconditions.checkState(offset == autoGrowCharsBuf.dataSize());
+    Preconditions.checkState(offset == autoGrowDataBuf.dataSize());
 
-    ByteBuffer chars = autoGrowCharsBuf.getByteBuffer();
-    if (chars == initCharsBuf) {
+    ByteBuffer data = autoGrowDataBuf.getByteBuffer();
+    if (data == initDataBuf) {
       // Copy out.
-      ByteBuffer newChars = allocateDirect(offset);
-      MemoryUtil.copyMemory(MemoryUtil.getAddress(chars), MemoryUtil.getAddress(newChars), offset);
-      chars = newChars;
+      data = MemoryUtil.copyOf(data, offset);
     }
 
-    return new TiBlockColumnVector(this, nullMap, offsets, chars, size);
+    return new TiBlockColumnVector(this, nullMap, offsets, data, size);
   }
 }

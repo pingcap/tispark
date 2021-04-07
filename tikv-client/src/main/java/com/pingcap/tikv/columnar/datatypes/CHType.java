@@ -15,7 +15,7 @@
 
 package com.pingcap.tikv.columnar.datatypes;
 
-import static com.pingcap.tikv.util.MemoryUtil.allocateDirect;
+import static com.pingcap.tikv.util.MemoryUtil.allocate;
 
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.columnar.TiBlockColumnVector;
@@ -41,7 +41,7 @@ public abstract class CHType {
 
   protected ByteBuffer decodeNullMap(CodecDataInput cdi, int size) {
     // read size * uint8 from cdi
-    ByteBuffer buffer = allocateDirect(size);
+    ByteBuffer buffer = allocate(size);
     MemoryUtil.readFully(buffer, cdi, size);
     buffer.clear();
     return buffer;
@@ -63,13 +63,13 @@ public abstract class CHType {
     }
     if (isNullable()) {
       ByteBuffer nullMap = decodeNullMap(cdi, size);
-      ByteBuffer buffer = allocateDirect(bufferSize(size));
+      ByteBuffer data = allocate(bufferSize(size));
       // read bytes from cdi to buffer(off-heap)
-      MemoryUtil.readFully(buffer, cdi, bufferSize(size));
-      buffer.clear();
-      return new TiBlockColumnVector(this, nullMap, buffer, size, length);
+      MemoryUtil.readFully(data, cdi, bufferSize(size));
+      data.clear();
+      return new TiBlockColumnVector(this, nullMap, data, size, length);
     } else {
-      ByteBuffer buffer = allocateDirect(bufferSize(size));
+      ByteBuffer buffer = allocate(bufferSize(size));
       MemoryUtil.readFully(buffer, cdi, bufferSize(size));
       buffer.clear();
       return new TiBlockColumnVector(this, buffer, size, length);
