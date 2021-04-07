@@ -81,7 +81,7 @@ class TiBatchWrite(
   @transient private var tiDBJDBCClient: TiDBJDBCClient = _
   @transient private var tiBatchWriteTables: List[TiBatchWriteTable] = _
   @transient private var startMS: Long = _
-  @transient private var startTs: Long = _
+  private var startTs: Long = _
 
   private def write(): Unit = {
     try {
