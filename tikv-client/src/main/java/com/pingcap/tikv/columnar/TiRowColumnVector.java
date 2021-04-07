@@ -17,6 +17,7 @@ package com.pingcap.tikv.columnar;
 
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DateType;
 import java.math.BigDecimal;
 
 /**
@@ -99,6 +100,10 @@ public class TiRowColumnVector extends TiColumnVector {
    */
   @Override
   public int getInt(int rowId) {
+    if (type instanceof DateType) {
+      int days = (int) rows[rowId].getLong(colIdx);
+      return DateType.toJulianGregorianCalendar(days);
+    }
     return (int) rows[rowId].getLong(colIdx);
   }
 
