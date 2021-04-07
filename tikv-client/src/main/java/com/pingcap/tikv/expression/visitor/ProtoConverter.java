@@ -104,7 +104,9 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     }
     // for timestamp type, coprocessor will use datetime to do calculation.
     if (type instanceof TimestampType) {
-      return DateTimeType.DATETIME;
+      if (!(expression instanceof ColumnRef)) {
+        return DateTimeType.DATETIME;
+      }
     }
     return type;
   }

@@ -21,23 +21,42 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("test tiflash timestamp < 1970") {
+    if (!enableTiFlashTest) {
+      cancel("tiflash test not enabled")
+    }
+
+    tidbStmt.execute(s"""
+         |DROP TABLE IF EXISTS `t`;
+         |CREATE TABLE `t` (`col_timestamp0` timestamp,`col_bit` bit(1));
+         |INSERT INTO `t` VALUES ('1969-12-31 17:00:01.0',b'0');
+         |ALTER TABLE `t` SET TIFLASH REPLICA 1;
+         |""".stripMargin)
+
+    assert(checkLoadTiFlashWithRetry("t", Some("tispark_test")))
+    explainAndRunTest("select col_timestamp0 from t where col_bit < 1", canTestTiFlash = true)
+  }
+
   test("test clustered index read") {
     if (!supportClusteredIndex) {
       cancel("currently tidb instance does not support clustered index")
     }
     spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "true")
+
+    tidbStmt.execute("drop table if exists `tispark_test`.`clustered0`")
+
     tidbStmt.execute("""
-        |SET tidb_enable_clustered_index = 1;
-        |drop table if exists `tispark_test`.`clustered0`;
-        |CREATE TABLE `tispark_test`.`clustered0` (
-        |  `col_bit0` bit(1) not null,
-        |  `col_bit1` bit(1) not null,
+        CREATE TABLE `tispark_test`.`clustered0` (
+        |  `col_bigint` bigint(20) not null,
         |  `col_int0` int(11) not null,
         |  `col_int1` int(11) not null,
         |  UNIQUE KEY (`col_int0`),
-        |  PRIMARY KEY (`col_bit1`,`col_bit0`)
+        |  PRIMARY KEY (`col_bigint`) /*T![clustered_index] CLUSTERED */
         |  );
-        |  INSERT INTO `tispark_test`.`clustered0` VALUES (b'1',b'0',-1,-1);
+        |""".stripMargin)
+
+    tidbStmt.execute("""
+        |INSERT INTO `tispark_test`.`clustered0` VALUES (9223372036854775807,1,2);
         |""".stripMargin)
     val sql = "select * from clustered0"
     spark.sql(s"explain $sql").show(200, false)
@@ -452,20 +471,6 @@ class IssueTestSuite extends BaseTiSparkTest {
     filter_df.show
     val project_df = join_df.select("k1", "k2", "c2")
     project_df.show
-  }
-
-  // https://github.com/pingcap/tispark/issues/262
-  // https://github.com/pingcap/tispark/issues/1794
-  ignore("NPE when decoding datetime,date,timestamp") {
-    if (enableTiFlashTest) {
-      cancel("ignored in tiflash test")
-    }
-    tidbStmt.execute("DROP TABLE IF EXISTS `tmp_debug`")
-    tidbStmt.execute(
-      "CREATE TABLE `tmp_debug` (\n  `tp_datetime` datetime DEFAULT NULL, `tp_date` date DEFAULT NULL, `tp_timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
-    tidbStmt.execute(
-      "INSERT INTO `tmp_debug` VALUES ('0000-00-00 00:00:00','0000-00-00','0000-00-00 00:00:00')")
-    spark.sql("select * from tmp_debug").collect().foreach(println)
   }
 
   // https://github.com/pingcap/tispark/issues/255

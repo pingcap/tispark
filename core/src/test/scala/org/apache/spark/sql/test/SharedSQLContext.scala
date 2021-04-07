@@ -20,8 +20,7 @@ package org.apache.spark.sql.test
 import java.io.File
 import java.sql.{Connection, Date, Statement}
 import java.util.{Locale, Properties, TimeZone}
-
-import com.pingcap.tikv.{StoreVersion, Version}
+import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient, Version}
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
@@ -177,6 +176,32 @@ trait SharedSQLContext
     _statement = _tidbConnection.createStatement()
   }
 
+  protected def supportClusteredIndex: Boolean = {
+    val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
+    val tiDBJDBCClient = new TiDBJDBCClient(conn)
+    tiDBJDBCClient.supportClusteredIndex
+  }
+
+  private def enableClusteredIndex(): Unit = {
+    if (supportClusteredIndex) {
+      val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
+      val stmt = conn.createStatement()
+      stmt.execute("SET GLOBAL tidb_enable_clustered_index = 1")
+      stmt.close()
+      conn.close()
+    }
+  }
+
+  private def disableClusteredIndex(): Unit = {
+    if (supportClusteredIndex) {
+      val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
+      val stmt = conn.createStatement()
+      stmt.execute("SET GLOBAL tidb_enable_clustered_index = 0")
+      stmt.close()
+      conn.close()
+    }
+  }
+
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
 
   /**
@@ -325,6 +350,8 @@ trait SharedSQLContext
         s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
         s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}&sessionVariables=time_zone='$timeZoneOffset'"
 
+    disableClusteredIndex()
+
     _tidbConnection = TiDBUtils.createConnectionFactory(jdbcUrl)()
     initializeStatement()
   }
@@ -393,6 +420,15 @@ trait SharedSQLContext
         _tidbConf = SharedSQLContext.tidbConf
 
         conf = new SparkConf(false)
+
+        val propertyNames = _tidbConf.propertyNames()
+        while (propertyNames.hasMoreElements) {
+          val key: String = propertyNames.nextElement().asInstanceOf[String]
+          if (key.startsWith("spark.")) {
+            val value = _tidbConf.getProperty(key)
+            conf.set(key, value)
+          }
+        }
 
         conf.set("spark.tispark.write.allow_spark_sql", "true")
         conf.set("spark.tispark.write.without_lock_table", "true")

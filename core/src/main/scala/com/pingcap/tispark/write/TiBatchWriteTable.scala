@@ -53,14 +53,16 @@ class TiBatchWriteTable(
     @transient val tiContext: TiContext,
     val options: TiDBOptions,
     val tiConf: TiConfiguration,
-    @transient val tiDBJDBCClient: TiDBJDBCClient)
+    @transient val tiDBJDBCClient: TiDBJDBCClient,
+    val isTiDBV4: Boolean)
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
   import com.pingcap.tispark.write.TiBatchWrite._
   @transient private val tiSession = tiContext.tiSession
   // only fetch row format version once for each batch write process
-  private val enableNewRowFormat: Boolean = tiDBJDBCClient.getRowFormatVersion == 2
+  private val enableNewRowFormat: Boolean =
+    if (isTiDBV4) tiDBJDBCClient.getRowFormatVersion == 2 else false
   private var tiTableRef: TiTableReference = _
   private var tiDBInfo: TiDBInfo = _
   private var tiTableInfo: TiTableInfo = _
@@ -317,6 +319,11 @@ class TiBatchWriteTable(
   }
 
   def checkUnsupported(): Unit = {
+    if (tiTableInfo.isCommonHandle) {
+      throw new TiBatchWriteException(
+        "tispark currently does not support write data to table with clustered index!")
+    }
+
     // write to table with auto random column
     if (tiTableInfo.hasAutoRandomColumn) {
       throw new TiBatchWriteException(
