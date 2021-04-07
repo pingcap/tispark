@@ -92,6 +92,16 @@ public class DateType extends AbstractDateTimeType {
     return "DATE";
   }
 
+  public int getDays(LocalDate d) {
+    // count how many days from EPOCH
+    int days = Days.daysBetween(EPOCH, d).getDays();
+    // if the timezone has negative offset, minus one day.
+    if (getTimezone().getOffset(0) < 0) {
+      days -= 1;
+    }
+    return days;
+  }
+
   /**
    * In Spark 3.0, Proleptic Gregorian calendar is used in parsing, formatting, and converting dates
    * and timestamps as well as in extracting sub-components like years, days and so on. Spark 3.0
@@ -100,12 +110,15 @@ public class DateType extends AbstractDateTimeType {
    * Gregorian. The changes impact on the results for dates before October 15, 1582 (Gregorian) and
    * affect on the following Spark 3.0 API.
    *
-   * @param d
+   * @param days
    * @return
    */
-  public int getDaysUsingJulianGregorianCalendar(LocalDate d) {
-    // count how many days from EPOCH
-    int days = Days.daysBetween(EPOCH, d).getDays();
+  public static int toJulianGregorianCalendar(int days) {
+    int d = days;
+
+    if (Converter.getLocalTimezone().getOffset(0) < 0) {
+      d += 1;
+    }
 
     //  ~100-02-28 => -2
     // 100-03-01 ~200-02-28 => -1
@@ -120,41 +133,40 @@ public class DateType extends AbstractDateTimeType {
     // 1300-02-28 ~ 1400-02-28 => +8
     // 1400-03-01 ~ 1500-02-28 => +9
     // 1500-03-01 ~ 1582-10-14 => +10
-    if (days < -141426) {
-      if (days < -682943) {
-        days = days - 2;
-      } else if (days < -646419) {
-        days = days - 1;
-      } else if (days < -609895) {
+    if (d < -141426) {
+      if (d < -682943) {
+        d = d - 2;
+      } else if (d < -646419) {
+        d = d - 1;
+      } else if (d < -609895) {
         // days = days;
-      } else if (days < -536846) {
-        days = days + 1;
-      } else if (days < -500322) {
-        days = days + 2;
-      } else if (days < -463798) {
-        days = days + 3;
-      } else if (days < -390749) {
-        days = days + 4;
-      } else if (days < -354225) {
-        days = days + 5;
-      } else if (days < -317701) {
-        days = days + 6;
-      } else if (days < -244652) {
-        days = days + 7;
-      } else if (days < -208128) {
-        days = days + 8;
-      } else if (days < -171604) {
-        days = days + 9;
-      } else if (days < -141426) {
-        days = days + 10;
+      } else if (d < -536846) {
+        d = d + 1;
+      } else if (d < -500322) {
+        d = d + 2;
+      } else if (d < -463798) {
+        d = d + 3;
+      } else if (d < -390749) {
+        d = d + 4;
+      } else if (d < -354225) {
+        d = d + 5;
+      } else if (d < -317701) {
+        d = d + 6;
+      } else if (d < -244652) {
+        d = d + 7;
+      } else if (d < -208128) {
+        d = d + 8;
+      } else if (d < -171604) {
+        d = d + 9;
+      } else if (d < -141426) {
+        d = d + 10;
       }
     }
 
-    // if the timezone has negative offset, minus one day.
-    if (getTimezone().getOffset(0) < 0) {
-      days -= 1;
+    if (Converter.getLocalTimezone().getOffset(0) < 0) {
+      d -= 1;
     }
-    return days;
+    return d;
   }
 
   /** {@inheritDoc} */
@@ -166,7 +178,7 @@ public class DateType extends AbstractDateTimeType {
       return null;
     }
 
-    return (long) getDaysUsingJulianGregorianCalendar(date);
+    return (long) getDays(date);
   }
 
   @Override
