@@ -132,6 +132,27 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
   }
 
+  public void updateTableStatistics(long startTS, long tableId, long delta, long count)
+      throws SQLException {
+    try (Statement tidbStmt = connection.createStatement()) {
+      String sql;
+      if (delta < 0) {
+        sql =
+            String.format(
+                "update mysql.stats_meta set version = %s, count = count - %s, modify_count = modify_count + %s where table_id = %s and count >= %s",
+                startTS, -delta, count, tableId, -delta);
+      } else {
+        sql =
+            String.format(
+                "update mysql.stats_meta set version = %s, count = count + %s, modify_count = modify_count + %s where table_id = %s",
+                startTS, delta, count, tableId);
+      }
+
+      logger.info("updateTableStatistics: " + sql);
+      tidbStmt.executeUpdate(sql);
+    }
+  }
+
   private Map<String, Object> readConfMapFromTiDB() throws SQLException, IOException {
     String configJSON = (String) queryTiDBViaJDBC(SELECT_TIDB_CONFIG_SQL).get(0).get(0);
     ObjectMapper objectMapper = new ObjectMapper();
