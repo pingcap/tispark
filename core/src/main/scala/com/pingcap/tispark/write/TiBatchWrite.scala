@@ -357,7 +357,9 @@ class TiBatchWrite(
     }
 
     // update table statistics: modify_count & count
-    tiBatchWriteTables.foreach(_.updateTableStatistics(startTs))
+    if (options.enableUpdateTableStatistics) {
+      tiBatchWriteTables.foreach(_.updateTableStatistics(startTs))
+    }
 
     val endMS = System.currentTimeMillis()
     logger.info(s"batch write cost ${(endMS - startMS) / 1000} seconds")
