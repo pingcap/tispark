@@ -545,7 +545,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       backOffer.doBackOff(
           BackOffFunction.BackOffFuncType.BoRegionMiss,
           new GrpcException("TiKV down or Network partition"));
-      logger.warn("Re-splitting region task due to region error: TiKV down or Network partition");
+      logger.warn(
+          "Re-splitting region task due to region error: TiKV down or Network partition " + region);
       // Split ranges
       return RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(ranges);
     }
@@ -554,7 +555,11 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       Errorpb.Error regionError = response.getRegionError();
       backOffer.doBackOff(
           BackOffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(regionError.toString()));
-      logger.warn("Re-splitting region task due to region error:" + regionError.getMessage());
+      logger.warn(
+          "Re-splitting region task due to region error: "
+              + regionError.getMessage()
+              + " "
+              + region);
       // Split ranges
       return RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(ranges);
     }
@@ -574,7 +579,15 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
     String otherError = response.getOtherError();
     if (!otherError.isEmpty()) {
-      logger.warn(String.format("Other error occurred, message: %s", otherError));
+      String rangeString;
+      if (ranges.isEmpty()) {
+        rangeString = "empty range";
+      } else {
+        rangeString = ranges.get(0).toString();
+      }
+      logger.warn(
+          String.format(
+              "Other error occurred, message: %s %s range: %S", otherError, region, rangeString));
       throw new GrpcException(otherError);
     }
 
