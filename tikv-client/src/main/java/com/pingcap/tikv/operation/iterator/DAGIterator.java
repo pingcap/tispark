@@ -229,7 +229,6 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
                 + " tasks not executed due to",
             e);
         // Rethrow to upper levels
-        eof = true;
         throw new RegionTaskException("Handle region task failed:", e);
       }
     }
