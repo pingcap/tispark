@@ -54,6 +54,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
       .option("database", database)
       .option("table", table)
       .option("replace", "true")
+      .option("enableUpdateTableStatistics", "true")
       .mode("append")
       .save()
 
