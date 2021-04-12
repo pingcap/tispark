@@ -1,6 +1,14 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.14] 2021-04-12
+### Fixes
+- Fix GregorianCalendar [#1952](https://github.com/pingcap/tispark/pull/1952)
+- Fix tiflash timestamp pushdown bug [#1966](https://github.com/pingcap/tispark/pull/1966)
+- Do not select tidb_row_format_version if tidb is 3.x [#1993](https://github.com/pingcap/tispark/pull/1993)
+- Update table statistics after batch write [#2009](https://github.com/pingcap/tispark/pull/2009)
+- Fix oom cause missing data bug [#2010](https://github.com/pingcap/tispark/pull/2010)
+
 ## [TiSpark 2.3.13] 2021-03-05
 ### Fixes
 - Disable index scan on partition table [#1923](https://github.com/pingcap/tispark/pull/1923)
