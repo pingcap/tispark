@@ -1,6 +1,10 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.4.0] 2021-04-15
+### New Features
+- Support TiDB-5.0
+
 ## [TiSpark 2.3.14] 2021-04-12
 ### Fixes
 - Fix GregorianCalendar [#1952](https://github.com/pingcap/tispark/pull/1952)
