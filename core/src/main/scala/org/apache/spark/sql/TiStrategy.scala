@@ -16,7 +16,6 @@
 package org.apache.spark.sql
 
 import java.util.concurrent.TimeUnit
-
 import com.pingcap.tidb.tipb.EncodeType
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression._
@@ -26,10 +25,9 @@ import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
 import com.pingcap.tikv.region.TiStoreType
 import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.statistics.StatisticsManager
-import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
 import com.pingcap.tispark.{TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.catalyst.analysis.CleanupAliases
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{
   Alias,
@@ -38,7 +36,6 @@ import org.apache.spark.sql.catalyst.expressions.{
   AttributeMap,
   AttributeSet,
   Descending,
-  TiExprUtils,
   Expression,
   IntegerLiteral,
   IsNull,
@@ -46,7 +43,8 @@ import org.apache.spark.sql.catalyst.expressions.{
   NullsFirst,
   NullsLast,
   SortOrder,
-  SubqueryExpression
+  SubqueryExpression,
+  TiExprUtils
 }
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
@@ -378,11 +376,12 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       val newSortExpr = sortOrder.child.transformUp {
         case a: Attribute => aliases.getOrElse(a, a)
       }
-      val trimmedExpr = CleanupAliases.trimNonTopLevelAliases(newSortExpr)
-      val trimmedSortOrder = sortOrder.copy(child = trimmedExpr)
+      val trimmedExpr = ReflectionUtil.trimNonTopLevelAliases(newSortExpr)
+      val trimmedSortOrder = ReflectionUtil.copySortOrder(sortOrder, trimmedExpr)
+
       (sortOrder.direction, sortOrder.nullOrdering) match {
         case (_ @Ascending, _ @NullsLast) | (_ @Descending, _ @NullsFirst) =>
-          sortOrder.copy(child = IsNull(trimmedExpr)) :: trimmedSortOrder :: Nil
+          ReflectionUtil.copySortOrder(sortOrder, IsNull(trimmedExpr)) :: trimmedSortOrder :: Nil
         case _ =>
           trimmedSortOrder :: Nil
       }
@@ -471,11 +470,11 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       source: TiDBRelation,
       dagReq: TiDAGRequest): Seq[SparkPlan] = {
     val deterministicAggAliases = aggregateExpressions.collect {
-      case e if e.deterministic => e.canonicalized -> Alias(e, e.toString())()
+      case e if e.deterministic => e.canonicalized -> ReflectionUtil.newAlias(e, e.toString())
     }.toMap
 
     def aliasPushedPartialResult(e: AggregateExpression): Alias =
-      deterministicAggAliases.getOrElse(e.canonicalized, Alias(e, e.toString())())
+      deterministicAggAliases.getOrElse(e.canonicalized, ReflectionUtil.newAlias(e, e.toString()))
 
     val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
       // As `aggExpr` is being pushing down to TiKV, we need to replace the original Catalyst
