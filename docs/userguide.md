@@ -384,3 +384,12 @@ The following configurations can be used to avoid the garbled chinese characters
 --conf "spark.driver.extraJavaOptions=-Dfile.encoding=UTF-8"
 --conf "spark.executor.extraJavaOptions=-Dfile.encoding=UTF-8"
 ```
+### GRPC message exceeds maximum size error
+
+The maximum message size of GRPC java lib is 2G. The following error will be thrown if there is a huge region in TiKV whose size is more than 2G.
+
+```
+Caused by: shade.io.grpc.StatusRuntimeException: RESOURCE_EXHAUSTED: gRPC message exceeds maximum size 2147483647
+```
+
+Use `SHOW TABLE [table_name] REGIONS [WhereClauseOptional]` to check whether there is a huge region in TiKV.
