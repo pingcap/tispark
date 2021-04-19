@@ -155,7 +155,7 @@ object TiUtil {
     sqlContext.getConf(TiConfigConst.CHUNK_BATCH_SIZE, "1024").toInt
 
   def getPartitionPerSplit(sqlContext: SQLContext): Int =
-    sqlContext.getConf(TiConfigConst.PARTITION_PER_SPLIT, "10").toInt
+    sqlContext.getConf(TiConfigConst.PARTITION_PER_SPLIT, "1").toInt
 
   def getIsolationReadEngines(sqlContext: SQLContext): List[TiStoreType] =
     getIsolationReadEnginesFromString(
