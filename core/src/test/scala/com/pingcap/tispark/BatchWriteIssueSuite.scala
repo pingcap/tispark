@@ -29,7 +29,7 @@ import org.apache.spark.sql.types.{
 
 class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
 
-  test("stats_meta update modify_count") {
+  ignore("stats_meta update modify_count") {
     if (!supportBatchWrite) {
       cancel()
     }
