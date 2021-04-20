@@ -29,10 +29,10 @@ import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.catalyst.analysis.CleanupAliases
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{
   Alias,
+  AliasHelper,
   Ascending,
   Attribute,
   AttributeMap,
@@ -85,6 +85,7 @@ object TiStrategy {
  */
 case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
     extends Strategy
+    with AliasHelper
     with Logging {
   type TiExpression = com.pingcap.tikv.expression.Expression
   type TiColumnRef = com.pingcap.tikv.expression.ColumnRef
@@ -378,7 +379,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       val newSortExpr = sortOrder.child.transformUp {
         case a: Attribute => aliases.getOrElse(a, a)
       }
-      val trimmedExpr = CleanupAliases.trimNonTopLevelAliases(newSortExpr)
+      val trimmedExpr = trimNonTopLevelAliases(newSortExpr)
       val trimmedSortOrder = sortOrder.copy(child = trimmedExpr)
       (sortOrder.direction, sortOrder.nullOrdering) match {
         case (_ @Ascending, _ @NullsLast) | (_ @Descending, _ @NullsFirst) =>

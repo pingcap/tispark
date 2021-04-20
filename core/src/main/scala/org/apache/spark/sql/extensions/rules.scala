@@ -89,17 +89,17 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
     plan transformUp resolveTiDBRelations
 
   protected def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
-    case i @ InsertIntoStatement(UnresolvedRelation(tableIdentifier), _, _, _, _)
+    case i @ InsertIntoStatement(UnresolvedRelation(tableIdentifier, _, _), _, _, _, _, _)
         if tiCatalog
           .catalogOf(tableIdentifier)
           .exists(_.isInstanceOf[TiSessionCatalog]) =>
       i.copy(table = EliminateSubqueryAliases(resolveTiDBRelation()(tableIdentifier)))
-    case UnresolvedRelation(tableIdentifier)
+    case UnresolvedRelation(tableIdentifier, _, _)
         if tiCatalog
           .catalogOf(tableIdentifier)
           .exists(_.isInstanceOf[TiSessionCatalog]) =>
       resolveTiDBRelation()(tableIdentifier)
-    case UnresolvedTableOrView(tableIdentifier)
+    case UnresolvedTableOrView(tableIdentifier, _, _)
         if tiCatalog
           .catalogOf(tableIdentifier)
           .exists(_.isInstanceOf[TiSessionCatalog]) =>
@@ -213,7 +213,7 @@ case class TiResolutionRuleV2(getOrCreateTiContext: SparkSession => TiContext)(
 
   protected def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
     // todo can remove this branch since the target table of insert into statement should never be a tidb table
-    case i @ InsertIntoStatement(DataSourceV2Relation(table, output, _, _, _), _, _, _, _)
+    case i @ InsertIntoStatement(DataSourceV2Relation(table, output, _, _, _), _, _, _, _, _)
         if table.isInstanceOf[TiDBTable] =>
       val tiTable = table.asInstanceOf[TiDBTable]
       i.copy(table = EliminateSubqueryAliases(resolveTiDBRelation(tiTable, output)))

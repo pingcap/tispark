@@ -50,7 +50,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
     delegate: ParserInterface)
     extends ParserInterface {
   private lazy val tiContext = getOrCreateTiContext(sparkSession)
-  private lazy val internal = new SparkSqlParser(sparkSession.sqlContext.conf)
+  private lazy val internal = new SparkSqlParser()
 
   private val cteTableNames = new ThreadLocal[java.util.Set[String]] {
     override def initialValue(): util.Set[String] = new util.HashSet[String]()
@@ -62,9 +62,9 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
    * CHECK Spark [[org.apache.spark.sql.catalyst.analysis.Analyzer.ResolveRelations]] for details.
    */
   private val qualifyTableIdentifier: PartialFunction[LogicalPlan, LogicalPlan] = {
-    case r @ UnresolvedRelation(tableIdentifier) if needQualify(tableIdentifier) =>
+    case r @ UnresolvedRelation(tableIdentifier, _, _) if needQualify(tableIdentifier) =>
       r.copy(qualifyTableIdentifierInternal(tableIdentifier))
-    case i @ InsertIntoStatement(r @ UnresolvedRelation(tableIdentifier), _, _, _, _)
+    case i @ InsertIntoStatement(r @ UnresolvedRelation(tableIdentifier, _, _), _, _, _, _, _)
         if needQualify(tableIdentifier) =>
       // When getting temp view, we leverage legacy catalog.
       i.copy(r.copy(qualifyTableIdentifierInternal(tableIdentifier)))
@@ -78,11 +78,11 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
       cv.copy(child = child transform qualifyTableIdentifier)
     case e @ ExplainCommand(plan, _) =>
       e.copy(logicalPlan = plan transform qualifyTableIdentifier)
-    case c @ CacheTableCommand(tableIdentifier, plan, _, _)
+    case c @ CacheTableCommand(tableIdentifier, plan, _, _, _)
         if plan.isEmpty && needQualify(tableIdentifier) =>
       // Caching an unqualified catalog table.
       c.copy(qualifyTableIdentifierInternal(tableIdentifier))
-    case c @ CacheTableCommand(_, plan, _, _) if plan.isDefined =>
+    case c @ CacheTableCommand(_, plan, _, _, _) if plan.isDefined =>
       c.copy(plan = Some(plan.get transform qualifyTableIdentifier))
     case u @ UncacheTableCommand(tableIdentifier, _) if needQualify(tableIdentifier) =>
       // Uncaching an unqualified catalog table.
@@ -158,7 +158,4 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
 
   override def parseMultipartIdentifier(sqlText: String): Seq[String] =
     internal.parseMultipartIdentifier(sqlText)
-
-  @scala.throws[ParseException]("Text cannot be parsed to a DataType")
-  override def parseRawDataType(sqlText: String): DataType = ???
 }

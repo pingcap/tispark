@@ -18,6 +18,7 @@
 package org.apache.spark.sql.catalyst.expressions
 
 import java.sql.Timestamp
+import java.time.ZoneId
 
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
@@ -43,7 +44,8 @@ object BasicExpression {
         // and this number of date has compensate of timezone
         // and must be restored by DateTimeUtils.daysToMillis
         case DateType =>
-          new DateTime(DateTimeUtils.daysToMillis(value.asInstanceOf[DateTimeUtils.SQLDate]))
+          new DateTime(
+            DateTimeUtils.daysToMicros(value.asInstanceOf[Int], ZoneId.systemDefault()) / 1000L)
         case TimestampType => new Timestamp(value.asInstanceOf[Long] / 1000)
         case StringType => value.toString
         case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
@@ -84,16 +86,16 @@ object BasicExpression {
         Some(
           Constant.create(convertLiteral(value, dataType), TiConverter.fromSparkType(dataType)))
 
-      case Add(BasicExpression(lhs), BasicExpression(rhs)) =>
+      case Add(BasicExpression(lhs), BasicExpression(rhs), _) =>
         Some(ArithmeticBinaryExpression.plus(lhs, rhs))
 
-      case Subtract(BasicExpression(lhs), BasicExpression(rhs)) =>
+      case Subtract(BasicExpression(lhs), BasicExpression(rhs), _) =>
         Some(ArithmeticBinaryExpression.minus(lhs, rhs))
 
-      case e @ Multiply(BasicExpression(lhs), BasicExpression(rhs)) =>
+      case e @ Multiply(BasicExpression(lhs), BasicExpression(rhs), _) =>
         Some(ArithmeticBinaryExpression.multiply(TiConverter.fromSparkType(e.dataType), lhs, rhs))
 
-      case d @ Divide(BasicExpression(lhs), BasicExpression(rhs)) =>
+      case d @ Divide(BasicExpression(lhs), BasicExpression(rhs), _) =>
         Some(ArithmeticBinaryExpression.divide(TiConverter.fromSparkType(d.dataType), lhs, rhs))
 
       case And(BasicExpression(lhs), BasicExpression(rhs)) =>
