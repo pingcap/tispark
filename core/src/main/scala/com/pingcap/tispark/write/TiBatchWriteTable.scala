@@ -74,6 +74,8 @@ class TiBatchWriteTable(
   private var handleCol: TiColumnInfo = _
   private var tableLocked: Boolean = false
   private var autoIncProvidedID: Boolean = false
+  private var deltaCount: Long = 0
+  private var modifyCount: Long = 0
 
   tiTableRef = options.getTiTableRef(tiConf)
   tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
@@ -115,6 +117,10 @@ class TiBatchWriteTable(
 
     val count = df.count
     logger.info(s"source data count=$count")
+
+    // a rough estimate to deltaCount and modifyCount
+    deltaCount = count
+    modifyCount = count
 
     // auto increment
     val rdd = if (tiTableInfo.hasAutoIncrementColumn) {
@@ -347,6 +353,15 @@ class TiBatchWriteTable(
         tableColSize) != 0 && colsInDf.lengthCompare(tableColSize - 1) != 0) {
       throw new TiBatchWriteException(
         s"table with auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize and table column size - 1 ${tableColSize - 1} ")
+    }
+  }
+
+  // update table statistics: modify_count & count
+  def updateTableStatistics(startTs: Long): Unit = {
+    try {
+      tiDBJDBCClient.updateTableStatistics(startTs, tiTableInfo.getId, deltaCount, modifyCount)
+    } catch {
+      case e: Throwable => logger.warn("updateTableStatistics error!", e)
     }
   }
 
