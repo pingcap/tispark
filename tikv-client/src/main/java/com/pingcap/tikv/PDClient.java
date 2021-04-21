@@ -447,7 +447,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
               Long.parseLong(
                   kv.getKey().toString().substring(TIFLASH_TABLE_SYNC_PROGRESS_PATH.length()));
         } catch (Exception e) {
-          logger.info(
+          logger.debug(
               "invalid tiflash table replica sync progress key. key = " + kv.getKey().toString());
           continue;
         }

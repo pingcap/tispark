@@ -80,12 +80,17 @@ case class Schema(
   private val keys: List[String] = indexInfo.map(_.toString)
 
   override def toString: String = {
+    toString(isClusteredIndex = false)
+  }
+
+  def toString(isClusteredIndex: Boolean): String = {
+    val clusteredIndexStr = if (isClusteredIndex) " /*T![clustered_index] CLUSTERED */" else ""
     val index = if (keys.nonEmpty) {
       keys.mkString(",\n|  ", ",\n|  ", "")
     } else ""
     (s"CREATE TABLE `$database`.`$tableName` (\n|  ".stripMargin +
       columns.mkString(",\n|  ") +
-      index +
+      index + clusteredIndexStr +
       "\n|) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin").stripMargin
   }
 }

@@ -23,7 +23,7 @@
         <grpc.version>1.29.0</grpc.version>
         <powermock.version>1.6.6</powermock.version>
         <jackson.annotations.version>2.9.10</jackson.annotations.version>
-        <jackson.databind.version>2.9.10.4</jackson.databind.version>
+        <jackson.databind.version>2.9.10.7</jackson.databind.version>
         <trove4j.version>3.0.1</trove4j.version>
         <jetcd.version>0.4.1</jetcd.version>
         <joda-time.version>2.9.9</joda-time.version>
@@ -369,6 +369,10 @@
                                 <relocation>
                                     <pattern>io.opencensus</pattern>
                                     <shadedPattern>shade.io.opencensus</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.google.gson</pattern>
+                                    <shadedPattern>shade.com.google.gson</shadedPattern>
                                 </relocation>
                             </relocations>
                         </configuration>

@@ -53,14 +53,16 @@ class TiBatchWriteTable(
     @transient val tiContext: TiContext,
     val options: TiDBOptions,
     val tiConf: TiConfiguration,
-    @transient val tiDBJDBCClient: TiDBJDBCClient)
+    @transient val tiDBJDBCClient: TiDBJDBCClient,
+    val isTiDBV4: Boolean)
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
   import com.pingcap.tispark.write.TiBatchWrite._
   @transient private val tiSession = tiContext.tiSession
   // only fetch row format version once for each batch write process
-  private val enableNewRowFormat: Boolean = tiDBJDBCClient.getRowFormatVersion == 2
+  private val enableNewRowFormat: Boolean =
+    if (isTiDBV4) tiDBJDBCClient.getRowFormatVersion == 2 else false
   private var tiTableRef: TiTableReference = _
   private var tiDBInfo: TiDBInfo = _
   private var tiTableInfo: TiTableInfo = _
@@ -72,6 +74,8 @@ class TiBatchWriteTable(
   private var tableLocked: Boolean = false
   private var autoIncProvidedID: Boolean = false
   private var isCommonHandle: Boolean = _
+  private var deltaCount: Long = 0
+  private var modifyCount: Long = 0
 
   tiTableRef = options.getTiTableRef(tiConf)
   tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
@@ -114,6 +118,10 @@ class TiBatchWriteTable(
 
     val count = df.count
     logger.info(s"source data count=$count")
+
+    // a rough estimate to deltaCount and modifyCount
+    deltaCount = count
+    modifyCount = count
 
     // auto increment
     val rdd = if (tiTableInfo.hasAutoIncrementColumn) {
@@ -351,6 +359,15 @@ class TiBatchWriteTable(
         tableColSize) != 0 && colsInDf.lengthCompare(tableColSize - 1) != 0) {
       throw new TiBatchWriteException(
         s"table with auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize and table column size - 1 ${tableColSize - 1} ")
+    }
+  }
+
+  // update table statistics: modify_count & count
+  def updateTableStatistics(startTs: Long): Unit = {
+    try {
+      tiDBJDBCClient.updateTableStatistics(startTs, tiTableInfo.getId, deltaCount, modifyCount)
+    } catch {
+      case e: Throwable => logger.warn("updateTableStatistics error!", e)
     }
   }
 

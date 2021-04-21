@@ -45,18 +45,19 @@ class IssueTestSuite extends BaseTiSparkTest {
 
     tidbStmt.execute("drop table if exists `tispark_test`.`clustered0`")
 
-    createTableWithClusteredIndex("""
+    tidbStmt.execute("""
         CREATE TABLE `tispark_test`.`clustered0` (
-        |  `col_bit0` bit(1) not null,
-        |  `col_bit1` bit(1) not null,
+        |  `col_bigint` bigint(20) not null,
         |  `col_int0` int(11) not null,
         |  `col_int1` int(11) not null,
         |  UNIQUE KEY (`col_int0`),
-        |  PRIMARY KEY (`col_bit1`,`col_bit0`)
+        |  PRIMARY KEY (`col_bigint`) /*T![clustered_index] CLUSTERED */
         |  );
         |""".stripMargin)
 
-    tidbStmt.execute("INSERT INTO `tispark_test`.`clustered0` VALUES (b'1',b'0',-1,-1)")
+    tidbStmt.execute("""
+        |INSERT INTO `tispark_test`.`clustered0` VALUES (9223372036854775807,1,2);
+        |""".stripMargin)
     val sql = "select * from clustered0"
     spark.sql(s"explain $sql").show(200, false)
     spark.sql(s"$sql").show(200, false)

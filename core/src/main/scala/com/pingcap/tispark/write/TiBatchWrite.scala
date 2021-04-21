@@ -81,6 +81,7 @@ class TiBatchWrite(
   @transient private var tiDBJDBCClient: TiDBJDBCClient = _
   @transient private var tiBatchWriteTables: List[TiBatchWriteTable] = _
   @transient private var startMS: Long = _
+  private var startTs: Long = _
 
   private def write(): Unit = {
     try {
@@ -129,6 +130,7 @@ class TiBatchWrite(
     tiConf = mergeSparkConfWithDataSourceConf(tiContext.conf, options)
     tiSession = tiContext.tiSession
     val tikvSupportUpdateTTL = StoreVersion.minTiKVVersion("3.0.5", tiSession.getPDClient)
+    val isTiDBV4 = StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient)
     isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
     lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
     tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
@@ -142,7 +144,8 @@ class TiBatchWrite(
             tiContext,
             options.setDBTable(dbTable),
             tiConf,
-            tiDBJDBCClient)
+            tiDBJDBCClient,
+            isTiDBV4)
       }.toList
     }
 
@@ -169,7 +172,6 @@ class TiBatchWrite(
     if (useTableLock) {
       tiBatchWriteTables.foreach(_.lockTable())
     } else {
-      val isTiDBV4 = StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient)
       if (!isTiDBV4) {
         if (tiContext.tiConf.isWriteWithoutLockTable) {
           logger.warn("write tidb-2.x or 3.x without lock table enabled! only for test!")
@@ -185,7 +187,7 @@ class TiBatchWrite(
 
     // get timestamp as start_ts
     val startTimeStamp = tiSession.getTimestamp
-    val startTs = startTimeStamp.getVersion
+    startTs = startTimeStamp.getVersion
     logger.info(s"startTS: $startTs")
 
     // pre calculate
@@ -352,6 +354,11 @@ class TiBatchWrite(
       logger.info("commitSecondaryKeys finish")
     } else {
       logger.info("skipping commit secondary key")
+    }
+
+    // update table statistics: modify_count & count
+    if (options.enableUpdateTableStatistics) {
+      tiBatchWriteTables.foreach(_.updateTableStatistics(startTs))
     }
 
     val endMS = System.currentTimeMillis()
