@@ -81,6 +81,7 @@ class TiBatchWrite(
   @transient private var tiDBJDBCClient: TiDBJDBCClient = _
   @transient private var tiBatchWriteTables: List[TiBatchWriteTable] = _
   @transient private var startMS: Long = _
+  private var startTs: Long = _
 
   private def write(): Unit = {
     try {
@@ -186,7 +187,7 @@ class TiBatchWrite(
 
     // get timestamp as start_ts
     val startTimeStamp = tiSession.getTimestamp
-    val startTs = startTimeStamp.getVersion
+    startTs = startTimeStamp.getVersion
     logger.info(s"startTS: $startTs")
 
     // pre calculate
@@ -353,6 +354,11 @@ class TiBatchWrite(
       logger.info("commitSecondaryKeys finish")
     } else {
       logger.info("skipping commit secondary key")
+    }
+
+    // update table statistics: modify_count & count
+    if (options.enableUpdateTableStatistics) {
+      tiBatchWriteTables.foreach(_.updateTableStatistics(startTs))
     }
 
     val endMS = System.currentTimeMillis()
