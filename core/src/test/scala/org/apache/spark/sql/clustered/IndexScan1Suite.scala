@@ -16,10 +16,10 @@
 package org.apache.spark.sql.clustered
 
 import com.pingcap.tispark.TiConfigConst
-import org.apache.spark.sql.test.generator.DataType.INT
+import com.pingcap.tispark.test.generator.DataType.INT
+import com.pingcap.tispark.test.generator.NullableType
 
 class IndexScan1Suite extends ClusteredIndexTest {
-
   override def beforeAll(): Unit = {
     super.beforeAll()
     spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "true")
@@ -30,14 +30,20 @@ class IndexScan1Suite extends ClusteredIndexTest {
     super.afterAll()
   }
 
-  test("index scan 1: primary key has two columns") {
+  test("index scan 0: primary key has two columns") {
     if (!supportClusteredIndex) {
       cancel("currently tidb instance does not support clustered index")
     }
-    for (dataType1 <- testDataTypes) {
-      for (dataType2 <- testDataTypes) {
-        val schemas = genSchema(List(dataType2, dataType1, INT, INT), tablePrefix)
-        schemas.foreach { schema =>
+    for (dataType1 <- testDataTypes2) {
+      for (dataType2 <- testDataTypes1) {
+        val schemaAndDataList = genSchemaAndData(
+          rowCount,
+          List(dataType2, dataType1, INT, INT).map(d =>
+            genDescription(d, NullableType.NumericNotNullable)),
+          database,
+          isClusteredIndex = true,
+          hasTiFlashReplica = enableTiFlashTest)
+        schemaAndDataList.foreach { schema =>
           test(schema)
         }
       }

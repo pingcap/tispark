@@ -15,37 +15,26 @@
 
 package org.apache.spark.sql.clustered
 
-import org.apache.spark.sql.BaseTiSparkTest
-import org.apache.spark.sql.insertion.BaseEnumerateDataTypesTestSpec
-import org.apache.spark.sql.test.generator.DataType.{BIT, BOOLEAN, ReflectedDataType}
-import org.apache.spark.sql.test.generator.TestDataGenerator._
-import org.apache.spark.sql.test.generator._
+import com.pingcap.tispark.test.generator.DataType._
+import com.pingcap.tispark.test.generator.DataGenerator._
+import com.pingcap.tispark.test.generator._
+import org.apache.spark.sql.types.BaseRandomDataTypeTest
 
 import scala.util.Random
 
-trait ClusteredIndexTest extends BaseTiSparkTest with BaseEnumerateDataTypesTestSpec {
-  protected val testDataTypes: List[ReflectedDataType] = baseDataTypes
+trait ClusteredIndexTest extends BaseRandomDataTypeTest {
+  protected val testDataTypes1: List[ReflectedDataType] =
+    List(BIT, INT, DECIMAL, TIMESTAMP, TEXT, BLOB)
 
-  protected val tablePrefix: String = "clustered"
+  protected val testDataTypes2: List[ReflectedDataType] =
+    List(BOOLEAN, BIGINT, DOUBLE, DATE, VARCHAR)
 
-  override def dbName: String = "tispark_test"
+  override protected val database: String = "clustered_index_test"
 
-  override def rowCount = 10
-
-  override def dataTypes: List[ReflectedDataType] = ???
-
-  override def unsignedDataTypes: List[ReflectedDataType] = ???
-
-  override def testDesc: String = ???
-
-  override def test(): Unit = ???
-
-  override def afterAll(): Unit = {
-    super.afterAll()
-  }
-
-  override def genIndex(dataTypes: List[ReflectedDataType], r: Random): List[List[Index]] = {
-    val size = dataTypes.length
+  override protected def genIndex(
+      dataTypesWithDesc: List[(ReflectedDataType, String, String)],
+      r: Random): List[List[Index]] = {
+    val size = dataTypesWithDesc.length
     var keys1: List[Index] = Nil
     var keys2: List[Index] = Nil
 
@@ -59,7 +48,7 @@ trait ClusteredIndexTest extends BaseTiSparkTest with BaseEnumerateDataTypesTest
     {
       var pkCol: List[IndexColumn] = Nil
       primaryKeyList.foreach { i =>
-        pkCol = if (isStringType(dataTypes(i))) {
+        pkCol = if (isStringType(dataTypesWithDesc(i)._1)) {
           PrefixColumn(i + 1, r.nextInt(4) + 2) :: pkCol
         } else {
           DefaultColumn(i + 1) :: pkCol
@@ -71,7 +60,7 @@ trait ClusteredIndexTest extends BaseTiSparkTest with BaseEnumerateDataTypesTest
     }
 
     {
-      val keyCol = if (isStringType(dataTypes(uniqueKey))) {
+      val keyCol = if (isStringType(dataTypesWithDesc(uniqueKey)._1)) {
         PrefixColumn(uniqueKey + 1, r.nextInt(4) + 2) :: Nil
       } else {
         DefaultColumn(uniqueKey + 1) :: Nil
@@ -84,70 +73,12 @@ trait ClusteredIndexTest extends BaseTiSparkTest with BaseEnumerateDataTypesTest
     List(keys1, keys2)
   }
 
-  protected def test(schema: Schema): Unit = {
-    executeTiDBSQL(s"drop table if exists `$dbName`.`${schema.tableName}`;")
-    executeTiDBSQL(schema.toString(isClusteredIndex = true))
+  protected def test(schemaAndData: SchemaAndData): Unit = {
+    loadToDB(schemaAndData)
 
-    var rc = rowCount
-    schema.columnInfo.foreach { columnInfo =>
-      if (columnInfo.dataType.equals(BIT) || columnInfo.dataType.equals(BOOLEAN)) {
-        rc = 2
-      }
-    }
-
-    for (insert <- toInsertSQL(schema, generateRandomRows(schema, rc, r))) {
-      try {
-        executeTiDBSQL(insert)
-      } catch {
-        case _: Throwable => println("insert fail")
-      }
-    }
-
-    val sql = s"select * from `${schema.tableName}`"
-    spark.sql(s"explain $sql").show(200, false)
-    spark.sql(s"$sql").show(200, false)
+    setCurrentDatabase(schemaAndData.schema.database)
+    val sql = s"select * from `${schemaAndData.schema.tableName}`"
+    println(sql)
     runTest(sql, skipJDBC = true)
   }
-
-  private def executeTiDBSQL(sql: String): Unit = {
-    println(sql)
-    tidbStmt.execute(sql)
-  }
-
-  private def toInsertSQL(schema: Schema, data: List[TiRow]): List[String] = {
-    data
-      .map { row =>
-        (0 until row.fieldCount())
-          .map { idx =>
-            val value = row.get(idx, schema.columnInfo(idx).generator.tiDataType)
-            toOutput(value)
-          }
-          .mkString("(", ",", ")")
-      }
-      .map { text =>
-        s"INSERT INTO `$dbName`.`${schema.tableName}` VALUES $text;"
-      }
-  }
-
-  private def toOutput(value: Any): String =
-    value match {
-      case null => null
-      case _: Boolean => value.toString
-      case _: Number => value.toString
-      case arr: Array[Byte] =>
-        s"X\'${arr.map { b =>
-          f"${new java.lang.Byte(b)}%02x"
-        }.mkString}\'"
-      case arr: Array[Boolean] =>
-        s"b\'${arr.map {
-          case true => "1"
-          case false => "0"
-        }.mkString}\'"
-      case ts: java.sql.Timestamp =>
-        // convert to Timestamp output with current TimeZone
-        val zonedDateTime = ts.toLocalDateTime.atZone(java.util.TimeZone.getDefault.toZoneId)
-        val milliseconds = zonedDateTime.toEpochSecond * 1000L + zonedDateTime.getNano / 1000000
-        s"\'${new java.sql.Timestamp(milliseconds)}\'"
-      case _ => s"\'$value\'"
-    }
 }

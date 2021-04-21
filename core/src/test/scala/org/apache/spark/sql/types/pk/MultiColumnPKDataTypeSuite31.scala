@@ -20,5 +20,5 @@ package org.apache.spark.sql.types.pk
 class MultiColumnPKDataTypeSuite31 extends MultiColumnPKDataTypeSuites {
   override def currentTest: Seq[(Int, Int)] = tests(getId)
 
-  test()
+  generateTestCases()
 }

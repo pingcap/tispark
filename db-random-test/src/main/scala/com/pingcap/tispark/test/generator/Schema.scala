@@ -15,9 +15,9 @@
  *
  */
 
-package org.apache.spark.sql.test.generator
+package com.pingcap.tispark.test.generator
 
-import org.apache.spark.sql.test.generator.DataType._
+import com.pingcap.tispark.test.generator.DataType._
 
 /**
  * Case class for Schema of TiDB table
@@ -34,7 +34,9 @@ case class Schema(
     tableName: String,
     columnNames: List[String],
     columnDesc: Map[String, (ReflectedDataType, (Integer, Integer), String)],
-    indexColumns: Map[String, (List[(String, Integer)], Boolean, Boolean)]) {
+    indexColumns: Map[String, (List[(String, Integer)], Boolean, Boolean)],
+    var isClusteredIndex: Boolean = false,
+    var hasTiFlashReplica: Boolean = false) {
 
   // validations
   assert(columnDesc.size == columnNames.size, "columnDesc size not equal to column name size")
@@ -80,10 +82,6 @@ case class Schema(
   private val keys: List[String] = indexInfo.map(_.toString)
 
   override def toString: String = {
-    toString(isClusteredIndex = false)
-  }
-
-  def toString(isClusteredIndex: Boolean): String = {
     val clusteredIndexStr = if (isClusteredIndex) " /*T![clustered_index] CLUSTERED */" else ""
     val index = if (keys.nonEmpty) {
       keys.mkString(",\n|  ", ",\n|  ", "")
