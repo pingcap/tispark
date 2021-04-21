@@ -176,8 +176,8 @@ public class RowEncoderV2 {
           this.row.colIDs32[j] = Byte.toUnsignedInt(this.row.colIDs[j]);
         }
         this.row.initOffsets32();
-        if (numCols >= 0) {
-          System.arraycopy(this.row.offsets, 0, this.row.offsets32, 0, numCols);
+        if (this.row.numNotNullCols >= 0) {
+          System.arraycopy(this.row.offsets, 0, this.row.offsets32, 0, this.row.numNotNullCols);
         }
         this.row.large = true;
       }
