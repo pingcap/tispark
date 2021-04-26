@@ -76,6 +76,8 @@ class TiBatchWriteTable(
   private var isCommonHandle: Boolean = _
   private var deltaCount: Long = 0
   private var modifyCount: Long = 0
+  @transient private var persistedDFList: List[DataFrame] = Nil
+  @transient private var persistedRDDList: List[RDD[_]] = Nil
 
   tiTableRef = options.getTiTableRef(tiConf)
   tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
@@ -94,6 +96,12 @@ class TiBatchWriteTable(
 
   def persist(): Unit = {
     df = df.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+    persistedDFList = df :: persistedDFList
+  }
+
+  def unpersistAll(): Unit = {
+    persistedDFList.foreach(_.unpersist())
+    persistedRDDList.foreach(_.unpersist())
   }
 
   def isDFEmpty: Boolean = {
@@ -246,6 +254,7 @@ class TiBatchWriteTable(
                       } else {
                         generateDataToBeRemovedRddV1(distinctWrappedRowRdd, startTimeStamp)
                       }).persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+      persistedRDDList = deletion :: persistedRDDList
 
       if (!options.replace && !deletion.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
@@ -305,7 +314,10 @@ class TiBatchWriteTable(
     }
 
     // persist
-    keyValueRDD.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+    val persistedKeyValueRDD =
+      keyValueRDD.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+    persistedRDDList = persistedKeyValueRDD :: persistedRDDList
+    persistedKeyValueRDD
   }
 
   def lockTable(): Unit = {
