@@ -101,6 +101,14 @@ class TiBatchWrite(
     }
 
     try {
+      if (tiBatchWriteTables != null) {
+        tiBatchWriteTables.foreach(_.unpersistAll())
+      }
+    } catch {
+      case _: Throwable =>
+    }
+
+    try {
       if (ttlManager != null) {
         ttlManager.close()
       }
