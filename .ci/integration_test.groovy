@@ -13,7 +13,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TEST_REGION_SIZE = "normal"
     def TEST_TIFLASH = "false"
     def TEST_ALTER_PRIMARY_KEY = "true"
-    def TEST_SPARK_CATALOG = "false"
+    def TEST_SPARK_CATALOG = "true"
 
     // parse tidb branch
     def m1 = ghprbCommentBody =~ /tidb\s*=\s*([^\s\\]+)(\s|\\|$)/
