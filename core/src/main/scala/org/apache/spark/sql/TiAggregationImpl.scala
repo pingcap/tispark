@@ -15,15 +15,10 @@
 
 package org.apache.spark.sql
 
+import com.pingcap.tispark.utils.ReflectionUtil
 import org.apache.spark.sql.catalyst.expressions.NamedExpression.newExprId
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.{
-  Alias,
-  Cast,
-  Divide,
-  Expression,
-  NamedExpression
-}
+import org.apache.spark.sql.catalyst.expressions.{Cast, Divide, Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.PhysicalAggregation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.types.{DecimalType, DoubleType, FloatType, LongType}
@@ -97,7 +92,7 @@ object TiAggregationImpl {
               case DoubleType => Cast(sum.resultAttribute, DoubleType)
               case d: DecimalType => Cast(sum.resultAttribute, d)
             }
-            (ref: Expression) -> Alias(castedSum, ref.name)(exprId = ref.exprId)
+            (ref: Expression) -> ReflectionUtil.newAlias(castedSum, ref.name, ref.exprId)
         }
 
         val avgRewrite: PartialFunction[Expression, Expression] = avgRewriteMap.map {
@@ -105,7 +100,7 @@ object TiAggregationImpl {
             val castedSum = Cast(sum.resultAttribute, DoubleType)
             val castedCount = Cast(count.resultAttribute, DoubleType)
             val division = Cast(Divide(castedSum, castedCount), ref.dataType)
-            (ref: Expression) -> Alias(division, ref.name)(exprId = ref.exprId)
+            (ref: Expression) -> ReflectionUtil.newAlias(division, ref.name, ref.exprId)
         }
 
         val rewrittenResultExpressions = resultExpressions

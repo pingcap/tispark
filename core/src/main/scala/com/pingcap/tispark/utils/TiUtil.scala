@@ -16,7 +16,6 @@
 package com.pingcap.tispark.utils
 
 import java.util.concurrent.TimeUnit
-
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.datatype.TypeMapping
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
@@ -30,7 +29,44 @@ import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{SparkConf, sql}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
+import java.time.{Instant, LocalDate, ZoneId}
+import java.util.TimeZone
+import java.util.concurrent.TimeUnit.NANOSECONDS
+
 object TiUtil {
+  val MICROS_PER_MILLIS = 1000L
+  val MICROS_PER_SECOND = 1000000L
+
+  def defaultTimeZone(): TimeZone = TimeZone.getDefault
+
+  def daysToMillis(days: Int): Long = {
+    daysToMillis(days, defaultTimeZone().toZoneId)
+  }
+
+  def daysToMillis(days: Int, zoneId: ZoneId): Long = {
+    val instant = daysToLocalDate(days).atStartOfDay(zoneId).toInstant
+    toMillis(instantToMicros(instant))
+  }
+
+  /*
+   * Converts the timestamp to milliseconds since epoch. In spark timestamp values have microseconds
+   * precision, so this conversion is lossy.
+   */
+  def toMillis(us: Long): Long = {
+    // When the timestamp is negative i.e before 1970, we need to adjust the millseconds portion.
+    // Example - 1965-01-01 10:11:12.123456 is represented as (-157700927876544) in micro precision.
+    // In millis precision the above needs to be represented as (-157700927877).
+    Math.floorDiv(us, MICROS_PER_MILLIS)
+  }
+
+  def instantToMicros(instant: Instant): Long = {
+    val us = Math.multiplyExact(instant.getEpochSecond, MICROS_PER_SECOND)
+    val result = Math.addExact(us, NANOSECONDS.toMicros(instant.getNano))
+    result
+  }
+
+  def daysToLocalDate(days: Int): LocalDate = LocalDate.ofEpochDay(days)
+
   def getSchemaFromTable(table: TiTableInfo): StructType = {
     val fields = new Array[StructField](table.getColumns.size())
     for (i <- 0 until table.getColumns.size()) {

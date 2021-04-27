@@ -70,8 +70,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-        <spark.version.compile>3.0.0</spark.version.compile>
-        <spark.version.test>3.0.2</spark.version.test>
+        <spark.version.compile>3.0.2</spark.version.compile>
+        <spark.version.test>3.1.1</spark.version.test>
         <scala.binary.version>2.12</scala.binary.version>
         <scala.version>2.12.10</scala.version>
         <!-- for now, not running scalafmt as part of default verify pipeline -->
@@ -161,10 +161,21 @@
     <modules>
         <module>tikv-client</module>
         <module>core</module>
+        <module>spark-wrapper/spark-3.0</module>
+        <module>spark-wrapper/spark-3.1</module>
         <module>assembly</module>
     </modules>
 
     <profiles>
+        <profile>
+            <id>spark-3.1.1</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <spark.version.compile>3.1.1</spark.version.compile>
+            </properties>
+        </profile>
         <profile>
             <id>jenkins</id>
             <modules>
