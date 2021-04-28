@@ -121,7 +121,7 @@ public class TableCodecV2Test {
                 new int[] {128, 0, 1, 0, 0, 0, 1, 5, 0, 6, 4, 139, 38, 172},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", DecimalType.DECIMAL)
+                    .addColumn("c1", new DecimalType(6, 4))
                     .build(),
                 new Object[] {new BigDecimal("11.9900")}),
             // test bit
@@ -248,7 +248,7 @@ public class TableCodecV2Test {
             .addColumn("c5", StringType.CHAR, 25)
             .addColumn("c6", TimestampType.TIMESTAMP, 5)
             .addColumn("c7", TimeType.TIME, 16)
-            .addColumn("c8", DecimalType.DECIMAL, 8)
+            .addColumn("c8", new DecimalType(6, 4), 8)
             .addColumn("c9", IntegerType.YEAR, 12)
             .addColumn("c10", TEST_ENUM_TYPE, 9)
             // .addColumn("c11", JsonType.JSON, 14)
