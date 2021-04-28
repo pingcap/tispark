@@ -15,24 +15,20 @@
  *
  */
 
-package org.apache.spark.sql.types
+package com.pingcap.tispark.test.generator
 
-import org.apache.spark.sql.test.generator.DataType.getTypeName
+trait Index {
+  def indexColumns: List[IndexColumn]
+  val isPrimaryKey: Boolean = false
+  val isUnique: Boolean = false
+}
 
-trait RunUnitDataTypeTestAction extends UnitDataTypeTestSpec {
+case class Key(indexColumns: List[IndexColumn]) extends Index {}
 
-  def startTest(typeName: String): Unit
+case class PrimaryKey(indexColumns: List[IndexColumn]) extends Index {
+  override val isPrimaryKey: Boolean = true
+}
 
-  def startUnsignedTest(typeName: String): Unit
-
-  def test(): Unit = {
-    for (dataType <- dataTypes) {
-      val typeName = getTypeName(dataType)
-      startTest(typeName)
-    }
-    for (dataType <- unsignedDataTypes) {
-      val typeName = getTypeName(dataType)
-      startUnsignedTest(typeName)
-    }
-  }
+case class UniqueKey(indexColumns: List[IndexColumn]) extends Index {
+  override val isUnique: Boolean = true
 }

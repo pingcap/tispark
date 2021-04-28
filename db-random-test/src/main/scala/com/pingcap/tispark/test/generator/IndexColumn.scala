@@ -15,10 +15,10 @@
  *
  */
 
-package org.apache.spark.sql.test.generator
+package com.pingcap.tispark.test.generator
 
-import org.apache.spark.sql.test.generator.DataType.{ReflectedDataType, getBaseType}
-import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength}
+import com.pingcap.tispark.test.generator.DataType.{ReflectedDataType, getBaseType}
+import com.pingcap.tispark.test.generator.DataGenerator.{getDecimal, getLength}
 
 trait IndexColumn {
   def id: Int
@@ -81,7 +81,7 @@ case class ColumnInfo(
 
   {
     // validation
-    import org.apache.spark.sql.test.generator.TestDataGenerator._
+    import com.pingcap.tispark.test.generator.DataGenerator._
     if (isVarString(dataType) && len == -1) {
       throw new IllegalArgumentException("Length must be specified for Text and BLOB Types")
     }

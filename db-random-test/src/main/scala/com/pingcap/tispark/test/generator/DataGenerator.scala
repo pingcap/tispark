@@ -15,16 +15,15 @@
  *
  */
 
-package org.apache.spark.sql.test.generator
+package com.pingcap.tispark.test.generator
 
 import com.pingcap.tikv.row.ObjectRowImpl
-import org.apache.spark.SparkFunSuite
-import org.apache.spark.sql.test.generator.DataType._
+import com.pingcap.tispark.test.generator.DataType._
 
 import scala.collection.mutable
 import scala.util.Random
 
-object TestDataGenerator {
+object DataGenerator {
   type TiRow = com.pingcap.tikv.row.Row
 
   val bits = List(BIT)
@@ -162,7 +161,7 @@ object TestDataGenerator {
    * @param database                 database name
    * @param table                    table name
    * @param r                        random
-   * @param dataTypesWithDescription (typeName, lengthDescriptions, extraDescriptions)
+   * @param dataTypesWithDesc        (typeName, lengthDescriptions, extraDescriptions)
    * @param indices                  index info, list of column ids chosen (start from 1)
    * @return Generated Schema
    */
@@ -170,19 +169,18 @@ object TestDataGenerator {
       database: String,
       table: String,
       r: Random,
-      dataTypesWithDescription: List[(ReflectedDataType, String, String)],
+      dataTypesWithDesc: List[(ReflectedDataType, String, String)],
       indices: List[Index]): Schema = {
 
     // validation
     assert(
-      dataTypesWithDescription.forall(x => supportedDataTypes.contains(x._1)),
+      dataTypesWithDesc.forall(x => supportedDataTypes.contains(x._1)),
       "required data type not present for generator")
     assert(
       indices
-        .forall(_.indexColumns.forall(x =>
-          x.getId >= 0 && x.getId < dataTypesWithDescription.size)))
+        .forall(_.indexColumns.forall(x => x.getId >= 0 && x.getId < dataTypesWithDesc.size)))
 
-    val dataTypeList: List[ReflectedDataType] = dataTypesWithDescription.map {
+    val dataTypeList: List[ReflectedDataType] = dataTypesWithDesc.map {
       _._1
     }
 
@@ -199,7 +197,7 @@ object TestDataGenerator {
     }
 
     val columnNames: List[String] =
-      dataTypesWithDescription.map { x =>
+      dataTypesWithDesc.map { x =>
         val tp = x._1
         val ret = if (dataTypeMap(tp) == 1) {
           generateColumnName(tp)
@@ -334,8 +332,12 @@ object TestDataGenerator {
   }
 
   // Data Generator
-  def randomDataGenerator(schema: Schema, rowCount: Long, directory: String, r: Random): Data = {
-    Data(schema, generateRandomRows(schema, rowCount, r), directory)
+  def randomDataGenerator(
+      schema: Schema,
+      rowCount: Long,
+      directory: String,
+      r: Random): SchemaAndData = {
+    SchemaAndData(schema, generateRandomRows(schema, rowCount, r))
   }
 
   def generateRandomRows(schema: Schema, n: Long, r: Random): List[TiRow] = {
@@ -353,17 +355,25 @@ object TestDataGenerator {
         List.empty[(Int, Int)]
       }
     }
+
+    var realSize = n
     schema.columnInfo.indices.foreach { i =>
       schema.columnInfo(i).generator.reset()
       pkOffset.find(_._1 == i) match {
         case Some((_, len)) =>
-          schema.columnInfo(i).generator.preGenerateRandomValues(r, n, len)
+          val s = schema.columnInfo(i).generator.preGenerateRandomValues(r, n, len)
+          if (s < realSize) {
+            realSize = s
+          }
         case None =>
-          schema.columnInfo(i).generator.preGenerateRandomValues(r, n)
+          val s = schema.columnInfo(i).generator.preGenerateRandomValues(r, n)
+          if (s < realSize) {
+            realSize = s
+          }
       }
     }
 
-    (1.toLong to n).map { _ =>
+    (1.toLong to realSize).map { _ =>
       generateRandomRow(schema, r)
     }.toList
   }
@@ -389,76 +399,5 @@ object TestDataGenerator {
     } else {
       row.set(offset, colValueGenerator.tiDataType, value)
     }
-  }
-}
-
-class TestDataGenerator extends SparkFunSuite {
-
-  test("base test for schema generator") {
-    val r = new Random(1234)
-    val schema = TestDataGenerator.schemaGenerator(
-      "tispark_test",
-      "test_table",
-      r,
-      List(
-        (INT, "", "not null primary key"),
-        (INT, "", "default null"),
-        (DOUBLE, "", "not null default 0.2"),
-        (VARCHAR, "50", "default null"),
-        (DECIMAL, "20,3", "default null")),
-      List(
-        Key(List(DefaultColumn(2), DefaultColumn(3))),
-        Key(List(PrefixColumn(4, 20))),
-        Key(List(DefaultColumn(3), DefaultColumn(5)))))
-    val schema2 = TestDataGenerator.schemaGenerator(
-      "tispark_test",
-      "test_table",
-      r,
-      List(
-        (INT, "", "not null"),
-        (INT, "", "default null"),
-        (DOUBLE, "", "not null default 0.2"),
-        (VARCHAR, "50", "default null"),
-        (DECIMAL, "20,3", "default null")),
-      List(
-        PrimaryKey(List(DefaultColumn(1))),
-        Key(List(DefaultColumn(2), DefaultColumn(3))),
-        Key(List(PrefixColumn(4, 20))),
-        Key(List(DefaultColumn(3), DefaultColumn(5)))))
-    val answer =
-      """CREATE TABLE `tispark_test`.`test_table` (
-        |  `col_int0` int not null,
-        |  `col_int1` int default null,
-        |  `col_double` double not null default 0.2,
-        |  `col_varchar` varchar(50) default null,
-        |  `col_decimal` decimal(20,3) default null,
-        |  PRIMARY KEY (`col_int0`),
-        |  KEY `idx_col_int1_col_double`(`col_int1`,`col_double`),
-        |  KEY `idx_col_varchar`(`col_varchar`(20)),
-        |  KEY `idx_col_double_col_decimal`(`col_double`,`col_decimal`)
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin
-    assert(schema.toString === answer)
-    assert(schema2.toString === answer)
-  }
-
-  test("test generate schema") {
-    val r = new Random(1234)
-    val schema = TestDataGenerator.schemaGenerator(
-      "tispark_test",
-      "test_table",
-      r,
-      List(
-        (INT, "", "not null primary key"),
-        (INT, "", "default null"),
-        (BIT, "3", "default null"),
-        (DOUBLE, "", "not null default 0.2"),
-        (VARCHAR, "50", "default null"),
-        (DECIMAL, "10,3", "default null")),
-      List(
-        Key(List(DefaultColumn(2), DefaultColumn(4))),
-        Key(List(PrefixColumn(5, 20))),
-        Key(List(DefaultColumn(4), DefaultColumn(5)))))
-    val data: Data = TestDataGenerator.randomDataGenerator(schema, 10, "tispark-test", r)
-    data.save()
   }
 }
