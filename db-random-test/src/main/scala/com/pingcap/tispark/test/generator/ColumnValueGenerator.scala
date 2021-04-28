@@ -15,12 +15,12 @@
  *
  */
 
-package org.apache.spark.sql.test.generator
+package com.pingcap.tispark.test.generator
 
 import com.pingcap.tikv.meta.Collation
-import org.apache.spark.sql.test.generator.DataType._
-import org.apache.spark.sql.test.generator.GeneratorUtils._
-import org.apache.spark.sql.test.generator.TestDataGenerator._
+import com.pingcap.tispark.test.generator.DataType._
+import com.pingcap.tispark.test.generator.GeneratorUtils._
+import com.pingcap.tispark.test.generator.DataGenerator._
 
 import scala.collection.mutable
 import scala.util.Random
@@ -168,30 +168,25 @@ case class ColumnValueGenerator(
   }
 
   // pre-generate n random values
-  def preGenerateRandomValues(r: Random, n: Long, len: Int = -1): Unit = {
-    if (n <= 1e6) {
+  def preGenerateRandomValues(r: Random, n1: Long, len: Int = -1): Long = {
+    val realSize = if (n1 <= rangeSize) n1 else rangeSize
+    if (realSize <= 1e6) {
       generatedRandomValues = if (generateUnique) {
-        assert(
-          n <= rangeSize,
-          "random generator cannot generate unique value less than available")
         val set: mutable.Set[String] = mutable.HashSet.empty[String]
-        set ++= specialBound.map(x => TestDataGenerator.hash(x, len))
+        set ++= specialBound.map(x => DataGenerator.hash(x, len))
         val size = set.size
-        (0L until n - size).map { _ =>
+        (0L until realSize - size).map { _ =>
           randomUniqueValue(r, set, len)
         }.toList ++ specialBound
       } else {
-        (0L until n - specialBound.size).map { _ =>
+        (0L until realSize - specialBound.size).map { _ =>
           randomValue(r)
         }.toList ++ specialBound
       }
 
-      val expectedGeneratedRandomValuesLen = generatedRandomValues.size
-      assert(
-        expectedGeneratedRandomValuesLen >= n,
-        s"Generate values size=$expectedGeneratedRandomValuesLen less than n=$n on datatype $dataType. unique=$generateUnique ")
       curPos = 0
     }
+    realSize
   }
 
   ////////////////// Iterator //////////////////
@@ -330,9 +325,6 @@ case class ColumnValueGenerator(
       generatedRandomValues.nonEmpty,
       "Values not pre-generated, please generate values first to use next()")
     if (!hasNext) {
-      assert(
-        !generateUnique,
-        s"Generated random values(${generatedRandomValues.size}) is less than needed(${curPos + 1}).")
       // reuse previous generated data
       curPos = 0
     }

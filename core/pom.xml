@@ -14,15 +14,17 @@
     <name>TiSpark Project Core Internal</name>
     <url>http://github.copm/pingcap/tispark</url>
 
-    <properties>
-        <scalaj.version>2.3.0</scalaj.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.pingcap.tikv</groupId>
             <artifactId>tikv-client</artifactId>
             <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.pingcap.tispark</groupId>
+            <artifactId>db-random-test</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.scalaj</groupId>
