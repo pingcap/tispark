@@ -15,44 +15,45 @@
  *
  */
 
-package org.apache.spark.sql.test.generator
+package com.pingcap.tispark.test.generator
 
-import org.apache.spark.sql.test.generator.TestDataGenerator.TiRow
+import com.pingcap.tispark.test.generator.DataGenerator.TiRow
 
-/**
- * Data with corresponding schema
- *
- * @param schema generated schema
- * @param data list of [[com.pingcap.tikv.row.Row]]
- * @param directory relative path where the data should be stored
- */
-case class Data(schema: Schema, data: List[TiRow], directory: String) {
-  private val database = schema.database
-  private val table = schema.tableName
-  private val fileName = s"$directory/$table.sql"
-  private val text =
-    data
-      .map { row =>
-        (0 until row.fieldCount())
-          .map { idx =>
-            val value = row.get(idx, schema.columnInfo(idx).generator.tiDataType)
-            toOutput(value)
+case class SchemaAndData(schema: Schema, data: List[TiRow]) {
+  private val fileName = s"random-test/${schema.database}/${schema.tableName}.sql"
+
+  def getInitSQLList: List[String] = {
+    val database = schema.database
+    val table = schema.tableName
+
+    var sql = s"CREATE DATABASE IF NOT EXISTS `$database`;" ::
+      s"USE `$database`;" ::
+      s"DROP TABLE IF EXISTS `$table`;" ::
+      s"${schema.toString};" :: Nil
+
+    if (data.nonEmpty) {
+      val insert =
+        data
+          .map { row =>
+            (0 until row.fieldCount())
+              .map { idx =>
+                val value = row.get(idx, schema.columnInfo(idx).generator.tiDataType)
+                toOutput(value)
+              }
+              .mkString("(", ",", ")")
           }
-          .mkString("(", ",", ")")
-      }
-      .mkString(",")
-  private val sql = s"CREATE DATABASE IF NOT EXISTS `$database`;\n" +
-    s"DROP TABLE IF EXISTS `$database`.`$table`;\n" +
-    s"${schema.toString};\n" +
-    s"INSERT INTO `$database`.`$table` VALUES $text;\n"
-  private val tiflash_sql = s"ALTER TABLE `$database`.`$table` SET TIFLASH REPLICA 1"
-  private var hasTiFlashReplica = false
+          .map(values => s"INSERT INTO `$table` VALUES $values;")
+      sql = sql ::: insert
+    }
 
-  def setTiFLashReplica(has: Boolean): Unit = {
-    hasTiFlashReplica = has
+    if (schema.hasTiFlashReplica) {
+      val tiflash_sql = s"ALTER TABLE `$table` SET TIFLASH REPLICA 1"
+      sql = sql ::: tiflash_sql :: Nil
+    }
+    sql
   }
 
-  def toOutput(value: Any): String =
+  private def toOutput(value: Any): String = {
     value match {
       case null => null
       case _: Boolean => value.toString
@@ -73,26 +74,16 @@ case class Data(schema: Schema, data: List[TiRow], directory: String) {
         s"\'${new java.sql.Timestamp(milliseconds)}\'"
       case _ => s"\'$value\'"
     }
+  }
 
   def save(): Unit = {
     import java.io._
-    // FileWriter
     val path = getClass.getResource("/")
     val file = new File(path.getPath + fileName)
     file.getParentFile.mkdirs()
     file.createNewFile()
     val bw = new BufferedWriter(new FileWriter(file))
-    bw.write(sql)
-    if (hasTiFlashReplica) {
-      bw.write(tiflash_sql)
-    }
+    bw.write(getInitSQLList.mkString("\n"))
     bw.close()
   }
-
-  override def toString: String =
-    schema.toString + "\n" + data
-      .map { row: TiRow =>
-        row.toString
-      }
-      .mkString("{\n\t", "\n\t", "\n}")
 }
