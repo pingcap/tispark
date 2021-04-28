@@ -16,63 +16,85 @@
 package org.apache.spark.sql.insertion
 
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
+import com.pingcap.tispark.test.generator.DataGenerator._
+import com.pingcap.tispark.test.generator.DataType.ReflectedDataType
+import com.pingcap.tispark.test.generator._
 import com.pingcap.tispark.utils.TiUtil
-import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
-import org.apache.spark.sql.test.generator.Schema
-import org.apache.spark.sql.test.generator.TestDataGenerator._
+import org.apache.commons.math3.util.Combinations
+import org.apache.spark.sql.types.BaseRandomDataTypeTest
+
+import scala.util.Random
 
 class BatchWritePKAndUniqueIndexSuite
     extends BaseBatchWriteTest(
       "batch_write_insertion_pk_and_one_unique_index",
       "batch_write_test_pk_and_index")
-    with EnumerateUniqueIndexDataTypeTestAction {
+    with BaseRandomDataTypeTest {
+  override protected def rowCount: Int = 0
+
+  private val writeRowCount = 50
+
   // TODO: support binary insertion.
-  override def dataTypes: List[ReflectedDataType] =
+  private val dataTypes: List[ReflectedDataType] =
     integers ::: decimals ::: doubles ::: charCharset
-  override def unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
-  override def dbName: String = database
-  override def testDesc = "Test for pk and unique index type in batch-write insertion"
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    tidbStmt.execute(s"drop database if exists $dbName")
-    tidbStmt.execute(s"create database $dbName")
+  override protected def genIndex(
+      dataTypesWithDesc: List[(ReflectedDataType, String, String)],
+      r: Random): List[List[Index]] = {
+    val size = dataTypesWithDesc.length
+    // the first step is generate all possible keys
+    val keyList = scala.collection.mutable.ListBuffer.empty[List[UniqueKey]]
+    for (i <- 1 until 3) {
+      val combination = new Combinations(size, i)
+      //(i, size)
+      val iterator = combination.iterator()
+      while (iterator.hasNext) {
+        val intArray = iterator.next()
+        val indexColumnList = scala.collection.mutable.ListBuffer.empty[IndexColumn]
+        // index may have multiple column
+        for (j <- 0 until intArray.length) {
+          // we add extra one to the column id since 1 is reserved to primary key
+          if (isStringType(dataTypesWithDesc(intArray(j))._1)) {
+            indexColumnList += PrefixColumn(intArray(j) + 1, r.nextInt(4) + 2)
+          } else {
+            indexColumnList += DefaultColumn(intArray(j) + 1)
+          }
+        }
+
+        keyList += UniqueKey(indexColumnList.toList) :: Nil
+      }
+    }
+
+    keyList.toList
   }
-
-  // this is only for mute the warning
-  override def test(): Unit = {}
 
   test("test pk and unique indices cases") {
-    val schemas = genSchema(dataTypes, table)
-
-    schemas.foreach { schema =>
-      dropAndCreateTbl(schema)
+    val dataTypesWithDesc: List[(ReflectedDataType, String, String)] = dataTypes.map {
+      genDescription(_, NullableType.NumericNotNullable)
     }
 
-    schemas.foreach { schema =>
-      insertAndSelect(schema)
+    val schemaAndDataList = genSchemaAndData(
+      rowCount,
+      dataTypesWithDesc,
+      database,
+      hasTiFlashReplica = enableTiFlashTest)
+    schemaAndDataList.foreach { schemaAndData =>
+      loadToDB(schemaAndData)
+
+      setCurrentDatabase(database)
+      insertAndSelect(schemaAndData.schema)
     }
-  }
-
-  private def dropAndCreateTbl(schema: Schema): Unit = {
-    // drop table if exits
-    dropTable(schema.tableName)
-
-    // create table in tidb first
-    jdbcUpdate(schema.toString)
   }
 
   private def insertAndSelect(schema: Schema): Unit = {
-    val tblName = schema.tableName
-
-    val tiTblInfo = getTableInfo(dbName, tblName)
+    val tiTblInfo = getTableInfo(schema.database, schema.tableName)
     val tiColInfos = tiTblInfo.getColumns
+
     // gen data
     val rows =
-      generateRandomRows(schema, rowCount, r).map(row => tiRowToSparkRow(row, tiColInfos))
+      generateRandomRows(schema, writeRowCount, r).map(row => tiRowToSparkRow(row, tiColInfos))
     // insert data to tikv
-    tidbWriteWithTable(rows, TiUtil.getSchemaFromTable(tiTblInfo), tblName)
+    tidbWriteWithTable(rows, TiUtil.getSchemaFromTable(tiTblInfo), schema.tableName)
     // select data from tikv and compare with tidb
-    compareTiDBSelectWithJDBCWithTable_V2(tblName = tblName, "col_bigint")
   }
 }
