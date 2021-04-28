@@ -1,6 +1,5 @@
 /*
- *
- * Copyright 2019 PingCAP, Inc.
+ * Copyright 2020 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,18 +11,10 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package org.apache.spark.sql.types
+package com.pingcap.tispark.test.generator
 
-import org.apache.spark.sql.TiSparkTestSpec
-import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
-
-trait UnitDataTypeTestSpec extends TiSparkTestSpec {
-  def dataTypes: List[ReflectedDataType]
-  def unsignedDataTypes: List[ReflectedDataType]
-  def dataTypeTestDir: String
-
-  val extraDesc = "unsigned"
+object GeneratorUtils {
+  val defaultEnumValues: List[String] = List("XS", "S", "M", "L", "XL", "XXL")
 }
