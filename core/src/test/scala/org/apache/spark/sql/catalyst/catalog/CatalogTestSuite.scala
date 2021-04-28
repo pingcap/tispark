@@ -401,7 +401,6 @@ class CatalogTestSuite extends BaseTiSparkTest {
       "desc extended t id",
       skipJDBC = true,
       rTiDB = expectedDescExtendedTableColumn)
-    spark.sql("drop table if exists t")
   }
 
   test("test schema change") {

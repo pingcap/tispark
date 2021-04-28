@@ -241,6 +241,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     """
                     sh """
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M"
+                        mvn clean package -DskipTests
                         mvn test ${MVN_PROFILE} -Dtest=moo ${mvnStr}
                     """
                 }
