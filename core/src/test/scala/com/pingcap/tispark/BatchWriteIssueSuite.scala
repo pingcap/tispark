@@ -115,7 +115,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
     assert(22 == spark.sql(s"select c2 from $table where c1 = 2").collect().head.get(0))
   }
 
-  test("bigdecimal conversion test") {
+  ignore("bigdecimal conversion test") {
     jdbcUpdate(s"drop table if exists t")
     jdbcUpdate(s"create table t(a bigint unsigned)")
 
@@ -139,7 +139,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
     assert(queryTiDBViaJDBC(s"select * from $database.t").head.head.toString.equals("1"))
   }
 
-  test("integer conversion test") {
+  ignore("integer conversion test") {
     jdbcUpdate(s"drop table if exists t")
     jdbcUpdate(s"create table t(a int)")
 
