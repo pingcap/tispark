@@ -36,6 +36,15 @@ public class CommonHandle implements Handle {
   private static final int MIN_ENCODE_LEN = 9;
 
   public static CommonHandle newCommonHandle(DataType[] dataTypes, Object[] data) {
+    long[] prefixLengthes = new long[dataTypes.length];
+    for (int i = 0; i < dataTypes.length; i++) {
+      prefixLengthes[i] = -1;
+    }
+    return newCommonHandle(dataTypes, data, prefixLengthes);
+  }
+
+  public static CommonHandle newCommonHandle(
+      DataType[] dataTypes, Object[] data, long[] prefixLengthes) {
     CodecDataOutput cdo = new CodecDataOutput();
     for (int i = 0; i < data.length; i++) {
       if (dataTypes[i].getType().equals(MySQLType.TypeTimestamp)) {
@@ -47,7 +56,16 @@ public class CommonHandle implements Handle {
         }
         dataTypes[i].encode(cdo, DataType.EncodeType.KEY, new Date((days) * 24 * 3600 * 1000));
       } else {
-        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, data[i]);
+        if (prefixLengthes[i] > 0 && data[i] instanceof String) {
+          String source = (String) data[i];
+          String dest = source;
+          if (source.length() > prefixLengthes[i]) {
+            dest = source.substring(0, (int) prefixLengthes[i]);
+          }
+          dataTypes[i].encode(cdo, DataType.EncodeType.KEY, dest);
+        } else {
+          dataTypes[i].encode(cdo, DataType.EncodeType.KEY, data[i]);
+        }
       }
     }
     return new CommonHandle(cdo.toBytes());
@@ -116,6 +134,11 @@ public class CommonHandle implements Handle {
 
   @Override
   public byte[] encoded() {
+    return this.encoded;
+  }
+
+  @Override
+  public byte[] encodedAsKey() {
     return this.encoded;
   }
 

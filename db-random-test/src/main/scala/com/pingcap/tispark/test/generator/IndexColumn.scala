@@ -36,9 +36,11 @@ case class ColumnInfo(
     columnName: String,
     dataType: ReflectedDataType,
     length: (Integer, Integer),
-    desc: String) {
+    desc: String,
+    belongToPrimaryKey: Boolean,
+    belongToUniqueKey: Boolean) {
 
-  val isPrimaryKey: Boolean = desc.contains("primary key")
+  val isPrimaryKey: Boolean = desc.contains("primary key") || belongToPrimaryKey
   val nullable: Boolean = !isPrimaryKey && !desc.contains("not null")
   val breakDown: Array[String] = desc.split(" ")
   val unsigned: Boolean = breakDown.contains("unsigned")
@@ -106,10 +108,12 @@ case class IndexInfo(
     indexColumns: List[IndexColumnInfo],
     isPrimary: Boolean,
     isUnique: Boolean) {
-  override def toString: String = {
+
+  def toString(isClusteredIndex: Boolean): String = {
+    val clusteredIndexStr = if (isClusteredIndex) " /*T![clustered_index] CLUSTERED */" else ""
     val indexColumnString = indexColumns.mkString("(", ",", ")")
     if (isPrimary) {
-      s"PRIMARY KEY $indexColumnString"
+      s"PRIMARY KEY $indexColumnString $clusteredIndexStr"
     } else if (isUnique) {
       s"UNIQUE KEY $indexColumnString"
     } else {

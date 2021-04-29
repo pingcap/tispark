@@ -28,7 +28,7 @@ class InitialTTLExpiredSuite
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
   }
 
-  test("Test Initial TTL Expired") {
+  ignore("Test Initial TTL Expired") {
     if (!supportTTLUpdate || !supportBatchWrite) {
       cancel
     }
