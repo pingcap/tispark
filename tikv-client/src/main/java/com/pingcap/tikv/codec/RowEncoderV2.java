@@ -24,6 +24,7 @@ import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DecimalType;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
@@ -220,7 +221,8 @@ public class RowEncoderV2 {
         encodeString(cdo, value);
         break;
       case TypeNewDecimal:
-        encodeDecimal(cdo, value);
+        DecimalType decimalType = (DecimalType) tp;
+        encodeDecimal(cdo, value, (int) decimalType.getLength(), decimalType.getDecimal());
         break;
       case TypeBit:
         encodeBit(cdo, value);
@@ -333,17 +335,14 @@ public class RowEncoderV2 {
     }
   }
 
-  private void encodeDecimal(CodecDataOutput cdo, Object value) {
+  private void encodeDecimal(CodecDataOutput cdo, Object value, int precision, int frac) {
     if (value instanceof MyDecimal) {
       MyDecimal dec = (MyDecimal) value;
-      DecimalCodec.writeDecimal(cdo, dec, dec.precision(), dec.frac());
+      DecimalCodec.writeDecimal(cdo, dec, precision, frac);
     } else if (value instanceof BigDecimal) {
       MyDecimal dec = new MyDecimal();
-      BigDecimal decimal = (BigDecimal) value;
-      int prec = decimal.precision();
-      int frac = decimal.scale();
       dec.fromString(((BigDecimal) value).toPlainString());
-      DecimalCodec.writeDecimal(cdo, dec, prec, frac);
+      DecimalCodec.writeDecimal(cdo, dec, precision, frac);
     } else {
       throw new CodecException("invalid decimal type " + value.getClass());
     }

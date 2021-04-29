@@ -51,6 +51,11 @@ trait BaseRandomDataTypeTest extends BaseTiSparkTest with RandomTest {
       col2: String,
       dataType: ReflectedDataType): Unit = {
     setCurrentDatabase(dbName)
+
+    if (enableTiFlashTest) {
+      checkLoadTiFlashWithRetry(tableName, Some(dbName))
+    }
+
     for ((op, value) <- getOperations(dataType)) {
       val query = s"select $col1 from $tableName where $col2 $op $value"
       println(query)
