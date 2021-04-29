@@ -29,6 +29,8 @@ public interface Handle extends Serializable {
 
   byte[] encoded();
 
+  byte[] encodedAsKey();
+
   int len();
 
   int numCols();

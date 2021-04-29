@@ -68,27 +68,34 @@ case class Schema(
 
   val columnInfo: List[ColumnInfo] = columnNames.map { col =>
     val x = columnDesc(col)
-    if (col == pkColumnName) {
-      ColumnInfo(col, x._1, x._2, x._3 + " primary key")
-    } else if (uniqueColumnNames.contains(col)) {
-      ColumnInfo(col, x._1, x._2, x._3 + " unique key")
+    val belongsToPrimaryKey = if (pkIndexInfo.nonEmpty) {
+      pkIndexInfo.head.indexColumns.exists(idx => col.equals(idx.column))
     } else {
-      ColumnInfo(col, x._1, x._2, x._3)
+      false
+    }
+
+    val belongToUniqueKey = uniqueIndexInfo.exists { indexInfo =>
+      indexInfo.indexColumns.exists { indexColumn =>
+        indexColumn.column.equals(col)
+      }
+    }
+
+    if (col == pkColumnName) {
+      ColumnInfo(col, x._1, x._2, x._3 + " primary key", belongsToPrimaryKey, belongToUniqueKey)
+    } else if (uniqueColumnNames.contains(col)) {
+      ColumnInfo(col, x._1, x._2, x._3 + " unique key", belongsToPrimaryKey, belongToUniqueKey)
+    } else {
+      ColumnInfo(col, x._1, x._2, x._3, belongsToPrimaryKey, belongToUniqueKey)
     }
   }
 
-  // column info to string
-  private val columns: List[String] = columnInfo.map(_.toString)
-  private val keys: List[String] = indexInfo.map(_.toString)
-
   override def toString: String = {
-    val clusteredIndexStr = if (isClusteredIndex) " /*T![clustered_index] CLUSTERED */" else ""
-    val index = if (keys.nonEmpty) {
-      keys.mkString(",\n|  ", ",\n|  ", "")
+    val index = if (indexInfo.nonEmpty) {
+      indexInfo.map(_.toString(isClusteredIndex)).mkString(",\n|  ", ",\n|  ", "")
     } else ""
     (s"CREATE TABLE `$database`.`$tableName` (\n|  ".stripMargin +
-      columns.mkString(",\n|  ") +
-      index + clusteredIndexStr +
+      columnInfo.map(_.toString).mkString(",\n|  ") +
+      index +
       "\n|) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin").stripMargin
   }
 }
