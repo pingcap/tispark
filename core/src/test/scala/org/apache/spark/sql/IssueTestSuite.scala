@@ -363,7 +363,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     judge("select count(1) from (select * from t order by a limit 10) e", checkLimit = false)
   }
 
-  test("Test sql with limit without order by") {
+  ignore("Test sql with limit without order by") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
     tidbStmt.execute("""CREATE TABLE `t` (
         |  `a` int(11) DEFAULT NULL,
