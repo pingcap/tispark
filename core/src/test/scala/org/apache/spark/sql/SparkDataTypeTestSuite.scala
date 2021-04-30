@@ -88,7 +88,8 @@ class SparkDataTypeTestSuite extends BaseTiSparkTest {
         "select id_dt, tp_bit, tp_binary from full_data_type_table order by tp_binary is null desc, tp_binary desc, id_dt limit 10")
   }
 
-  test("enum type test") {
+  // ignore because of https://github.com/pingcap/tidb/issues/24395
+  ignore("enum type test") {
     compSparkWithTiDB(
       qSpark =
         "select id_dt, tp_enum from full_data_type_table order by tp_enum desc nulls last, id_dt limit 10",
