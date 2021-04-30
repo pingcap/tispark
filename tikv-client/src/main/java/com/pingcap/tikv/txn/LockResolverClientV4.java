@@ -231,12 +231,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
   private TxnStatus getTxnStatusFromLock(BackOffer bo, Lock lock, long callerStartTS) {
     long currentTS;
 
-    if (lock.isUseAsyncCommit()) {
-      // Async commit doesn't need the current ts since it uses the minCommitTS.
-      currentTS = 0;
-      // Set to 0 so as not to push forward min commit ts.
-      callerStartTS = 0;
-    } else if (lock.getTtl() == 0) {
+    if (lock.getTtl() == 0) {
       // NOTE: l.TTL = 0 is a special protocol!!!
       // When the pessimistic txn prewrite meets locks of a txn, it should resolve the lock
       // **unconditionally**.
