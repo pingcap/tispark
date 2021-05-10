@@ -248,6 +248,14 @@ class TiBatchWriteTable(
 
       val distinctWrappedRowRdd = deduplicate(wrappedRowRdd)
 
+      if (!options.deduplicate) {
+        val c1 = wrappedRowRdd.count()
+        val c2 = distinctWrappedRowRdd.count()
+        if (c1 != c2) {
+          throw new TiBatchWriteException("duplicate unique key or primary key")
+        }
+      }
+
       val deletion = (if (options.useSnapshotBatchGet) {
                         generateDataToBeRemovedRddV2(distinctWrappedRowRdd, startTimeStamp)
                       } else {
