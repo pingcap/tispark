@@ -95,7 +95,7 @@ public class CatalogTransaction {
       if (KeyUtils.hasPrefix(pair.first, ByteString.copyFromUtf8(MetaCodec.KEY_TABLE))) {
         try {
           TiTableInfo tableInfo = parseFromJson(pair.second, TiTableInfo.class);
-          if (!tableInfo.isSequence()) {
+          if (!tableInfo.isSequence() && !tableInfo.isView()) {
             builder.add(tableInfo);
           }
         } catch (TiClientInternalException e) {
