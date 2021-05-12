@@ -88,6 +88,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
     getOrDefault(TIDB_COMMIT_PRIMARY_KEY_RETRY_NUMBER, "4").toInt
   val enableUpdateTableStatistics: Boolean =
     getOrDefault(TIDB_ENABLE_UPDATE_TABLE_STATISTICS, "false").toBoolean
+  val deduplicate: Boolean = getOrDefault(TIDB_DEDUPLICATE, "true").toBoolean
 
   // region split
   val enableRegionSplit: Boolean = getOrDefault(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
@@ -206,6 +207,7 @@ object TiDBOptions {
   val TIDB_PREWRITE_MAX_RETRY_TIMES: String = newOption("prewriteMaxRetryTimes")
   val TIDB_COMMIT_PRIMARY_KEY_RETRY_NUMBER: String = newOption("commitPrimaryKeyRetryNumber")
   val TIDB_ENABLE_UPDATE_TABLE_STATISTICS: String = newOption("enableUpdateTableStatistics")
+  val TIDB_DEDUPLICATE: String = newOption("deduplicate")
 
   // region split
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
