@@ -16,7 +16,7 @@
 
 TISPARK_HOME="$(cd "`dirname "$0"`"/../..; pwd)"
 
-TiSparkReleaseVersion=2.3.15-SNAPSHOT
+TiSparkReleaseVersion=2.3.16-SNAPSHOT
 TiSparkBuildTS=`date -u '+%Y-%m-%d %I:%M:%S'`
 TiSparkGitHash=`git rev-parse HEAD`
 TiSparkGitBranch=`git rev-parse --abbrev-ref HEAD`
