@@ -1,7 +1,7 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
-## [TiSpark 2.3.15] 2021-05-17
+## [TiSpark 2.3.16] 2021-05-17
 ### Fixes
 - Change PARTITION_PER_SPLIT default value from 1 to 10 [#2029](https://github.com/pingcap/tispark/pull/2029)
 - Fix array index out of bound when encoding [#2041](https://github.com/pingcap/tispark/pull/2041)
