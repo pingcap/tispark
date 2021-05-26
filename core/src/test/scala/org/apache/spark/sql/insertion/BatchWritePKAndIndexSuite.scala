@@ -18,15 +18,7 @@ package org.apache.spark.sql.insertion
 import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import com.pingcap.tispark.test.generator.DataGenerator._
-import com.pingcap.tispark.test.generator.DataType.{
-  BIGINT,
-  INT,
-  MEDIUMINT,
-  ReflectedDataType,
-  SMALLINT,
-  TINYINT,
-  VARCHAR
-}
+import com.pingcap.tispark.test.generator.DataType.{ReflectedDataType, VARCHAR}
 import com.pingcap.tispark.test.generator._
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.commons.math3.util.Combinations
@@ -69,7 +61,8 @@ class BatchWritePKAndIndexSuite
         for (j <- 0 until intArray.length) {
           // we add extra one to the column id since 1 is reserved to primary key
           if (isStringType(dataTypesWithDesc(intArray(j))._1)) {
-            // TODO: mars data duplicate cannot check answer
+            // TODO: enalbe test prefix index
+            //  data duplicate cannot check answer
             indexColumnList += DefaultColumn(intArray(j) + 1)
             //indexColumnList += PrefixColumn(intArray(j) + 1, r.nextInt(4) + 2)
           } else {
@@ -88,7 +81,8 @@ class BatchWritePKAndIndexSuite
 
   private def genIndex(i: Int, dataType: ReflectedDataType): IndexColumn = {
     if (isStringType(dataType)) {
-      // TODO: mars data duplicate cannot check answer
+      // TODO: enable test prefix index
+      // data duplicate cannot check answer
       DefaultColumn(i)
       //PrefixColumn(i, r.nextInt(4) + 2)
     } else {
