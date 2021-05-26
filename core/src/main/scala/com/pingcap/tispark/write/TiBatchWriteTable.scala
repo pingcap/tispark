@@ -339,18 +339,6 @@ class TiBatchWriteTable(
   }
 
   def checkUnsupported(): Unit = {
-    // TODO: mars
-    /*if(tiTableInfo.isCommonHandle) {
-      if(tiTableInfo.getPrimaryKey != null) {
-        tiTableInfo.getPrimaryKey.getIndexColumns.asScala.foreach { indexColumn =>
-          if(indexColumn.getLength >= 0) {
-            throw new TiBatchWriteException(
-              "tispark currently does not support write data to PrefixIndex!")
-          }
-        }
-      }
-    }*/
-
     // write to table with auto random column
     if (tiTableInfo.hasAutoRandomColumn) {
       throw new TiBatchWriteException(

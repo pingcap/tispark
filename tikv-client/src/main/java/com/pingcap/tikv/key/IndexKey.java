@@ -63,7 +63,6 @@ public class IndexKey extends Key {
     // when appendHandleIfContainsNull is true, append handle column if any of the index column is
     // NULL
     boolean appendHandle = false;
-    // TODO: mars correct?
     if (handle.isInt()) {
       if (appendHandleIfContainsNull) {
         for (TiIndexColumn col : indexColumns) {
