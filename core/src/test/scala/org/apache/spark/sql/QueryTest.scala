@@ -371,7 +371,7 @@ abstract class QueryTest extends SparkFunSuite {
           }
       }
 
-    assertEmptyMissingInput(analyzedDF)
+    // assertEmptyMissingInput(analyzedDF)
 
     QueryTest.checkAnswer(analyzedDF, expectedAnswer) match {
       case Some(errorMessage) => fail(errorMessage)

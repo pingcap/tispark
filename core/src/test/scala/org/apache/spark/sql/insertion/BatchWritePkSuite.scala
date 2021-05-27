@@ -32,65 +32,93 @@ class BatchWritePkSuite
   private val writeRowCount = 50
 
   // TODO: support binary insertion.
-  private val dataTypes: List[ReflectedDataType] =
-    integers ::: decimals ::: doubles ::: charCharset
+  // TODO: support decimals insertion.
+  private val dataTypes: List[ReflectedDataType] = integers ::: doubles ::: charCharset
 
-  private val testDesc = "Test for single PK column in batch-write insertion"
+  private val clusteredIndex: List[Boolean] = true :: false :: Nil
+
+  private val testDesc = "Test for PK (one column & two columns) in batch-write insertion"
 
   override protected def genIndex(
       dataTypesWithDesc: List[(ReflectedDataType, String, String)],
       r: Random): List[List[Index]] = {
-    val size = dataTypesWithDesc.length
     val keyList = scala.collection.mutable.ListBuffer.empty[List[PrimaryKey]]
-    for (i <- 0 until size) {
-      // we add extra one to the column id since 1 is reserved to primary key
-      val pkCol = if (isStringType(dataTypesWithDesc(i)._1)) {
-        PrefixColumn(i + 1, r.nextInt(4) + 2) :: Nil
-      } else {
-        DefaultColumn(i + 1) :: Nil
-      }
-      keyList += PrimaryKey(pkCol) :: Nil
+    val pkColList = dataTypesWithDesc.zipWithIndex.map {
+      case (dataType, i) =>
+        genIndex(i + 1, dataType._1)
+    }
+    if (pkColList.nonEmpty) {
+      keyList += List(PrimaryKey(pkColList(0) :: Nil))
+    }
+    if (pkColList.size >= 2) {
+      keyList += List(PrimaryKey(pkColList(0) :: pkColList(1) :: Nil))
     }
     keyList.toList
   }
 
-  private def startTest(schemaAndDataList: List[SchemaAndData], typeName: String): Unit = {
-    test(s"Test $typeName - $testDesc") {
+  private def genIndex(i: Int, dataType: ReflectedDataType): IndexColumn = {
+    if (isStringType(dataType)) {
+      PrefixColumn(i, r.nextInt(4) + 2)
+    } else {
+      DefaultColumn(i)
+    }
+  }
+
+  private def startTest(
+      schemaAndDataList: List[SchemaAndData],
+      typeName: String,
+      clusteredIndex: Boolean): Unit = {
+    test(s"Test $typeName ClusteredIndex $clusteredIndex - $testDesc") {
       schemaAndDataList.foreach { schemaAndData =>
         loadToDB(schemaAndData)
         setCurrentDatabase(database)
-        insertAndSelect(schemaAndData.schema)
+        insertAndReplace(schemaAndData.schema)
       }
     }
   }
 
-  private def insertAndSelect(schema: Schema): Unit = {
+  private def insertAndReplace(schema: Schema): Unit = {
     val tiTblInfo = getTableInfo(schema.database, schema.tableName)
     val tiColInfos = tiTblInfo.getColumns
+    val tableSchema = TiUtil.getSchemaFromTable(tiTblInfo)
+    val data = generateRandomRows(schema, writeRowCount, r)
+
     // gen data
-    val rows =
-      generateRandomRows(schema, writeRowCount, r).map { row =>
-        tiRowToSparkRow(row, tiColInfos)
-      }
+    val rows = data.map(tiRowToSparkRow(_, tiColInfos))
     // insert data to tikv
-    tidbWriteWithTable(rows, TiUtil.getSchemaFromTable(tiTblInfo), schema.tableName)
-    // select data from tikv and compare with tidb
-    compareTiDBSelectWithJDBCWithTable_V2(tblName = schema.tableName, schema.pkColumnName)
+    tidbWriteWithTable(rows, tableSchema, schema.tableName)
+    // check data and index consistence
+    adminCheck(schema)
+    checkAnswer(spark.sql(s"select * from `$databaseWithPrefix`.`${schema.tableName}`"), rows)
+
+    // replace
+    val replaceData = genReplaceData(data, schema)
+    val replaceRows = replaceData.map(tiRowToSparkRow(_, tiColInfos))
+    tidbWriteWithTable(replaceRows, tableSchema, schema.tableName, Some(Map("replace" -> "true")))
+    // check data and index consistence
+    adminCheck(schema)
+    checkAnswer(
+      spark.sql(s"select * from `$databaseWithPrefix`.`${schema.tableName}`"),
+      replaceRows)
+
   }
 
   private def generateTestCases(): Unit = {
     for (pk <- dataTypes) {
       val dataTypes = List(pk, INT)
       val dataTypesWithDesc: List[(ReflectedDataType, String, String)] = dataTypes.map {
-        genDescription(_, NullableType.NumericNotNullable)
+        genDescription(_, NullableType.Nullable)
       }
 
-      val schemaAndDataList = genSchemaAndData(
-        rowCount,
-        dataTypesWithDesc,
-        database,
-        hasTiFlashReplica = enableTiFlashTest)
-      startTest(schemaAndDataList, getTypeName(pk))
+      clusteredIndex.foreach { clusteredIndex =>
+        val schemaAndDataList = genSchemaAndData(
+          rowCount,
+          dataTypesWithDesc,
+          database,
+          isClusteredIndex = clusteredIndex,
+          hasTiFlashReplica = enableTiFlashTest)
+        startTest(schemaAndDataList, getTypeName(pk), clusteredIndex)
+      }
     }
   }
 

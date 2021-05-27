@@ -18,6 +18,8 @@ package com.pingcap.tikv.key;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.CodecException;
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.IntegerType;
 import java.util.Arrays;
 
 public class IntHandle implements Handle {
@@ -82,6 +84,17 @@ public class IntHandle implements Handle {
   public byte[] encoded() {
     CodecDataOutput cdo = new CodecDataOutput();
     IntegerCodec.writeLong(cdo, handle);
+    byte[] encoded = cdo.toBytes();
+    if (infFlag == 1) {
+      return Arrays.copyOf(encoded, encoded.length + 1);
+    }
+    return encoded;
+  }
+
+  @Override
+  public byte[] encodedAsKey() {
+    CodecDataOutput cdo = new CodecDataOutput();
+    IntegerType.BIGINT.encode(cdo, DataType.EncodeType.KEY, handle);
     byte[] encoded = cdo.toBytes();
     if (infFlag == 1) {
       return Arrays.copyOf(encoded, encoded.length + 1);

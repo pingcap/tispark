@@ -347,8 +347,6 @@ trait SharedSQLContext
         s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
         s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}&sessionVariables=time_zone='$timeZoneOffset'"
 
-    disableClusteredIndex()
-
     _tidbConnection = TiDBUtils.createConnectionFactory(jdbcUrl)()
     initializeStatement()
   }
