@@ -344,15 +344,13 @@ object DataGenerator {
     // offset of pk columns
     val pkOffset: List[(Int, Int)] = {
       val primary = schema.indexInfo.filter(_.isPrimary)
-      if (primary.nonEmpty && primary.lengthCompare(1) == 0) {
-        primary.head.indexColumns.map(
+      primary.flatMap { key =>
+        key.indexColumns.map(
           x =>
             (
               schema.columnNames.indexOf(x.column),
               if (x.length == null) -1
               else x.length.intValue()))
-      } else {
-        List.empty[(Int, Int)]
       }
     }
 
