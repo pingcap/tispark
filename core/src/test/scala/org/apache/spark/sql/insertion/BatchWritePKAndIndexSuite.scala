@@ -15,47 +15,44 @@
 
 package org.apache.spark.sql.insertion
 
+import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import com.pingcap.tispark.test.generator.DataGenerator._
-import com.pingcap.tispark.test.generator.DataType.ReflectedDataType
-import com.pingcap.tispark.test.generator.{
-  DefaultColumn,
-  Index,
-  IndexColumn,
-  NullableType,
-  PrefixColumn,
-  Schema,
-  SchemaAndData,
-  UniqueKey
-}
+import com.pingcap.tispark.test.generator.DataType.{ReflectedDataType, VARCHAR}
+import com.pingcap.tispark.test.generator._
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.commons.math3.util.Combinations
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.BaseRandomDataTypeTest
 
 import scala.util.Random
 
-class BatchWriteUniqueIndexSuite
-    extends BaseBatchWriteTest("batch_write_insertion_one_unique_index", "batch_write_test_index")
+class BatchWritePKAndIndexSuite
+    extends BaseBatchWriteTest(
+      "batch_write_insertion_pk_and_index",
+      "batch_write_test_pk_and_index")
     with BaseRandomDataTypeTest {
   override protected def rowCount: Int = 0
 
   private val writeRowCount = 50
 
-  private val testDesc = "Test for single and multiple unique index type in batch-write insertion"
-
   // TODO: support binary insertion.
+  // TODO: support texts
   private val dataTypes: List[ReflectedDataType] =
-    integers ::: decimals ::: doubles ::: charCharset
+    integers ::: decimals ::: doubles ::: strings
+
+  // TODO: tidb-4.0 does not support clustered index, should skip test
+  private val clusteredIndex: List[Boolean] = true :: false :: Nil
 
   override protected def genIndex(
       dataTypesWithDesc: List[(ReflectedDataType, String, String)],
       r: Random): List[List[Index]] = {
     val size = dataTypesWithDesc.length
     // the first step is generate all possible keys
-    val keyList = scala.collection.mutable.ListBuffer.empty[List[UniqueKey]]
+    val keyList = scala.collection.mutable.ListBuffer.empty[List[Index]]
     for (i <- 1 until 3) {
-      val combination = new Combinations(size, i)
-      //(i, size)
+      val combination = new Combinations(size - 1, i)
+      //(i, size - 1)
       val iterator = combination.iterator()
       while (iterator.hasNext) {
         val intArray = iterator.next()
@@ -64,23 +61,51 @@ class BatchWriteUniqueIndexSuite
         for (j <- 0 until intArray.length) {
           // we add extra one to the column id since 1 is reserved to primary key
           if (isStringType(dataTypesWithDesc(intArray(j))._1)) {
-            indexColumnList += PrefixColumn(intArray(j) + 1, r.nextInt(4) + 2)
+            // TODO: enalbe test prefix index
+            //  data duplicate cannot check answer
+            indexColumnList += DefaultColumn(intArray(j) + 1)
+            //indexColumnList += PrefixColumn(intArray(j) + 1, r.nextInt(4) + 2)
           } else {
             indexColumnList += DefaultColumn(intArray(j) + 1)
           }
         }
 
-        keyList += UniqueKey(indexColumnList.toList) :: Nil
+        val primaryKey = PrimaryKey(genIndex(size, dataTypesWithDesc(size - 1)._1) :: Nil)
+        keyList += primaryKey :: UniqueKey(indexColumnList.toList) :: Nil
+        keyList += primaryKey :: Key(indexColumnList.toList) :: Nil
       }
     }
 
     keyList.toList
   }
 
-  private def startTest(schemaAndDataList: List[SchemaAndData]): Unit = {
-    test(s"test unique indices cases $testDesc") {
+  private def genIndex(i: Int, dataType: ReflectedDataType): IndexColumn = {
+    if (isStringType(dataType)) {
+      // TODO: enable test prefix index
+      // data duplicate cannot check answer
+      DefaultColumn(i)
+      //PrefixColumn(i, r.nextInt(4) + 2)
+    } else {
+      DefaultColumn(i)
+    }
+  }
+
+  test("test pk and unique indices cases") {
+    val dataTypesWithDesc: List[(ReflectedDataType, String, String)] =
+      (dataTypes ::: VARCHAR :: Nil).map {
+        genDescription(_, NullableType.Nullable)
+      }
+
+    clusteredIndex.foreach { clusteredIndex =>
+      val schemaAndDataList = genSchemaAndData(
+        rowCount,
+        dataTypesWithDesc,
+        database,
+        isClusteredIndex = clusteredIndex,
+        hasTiFlashReplica = enableTiFlashTest)
       schemaAndDataList.foreach { schemaAndData =>
         loadToDB(schemaAndData)
+
         setCurrentDatabase(database)
         insertAndReplace(schemaAndData.schema)
       }
@@ -99,7 +124,7 @@ class BatchWriteUniqueIndexSuite
     tidbWriteWithTable(rows, tableSchema, schema.tableName)
     // check data and index consistence
     adminCheck(schema)
-    checkAnswer(spark.sql(s"select * from `$databaseWithPrefix`.`${schema.tableName}`"), rows)
+    checkAnswer(rows, schema.tableName)
 
     // replace
     val replaceData = genReplaceData(data, schema)
@@ -107,23 +132,18 @@ class BatchWriteUniqueIndexSuite
     tidbWriteWithTable(replaceRows, tableSchema, schema.tableName, Some(Map("replace" -> "true")))
     // check data and index consistence
     adminCheck(schema)
-    checkAnswer(
-      spark.sql(s"select * from `$databaseWithPrefix`.`${schema.tableName}`"),
-      replaceRows)
+    checkAnswer(replaceRows, schema.tableName)
   }
 
-  private def generateTestCases(): Unit = {
-    val dataTypesWithDesc: List[(ReflectedDataType, String, String)] = dataTypes.map {
-      genDescription(_, NullableType.NotNullable)
-    }
+  private def checkAnswer(expectedAnswer: Seq[Row], tableName: String): Unit = {
+    spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "false")
+    spark.sql(s"explain select * from `$databaseWithPrefix`.`$tableName`").show(false)
+    spark.sql(s"select * from `$databaseWithPrefix`.`$tableName`").show(false)
+    checkAnswer(spark.sql(s"select * from `$databaseWithPrefix`.`$tableName`"), expectedAnswer)
 
-    val schemaAndDataList = genSchemaAndData(
-      rowCount,
-      dataTypesWithDesc,
-      database,
-      hasTiFlashReplica = enableTiFlashTest)
-    startTest(schemaAndDataList)
+    spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "true")
+    spark.sql(s"explain select * from `$databaseWithPrefix`.`$tableName`").show(false)
+    checkAnswer(spark.sql(s"select * from `$databaseWithPrefix`.`$tableName`"), expectedAnswer)
+    spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "false")
   }
-
-  generateTestCases()
 }

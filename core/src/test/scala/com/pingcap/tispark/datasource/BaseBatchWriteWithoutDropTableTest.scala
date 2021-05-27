@@ -55,11 +55,13 @@ class BaseBatchWriteWithoutDropTableTest(
   protected def compareTiDBSelectWithJDBCWithTable_V2(
       tblName: String,
       sortCol: String = "i"): Unit = {
-    val sql = s"select * from `$database`.`$tblName` order by $sortCol"
+    // check jdbc result
+    val jdbcSQL = s"select * from `$database`.`$tblName` order by $sortCol"
+    val jdbcResult = queryTiDBViaJDBC(jdbcSQL)
 
-    // check jdbc result & data source result
-    val jdbcResult = queryTiDBViaJDBC(sql)
-    val df = queryDatasourceTiDBWithTable(sortCol, tableName = tblName)
+    // check tispark result
+    val tisparkSQL = s"select * from `$dbPrefix$database`.`$tblName` order by $sortCol"
+    val df = spark.sql(tisparkSQL)
     val tidbResult = seqRowToList(df.collect(), df.schema)
 
     if (!compResult(jdbcResult, tidbResult)) {

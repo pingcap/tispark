@@ -51,23 +51,15 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
       expectedAnswer: Seq[Row],
       sortCol: String = "i",
       selectCol: String = null): Unit = {
-    testTiDBSelectWithTable(expectedAnswer, sortCol, selectCol, table)
-  }
-
-  protected def testTiDBSelectWithTable(
-      expectedAnswer: Seq[Row],
-      sortCol: String = "i",
-      selectCol: String = null,
-      tableName: String): Unit = {
     // check data source result & expected answer
-    var df = queryDatasourceTiDBWithTable(sortCol, tableName)
+    var df = spark.sql(s"select * from `$databaseWithPrefix`.`$table` order by $sortCol")
     if (selectCol != null) {
       df = df.select(selectCol)
     }
     checkAnswer(df, expectedAnswer)
 
     // check table scan
-    var df2 = queryDatasourceTableScanWithTable(sortCol, tableName)
+    var df2 = queryDatasourceTableScanWithTable(sortCol, table)
     if (selectCol != null) {
       df2 = df2.select(selectCol)
     }
@@ -176,7 +168,7 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
     val jdbcResult = queryTiDBViaJDBC(sql)
     val df =
       try {
-        queryDatasourceTiDB(sortCol)
+        spark.sql(s"select * from `$databaseWithPrefix`.`$table` order by $sortCol")
       } catch {
         case e: NoSuchTableException =>
           logger.warn("query via datasource api fails", e)
@@ -197,11 +189,7 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
       // check jdbc result & tidb result
       assert(compSqlResult(sql, jdbcResult, tidbResult, checkLimit = false))
     }
-
   }
-
-  protected def queryDatasourceTiDB(sortCol: String): DataFrame =
-    queryDatasourceTiDBWithTable(sortCol, table)
 
   protected def seqRowToList(rows: Seq[Row], schema: StructType): List[List[Any]] =
     rows
@@ -217,15 +205,6 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
         rowRes.toList
       })
       .toList
-
-  protected def queryDatasourceTiDBWithTable(sortCol: String, tableName: String): DataFrame =
-    sqlContext.read
-      .format("tidb")
-      .options(tidbOptions)
-      .option("database", database)
-      .option("table", tableName)
-      .load()
-      .sort(sortCol)
 
   protected def queryDatasourceTableScan(sortCol: String): DataFrame = {
     queryDatasourceTableScanWithTable(sortCol, table)

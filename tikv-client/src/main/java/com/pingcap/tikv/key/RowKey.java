@@ -26,6 +26,8 @@ import java.io.Serializable;
 
 public class RowKey extends Key implements Serializable {
   private static final byte[] REC_PREFIX_SEP = new byte[] {'_', 'r'};
+  private static final int INT_HANDLE_SIZE = 19;
+  private static final int HANDLE_PREFIX_SIZE = 11;
 
   private final long tableId;
   private final Handle handle;
@@ -73,11 +75,20 @@ public class RowKey extends Key implements Serializable {
   public static RowKey decode(byte[] value) {
     CodecDataInput cdi = new CodecDataInput(value);
     cdi.readByte();
-    long tableId = IntegerCodec.readLong(cdi); // tableId
+    long tableId = IntegerCodec.readLong(cdi);
     cdi.readByte();
     cdi.readByte();
-    long handle = IntegerCodec.readLong(cdi); // handle
-    return toRowKey(tableId, new IntHandle(handle));
+
+    Handle handle;
+    if (value.length == INT_HANDLE_SIZE) {
+      handle = new IntHandle(IntegerCodec.readLong(cdi));
+    } else {
+      byte[] buffer = new byte[value.length - HANDLE_PREFIX_SIZE];
+      cdi.readFully(buffer);
+      handle = new CommonHandle(buffer);
+    }
+
+    return toRowKey(tableId, handle);
   }
 
   private static byte[] encode(long tableId, Handle handle) {
