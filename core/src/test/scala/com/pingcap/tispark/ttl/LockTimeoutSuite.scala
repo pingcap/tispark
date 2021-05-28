@@ -34,7 +34,7 @@ class LockTimeoutSuite extends BaseBatchWriteWithoutDropTableTest("test_lock_tim
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
   }
 
-  test("Test Lock TTL Timeout") {
+  ignore("Test Lock TTL Timeout") {
     if (!supportTTLUpdate) {
       cancel
     }

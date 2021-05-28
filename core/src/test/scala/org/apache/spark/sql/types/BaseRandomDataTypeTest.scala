@@ -1,9 +1,14 @@
 package org.apache.spark.sql.types
 
+import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tispark.test.RandomTest
-import com.pingcap.tispark.test.generator.DataGenerator.{isNumeric, isStringType}
+import com.pingcap.tispark.test.generator.DataGenerator.{
+  generateRandomRows,
+  isNumeric,
+  isStringType
+}
 import com.pingcap.tispark.test.generator.DataType.{BOOLEAN, ReflectedDataType, TINYINT}
-import com.pingcap.tispark.test.generator.SchemaAndData
+import com.pingcap.tispark.test.generator.{Schema, SchemaAndData}
 import org.apache.spark.sql.BaseTiSparkTest
 
 import scala.util.Random
@@ -32,9 +37,14 @@ trait BaseRandomDataTypeTest extends BaseTiSparkTest with RandomTest {
         tidbStmt.execute(sql)
         println(sql)
       } catch {
-        case _: Throwable =>
+        case e: Throwable =>
+          logWarning(s"failed to run: $sql", e)
       }
     }
+  }
+
+  protected def adminCheck(schema: Schema): Unit = {
+    tidbStmt.execute(s"ADMIN CHECK TABLE `${schema.database}`.`${schema.tableName}`")
   }
 
   private val cmps: List[String] = List(">", "<")
@@ -81,5 +91,25 @@ trait BaseRandomDataTypeTest extends BaseTiSparkTest with RandomTest {
         }
       }
     }
+  }
+
+  protected def genReplaceData(rows: List[TiRow], schema: Schema): List[TiRow] = {
+    val newData = generateRandomRows(schema, rows.size, r)
+
+    val result = rows.zipWithIndex.map {
+      case (row, i) =>
+        val resultRow = ObjectRowImpl.create(row.fieldCount())
+        schema.columnInfo.indices.foreach { j =>
+          val columnInfo = schema.columnInfo(j)
+          if (columnInfo.isUnique || columnInfo.belongToPrimaryKey || columnInfo.belongToUniqueKey) {
+            resultRow.set(j, null, row.get(j, null))
+          } else {
+            resultRow.set(j, null, row.get(j, null))
+          }
+        }
+        resultRow
+    }
+
+    result
   }
 }
