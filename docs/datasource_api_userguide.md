@@ -208,6 +208,15 @@ enable-table-lock: true
 delay-clean-table-lock: 60000
 ```
 
+## Supports and Limitations
+
+TiSpark (>= 2.4.2) supports writing data to clustered index tables, which is a new feature in TiDB-5.0.0.
+
+TiSpark does not support writing to the following tables:
+- tables with auto random column
+- partition table
+- tables with generated column
+
 ## Type Conversion for Write
 
 The following types of SparkSQL Data are currently not supported for writing to TiDB:
