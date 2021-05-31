@@ -19,12 +19,12 @@ package com.pingcap.tikv.txn;
 
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnNotFound;
+import static com.pingcap.tikv.util.ClientUtils.groupKeysByRegion;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.Utils;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -37,10 +37,8 @@ import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.region.TiRegion.RegionVerID;
-import com.pingcap.tikv.txn.type.GroupKeyResult;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
-import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.util.TsoUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,7 +58,6 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
-import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import org.tikv.kvproto.TikvGrpc.TikvStub;
@@ -196,7 +193,6 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
               regionManager,
               this,
               this,
-              region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
               resp -> resp.getErrorsCount() > 0 ? resp.getErrorsList().get(0) : null,
               resolveLockResult -> null,
@@ -324,15 +320,14 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
         };
 
     while (true) {
-      TiRegion primaryKeyRegion = regionManager.getRegionByKey(primary);
       // new RegionStoreClient for PrimaryKey
       RegionStoreClient primaryKeyRegionStoreClient = clientBuilder.build(primary);
+      TiRegion primaryKeyRegion = primaryKeyRegionStoreClient.getRegion();
       KVErrorHandler<Kvrpcpb.CheckTxnStatusResponse> handler =
           new KVErrorHandler<>(
               regionManager,
               primaryKeyRegionStoreClient,
               primaryKeyRegionStoreClient.lockResolverClient,
-              primaryKeyRegion,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
               resp -> resp.hasError() ? resp.getError() : null,
               resolveLockResult -> null,
@@ -413,8 +408,8 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
 
     resolveData.appendKey(lock.getPrimary());
 
-    GroupKeyResult groupResult =
-        Utils.groupKeysByRegion(this.regionManager, resolveData.getKeys(), bo);
+    Map<TiRegion, List<ByteString>> groupResult =
+        groupKeysByRegion(this.regionManager, resolveData.getKeys(), bo);
 
     logger.info(
         String.format(
@@ -427,15 +422,14 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     ExecutorCompletionService<Boolean> completionService =
         new ExecutorCompletionService<>(executorService);
 
-    for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry :
-        groupResult.getGroupsResult().entrySet()) {
-      TiRegion tiRegion = entry.getKey().first;
+    for (Map.Entry<TiRegion, List<ByteString>> entry : groupResult.entrySet()) {
+      TiRegion tiRegion = entry.getKey();
       List<ByteString> keys = entry.getValue();
       completionService.submit(() -> resolveRegionLocks(bo, lock, tiRegion, keys, status));
     }
 
     try {
-      for (int i = 0; i < groupResult.getGroupsResult().size(); i++) {
+      for (int i = 0; i < groupResult.size(); i++) {
         completionService.take().get();
       }
     } catch (InterruptedException e) {
@@ -461,9 +455,8 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     AsyncResolveData shared =
         new AsyncResolveData(status.getPrimaryLock().getMinCommitTs(), new ArrayList<>(), false);
 
-    GroupKeyResult groupResult =
-        Utils.groupKeysByRegion(
-            this.regionManager, status.getPrimaryLock().getSecondariesList(), bo);
+    Map<TiRegion, List<ByteString>> groupResult =
+        groupKeysByRegion(this.regionManager, status.getPrimaryLock().getSecondariesList(), bo);
 
     ExecutorService executorService =
         Executors.newFixedThreadPool(
@@ -471,15 +464,14 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     ExecutorCompletionService<Boolean> completionService =
         new ExecutorCompletionService<>(executorService);
 
-    for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry :
-        groupResult.getGroupsResult().entrySet()) {
-      TiRegion tiRegion = entry.getKey().first;
+    for (Map.Entry<TiRegion, List<ByteString>> entry : groupResult.entrySet()) {
+      TiRegion tiRegion = entry.getKey();
       List<ByteString> keys = entry.getValue();
       completionService.submit(() -> checkSecondaries(bo, lock.getTxnID(), keys, tiRegion, shared));
     }
 
     try {
-      for (int i = 0; i < groupResult.getGroupsResult().size(); i++) {
+      for (int i = 0; i < groupResult.size(); i++) {
         completionService.take().get();
       }
       return shared;
@@ -519,7 +511,6 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
             regionManager,
             regionStoreClient,
             regionStoreClient.lockResolverClient,
-            tiRegion,
             resp -> null,
             resp -> null,
             resolveLockResult -> null,
@@ -543,10 +534,10 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
               txnID, tiRegion.getId()));
       // If regions have changed, then we might need to regroup the keys. Since this should be rare
       // and for the sake of simplicity, we will resolve regions sequentially.
-      GroupKeyResult groupResult = Utils.groupKeysByRegion(this.regionManager, curKeys, bo);
-      for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry :
-          groupResult.getGroupsResult().entrySet()) {
-        TiRegion region = entry.getKey().first;
+      Map<TiRegion, List<ByteString>> groupResult =
+          groupKeysByRegion(this.regionManager, curKeys, bo);
+      for (Map.Entry<TiRegion, List<ByteString>> entry : groupResult.entrySet()) {
+        TiRegion region = entry.getKey();
         List<ByteString> keys = entry.getValue();
         checkSecondaries(bo, txnID, keys, region, shared);
       }
@@ -578,7 +569,6 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
             regionManager,
             regionStoreClient,
             regionStoreClient.lockResolverClient,
-            tiRegion,
             resp -> null,
             resp -> null,
             resolveLockResult -> null,
@@ -601,10 +591,9 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
               lock, tiRegion.getId()));
 
       // Regroup locks.
-      GroupKeyResult groupResult = Utils.groupKeysByRegion(this.regionManager, keys, bo);
-      for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry :
-          groupResult.getGroupsResult().entrySet()) {
-        TiRegion region = entry.getKey().first;
+      Map<TiRegion, List<ByteString>> groupResult = groupKeysByRegion(this.regionManager, keys, bo);
+      for (Map.Entry<TiRegion, List<ByteString>> entry : groupResult.entrySet()) {
+        TiRegion region = entry.getKey();
         resolveRegionLocks(bo, lock, region, entry.getValue(), status);
       }
     } else if (resp.hasError()) {
@@ -648,7 +637,6 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
               regionManager,
               this,
               this,
-              region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
               resp -> resp.hasError() ? resp.getError() : null,
               resolveLockResult -> null,

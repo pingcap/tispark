@@ -44,7 +44,10 @@ class CacheInvalidateEventHandler(regionManager: RegionManager) {
           // Used for updating region/store cache in the given regionManager
           if (event.shouldUpdateRegion()) {
             logger.info(s"Invalidating region ${event.getRegionId} cache at driver.")
-            regionManager.invalidateRegion(event.getRegionId)
+            val region = regionManager.getRegionById(event.getRegionId);
+            if (region != null) {
+              regionManager.invalidateRegion(region)
+            }
           }
 
           if (event.shouldUpdateStore()) {
@@ -55,10 +58,18 @@ class CacheInvalidateEventHandler(regionManager: RegionManager) {
           // Used for updating leader information cached in the given regionManager
           logger.info(
             s"Invalidating leader of region:${event.getRegionId} store:${event.getStoreId} cache at driver.")
-          regionManager.updateLeader(event.getRegionId, event.getStoreId)
+          val region = regionManager.getRegionById(event.getRegionId);
+          if (region != null) {
+            regionManager.updateLeader(region, event.getStoreId)
+            regionManager.invalidateRegion(region)
+          }
+
         case CacheType.REQ_FAILED =>
           logger.info(s"Request failed cache invalidation for region ${event.getRegionId}")
-          regionManager.onRequestFail(event.getRegionId, event.getStoreId)
+          val region = regionManager.getRegionById(event.getRegionId);
+          if (region != null) {
+            regionManager.onRequestFail(region)
+          }
         case _ => throw new IllegalArgumentException("Unsupported cache invalidate type.")
       }
     } catch {

@@ -18,7 +18,7 @@ CURRENT_DIR=`pwd`
 TISPARK_HOME="$(cd "`dirname "$0"`"/../..; pwd)"
 cd $TISPARK_HOME/tikv-client
 
-kvproto_hash=e6d6090277c921c3291c48c5bc8fb38907c852d0
+kvproto_hash=6ed99a08e262d8a32d6355dcba91cf99cb92074a
 
 raft_rs_hash=b9891b673573fad77ebcf9bbe0969cf945841926
 

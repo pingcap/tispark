@@ -20,7 +20,9 @@ package com.pingcap.tikv.region;
 import org.tikv.kvproto.Metapb.Store;
 
 public interface RegionErrorReceiver {
-  boolean onNotLeader(Store store);
+  boolean onNotLeader(Store store, TiRegion region);
 
   void onStoreNotMatch(Store store);
+
+  TiRegion getRegion();
 }
