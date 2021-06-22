@@ -34,35 +34,33 @@ Catalog cat = session.getCatalog();
 TiDBInfo db = cat.getDatabase("tpch_test");
 TiTableInfo table = cat.getTable(db, "customer");
 Snapshot snapshot = session.createSnapshot();
- 
-// Generate select ranges
-ByteString startKey = TableCodec.encodeRowKeyWithHandle(table.getId(), Long.MIN_VALUE);
-ByteString endKey = TableCodec.encodeRowKeyWithHandle(table.getId(), Long.MAX_VALUE);
-Coprocessor.KeyRange keyRange = Coprocessor.KeyRange.newBuilder().setStart(startKey).setEnd(endKey).build();
-List<Coprocessor.KeyRange> ranges = new ArrayList<>();
-ranges.add(keyRange);
 
- 
 // Create select request
-TiDAGRequest dagRequest = new TiDAGRequest();
-dagRequest.addRanges(ranges);
-dagRequest.addField(TiColumnRef.create("c_mktsegment", table));
+TiDAGRequest dagRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
+dagRequest.addRanges(ImmutableMap.of(table.getId(),
+ImmutableList.of(Coprocessor.KeyRange.newBuilder()
+        .setStart(ByteString.copyFromUtf8("startkey"))
+        .setEnd(ByteString.copyFromUtf8("endkey")).build())));
+dagRequest.addRequiredColumn(ColumnRef.create("c_mktsegment", table));
 dagRequest.setTableInfo(table);
-dagRequest.setStartTs(session.getTimestamp().getVersion());
-dagRequest.addWhere(new GreaterEqual(TiConstant.create(5, IntegerType.BIGINT), TiConstant.create(5, IntegerType.BIGINT)));
-dagRequest.addGroupByItem(TiByItem.create(TiColumnRef.create("c_mktsegment", table), false));
+dagRequest.setStartTs(session.getTimestamp());
+dagRequest.addFilters(ImmutableList.of(
+        new ComparisonBinaryExpression(
+                GREATER_EQUAL,
+                Constant.create(5L, IntegerType.BIGINT),
+                Constant.create(5L, IntegerType.BIGINT))));
+dagRequest.addGroupByItem(ByItem.create(ColumnRef.create("c_mktsegment", table), false));
 dagRequest.setLimit(10);
-dagRequest.resolve();
- 
+
 // Fetch data
 Iterator<Row> iterator = snapshot.tableReadRow(dagRequest, table.getId());
 System.out.println("Show result:");
 while (iterator.hasNext()) {
-  Row rowData = iterator.next();
-  for (int i = 0; i < rowData.fieldCount(); i++) {
+    Row rowData = iterator.next();
+    for (int i = 0; i < rowData.fieldCount(); i++) {
     System.out.print(rowData.get(i, null) + "\t");
-  }
-  System.out.println();
+}
+System.out.println();
 }
 
 ```
