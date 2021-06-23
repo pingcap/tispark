@@ -25,7 +25,8 @@ make tikv
 
 ## How to use for now
 It is not recommended to use tikv java client directly; it is better to use together with TiSpark.  
-If users want to find some way to quickly write/read data to tikv.this library https://github.com/tikv/client-java is recommended.
+
+If users want to find some way to quickly write/read data to TiKV. This [library](https://github.com/tikv/client-java) is recommended.
 
 Result:
 ```java
