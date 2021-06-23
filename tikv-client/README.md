@@ -24,48 +24,10 @@ make tikv
 ```
 
 ## How to use for now
-It is not recommended to use tikv java client directly; it is better to use together with `TiSpark`
+It is not recommended to use tikv java client directly; it is better to use together with TiSpark.  
 
-```java
-// Init tidb cluster configuration
-TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:2379");
-TiSession session = TiSession.getInstance(conf);
-Catalog cat = session.getCatalog();
-TiDBInfo db = cat.getDatabase("tpch_test");
-TiTableInfo table = cat.getTable(db, "customer");
-Snapshot snapshot = session.createSnapshot();
- 
-// Generate select ranges
-ByteString startKey = TableCodec.encodeRowKeyWithHandle(table.getId(), Long.MIN_VALUE);
-ByteString endKey = TableCodec.encodeRowKeyWithHandle(table.getId(), Long.MAX_VALUE);
-Coprocessor.KeyRange keyRange = Coprocessor.KeyRange.newBuilder().setStart(startKey).setEnd(endKey).build();
-List<Coprocessor.KeyRange> ranges = new ArrayList<>();
-ranges.add(keyRange);
+If users want to find some way to quickly write/read data to TiKV. This [library](https://github.com/tikv/client-java) is recommended.
 
- 
-// Create select request
-TiDAGRequest dagRequest = new TiDAGRequest();
-dagRequest.addRanges(ranges);
-dagRequest.addField(TiColumnRef.create("c_mktsegment", table));
-dagRequest.setTableInfo(table);
-dagRequest.setStartTs(session.getTimestamp().getVersion());
-dagRequest.addWhere(new GreaterEqual(TiConstant.create(5, IntegerType.BIGINT), TiConstant.create(5, IntegerType.BIGINT)));
-dagRequest.addGroupByItem(TiByItem.create(TiColumnRef.create("c_mktsegment", table), false));
-dagRequest.setLimit(10);
-dagRequest.resolve();
- 
-// Fetch data
-Iterator<Row> iterator = snapshot.tableReadRow(dagRequest, table.getId());
-System.out.println("Show result:");
-while (iterator.hasNext()) {
-  Row rowData = iterator.next();
-  for (int i = 0; i < rowData.fieldCount(); i++) {
-    System.out.print(rowData.get(i, null) + "\t");
-  }
-  System.out.println();
-}
-
-```
 Result:
 ```java
 Show result:
