@@ -45,6 +45,9 @@ enable-table-lock = true
 # In order to support "drop primary key" operation , this flag must be true and the table does not have the pkIsHandle flag.
 alter-primary-key = true
 
+# index-limit is used to deal with compatibility issues. It can only be in [64, 64*8].
+index-limit = 512
+
 [log]
 # Log level: info, debug, warn, error, fatal.
 level = "info"
