@@ -259,7 +259,7 @@ public class MetaUtils {
       kvServer.put(getSchemaVersionKey(), ByteString.copyFromUtf8(String.format("%d", version)));
     }
 
-    public void addTable(int dbId, int tableId, String tableName) {
+    public void addTable(long dbId, long tableId, String tableName) {
       String tableJson =
           String.format(
               "\n"
