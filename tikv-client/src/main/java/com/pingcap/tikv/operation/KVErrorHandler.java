@@ -315,9 +315,6 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         try {
           resolveLocks(backOffer, locks);
           retry = true;
-          backOffer.doBackOff(
-              BackOffFunction.BackOffFuncType.BoTxnLockFast,
-              new KeyException("resolve " + locks.size() + " locks"));
         } catch (KeyException e) {
           logger.warn("Unable to handle KeyExceptions other than LockException", e);
         }
@@ -330,8 +327,6 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
           Lock lock = AbstractLockResolverClient.extractLockFromKeyErr(keyError);
           resolveLock(backOffer, lock);
           retry = true;
-          backOffer.doBackOff(
-              BackOffFunction.BackOffFuncType.BoTxnLockFast, new KeyException("resolve lock"));
         } catch (KeyException e) {
           logger.warn("Unable to handle KeyExceptions other than LockException", e);
         }
