@@ -1,6 +1,23 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.3.16] 2021-05-17
+### Fixes
+- Change PARTITION_PER_SPLIT default value from 1 to 10 [#2029](https://github.com/pingcap/tispark/pull/2029)
+- Fix array index out of bound when encoding [#2041](https://github.com/pingcap/tispark/pull/2041)
+- fix batch write missing unpersist [#2046](https://github.com/pingcap/tispark/pull/2046)
+- Fix bug: write decimal(16, 4) using batch write and read using tiflash [#2055](https://github.com/pingcap/tispark/pull/2055)
+- Fix mistake setting current_ts to 0 [#2067](https://github.com/pingcap/tispark/pull/2067)
+- Filter views in catalog [#2071](https://github.com/pingcap/tispark/pull/2071)
+- BatchWrite: add argument deduplicate [#2073](https://github.com/pingcap/tispark/pull/2073)
+
+## [TiSpark 2.4.1] 2021-05-17
+### Fixes
+- Fix bug: write decimal(16, 4) using batch write and read using tiflash [#2055](https://github.com/pingcap/tispark/pull/2055)
+- Fix mistake setting current_ts to 0 [#2067](https://github.com/pingcap/tispark/pull/2067)
+- Filter views in catalog [#2071](https://github.com/pingcap/tispark/pull/2071)
+- BatchWrite: add argument deduplicate [#2073](https://github.com/pingcap/tispark/pull/2073)
+
 ## [TiSpark 2.4.0] 2021-04-15
 ### New Features
 - Support TiDB-5.0

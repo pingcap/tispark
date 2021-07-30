@@ -33,12 +33,16 @@ import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Errorpb;
 import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.kvproto.Kvrpcpb.KvPair;
+import org.tikv.kvproto.Kvrpcpb.ScanResponse;
 
 // TODO: consider refactor to Builder mode
 // TODO: KVErrorHandler should resolve locks if it could.
@@ -99,6 +103,24 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private void invalidateRegionStoreCache(TiRegion ctxRegion) {
     regionManager.invalidateRegion(ctxRegion);
     regionManager.invalidateStore(ctxRegion.getLeader().getStoreId());
+  }
+
+  private void resolveLocks(BackOffer backOffer, List<Lock> locks) {
+    if (lockResolverClient != null) {
+      logger.warn("resolving " + locks.size() + " locks");
+
+      ResolveLockResult resolveLockResult =
+          lockResolverClient.resolveLocks(backOffer, callerStartTS, locks, forWrite);
+      resolveLockResultCallback.apply(resolveLockResult);
+      long msBeforeExpired = resolveLockResult.getMsBeforeTxnExpired();
+      if (msBeforeExpired > 0) {
+        // if not resolve all locks, we wait and retry
+        backOffer.doBackOffWithMaxSleep(
+            BoTxnLockFast,
+            msBeforeExpired,
+            new KeyException("not all locks resolved: " + locks.size()));
+      }
+    }
   }
 
   private void resolveLock(BackOffer backOffer, Lock lock) {
@@ -256,15 +278,34 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
 
     boolean retry = false;
 
-    // Key error handling logic
-    Kvrpcpb.KeyError keyError = getKeyError.apply(resp);
-    if (keyError != null) {
-      try {
-        Lock lock = AbstractLockResolverClient.extractLockFromKeyErr(keyError);
-        resolveLock(backOffer, lock);
-        retry = true;
-      } catch (KeyException e) {
-        logger.warn("Unable to handle KeyExceptions other than LockException", e);
+    if (resp instanceof ScanResponse) {
+      List<KvPair> kvPairs = ((ScanResponse) resp).getPairsList();
+      List<Lock> locks = new ArrayList<>();
+      for (KvPair kvPair : kvPairs) {
+        if (kvPair.hasError()) {
+          Lock lock = AbstractLockResolverClient.extractLockFromKeyErr(kvPair.getError());
+          locks.add(lock);
+        }
+      }
+      if (!locks.isEmpty()) {
+        try {
+          resolveLocks(backOffer, locks);
+          retry = true;
+        } catch (KeyException e) {
+          logger.warn("Unable to handle KeyExceptions other than LockException", e);
+        }
+      }
+    } else {
+      // Key error handling logic
+      Kvrpcpb.KeyError keyError = getKeyError.apply(resp);
+      if (keyError != null) {
+        try {
+          Lock lock = AbstractLockResolverClient.extractLockFromKeyErr(keyError);
+          resolveLock(backOffer, lock);
+          retry = true;
+        } catch (KeyException e) {
+          logger.warn("Unable to handle KeyExceptions other than LockException", e);
+        }
       }
     }
     return retry;

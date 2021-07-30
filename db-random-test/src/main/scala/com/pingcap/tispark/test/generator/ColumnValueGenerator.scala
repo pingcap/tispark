@@ -147,6 +147,7 @@ case class ColumnValueGenerator(
   }
   private var generatedRandomValues: List[Any] = List.empty[Any]
   private var curPos = 0
+  private var nullGenerated = false
 
   def randomUniqueString(r: Random, set: mutable.Set[String], len: Int = -1): String = {
     while (true) {
@@ -186,6 +187,7 @@ case class ColumnValueGenerator(
 
       curPos = 0
     }
+    nullGenerated = false
     realSize
   }
 
@@ -209,7 +211,16 @@ case class ColumnValueGenerator(
   ////////////////// Generate Random Value //////////////////
   def randomNull(r: Random): Boolean = {
     // 5% of non-null data be null
-    !tiDataType.isNotNull && r.nextInt(20) == 0
+    var result = !tiDataType.isNotNull && r.nextInt(20) == 0
+
+    if (nullGenerated && isUnique) {
+      result = false
+    }
+
+    if (result) {
+      nullGenerated = true
+    }
+    result
   }
 
   def randomValue(r: Random): Any = {

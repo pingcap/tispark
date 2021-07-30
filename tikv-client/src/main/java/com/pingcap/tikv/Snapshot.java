@@ -153,21 +153,6 @@ public class Snapshot {
   }
 
   /**
-   * scan all keys after startKey, inclusive
-   *
-   * @param startKey start of keys
-   * @return iterator of kvPair
-   */
-  public Iterator<KvPair> scan(ByteString startKey) {
-    return new ConcreteScanIterator(
-        session.getConf(),
-        session.getRegionStoreClientBuilder(),
-        startKey,
-        timestamp.getVersion(),
-        Integer.MAX_VALUE);
-  }
-
-  /**
    * scan all keys with prefix
    *
    * @param prefix prefix of keys

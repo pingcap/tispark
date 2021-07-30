@@ -13,13 +13,14 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TEST_REGION_SIZE = "normal"
     def TEST_TIFLASH = "false"
     def TEST_ALTER_PRIMARY_KEY = "true"
-    def TEST_SPARK_CATALOG = "false"
+    def TEST_SPARK_CATALOG = "true"
 
     // parse tidb branch
     def m1 = ghprbCommentBody =~ /tidb\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m1) {
         TIDB_BRANCH = "${m1[0][1]}"
     }
+    m1 = null
     println "TIDB_BRANCH=${TIDB_BRANCH}"
 
     // parse pd branch
@@ -27,6 +28,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     if (m2) {
         PD_BRANCH = "${m2[0][1]}"
     }
+    m2 = null
     println "PD_BRANCH=${PD_BRANCH}"
 
     // parse tikv branch
@@ -34,6 +36,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     if (m3) {
         TIKV_BRANCH = "${m3[0][1]}"
     }
+    m3 = null
     println "TIKV_BRANCH=${TIKV_BRANCH}"
 
     // parse tiflash branch
@@ -41,6 +44,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     if (m4) {
         TIFLASH_BRANCH = "${m4[0][1]}"
     }
+    m4 = null
     println "TIFLASH_BRANCH=${TIFLASH_BRANCH}"
 
     // parse mvn profile
@@ -48,36 +52,42 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     if (m5) {
         MVN_PROFILE = MVN_PROFILE + " -P${m5[0][1]}"
     }
+    m5 = null
 
     // parse test mode
     def m6 = ghprbCommentBody =~ /mode\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m6) {
         TEST_MODE = "${m6[0][1]}"
     }
+    m6 = null
 
     // parse test region size
     def m7 = ghprbCommentBody =~ /region\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m7) {
         TEST_REGION_SIZE = "${m7[0][1]}"
     }
+    m7 = null
 
     // parse test tiflash
     def m8 = ghprbCommentBody =~ /test-flash\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m8) {
         TEST_TIFLASH = "${m8[0][1]}"
     }
+    m8 = null
 
     // parse test alter primary key
     def m9 = ghprbCommentBody =~ /test-alter-primary-key\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m9) {
         TEST_ALTER_PRIMARY_KEY = "${m9[0][1]}"
     }
+    m9 = null
 
     // parse test spark catalog
     def m100 = ghprbCommentBody =~ /test-spark-catalog\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m100) {
         TEST_SPARK_CATALOG = "${m100[0][1]}"
     }
+    m100 = null
 
     groovy.lang.Closure readfile = { filename ->
         def file = readFile filename

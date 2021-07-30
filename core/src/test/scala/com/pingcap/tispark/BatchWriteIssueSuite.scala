@@ -15,6 +15,7 @@
 
 package com.pingcap.tispark
 
+import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
@@ -28,6 +29,35 @@ import org.apache.spark.sql.types.{
 }
 
 class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
+
+  test("deduplicate=false") {
+    jdbcUpdate(s"drop table if exists $table")
+    jdbcUpdate(s"""create table $table(
+                  |`id` varchar(36) COLLATE utf8_general_ci NOT NULL,
+                  |`name` varchar(36) COLLATE utf8_general_ci DEFAULT NULL,
+                  |`school` varchar(36) COLLATE utf8_general_ci NOT NULL,
+                  |PRIMARY KEY (`id`),
+                  |UNIQUE KEY `test_unique_1` (`name`,`school`)
+                  |)""".stripMargin)
+
+    val s = spark
+
+    import s.implicits._
+
+    val df = Seq(("10", "n5", "n10"), ("11", "n5", "n10")).toDF("id", "name", "school")
+
+    val caught = intercept[TiBatchWriteException] {
+      df.write
+        .format("tidb")
+        .options(tidbOptions)
+        .option("database", database)
+        .option("table", table)
+        .option("deduplicate", "false")
+        .mode("append")
+        .save()
+    }
+    assert(caught.getMessage.equals("duplicate unique key or primary key"))
+  }
 
   ignore("stats_meta update modify_count") {
     if (!supportBatchWrite) {
@@ -115,7 +145,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
     assert(22 == spark.sql(s"select c2 from $table where c1 = 2").collect().head.get(0))
   }
 
-  test("bigdecimal conversion test") {
+  ignore("bigdecimal conversion test") {
     jdbcUpdate(s"drop table if exists t")
     jdbcUpdate(s"create table t(a bigint unsigned)")
 
@@ -139,7 +169,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
     assert(queryTiDBViaJDBC(s"select * from $database.t").head.head.toString.equals("1"))
   }
 
-  test("integer conversion test") {
+  ignore("integer conversion test") {
     jdbcUpdate(s"drop table if exists t")
     jdbcUpdate(s"create table t(a int)")
 
