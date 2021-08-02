@@ -74,18 +74,16 @@ public abstract class AbstractRegionStoreClient
    * @return false when re-split is needed.
    */
   @Override
-  public boolean onNotLeader(Metapb.Store newStore) {
+  public boolean onNotLeader(Metapb.Store newStore, TiRegion newRegion) {
     if (logger.isDebugEnabled()) {
       logger.debug(region + ", new leader = " + newStore.getId());
     }
-    TiRegion cachedRegion = regionManager.getRegionByKey(region.getStartKey());
-    // When switch leader fails or the region changed its key range,
+    // When switch leader fails or the region changed its region epoch,
     // it would be necessary to re-split task's key range for new region.
-    if (!region.getStartKey().equals(cachedRegion.getStartKey())
-        || !region.getEndKey().equals(cachedRegion.getEndKey())) {
+    if (!region.getRegionEpoch().equals(newRegion.getRegionEpoch())) {
       return false;
     }
-    region = cachedRegion;
+    region = newRegion;
     String addressStr = regionManager.getStoreById(region.getLeader().getStoreId()).getAddress();
     ManagedChannel channel = channelFactory.getChannel(addressStr);
     blockingStub = TikvGrpc.newBlockingStub(channel);
