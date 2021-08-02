@@ -144,7 +144,15 @@ public class RegionStoreClientTest extends MockServerTest {
     server.put("key2", "value2");
     server.put("key4", "value4");
     server.put("key5", "value5");
-    List<Kvrpcpb.KvPair> kvs = client.scan(defaultBackOff(), ByteString.copyFromUtf8("key2"), 1);
+    List<Kvrpcpb.KvPair> kvs =
+        client.scan(defaultBackOff(), ByteString.copyFromUtf8("key2"), 100, 1);
+    assertEquals(3, kvs.size());
+    kvs.forEach(
+        kv ->
+            assertEquals(
+                kv.getKey().toStringUtf8().replace("key", "value"), kv.getValue().toStringUtf8()));
+
+    kvs = client.scan(defaultBackOff(), ByteString.copyFromUtf8("key1"), 3, 1);
     assertEquals(3, kvs.size());
     kvs.forEach(
         kv ->
@@ -153,7 +161,7 @@ public class RegionStoreClientTest extends MockServerTest {
 
     server.putError("error1", KVMockServer.ABORT);
     try {
-      client.scan(defaultBackOff(), ByteString.copyFromUtf8("error1"), 1);
+      client.scan(defaultBackOff(), ByteString.copyFromUtf8("error1"), 100, 1);
       fail();
     } catch (Exception e) {
       assertTrue(true);

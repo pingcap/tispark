@@ -111,25 +111,6 @@ public class KVClient implements AutoCloseable {
     return result;
   }
 
-  /**
-   * Scan key-value pairs from TiKV in range [startKey, ♾), maximum to `limit` pairs
-   *
-   * @param startKey start key, inclusive
-   * @param limit limit of kv pairs
-   * @return list of key-value pairs in range
-   */
-  public List<Kvrpcpb.KvPair> scan(ByteString startKey, long version, int limit)
-      throws GrpcException {
-    Iterator<Kvrpcpb.KvPair> iterator = scanIterator(conf, clientBuilder, startKey, version, limit);
-    List<Kvrpcpb.KvPair> result = new ArrayList<>();
-    iterator.forEachRemaining(result::add);
-    return result;
-  }
-
-  public List<Kvrpcpb.KvPair> scan(ByteString startKey, long version) throws GrpcException {
-    return scan(startKey, version, Integer.MAX_VALUE);
-  }
-
   private List<KvPair> doSendBatchGet(BackOffer backOffer, List<ByteString> keys, long version) {
     ExecutorCompletionService<List<KvPair>> completionService =
         new ExecutorCompletionService<>(batchGetThreadPool);
@@ -190,14 +171,5 @@ public class KVClient implements AutoCloseable {
       ByteString endKey,
       long version) {
     return new ConcreteScanIterator(conf, builder, startKey, endKey, version);
-  }
-
-  private Iterator<Kvrpcpb.KvPair> scanIterator(
-      TiConfiguration conf,
-      RegionStoreClientBuilder builder,
-      ByteString startKey,
-      long version,
-      int limit) {
-    return new ConcreteScanIterator(conf, builder, startKey, version, limit);
   }
 }
