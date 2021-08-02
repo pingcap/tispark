@@ -142,10 +142,13 @@ public class ClientUtils {
     Map<TiRegion, List<ByteString>> groups = new HashMap<>();
     Stream<ByteString> keyStream = keys.stream();
     if (!sorted) {
-      keyStream = keys.stream().sorted((k1, k2) -> FastByteComparisons.compareTo(k1.toByteArray(), k2.toByteArray()));
+      keyStream =
+          keys.stream()
+              .sorted(
+                  (k1, k2) -> FastByteComparisons.compareTo(k1.toByteArray(), k2.toByteArray()));
     }
     TiRegion lastRegion = null;
-    for (ByteString key: keyStream.toArray(ByteString[]::new)) {
+    for (ByteString key : keyStream.toArray(ByteString[]::new)) {
       if (lastRegion == null || !lastRegion.contains(key)) {
         lastRegion = regionManager.getRegionByKey(key, backoffer);
       }
