@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 
@@ -139,11 +140,12 @@ public class ClientUtils {
   public static Map<TiRegion, List<ByteString>> groupKeysByRegion(
       RegionManager regionManager, List<ByteString> keys, BackOffer backoffer, boolean sorted) {
     Map<TiRegion, List<ByteString>> groups = new HashMap<>();
+    Stream<ByteString> keyStream = keys.stream();
     if (!sorted) {
-      keys.sort((k1, k2) -> FastByteComparisons.compareTo(k1.toByteArray(), k2.toByteArray()));
+      keyStream = keys.stream().sorted((k1, k2) -> FastByteComparisons.compareTo(k1.toByteArray(), k2.toByteArray()));
     }
     TiRegion lastRegion = null;
-    for (ByteString key : keys) {
+    for (ByteString key: keyStream.toArray(ByteString[]::new)) {
       if (lastRegion == null || !lastRegion.contains(key)) {
         lastRegion = regionManager.getRegionByKey(key, backoffer);
       }
