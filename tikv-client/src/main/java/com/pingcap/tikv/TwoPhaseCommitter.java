@@ -15,6 +15,8 @@
 
 package com.pingcap.tikv;
 
+import static com.pingcap.tikv.util.ClientUtils.groupKeysByRegion;
+
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
@@ -25,7 +27,6 @@ import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.txn.type.BatchKeys;
 import com.pingcap.tikv.txn.type.ClientRPCResult;
-import com.pingcap.tikv.txn.type.GroupKeyResult;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
@@ -33,10 +34,8 @@ import com.pingcap.tikv.util.LogDesensitization;
 import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -148,7 +147,6 @@ public class TwoPhaseCommitter {
       throws TiBatchWriteException {
     Pair<TiRegion, Metapb.Store> pair = this.regionManager.getRegionStorePairByKey(key, backOffer);
     TiRegion tiRegion = pair.first;
-    Metapb.Store store = pair.second;
 
     Kvrpcpb.Mutation mutation;
     if (!value.isEmpty()) {
@@ -161,8 +159,7 @@ public class TwoPhaseCommitter {
     // send rpc request to tikv server
     long lockTTL = getTxnLockTTL(this.startTs);
     ClientRPCResult prewriteResult =
-        this.kvClient.prewrite(
-            backOffer, mutationList, key, lockTTL, this.startTs, tiRegion, store);
+        this.kvClient.prewrite(backOffer, mutationList, key, lockTTL, this.startTs, tiRegion);
     if (!prewriteResult.isSuccess() && !prewriteResult.isRetry()) {
       throw new TiBatchWriteException("prewrite primary key error", prewriteResult.getException());
     }
@@ -204,12 +201,12 @@ public class TwoPhaseCommitter {
       throws TiBatchWriteException {
     Pair<TiRegion, Metapb.Store> pair = this.regionManager.getRegionStorePairByKey(key, backOffer);
     TiRegion tiRegion = pair.first;
-    Metapb.Store store = pair.second;
-    ByteString[] keys = new ByteString[] {key};
+    List<ByteString> keys = new ArrayList<>();
+    keys.add(key);
 
     // send rpc request to tikv server
     ClientRPCResult commitResult =
-        this.kvClient.commit(backOffer, keys, this.startTs, commitTs, tiRegion, store);
+        this.kvClient.commit(backOffer, keys, this.startTs, commitTs, tiRegion);
 
     if (!commitResult.isSuccess()) {
       if (!commitResult.isRetry()) {
@@ -268,16 +265,14 @@ public class TwoPhaseCommitter {
       ExecutorCompletionService<Void> completionService =
           new ExecutorCompletionService<>(executorService);
       while (pairs.hasNext()) {
-        int size = 0;
-        ByteString[] keyBytes = new ByteString[writeBufferSize];
-        ByteString[] valueBytes = new ByteString[writeBufferSize];
-        while (size < writeBufferSize && pairs.hasNext()) {
+        List<ByteString> keyBytes = new ArrayList<>(writeBufferSize);
+        List<ByteString> valueBytes = new ArrayList<>(writeBufferSize);
+        while (keyBytes.size() < writeBufferSize && pairs.hasNext()) {
           pair = pairs.next();
-          keyBytes[size] = pair.first;
-          valueBytes[size] = pair.second;
-          size++;
+          keyBytes.add(pair.first);
+          valueBytes.add(pair.second);
         }
-        int curSize = size;
+        int curSize = keyBytes.size();
         cnt++;
         if (cnt > taskBufferSize) {
           // consume one task if reaches task limit
@@ -291,7 +286,7 @@ public class TwoPhaseCommitter {
               return null;
             });
 
-        totalSize = totalSize + size;
+        totalSize = totalSize + keyBytes.size();
       }
 
       for (int i = 0; i < Math.min(taskBufferSize, cnt); i++) {
@@ -309,20 +304,20 @@ public class TwoPhaseCommitter {
   private void doPrewriteSecondaryKeysInBatchesWithRetry(
       BackOffer backOffer,
       ByteString primaryKey,
-      ByteString[] keys,
-      ByteString[] values,
+      List<ByteString> keys,
+      List<ByteString> values,
       int size,
       int level)
       throws TiBatchWriteException {
-    if (keys == null || keys.length == 0 || values == null || values.length == 0 || size <= 0) {
+    if (keys == null || keys.isEmpty() || values == null || values.isEmpty() || size <= 0) {
       // return success
       return;
     }
 
     Map<ByteString, Kvrpcpb.Mutation> mutations = new LinkedHashMap<>();
     for (int i = 0; i < size; i++) {
-      ByteString key = keys[i];
-      ByteString value = values[i];
+      ByteString key = keys.get(i);
+      ByteString value = values.get(i);
 
       Kvrpcpb.Mutation mutation;
       if (!value.isEmpty()) {
@@ -336,14 +331,13 @@ public class TwoPhaseCommitter {
     }
 
     // groups keys by region
-    GroupKeyResult groupResult = this.groupKeysByRegion(keys, size, backOffer);
-    List<BatchKeys> batchKeyList = new LinkedList<>();
-    Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
+    Map<TiRegion, List<ByteString>> groupResult =
+        groupKeysByRegion(this.regionManager, keys, backOffer);
+    List<BatchKeys> batchKeyList = new ArrayList<>();
 
-    for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry : groupKeyMap.entrySet()) {
-      TiRegion tiRegion = entry.getKey().first;
-      Metapb.Store store = entry.getKey().second;
-      this.appendBatchBySize(batchKeyList, tiRegion, store, entry.getValue(), true, mutations);
+    for (Map.Entry<TiRegion, List<ByteString>> entry : groupResult.entrySet()) {
+      TiRegion tiRegion = entry.getKey();
+      this.appendBatchBySize(batchKeyList, tiRegion, entry.getValue(), true, mutations);
     }
 
     // For prewrite, stop sending other requests after receiving first error.
@@ -377,13 +371,11 @@ public class TwoPhaseCommitter {
       int level) {
 
     int size = batchKeys.getKeys().size();
-    ByteString[] keyBytes = new ByteString[size];
-    ByteString[] valueBytes = new ByteString[size];
-    int i = 0;
+    List<ByteString> keyBytes = new ArrayList<>(size);
+    List<ByteString> valueBytes = new ArrayList<>(size);
     for (ByteString k : batchKeys.getKeys()) {
-      keyBytes[i] = k;
-      valueBytes[i] = mutations.get(k).getValue();
-      i++;
+      keyBytes.add(k);
+      valueBytes.add(mutations.get(k).getValue());
     }
     doPrewriteSecondaryKeysInBatchesWithRetry(
         backOffer, primaryKey, keyBytes, valueBytes, size, level);
@@ -412,13 +404,7 @@ public class TwoPhaseCommitter {
     long lockTTL = getTxnLockTTL(this.startTs, txnSize);
     ClientRPCResult prewriteResult =
         this.kvClient.prewrite(
-            backOffer,
-            mutationList,
-            primaryKey,
-            lockTTL,
-            this.startTs,
-            batchKeys.getRegion(),
-            batchKeys.getStore());
+            backOffer, mutationList, primaryKey, lockTTL, this.startTs, batchKeys.getRegion());
     if (!prewriteResult.isSuccess() && !prewriteResult.isRetry()) {
       throw new TiBatchWriteException(
           "prewrite secondary key error", prewriteResult.getException());
@@ -453,7 +439,6 @@ public class TwoPhaseCommitter {
   private void appendBatchBySize(
       List<BatchKeys> batchKeyList,
       TiRegion tiRegion,
-      Metapb.Store store,
       List<ByteString> keys,
       boolean sizeIncludeValue,
       Map<ByteString, Kvrpcpb.Mutation> mutations) {
@@ -474,7 +459,7 @@ public class TwoPhaseCommitter {
           sizeInBytes += this.keySize(keys.get(end));
         }
       }
-      BatchKeys batchKeys = new BatchKeys(tiRegion, store, keys.subList(start, end), sizeInBytes);
+      BatchKeys batchKeys = new BatchKeys(tiRegion, keys.subList(start, end), sizeInBytes);
       batchKeyList.add(batchKeys);
     }
   }
@@ -529,13 +514,11 @@ public class TwoPhaseCommitter {
       ExecutorCompletionService<Void> completionService =
           new ExecutorCompletionService<>(executorService);
       while (keys.hasNext()) {
-        int size = 0;
-        ByteString[] keyBytes = new ByteString[writeBufferSize];
-        while (size < writeBufferSize && keys.hasNext()) {
-          keyBytes[size] = keys.next();
-          size++;
+        List<ByteString> keyBytes = new ArrayList<>(writeBufferSize);
+        while (keyBytes.size() < writeBufferSize && keys.hasNext()) {
+          keyBytes.add(keys.next());
         }
-        int curSize = size;
+        int curSize = keyBytes.size();
         cnt++;
         if (cnt > taskBufferSize) {
           // consume one task if reaches task limit
@@ -548,7 +531,7 @@ public class TwoPhaseCommitter {
               return null;
             });
 
-        totalSize = totalSize + size;
+        totalSize = totalSize + keyBytes.size();
       }
 
       for (int i = 0; i < Math.min(taskBufferSize, cnt); i++) {
@@ -564,21 +547,20 @@ public class TwoPhaseCommitter {
   }
 
   private void doCommitSecondaryKeysWithRetry(
-      BackOffer backOffer, ByteString[] keys, int size, long commitTs)
+      BackOffer backOffer, List<ByteString> keys, int size, long commitTs)
       throws TiBatchWriteException {
-    if (keys == null || keys.length == 0 || size <= 0) {
+    if (keys == null || keys.isEmpty() || size <= 0) {
       return;
     }
 
     // groups keys by region
-    GroupKeyResult groupResult = this.groupKeysByRegion(keys, size, backOffer);
+    Map<TiRegion, List<ByteString>> groupResult =
+        groupKeysByRegion(this.regionManager, keys, backOffer);
     List<BatchKeys> batchKeyList = new ArrayList<>();
-    Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
 
-    for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<ByteString>> entry : groupKeyMap.entrySet()) {
-      TiRegion tiRegion = entry.getKey().first;
-      Metapb.Store store = entry.getKey().second;
-      this.appendBatchBySize(batchKeyList, tiRegion, store, entry.getValue(), false, null);
+    for (Map.Entry<TiRegion, List<ByteString>> entry : groupResult.entrySet()) {
+      TiRegion tiRegion = entry.getKey();
+      this.appendBatchBySize(batchKeyList, tiRegion, entry.getValue(), false, null);
     }
 
     for (BatchKeys batchKeys : batchKeyList) {
@@ -594,14 +576,11 @@ public class TwoPhaseCommitter {
         batchKeys.getSizeInKB(),
         batchKeys.getRegion().getId());
     List<ByteString> keysCommit = batchKeys.getKeys();
-    ByteString[] keys = new ByteString[keysCommit.size()];
-    keysCommit.toArray(keys);
     // send rpc request to tikv server
     ClientRPCResult commitResult =
-        this.kvClient.commit(
-            backOffer, keys, this.startTs, commitTs, batchKeys.getRegion(), batchKeys.getStore());
+        this.kvClient.commit(backOffer, keysCommit, this.startTs, commitTs, batchKeys.getRegion());
     if (retryCommitSecondaryKeys && commitResult.isRetry()) {
-      doCommitSecondaryKeysWithRetry(backOffer, keys, keysCommit.size(), commitTs);
+      doCommitSecondaryKeysWithRetry(backOffer, keysCommit, keysCommit.size(), commitTs);
     } else if (!commitResult.isSuccess()) {
       String error =
           String.format("Txn commit secondary key error, regionId=%s", batchKeys.getRegion());
@@ -613,27 +592,6 @@ public class TwoPhaseCommitter {
         batchKeys.getKeys().size(),
         batchKeys.getSizeInKB(),
         batchKeys.getRegion().getId());
-  }
-
-  private GroupKeyResult groupKeysByRegion(ByteString[] keys, int size, BackOffer backOffer)
-      throws TiBatchWriteException {
-    Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groups = new HashMap<>();
-    int index = 0;
-    try {
-      for (; index < size; index++) {
-        ByteString key = keys[index];
-        Pair<TiRegion, Metapb.Store> pair =
-            this.regionManager.getRegionStorePairByKey(key, backOffer);
-        if (pair != null) {
-          groups.computeIfAbsent(pair, e -> new ArrayList<>()).add(key);
-        }
-      }
-    } catch (Exception e) {
-      throw new TiBatchWriteException("Txn groupKeysByRegion error", e);
-    }
-    GroupKeyResult result = new GroupKeyResult();
-    result.setGroupsResult(groups);
-    return result;
   }
 
   private long getTxnLockTTL(long startTime) {

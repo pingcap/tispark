@@ -45,6 +45,11 @@ public class TiConfiguration implements Serializable {
   private static final int MAX_REQUEST_KEY_RANGE_SIZE = 20000;
   private static final int DEF_INDEX_SCAN_CONCURRENCY = 5;
   private static final int DEF_TABLE_SCAN_CONCURRENCY = 512;
+  private static final int DEF_BATCH_GET_CONCURRENCY = 20;
+  private static final int DEF_BATCH_PUT_CONCURRENCY = 20;
+  private static final int DEF_BATCH_DELETE_CONCURRENCY = 20;
+  private static final int DEF_BATCH_SCAN_CONCURRENCY = 5;
+  private static final int DEF_DELETE_RANGE_CONCURRENCY = 20;
   private static final CommandPri DEF_COMMAND_PRIORITY = CommandPri.Low;
   private static final IsolationLevel DEF_ISOLATION_LEVEL = IsolationLevel.SI;
   private static final boolean DEF_SHOW_ROWID = false;
@@ -68,6 +73,11 @@ public class TiConfiguration implements Serializable {
   private int downgradeThreshold = DEF_REGION_SCAN_DOWNGRADE_THRESHOLD;
   private int indexScanConcurrency = DEF_INDEX_SCAN_CONCURRENCY;
   private int tableScanConcurrency = DEF_TABLE_SCAN_CONCURRENCY;
+  private int batchGetConcurrency = DEF_BATCH_GET_CONCURRENCY;
+  private int batchPutConcurrency = DEF_BATCH_PUT_CONCURRENCY;
+  private int batchDeleteConcurrency = DEF_BATCH_DELETE_CONCURRENCY;
+  private int batchScanConcurrency = DEF_BATCH_SCAN_CONCURRENCY;
+  private int deleteRangeConcurrency = DEF_DELETE_RANGE_CONCURRENCY;
   private CommandPri commandPriority = DEF_COMMAND_PRIORITY;
   private IsolationLevel isolationLevel = DEF_ISOLATION_LEVEL;
   private int maxRequestKeyRangeSize = MAX_REQUEST_KEY_RANGE_SIZE;
@@ -194,6 +204,51 @@ public class TiConfiguration implements Serializable {
 
   public void setTableScanConcurrency(int tableScanConcurrency) {
     this.tableScanConcurrency = tableScanConcurrency;
+  }
+
+  public int getBatchGetConcurrency() {
+    return batchGetConcurrency;
+  }
+
+  public TiConfiguration setBatchGetConcurrency(int batchGetConcurrency) {
+    this.batchGetConcurrency = batchGetConcurrency;
+    return this;
+  }
+
+  public int getBatchPutConcurrency() {
+    return batchPutConcurrency;
+  }
+
+  public TiConfiguration setBatchPutConcurrency(int batchPutConcurrency) {
+    this.batchPutConcurrency = batchPutConcurrency;
+    return this;
+  }
+
+  public int getBatchDeleteConcurrency() {
+    return batchDeleteConcurrency;
+  }
+
+  public TiConfiguration setBatchDeleteConcurrency(int batchDeleteConcurrency) {
+    this.batchDeleteConcurrency = batchDeleteConcurrency;
+    return this;
+  }
+
+  public int getBatchScanConcurrency() {
+    return batchScanConcurrency;
+  }
+
+  public TiConfiguration setBatchScanConcurrency(int batchScanConcurrency) {
+    this.batchScanConcurrency = batchScanConcurrency;
+    return this;
+  }
+
+  public int getDeleteRangeConcurrency() {
+    return deleteRangeConcurrency;
+  }
+
+  public TiConfiguration setDeleteRangeConcurrency(int deleteRangeConcurrency) {
+    this.deleteRangeConcurrency = deleteRangeConcurrency;
+    return this;
   }
 
   public CommandPri getCommandPriority() {

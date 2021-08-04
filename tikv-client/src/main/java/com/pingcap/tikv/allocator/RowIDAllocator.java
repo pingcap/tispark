@@ -22,6 +22,7 @@ import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.TwoPhaseCommitter;
+import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.MetaCodec;
@@ -156,7 +157,7 @@ public final class RowIDAllocator implements Serializable {
 
     // decode long from bytes
     // big endian the 8 bytes
-    fieldCount = new CodecDataInput(metaVal.toByteArray()).readLong();
+    fieldCount = IntegerCodec.readVarLong(new CodecDataInput(metaVal.toByteArray()));
 
     // update meta field count only oldVal is null
     if (oldVal == null || oldVal.length == 0) {

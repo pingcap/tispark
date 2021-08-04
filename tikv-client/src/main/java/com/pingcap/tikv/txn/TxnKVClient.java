@@ -15,7 +15,6 @@
 
 package com.pingcap.tikv.txn;
 
-import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiConfiguration;
@@ -33,7 +32,6 @@ import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import io.grpc.StatusRuntimeException;
-import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,11 +91,10 @@ public class TxnKVClient implements AutoCloseable {
       ByteString primary,
       long lockTTL,
       long startTs,
-      TiRegion tiRegion,
-      Metapb.Store store) {
+      TiRegion tiRegion) {
     ClientRPCResult result = new ClientRPCResult(true, false, null);
     // send request
-    RegionStoreClient client = clientBuilder.build(tiRegion, store);
+    RegionStoreClient client = clientBuilder.build(tiRegion);
     try {
       client.prewrite(backOffer, primary, mutations, startTs, lockTTL);
     } catch (Exception e) {
@@ -143,19 +140,12 @@ public class TxnKVClient implements AutoCloseable {
    * @return
    */
   public ClientRPCResult commit(
-      BackOffer backOffer,
-      ByteString[] keys,
-      long startTs,
-      long commitTs,
-      TiRegion tiRegion,
-      Metapb.Store store) {
+      BackOffer backOffer, List<ByteString> keys, long startTs, long commitTs, TiRegion tiRegion) {
     ClientRPCResult result = new ClientRPCResult(true, false, null);
     // send request
-    RegionStoreClient client = clientBuilder.build(tiRegion, store);
-    List<ByteString> byteList = Lists.newArrayList();
-    byteList.addAll(Arrays.asList(keys));
+    RegionStoreClient client = clientBuilder.build(tiRegion);
     try {
-      client.commit(backOffer, byteList, startTs, commitTs);
+      client.commit(backOffer, keys, startTs, commitTs);
     } catch (Exception e) {
       result.setSuccess(false);
       // mark retryable, region error, should retry prewrite again

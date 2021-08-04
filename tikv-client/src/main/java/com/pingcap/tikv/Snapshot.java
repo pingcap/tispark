@@ -67,7 +67,11 @@ public class Snapshot {
   }
 
   public ByteString get(ByteString key) {
-    try (KVClient client = new KVClient(session.getConf(), session.getRegionStoreClientBuilder())) {
+    try (KVClient client =
+        new KVClient(
+            session.getConf(),
+            session.getRegionStoreClientBuilder(),
+            session.getThreadPoolForBatchGet())) {
       return client.get(key, timestamp.getVersion());
     }
   }
@@ -77,7 +81,11 @@ public class Snapshot {
     for (byte[] key : keys) {
       list.add(ByteString.copyFrom(key));
     }
-    try (KVClient client = new KVClient(session.getConf(), session.getRegionStoreClientBuilder())) {
+    try (KVClient client =
+        new KVClient(
+            session.getConf(),
+            session.getRegionStoreClientBuilder(),
+            session.getThreadPoolForBatchGet())) {
       List<KvPair> kvPairList =
           client.batchGet(
               ConcreteBackOffer.newCustomBackOff(backOffer), list, timestamp.getVersion());
