@@ -41,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Errorpb;
 import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.kvproto.Kvrpcpb.CleanupResponse;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.kvproto.Kvrpcpb.ScanResponse;
 
@@ -295,7 +296,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
           logger.warn("Unable to handle KeyExceptions other than LockException", e);
         }
       }
-    } else {
+    } else if (!(resp instanceof CleanupResponse)) {
       // Key error handling logic
       Kvrpcpb.KeyError keyError = getKeyError.apply(resp);
       if (keyError != null) {
