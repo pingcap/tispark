@@ -62,8 +62,9 @@ public class ConcreteScanIterator extends ScanIterator {
         if (limit <= 0) {
           currentCache = null;
         } else {
+          int scanLimit = Math.min(limit, conf.getScanBatchSize());
           try {
-            currentCache = client.scan(backOffer, startKey, limit, version);
+            currentCache = client.scan(backOffer, startKey, scanLimit, version);
           } catch (final TiKVException e) {
             backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
             continue;

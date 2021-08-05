@@ -91,10 +91,7 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
         lastKey = Key.toRawKey(curRegionEndKey);
       } else if (currentCache.size() > limit) {
         throw new IndexOutOfBoundsException(
-            "current cache size = "
-                + currentCache.size()
-                + ", larger than "
-                + conf.getScanBatchSize());
+            "current cache size = " + currentCache.size() + ", larger than " + limit);
       } else {
         // Start new scan from exact next key in current region
         lastKey = Key.toRawKey(currentCache.get(currentCache.size() - 1).getKey());
