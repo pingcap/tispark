@@ -29,10 +29,25 @@ class MetaManager(catalog: Catalog) {
   def getTables(db: TiDBInfo): List[TiTableInfo] =
     catalog.listTables(db).toList
 
+  def reloadCache(loadTables: Boolean = false): Unit =
+    catalog.reloadCache(loadTables)
+
   def getTable(dbName: String, tableName: String): Option[TiTableInfo] =
     Option(catalog.getTable(dbName, tableName))
 
   def getDatabase(dbName: String): Option[TiDBInfo] =
+    Option(catalog.getDatabase(dbName))
+
+  def getDatabasesFromCache: List[TiDBInfo] =
+    catalog.listDatabasesFromCache().toList
+
+  def getTablesFromCache(db: TiDBInfo): List[TiTableInfo] =
+    catalog.listTablesFromCache(db).toList
+
+  def getTableFromCache(dbName: String, tableName: String): Option[TiTableInfo] =
+    Option(catalog.getTable(dbName, tableName))
+
+  def getDatabaseFromCache(dbName: String): Option[TiDBInfo] =
     Option(catalog.getDatabase(dbName))
 
   def close(): Unit = catalog.close()
