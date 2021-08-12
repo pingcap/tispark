@@ -275,9 +275,17 @@ public class RegionManager {
           logger.debug(String.format("invalidateRegion ID[%s]", region.getId()));
         }
         TiRegion oldRegion = regionCache.get(region.getId());
-        if (oldRegion != null && oldRegion == region) {
-          keyToRegionIdCache.remove(makeRange(region.getStartKey(), region.getEndKey()));
-          regionCache.remove(region.getId());
+        if (oldRegion != null) {
+          if (oldRegion.equals(region)) {
+            keyToRegionIdCache.remove(makeRange(region.getStartKey(), region.getEndKey()));
+            regionCache.remove(region.getId());
+          } else {
+            logger.warn(
+                "region requested to invalidate does not match cached.\n\told region: "
+                    + oldRegion
+                    + "\n\tcurrent region: "
+                    + region);
+          }
         }
       } catch (Exception ignore) {
       }

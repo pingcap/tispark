@@ -86,10 +86,10 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
       // Session should be single-threaded itself
       // so that we don't worry about conf change in the middle
       // of a transaction. Otherwise below code might lose data
-      if (currentCache.size() < limit) {
+      if (currentCache.size() < conf.getScanBatchSize()) {
         startKey = curRegionEndKey;
         lastKey = Key.toRawKey(curRegionEndKey);
-      } else if (currentCache.size() > limit) {
+      } else if (currentCache.size() > conf.getScanBatchSize()) {
         throw new IndexOutOfBoundsException(
             "current cache size = "
                 + currentCache.size()
