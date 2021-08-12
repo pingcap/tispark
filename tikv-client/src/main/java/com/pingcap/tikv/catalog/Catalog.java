@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -38,23 +39,30 @@ public class Catalog implements AutoCloseable {
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
   private final Supplier<Snapshot> snapshotProvider;
   private CatalogCache metaCache;
+  private static final AtomicLong lastUpdateTime = new AtomicLong(0);
 
   public Catalog(Supplier<Snapshot> snapshotProvider, boolean showRowId, String dbPrefix) {
     this.snapshotProvider = Objects.requireNonNull(snapshotProvider, "Snapshot Provider is null");
     this.showRowId = showRowId;
     this.dbPrefix = dbPrefix;
     metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()), dbPrefix, false);
+    reloadCache(true);
   }
 
   @Override
   public void close() {}
 
-  private synchronized void reloadCache(boolean loadTables) {
-    Snapshot snapshot = snapshotProvider.get();
-    CatalogTransaction newTrx = new CatalogTransaction(snapshot);
-    long latestVersion = newTrx.getLatestSchemaVersion();
-    if (latestVersion > metaCache.getVersion()) {
-      metaCache = new CatalogCache(newTrx, dbPrefix, loadTables);
+  public void reloadCache(boolean loadTables) {
+    synchronized (lastUpdateTime) {
+      if (lastUpdateTime.get() < System.currentTimeMillis()) {
+        Snapshot snapshot = snapshotProvider.get();
+        CatalogTransaction newTrx = new CatalogTransaction(snapshot);
+        long latestVersion = newTrx.getLatestSchemaVersion();
+        if (latestVersion > metaCache.getVersion()) {
+          metaCache = new CatalogCache(newTrx, dbPrefix, loadTables, latestVersion);
+        }
+        lastUpdateTime.set(System.currentTimeMillis());
+      }
     }
   }
 
@@ -78,6 +86,47 @@ public class Catalog implements AutoCloseable {
           .collect(Collectors.toList());
     } else {
       return metaCache.listTables(database);
+    }
+  }
+
+  public List<TiDBInfo> listDatabasesFromCache() {
+    return metaCache.listDatabases();
+  }
+
+  public List<TiTableInfo> listTablesFromCache(TiDBInfo database) {
+    Objects.requireNonNull(database, "database is null");
+    if (showRowId) {
+      return metaCache
+          .listTables(database)
+          .stream()
+          .map(TiTableInfo::copyTableWithRowId)
+          .collect(Collectors.toList());
+    } else {
+      return metaCache.listTables(database);
+    }
+  }
+
+  public TiDBInfo getDatabaseFromCache(String dbName) {
+    Objects.requireNonNull(dbName, "dbName is null");
+    return metaCache.getDatabase(dbName);
+  }
+
+  public TiTableInfo getTableFromCache(String dbName, String tableName) {
+    TiDBInfo database = getDatabaseFromCache(dbName);
+    if (database == null) {
+      return null;
+    }
+    return getTableFromCache(database, tableName);
+  }
+
+  public TiTableInfo getTableFromCache(TiDBInfo database, String tableName) {
+    Objects.requireNonNull(database, "database is null");
+    Objects.requireNonNull(tableName, "tableName is null");
+    TiTableInfo table = metaCache.getTable(database, tableName);
+    if (showRowId && table != null) {
+      return table.copyTableWithRowId();
+    } else {
+      return table;
     }
   }
 
@@ -130,6 +179,15 @@ public class Catalog implements AutoCloseable {
     private final String dbPrefix;
     private final CatalogTransaction transaction;
     private final long currentVersion;
+
+    private CatalogCache(
+        CatalogTransaction transaction, String dbPrefix, boolean loadTables, long currentVersion) {
+      this.transaction = transaction;
+      this.dbPrefix = dbPrefix;
+      this.tableCache = new ConcurrentHashMap<>();
+      this.dbCache = loadDatabases(loadTables);
+      this.currentVersion = currentVersion;
+    }
 
     private CatalogCache(CatalogTransaction transaction, String dbPrefix, boolean loadTables) {
       this.transaction = transaction;
