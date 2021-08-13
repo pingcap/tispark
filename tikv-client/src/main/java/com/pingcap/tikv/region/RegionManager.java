@@ -275,7 +275,7 @@ public class RegionManager {
           logger.debug(String.format("invalidateRegion ID[%s]", region.getId()));
         }
         TiRegion oldRegion = regionCache.get(region.getId());
-        if (oldRegion != null && oldRegion == region) {
+        if (oldRegion != null && oldRegion.equals(region)) {
           keyToRegionIdCache.remove(makeRange(region.getStartKey(), region.getEndKey()));
           regionCache.remove(region.getId());
         }
