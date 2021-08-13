@@ -241,6 +241,14 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         backOffer.doBackOff(
             BackOffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(error.getMessage()));
         return true;
+      } else if (error.hasRegionNotFound()) {
+        // this error is reported from kv:
+        // will occur when leader was switched to another node.
+        // Solution: re-fetch from PD.
+        backOffer.doBackOff(
+          BackOffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(error.getMessage()));
+        this.regionManager.onRegionStale(recv.getRegion());
+        return false;
       } else if (error.hasStaleCommand()) {
         // this error is reported from raftstore:
         // command outdated, please try later
