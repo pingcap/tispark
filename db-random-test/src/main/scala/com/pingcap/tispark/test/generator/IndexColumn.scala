@@ -113,7 +113,7 @@ case class IndexInfo(
     val clusteredIndexStr = if (isClusteredIndex) " /*T![clustered_index] CLUSTERED */" else ""
     val indexColumnString = indexColumns.mkString("(", ",", ")")
     if (isPrimary) {
-      s"PRIMARY KEY $indexColumnString $clusteredIndexStr"
+      s"PRIMARY KEY $indexColumnString$clusteredIndexStr"
     } else if (isUnique) {
       s"UNIQUE KEY $indexColumnString"
     } else {

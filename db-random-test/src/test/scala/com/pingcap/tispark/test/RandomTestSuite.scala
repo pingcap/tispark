@@ -43,12 +43,13 @@ class RandomTestSuite extends FunSuite with RandomTest {
     assert(rowCount == schemaAndData.data.size)
 
     val answer = """CREATE DATABASE IF NOT EXISTS `random_test`;
-                   |DROP TABLE IF EXISTS `random_test`.`test_351626634_1517918040`;
+                   |USE `random_test`;
+                   |DROP TABLE IF EXISTS `test_351626634_1517918040`;
                    |CREATE TABLE `random_test`.`test_351626634_1517918040` (
                    |  `col_int0` int(11) not null,
-                   |  `col_int1` int(11) not null /*T![clustered_index] CLUSTERED */
+                   |  `col_int1` int(11) not null
                    |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
-                   |INSERT INTO `random_test`.`test_351626634_1517918040` VALUES (-1,-1);""".stripMargin
+                   |INSERT INTO `test_351626634_1517918040` VALUES (-1,-1);""".stripMargin
     assert(answer.equals(schemaAndData.getInitSQLList.mkString("\n")))
   }
 }
