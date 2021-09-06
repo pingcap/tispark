@@ -15,11 +15,12 @@
 
 package com.pingcap.tikv;
 
+import static com.pingcap.tikv.util.ClientUtils.groupKeysByRegion;
+
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
-import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiTimestamp;
@@ -55,6 +56,11 @@ public class TiSession implements AutoCloseable {
   private volatile Catalog catalog;
   private volatile ExecutorService indexScanThreadPool;
   private volatile ExecutorService tableScanThreadPool;
+  private volatile ExecutorService batchGetThreadPool;
+  private volatile ExecutorService batchPutThreadPool;
+  private volatile ExecutorService batchDeleteThreadPool;
+  private volatile ExecutorService batchScanThreadPool;
+  private volatile ExecutorService deleteRangeThreadPool;
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
   private boolean isClosed = false;
@@ -188,6 +194,101 @@ public class TiSession implements AutoCloseable {
     return res;
   }
 
+  public ExecutorService getThreadPoolForBatchPut() {
+    ExecutorService res = batchPutThreadPool;
+    if (res == null) {
+      synchronized (this) {
+        if (batchPutThreadPool == null) {
+          batchPutThreadPool =
+              Executors.newFixedThreadPool(
+                  conf.getBatchPutConcurrency(),
+                  new ThreadFactoryBuilder()
+                      .setNameFormat("batchPut-thread-%d")
+                      .setDaemon(true)
+                      .build());
+        }
+        res = batchPutThreadPool;
+      }
+    }
+    return res;
+  }
+
+  public ExecutorService getThreadPoolForBatchGet() {
+    ExecutorService res = batchGetThreadPool;
+    if (res == null) {
+      synchronized (this) {
+        if (batchGetThreadPool == null) {
+          batchGetThreadPool =
+              Executors.newFixedThreadPool(
+                  conf.getBatchGetConcurrency(),
+                  new ThreadFactoryBuilder()
+                      .setNameFormat("batchGet-thread-%d")
+                      .setDaemon(true)
+                      .build());
+        }
+        res = batchGetThreadPool;
+      }
+    }
+    return res;
+  }
+
+  public ExecutorService getThreadPoolForBatchDelete() {
+    ExecutorService res = batchDeleteThreadPool;
+    if (res == null) {
+      synchronized (this) {
+        if (batchDeleteThreadPool == null) {
+          batchDeleteThreadPool =
+              Executors.newFixedThreadPool(
+                  conf.getBatchDeleteConcurrency(),
+                  new ThreadFactoryBuilder()
+                      .setNameFormat("batchDelete-thread-%d")
+                      .setDaemon(true)
+                      .build());
+        }
+        res = batchDeleteThreadPool;
+      }
+    }
+    return res;
+  }
+
+  public ExecutorService getThreadPoolForBatchScan() {
+    ExecutorService res = batchScanThreadPool;
+    if (res == null) {
+      synchronized (this) {
+        if (batchScanThreadPool == null) {
+          batchScanThreadPool =
+              Executors.newFixedThreadPool(
+                  conf.getBatchScanConcurrency(),
+                  new ThreadFactoryBuilder()
+                      .setNameFormat("batchScan-thread-%d")
+                      .setDaemon(true)
+                      .build());
+        }
+        res = batchScanThreadPool;
+      }
+    }
+    return res;
+  }
+
+  public ExecutorService getThreadPoolForDeleteRange() {
+    ExecutorService res = deleteRangeThreadPool;
+    if (res == null) {
+      synchronized (this) {
+        if (deleteRangeThreadPool == null) {
+          deleteRangeThreadPool =
+              Executors.newFixedThreadPool(
+                  conf.getDeleteRangeConcurrency(),
+                  new ThreadFactoryBuilder()
+                      .setNameFormat("deleteRange-thread-%d")
+                      .setDaemon(true)
+                      .build());
+        }
+        res = deleteRangeThreadPool;
+      }
+    }
+    return res;
+  }
+
   /**
    * This is used for setting call back function to invalidate cache information
    *
@@ -253,7 +354,8 @@ public class TiSession implements AutoCloseable {
   private List<TiRegion> splitRegion(List<ByteString> splitKeys, BackOffer backOffer) {
     List<TiRegion> regions = new ArrayList<>();
 
-    Map<TiRegion, List<ByteString>> groupKeys = groupKeysByRegion(splitKeys);
+    Map<TiRegion, List<ByteString>> groupKeys =
+        groupKeysByRegion(regionManager, splitKeys, backOffer);
     for (Map.Entry<TiRegion, List<ByteString>> entry : groupKeys.entrySet()) {
 
       Pair<TiRegion, Metapb.Store> pair =
@@ -275,10 +377,10 @@ public class TiSession implements AutoCloseable {
         List<TiRegion> newRegions;
         try {
           newRegions = getRegionStoreClientBuilder().build(region, store).splitRegion(splits);
-        } catch (final TiKVException | TiClientInternalException e) {
+        } catch (final TiKVException e) {
           // retry
           logger.warn("ReSplitting ranges for splitRegion", e);
-          clientBuilder.getRegionManager().invalidateRegion(region.getId());
+          clientBuilder.getRegionManager().invalidateRegion(region);
           backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
           newRegions = splitRegion(splits, backOffer);
         }
@@ -289,11 +391,6 @@ public class TiSession implements AutoCloseable {
 
     logger.info("splitRegion: return region size={}", regions.size());
     return regions;
-  }
-
-  private Map<TiRegion, List<ByteString>> groupKeysByRegion(List<ByteString> keys) {
-    return keys.stream()
-        .collect(Collectors.groupingBy(clientBuilder.getRegionManager()::getRegionByKey));
   }
 
   @Override
@@ -313,6 +410,21 @@ public class TiSession implements AutoCloseable {
     }
     if (indexScanThreadPool != null) {
       indexScanThreadPool.shutdownNow();
+    }
+    if (batchGetThreadPool != null) {
+      batchGetThreadPool.shutdownNow();
+    }
+    if (batchPutThreadPool != null) {
+      batchPutThreadPool.shutdownNow();
+    }
+    if (batchDeleteThreadPool != null) {
+      batchDeleteThreadPool.shutdownNow();
+    }
+    if (batchScanThreadPool != null) {
+      batchScanThreadPool.shutdownNow();
+    }
+    if (deleteRangeThreadPool != null) {
+      deleteRangeThreadPool.shutdownNow();
     }
     if (client != null) {
       getPDClient().close();
