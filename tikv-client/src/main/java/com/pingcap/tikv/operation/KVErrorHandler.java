@@ -110,21 +110,18 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private void invalidateRegionStoreCache(TiRegion region) {
     regionManager.invalidateRegion(region);
     regionManager.invalidateStore(region.getLeader().getStoreId());
-    notifyRegionStoreCacheInvalidate(
-        region.getId(),
-        region.getLeader().getStoreId(),
-        CacheInvalidateEvent.CacheType.REGION_STORE);
+    notifyRegionStoreCacheInvalidate(region, CacheInvalidateEvent.CacheType.REGION_STORE);
   }
 
   private void notifyRegionStoreCacheInvalidate(
-      long regionId, long storeId, CacheInvalidateEvent.CacheType type) {
+      TiRegion region, CacheInvalidateEvent.CacheType type) {
     if (cacheInvalidateCallBack != null) {
-      cacheInvalidateCallBack.apply(new CacheInvalidateEvent(regionId, storeId, true, true, type));
+      cacheInvalidateCallBack.apply(new CacheInvalidateEvent(region, true, true, type));
       logger.info(
           "Accumulating cache invalidation info to driver:regionId="
-              + regionId
+              + region.getId()
               + ",storeId="
-              + storeId
+              + region.getLeader().getStoreId()
               + ",type="
               + type.name());
     } else {
@@ -133,14 +130,14 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     }
   }
 
-  private void notifyRegionCacheInvalidate(long regionId) {
+  private void notifyRegionCacheInvalidate(TiRegion region) {
     if (cacheInvalidateCallBack != null) {
       cacheInvalidateCallBack.apply(
           new CacheInvalidateEvent(
-              regionId, 0, true, false, CacheInvalidateEvent.CacheType.REGION_STORE));
+              region, true, false, CacheInvalidateEvent.CacheType.REGION_STORE));
       logger.info(
           "Accumulating cache invalidation info to driver:regionId="
-              + regionId
+              + region.getId()
               + ",type="
               + CacheInvalidateEvent.CacheType.REGION_STORE.name());
     } else {
@@ -221,7 +218,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
                   && recv.onNotLeader(this.regionManager.getStoreById(newStoreId), newRegion);
           if (!retry) {
             notifyRegionStoreCacheInvalidate(
-                recv.getRegion().getId(), newStoreId, CacheInvalidateEvent.CacheType.LEADER);
+                recv.getRegion(), CacheInvalidateEvent.CacheType.LEADER);
           }
 
           backOffFuncType = BackOffFunction.BackOffFuncType.BoUpdateLeader;
@@ -263,7 +260,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         // region has outdated version，please try later.
         logger.warn(String.format("Stale Epoch encountered for region [%s]", recv.getRegion()));
         this.regionManager.onRegionStale(recv.getRegion());
-        notifyRegionCacheInvalidate(recv.getRegion().getId());
+        notifyRegionCacheInvalidate(recv.getRegion());
         return false;
       } else if (error.hasServerIsBusy()) {
         // this error is reported from kv:
@@ -283,7 +280,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         backOffer.doBackOff(
             BackOffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(error.getMessage()));
         this.regionManager.onRegionStale(recv.getRegion());
-        notifyRegionCacheInvalidate(recv.getRegion().getId());
+        notifyRegionCacheInvalidate(recv.getRegion());
         return false;
       } else if (error.hasStaleCommand()) {
         // this error is reported from raftstore:
@@ -359,10 +356,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   @Override
   public boolean handleRequestError(BackOffer backOffer, Exception e) {
     regionManager.onRequestFail(recv.getRegion());
-    notifyRegionStoreCacheInvalidate(
-        recv.getRegion().getId(),
-        recv.getRegion().getLeader().getStoreId(),
-        CacheInvalidateEvent.CacheType.REQ_FAILED);
+    notifyRegionStoreCacheInvalidate(recv.getRegion(), CacheInvalidateEvent.CacheType.REQ_FAILED);
 
     backOffer.doBackOff(
         BackOffFunction.BackOffFuncType.BoTiKVRPC,

@@ -23,7 +23,6 @@ import static com.pingcap.tikv.util.ClientUtils.getKvPairs;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiKVException;
-import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder;
 import com.pingcap.tikv.region.TiRegion;
@@ -32,7 +31,6 @@ import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.Batch;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorCompletionService;
@@ -95,21 +93,6 @@ public class KVClient implements AutoCloseable {
     return doSendBatchGet(backOffer, keys, version);
   }
 
-  /**
-   * Scan key-value pairs from TiKV in range [startKey, endKey)
-   *
-   * @param startKey start key, inclusive
-   * @param endKey end key, exclusive
-   * @return list of key-value pairs in range
-   */
-  public List<KvPair> scan(ByteString startKey, ByteString endKey, long version)
-      throws GrpcException {
-    Iterator<KvPair> iterator = scanIterator(conf, clientBuilder, startKey, endKey, version);
-    List<KvPair> result = new ArrayList<>();
-    iterator.forEachRemaining(result::add);
-    return result;
-  }
-
   private List<KvPair> doSendBatchGet(BackOffer backOffer, List<ByteString> keys, long version) {
     ExecutorCompletionService<List<KvPair>> completionService =
         new ExecutorCompletionService<>(batchGetThreadPool);
@@ -161,14 +144,5 @@ public class KVClient implements AutoCloseable {
       results.addAll(batchResult);
     }
     return results;
-  }
-
-  private Iterator<KvPair> scanIterator(
-      TiConfiguration conf,
-      RegionStoreClientBuilder builder,
-      ByteString startKey,
-      ByteString endKey,
-      long version) {
-    return new ConcreteScanIterator(conf, builder, startKey, endKey, version);
   }
 }

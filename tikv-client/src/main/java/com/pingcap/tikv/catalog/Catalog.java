@@ -54,7 +54,7 @@ public class Catalog implements AutoCloseable {
 
   public void reloadCache(boolean loadTables) {
     synchronized (lastUpdateTime) {
-      if (lastUpdateTime.get() + 100 < System.currentTimeMillis()) {
+      if (lastUpdateTime.get() + 1000 < System.currentTimeMillis()) {
         Snapshot snapshot = snapshotProvider.get();
         CatalogTransaction newTrx = new CatalogTransaction(snapshot);
         long latestVersion = newTrx.getLatestSchemaVersion();
