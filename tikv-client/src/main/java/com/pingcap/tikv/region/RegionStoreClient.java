@@ -328,12 +328,9 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
   }
 
   public List<KvPair> scan(
-      BackOffer backOffer, ByteString startKey, long version, boolean keyOnly) {
+      BackOffer backOffer, ByteString startKey, int limit, long version, boolean keyOnly) {
     boolean forWrite = false;
     while (true) {
-      // we should refresh region
-      region = regionManager.getRegionByKey(startKey);
-
       Supplier<ScanRequest> request =
           () ->
               ScanRequest.newBuilder()
@@ -341,7 +338,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
                   .setStartKey(startKey)
                   .setVersion(version)
                   .setKeyOnly(keyOnly)
-                  .setLimit(getConf().getScanBatchSize())
+                  .setLimit(limit)
                   .build();
 
       KVErrorHandler<ScanResponse> handler =
@@ -358,6 +355,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       if (isScanSuccess(backOffer, resp)) {
         return doScan(resp);
       }
+      // we should refresh region
+      region = regionManager.getRegionByKey(startKey);
     }
   }
 
@@ -394,8 +393,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     return Collections.unmodifiableList(newKvPairs);
   }
 
-  public List<KvPair> scan(BackOffer backOffer, ByteString startKey, long version) {
-    return scan(backOffer, startKey, version, false);
+  public List<KvPair> scan(BackOffer backOffer, ByteString startKey, int limit, long version) {
+    return scan(backOffer, startKey, limit, version, false);
   }
 
   /**
