@@ -171,5 +171,4 @@ public class KVClient implements AutoCloseable {
       long version) {
     return new ConcreteScanIterator(conf, builder, startKey, endKey, version);
   }
-
 }
