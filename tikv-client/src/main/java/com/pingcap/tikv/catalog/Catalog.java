@@ -54,12 +54,12 @@ public class Catalog implements AutoCloseable {
 
   public void reloadCache(boolean loadTables) {
     synchronized (lastUpdateTime) {
-      if (lastUpdateTime.get() + 1000 < System.currentTimeMillis()) {
+      if (lastUpdateTime.get() < System.currentTimeMillis()) {
         Snapshot snapshot = snapshotProvider.get();
         CatalogTransaction newTrx = new CatalogTransaction(snapshot);
         long latestVersion = newTrx.getLatestSchemaVersion();
         if (latestVersion > metaCache.getVersion()) {
-          metaCache = new CatalogCache(newTrx, dbPrefix, loadTables);
+          metaCache = new CatalogCache(newTrx, dbPrefix, loadTables, latestVersion);
         }
         lastUpdateTime.set(System.currentTimeMillis());
       }
@@ -179,6 +179,14 @@ public class Catalog implements AutoCloseable {
     private final String dbPrefix;
     private final CatalogTransaction transaction;
     private final long currentVersion;
+
+    private CatalogCache(CatalogTransaction transaction, String dbPrefix, boolean loadTables, long currentVersion) {
+      this.transaction = transaction;
+      this.dbPrefix = dbPrefix;
+      this.tableCache = new ConcurrentHashMap<>();
+      this.dbCache = loadDatabases(loadTables);
+      this.currentVersion = currentVersion;
+    }
 
     private CatalogCache(CatalogTransaction transaction, String dbPrefix, boolean loadTables) {
       this.transaction = transaction;
