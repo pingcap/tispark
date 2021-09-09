@@ -112,7 +112,7 @@ public class CatalogTest extends PDMockServerTest {
     helper.setSchemaVersion(667);
 
     ReflectionWrapper wrapper = new ReflectionWrapper(cat);
-    wrapper.call("reloadCache");
+    wrapper.call("reloadCache", true);
 
     tables = cat.listTables(db);
     names = tables.stream().map(TiTableInfo::getName).sorted().collect(Collectors.toList());
@@ -126,7 +126,7 @@ public class CatalogTest extends PDMockServerTest {
 
     helper.dropTable(db.getId(), tables.get(0).getId());
     helper.setSchemaVersion(668);
-    wrapper.call("reloadCache");
+    wrapper.call("reloadCache", true);
     tables = cat.listTables(db);
     assertEquals(2, tables.size());
 
