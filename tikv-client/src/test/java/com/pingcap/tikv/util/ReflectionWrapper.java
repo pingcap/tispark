@@ -31,6 +31,13 @@ public class ReflectionWrapper {
       return method.invoke(obj, args);
     } catch (Exception e) {
       throw new RuntimeException(e);
+    } finally {
+      // mock call duration
+      try {
+        Thread.sleep(1);
+      } catch (Exception ignored) {
+        // ignore
+      }
     }
   }
 }

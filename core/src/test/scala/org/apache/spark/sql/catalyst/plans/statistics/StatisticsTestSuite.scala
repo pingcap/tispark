@@ -150,8 +150,10 @@ class StatisticsTestSuite extends BasePlanTest {
     initTable()
     val tblStatistics = StatisticsManager.getTableStatistics(fDataIdxTbl.getId)
     val idxStatistics = tblStatistics.getIndexHistMap.get(idx.getId)
-    val rc = idxStatistics.getRowCount(irs).toLong
-    assert(rc == expectedCount)
+    if (idxStatistics != null) {
+      val rc = idxStatistics.getRowCount(irs).toLong
+      assert(rc == expectedCount)
+    }
   }
 
   tableScanCases.foreach { query =>
