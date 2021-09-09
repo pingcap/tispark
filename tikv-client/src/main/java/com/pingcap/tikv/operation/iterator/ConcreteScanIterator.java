@@ -63,7 +63,8 @@ public class ConcreteScanIterator extends ScanIterator {
           currentCache = null;
         } else {
           try {
-            currentCache = client.scan(backOffer, startKey, limit, version);
+            int scanSize = Math.min(limit, conf.getScanBatchSize());
+            currentCache = client.scan(backOffer, startKey, scanSize, version);
           } catch (final TiKVException e) {
             backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
             continue;
@@ -113,7 +114,7 @@ public class ConcreteScanIterator extends ScanIterator {
     }
     // continue when cache is empty but not null
     while (currentCache != null && currentCache.isEmpty()) {
-      if (cacheLoadFails()) {
+      if (isCacheDrained() && cacheLoadFails()) {
         return false;
       }
     }

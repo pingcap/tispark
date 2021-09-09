@@ -34,7 +34,7 @@ public class TiConfiguration implements Serializable {
   private static final DateTimeZone DEF_TIMEZONE = Converter.getLocalTimezone();
   private static final int DEF_TIMEOUT = 10;
   private static final TimeUnit DEF_TIMEOUT_UNIT = TimeUnit.MINUTES;
-  private static final int DEF_SCAN_BATCH_SIZE = 100;
+  private static final int DEF_SCAN_BATCH_SIZE = 10480;
   private static final boolean DEF_IGNORE_TRUNCATE = true;
   private static final boolean DEF_TRUNCATE_AS_WARNING = false;
   private static final int DEF_MAX_FRAME_SIZE = 2147483647; // 2 GB
@@ -58,7 +58,7 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_WRITE_ALLOW_SPARK_SQL = false;
   private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
   private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
-  private static final int DEF_PARTITION_PER_SPLIT = 1;
+  private static final int DEF_PARTITION_PER_SPLIT = 10;
   private static final int DEF_KV_CLIENT_CONCURRENCY = 10;
   private static final List<TiStoreType> DEF_ISOLATION_READ_ENGINES =
       ImmutableList.of(TiStoreType.TiKV, TiStoreType.TiFlash);
