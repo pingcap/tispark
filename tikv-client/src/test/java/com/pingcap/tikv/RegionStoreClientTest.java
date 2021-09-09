@@ -226,7 +226,7 @@ public class RegionStoreClientTest extends MockServerTest {
     BackOffer backOffer = defaultBackOff();
     Queue<SelectResponse> responseQueue = new ArrayDeque<>();
 
-    client.coprocess(backOffer, request, ranges, responseQueue, 1);
+    client.coprocess(backOffer, request, client.getRegion(), ranges, responseQueue, 1);
 
     List<Chunk> resultChunk = new ArrayList<>();
     while (!responseQueue.isEmpty()) {
