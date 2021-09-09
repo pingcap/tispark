@@ -180,7 +180,8 @@ public class Catalog implements AutoCloseable {
     private final CatalogTransaction transaction;
     private final long currentVersion;
 
-    private CatalogCache(CatalogTransaction transaction, String dbPrefix, boolean loadTables, long currentVersion) {
+    private CatalogCache(
+        CatalogTransaction transaction, String dbPrefix, boolean loadTables, long currentVersion) {
       this.transaction = transaction;
       this.dbPrefix = dbPrefix;
       this.tableCache = new ConcurrentHashMap<>();

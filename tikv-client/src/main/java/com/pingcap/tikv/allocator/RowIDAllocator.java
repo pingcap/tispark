@@ -25,6 +25,7 @@ import com.pingcap.tikv.TwoPhaseCommitter;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.codec.MetaCodec;
 import com.pingcap.tikv.exception.AllocateRowIDOverflowException;
 import com.pingcap.tikv.exception.TiBatchWriteException;
@@ -152,12 +153,18 @@ public final class RowIDAllocator implements Serializable {
     // 3. update meta's filed count and set it back to TiKV
     CodecDataOutput cdo = new CodecDataOutput();
     ByteString metaKey = MetaCodec.encodeHashMetaKey(cdo, key.toByteArray());
-    long fieldCount;
+    long fieldCount = 0;
     ByteString metaVal = snapshot.get(metaKey);
 
     // decode long from bytes
     // big endian the 8 bytes
-    fieldCount = IntegerCodec.readVarLong(new CodecDataInput(metaVal.toByteArray()));
+    if (!metaVal.isEmpty()) {
+      try {
+        fieldCount = IntegerCodec.readULong(new CodecDataInput(metaVal.toByteArray()));
+      } catch (Exception ignored) {
+        LOG.warn("metaDecode failed, field is ignored." + KeyUtils.formatBytesUTF8(metaVal));
+      }
+    }
 
     // update meta field count only oldVal is null
     if (oldVal == null || oldVal.length == 0) {
