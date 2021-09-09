@@ -632,6 +632,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
   public List<RangeSplitter.RegionTask> coprocess(
       BackOffer backOffer,
       DAGRequest req,
+      TiRegion region,
       List<Coprocessor.KeyRange> ranges,
       Queue<SelectResponse> responseQueue,
       long startTs) {

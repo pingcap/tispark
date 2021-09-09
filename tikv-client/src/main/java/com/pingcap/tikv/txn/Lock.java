@@ -18,6 +18,7 @@
 package com.pingcap.tikv.txn;
 
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.codec.KeyUtils;
 import org.tikv.kvproto.Kvrpcpb;
 
 public class Lock {
@@ -66,5 +67,16 @@ public class Lock {
 
   public long getLockForUpdateTs() {
     return lockForUpdateTs;
+  }
+
+  @Override
+  public String toString() {
+    return String.format(
+        "Lock{TxnID:%d,LockType:%s,Key:%s,PrimaryKey:%s,TTL:%d}",
+        txnID,
+        lockType.toString(),
+        KeyUtils.formatBytesUTF8(key),
+        KeyUtils.formatBytesUTF8(primary),
+        ttl);
   }
 }
