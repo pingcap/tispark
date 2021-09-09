@@ -121,7 +121,7 @@ public class RegionManager {
       }
       if (store == null) {
         // clear the region cache so we may get the learner peer next time
-        cache.invalidateRegion(region);
+        cache.invalidateRange(region.getStartKey(), region.getEndKey());
       }
     }
 
@@ -233,6 +233,10 @@ public class RegionManager {
 
     private synchronized TiRegion getRegionFromCache(Key key) {
       return regionCache.get(key);
+    }
+
+    private synchronized void invalidateRange(ByteString startKey, ByteString endKey) {
+      regionCache.remove(makeRange(startKey, endKey));
     }
 
     /** Removes region associated with regionId from regionCache. */
