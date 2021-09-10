@@ -114,7 +114,7 @@ public class ConcreteScanIterator extends ScanIterator {
     }
     // continue when cache is empty but not null
     while (currentCache != null && currentCache.isEmpty()) {
-      if (cacheLoadFails()) {
+      if (isCacheDrained() && cacheLoadFails()) {
         return false;
       }
     }

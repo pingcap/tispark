@@ -82,7 +82,7 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
         return true;
       }
       index = 0;
-      Key lastKey = Key.EMPTY;
+      Key lastKey;
       // Session should be single-threaded itself
       // so that we don't worry about conf change in the middle
       // of a transaction. Otherwise below code might lose data
