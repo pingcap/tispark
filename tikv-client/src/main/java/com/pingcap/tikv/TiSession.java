@@ -316,7 +316,7 @@ public class TiSession implements AutoCloseable {
         splitRegion(
             splitKeys
                 .stream()
-                .map(k -> Key.toRawKey(k).next().toByteString())
+                .map(k -> Key.toRawKey(k).toByteString())
                 .collect(Collectors.toList()),
             ConcreteBackOffer.newCustomBackOff(splitRegionBackoffMS));
 

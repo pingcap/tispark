@@ -21,6 +21,7 @@ import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFas
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
+import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.region.RegionErrorReceiver;
@@ -53,6 +54,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private static final int NO_LEADER_STORE_ID = 0;
   private final Function<RespT, Errorpb.Error> getRegionError;
   private final Function<RespT, Kvrpcpb.KeyError> getKeyError;
+  private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallBack;
   private final Function<ResolveLockResult, Object> resolveLockResultCallback;
   private final RegionManager regionManager;
   private final RegionErrorReceiver recv;
@@ -74,6 +76,8 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     this.regionManager = regionManager;
     this.getRegionError = getRegionError;
     this.getKeyError = getKeyError;
+    this.cacheInvalidateCallBack =
+        regionManager != null ? regionManager.getCacheInvalidateCallback() : null;
     this.resolveLockResultCallback = resolveLockResultCallback;
     this.callerStartTS = callerStartTS;
     this.forWrite = forWrite;
@@ -88,6 +92,8 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     this.regionManager = regionManager;
     this.getRegionError = getRegionError;
     this.getKeyError = resp -> null;
+    this.cacheInvalidateCallBack =
+        regionManager != null ? regionManager.getCacheInvalidateCallback() : null;
     this.resolveLockResultCallback = resolveLock -> null;
     this.callerStartTS = 0;
     this.forWrite = false;
@@ -100,26 +106,50 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     return null;
   }
 
-  private void invalidateRegionStoreCache(TiRegion ctxRegion) {
-    regionManager.invalidateRegion(ctxRegion);
-    regionManager.invalidateStore(ctxRegion.getLeader().getStoreId());
+  private void invalidateRegionStoreCache(TiRegion region) {
+    regionManager.invalidateRegion(region);
+    regionManager.invalidateStore(region.getLeader().getStoreId());
+    notifyRegionStoreCacheInvalidate(region, CacheInvalidateEvent.CacheType.REGION_STORE);
+  }
+
+  private void notifyRegionStoreCacheInvalidate(
+      TiRegion region, CacheInvalidateEvent.CacheType type) {
+    if (cacheInvalidateCallBack != null) {
+      cacheInvalidateCallBack.apply(new CacheInvalidateEvent(region, true, true, type));
+      logger.info(
+          "Accumulating cache invalidation info to driver:regionId="
+              + region.getId()
+              + ",storeId="
+              + region.getLeader().getStoreId()
+              + ",type="
+              + type.name());
+    } else {
+      logger.warn(
+          "Failed to send notification back to driver since CacheInvalidateCallBack is null in executor node.");
+    }
+  }
+
+  private void notifyRegionCacheInvalidate(TiRegion region) {
+    if (cacheInvalidateCallBack != null) {
+      cacheInvalidateCallBack.apply(
+          new CacheInvalidateEvent(
+              region, true, false, CacheInvalidateEvent.CacheType.REGION_STORE));
+      logger.info(
+          "Accumulating cache invalidation info to driver:regionId="
+              + region.getId()
+              + ",type="
+              + CacheInvalidateEvent.CacheType.REGION_STORE.name());
+    } else {
+      logger.warn(
+          "Failed to send notification back to driver since CacheInvalidateCallBack is null in executor node.");
+    }
   }
 
   private void resolveLocks(BackOffer backOffer, List<Lock> locks) {
     if (lockResolverClient != null) {
       logger.warn("resolving " + locks.size() + " locks");
 
-      ResolveLockResult resolveLockResult =
-          lockResolverClient.resolveLocks(backOffer, callerStartTS, locks, forWrite);
-      resolveLockResultCallback.apply(resolveLockResult);
-      long msBeforeExpired = resolveLockResult.getMsBeforeTxnExpired();
-      if (msBeforeExpired > 0) {
-        // if not resolve all locks, we wait and retry
-        backOffer.doBackOffWithMaxSleep(
-            BoTxnLockFast,
-            msBeforeExpired,
-            new KeyException("not all locks resolved: " + locks.size()));
-      }
+      resolveLock(backOffer, locks.get(0));
     }
   }
 
@@ -185,6 +215,10 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
           retry =
               newRegion != null
                   && recv.onNotLeader(this.regionManager.getStoreById(newStoreId), newRegion);
+          if (!retry) {
+            notifyRegionStoreCacheInvalidate(
+                recv.getRegion(), CacheInvalidateEvent.CacheType.LEADER);
+          }
 
           backOffFuncType = BackOffFunction.BackOffFuncType.BoUpdateLeader;
         } else {
@@ -215,9 +249,8 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
                 "Store Not Match happened with region id %d, store id %d, actual store id %d",
                 recv.getRegion().getId(), storeId, actualStoreId));
 
-        this.regionManager.invalidateRegion(recv.getRegion());
-        this.regionManager.invalidateStore(storeId);
-        // recv.onStoreNotMatch(this.regionManager.getStoreById(storeId));
+        invalidateRegionStoreCache(recv.getRegion());
+        recv.onStoreNotMatch(this.regionManager.getStoreById(storeId));
         // assume this is a low probability error, do not retry, just re-split the request by
         // throwing it out.
         return false;
@@ -226,6 +259,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         // region has outdated version，please try later.
         logger.warn(String.format("Stale Epoch encountered for region [%s]", recv.getRegion()));
         this.regionManager.onRegionStale(recv.getRegion());
+        notifyRegionCacheInvalidate(recv.getRegion());
         return false;
       } else if (error.hasServerIsBusy()) {
         // this error is reported from kv:
@@ -242,12 +276,10 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
             BackOffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(error.getMessage()));
         return true;
       } else if (error.hasRegionNotFound()) {
-        // this error is reported from kv:
-        // will occur when leader was switched to another node.
-        // Solution: re-fetch from PD.
         backOffer.doBackOff(
             BackOffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(error.getMessage()));
         this.regionManager.onRegionStale(recv.getRegion());
+        notifyRegionCacheInvalidate(recv.getRegion());
         return false;
       } else if (error.hasStaleCommand()) {
         // this error is reported from raftstore:
@@ -277,7 +309,8 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       // Upper level may split this task.
       invalidateRegionStoreCache(recv.getRegion());
       // retry if raft proposal is dropped, it indicates the store is in the middle of transition
-      if (error.getMessage().contains("Raft ProposalDropped")) {
+      if (error.getMessage().contains("Raft ProposalDropped")
+          || error.getMessage().contains("is missing")) {
         backOffer.doBackOff(
             BackOffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(error.getMessage()));
         return true;
@@ -322,6 +355,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   @Override
   public boolean handleRequestError(BackOffer backOffer, Exception e) {
     regionManager.onRequestFail(recv.getRegion());
+    notifyRegionStoreCacheInvalidate(recv.getRegion(), CacheInvalidateEvent.CacheType.REQ_FAILED);
 
     backOffer.doBackOff(
         BackOffFunction.BackOffFuncType.BoTiKVRPC,
