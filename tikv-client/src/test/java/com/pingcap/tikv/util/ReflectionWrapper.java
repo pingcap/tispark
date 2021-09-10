@@ -25,19 +25,18 @@ public class ReflectionWrapper {
   }
 
   public Object call(String methodName, Object... args) {
+    // mock call duration
+    try {
+      Thread.sleep(1);
+    } catch (Exception ignored) {
+      // ignore
+    }
     try {
       Method method = obj.getClass().getDeclaredMethod(methodName);
       method.setAccessible(true);
       return method.invoke(obj, args);
     } catch (Exception e) {
       throw new RuntimeException(e);
-    } finally {
-      // mock call duration
-      try {
-        Thread.sleep(1);
-      } catch (Exception ignored) {
-        // ignore
-      }
     }
   }
 }
