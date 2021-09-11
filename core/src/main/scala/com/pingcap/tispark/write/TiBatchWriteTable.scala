@@ -410,8 +410,8 @@ class TiBatchWriteTable(
             }
           }
 
-          rowBuf += uniqueIndices.map { index =>
-            if (!isCommonHandle || !index.isPrimary) {
+          rowBuf ++= uniqueIndices.flatMap {
+            case index if !isCommonHandle || !index.isPrimary =>
               val keyInfo = buildUniqueIndexKey(wrappedRow.row, wrappedRow.handle, index)
               // if handle is appended, it must not exists in old table
               if (!keyInfo._2) {
@@ -420,10 +420,10 @@ class TiBatchWriteTable(
                   val oldHandle = TableCodec.decodeHandle(oldValue, isCommonHandle)
                   val oldRowValue = snapshot.get(buildRowKey(wrappedRow.row, oldHandle).bytes)
                   val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
-                  WrappedRow(oldRow, oldHandle)
-                }
-              }
-            }
+                  Some(WrappedRow(oldRow, oldHandle))
+                } else None
+              } else None
+            case _ => None
           }
           rowBuf
         }
