@@ -17,6 +17,9 @@ package com.pingcap.tikv.columnar;
 
 import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
 
+import com.pingcap.tikv.ExtendedDateTime;
+import com.pingcap.tikv.codec.Codec.DateCodec;
+import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.columnar.datatypes.CHType;
 import com.pingcap.tikv.types.AbstractDateTimeType;
 import com.pingcap.tikv.types.BytesType;
@@ -26,6 +29,7 @@ import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
+import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 
 public class TiBlockColumnVector extends TiColumnVector {
@@ -155,7 +159,7 @@ public class TiBlockColumnVector extends TiColumnVector {
    */
   @Override
   public short getShort(int rowId) {
-    return MemoryUtil.getShort(dataAddr + (rowId << 1));
+    return MemoryUtil.getShort(dataAddr + ((long) rowId << 1));
   }
 
   /**
@@ -167,36 +171,23 @@ public class TiBlockColumnVector extends TiColumnVector {
     if (type instanceof DateType) {
       return (int) getTime(rowId);
     }
-    return MemoryUtil.getInt(dataAddr + (rowId << 2));
+    return MemoryUtil.getInt(dataAddr + ((long) rowId << 2));
   }
 
-  private long getDateTime(int rowId) {
-    long v = MemoryUtil.getLong(dataAddr + (rowId << 3));
-    long ymdhms = v >>> 24;
-    long ymd = ymdhms >>> 17;
-    int day = (int) (ymd & ((1 << 5) - 1));
-    long ym = ymd >>> 5;
-    int month = (int) (ym % 13);
-    int year = (int) (ym / 13);
-
-    int hms = (int) (ymdhms & ((1 << 17) - 1));
-    int second = hms & ((1 << 6) - 1);
-    int minute = (hms >>> 6) & ((1 << 6) - 1);
-    int hour = hms >>> 12;
-    int microsec = (int) (v % (1 << 24));
-    Timestamp ts =
-        new Timestamp(year - 1900, month - 1, day, hour, minute, second, microsec * 1000);
+  private long getDateTime(int rowId, DateTimeZone tz) {
+    long v = MemoryUtil.getLong(dataAddr + ((long) rowId << 3));
+    ExtendedDateTime extendedDateTime = DateTimeCodec.fromPackedLong(v, tz);
+    if (extendedDateTime == null) {
+      // TODO: make this behavior configurable
+      return 0;
+    }
+    Timestamp ts = extendedDateTime.toTimeStamp();
     return ts.getTime() / 1000 * 1000000 + ts.getNanos() / 1000;
   }
 
   private long getTime(int rowId) {
-    long v = MemoryUtil.getLong(dataAddr + (rowId << 3));
-    long ymd = v >>> 41;
-    long ym = ymd >>> 5;
-    int year = (int) (ym / 13);
-    int month = (int) (ym % 13);
-    int day = (int) (ymd & ((1 << 5) - 1));
-    LocalDate date = new LocalDate(year, month, day);
+    long v = MemoryUtil.getLong(dataAddr + ((long) rowId << 3));
+    LocalDate date = DateCodec.fromPackedLong(v);
     return ((DateType) type).getDays(date);
   }
   /**
@@ -206,7 +197,7 @@ public class TiBlockColumnVector extends TiColumnVector {
   @Override
   public long getLong(int rowId) {
     if (type instanceof AbstractDateTimeType) {
-      return getDateTime(rowId);
+      return getDateTime(rowId, ((AbstractDateTimeType) type).getTimezone());
     }
     if (fixedLength == 1) {
       return getByte(rowId);
@@ -215,7 +206,7 @@ public class TiBlockColumnVector extends TiColumnVector {
     } else if (fixedLength == 4) {
       return getInt(rowId);
     } else if (fixedLength == 8) {
-      return MemoryUtil.getLong(dataAddr + (rowId * fixedLength));
+      return MemoryUtil.getLong(dataAddr + ((long) rowId * fixedLength));
     }
     throw new UnsupportedOperationException(
         String.format("getting long with fixed length %d", fixedLength));
@@ -227,7 +218,7 @@ public class TiBlockColumnVector extends TiColumnVector {
    */
   @Override
   public float getFloat(int rowId) {
-    return MemoryUtil.getFloat(dataAddr + (rowId * fixedLength));
+    return MemoryUtil.getFloat(dataAddr + ((long) rowId * fixedLength));
   }
 
   /**
@@ -236,7 +227,7 @@ public class TiBlockColumnVector extends TiColumnVector {
    */
   @Override
   public double getDouble(int rowId) {
-    return MemoryUtil.getDouble(dataAddr + (rowId * fixedLength));
+    return MemoryUtil.getDouble(dataAddr + ((long) rowId * fixedLength));
   }
 
   /**
@@ -244,7 +235,7 @@ public class TiBlockColumnVector extends TiColumnVector {
    */
   @Override
   public BigDecimal getDecimal(int rowId, int precision, int scale) {
-    long rowIdAddr = rowId * fixedLength + dataAddr;
+    long rowIdAddr = (long) rowId * fixedLength + dataAddr;
     if (fixedLength == 4) {
       return MemoryUtil.getDecimal32(rowIdAddr, scale);
     } else if (fixedLength == 8) {
@@ -257,15 +248,15 @@ public class TiBlockColumnVector extends TiColumnVector {
   }
 
   private long offsetAt(int i) {
-    return i == 0 ? 0 : MemoryUtil.getLong(offsetsAddr + ((i - 1) << 3));
+    return i == 0 ? 0 : MemoryUtil.getLong(offsetsAddr + ((long) (i - 1) << 3));
   }
 
   public int sizeAt(int i) {
     return (int)
         (i == 0
             ? MemoryUtil.getLong(offsetsAddr)
-            : MemoryUtil.getLong(offsetsAddr + (i << 3))
-                - MemoryUtil.getLong(offsetsAddr + ((i - 1) << 3)));
+            : MemoryUtil.getLong(offsetsAddr + ((long) i << 3))
+                - MemoryUtil.getLong(offsetsAddr + ((long) (i - 1) << 3)));
   }
 
   /**
