@@ -280,7 +280,7 @@ public class Converter {
       }
     } else if (val instanceof Integer) {
       // when the val is a Integer, it is only have year part of a Date.
-      return new Date((Integer) val - 1970, 0, 0);
+      return new Date((Integer) val - 1970, 1, 1);
     } else if (val instanceof Long) {
       return new Date((long) val);
     } else if (val instanceof Timestamp) {

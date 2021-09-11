@@ -16,12 +16,10 @@
 package com.pingcap.tikv.columnar;
 
 import com.google.common.primitives.UnsignedLong;
-import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.MyDecimal;
 import com.pingcap.tikv.types.AbstractDateTimeType;
 import com.pingcap.tikv.types.BitType;
-import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DateTimeType;
 import com.pingcap.tikv.types.DateType;
@@ -33,8 +31,9 @@ import com.pingcap.tikv.types.TimestampType;
 import com.pingcap.tikv.util.JsonUtils;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -141,6 +140,7 @@ public class TiChunkColumnVector extends TiColumnVector {
     int minute = coreTime.getMinute();
     int second = coreTime.getSecond();
     int microsecond = coreTime.getMicroSecond();
+    int nanosecond = coreTime.getNanoSecond();
     // This behavior can be modified using the zeroDateTimeBehavior configuration property.
     // The allowable values are:
     //    * exception (the default), which throws an SQLException with an SQLState of S1009.
@@ -157,9 +157,8 @@ public class TiChunkColumnVector extends TiColumnVector {
     } else if (type instanceof DateTimeType || type instanceof TimestampType) {
       LocalDateTime dateTime =
           LocalDateTime.of(year, month, day, hour, minute, second, microsecond * 1000);
-      ExtendedDateTime extendedDateTime = Converter.convertToDateTime(dateTime);
-      Timestamp ts = extendedDateTime.toTimeStamp();
-      return ts.getTime() / 1000 * 1000000 + ts.getNanos() / 1000;
+      ZonedDateTime zonedDateTime = ZonedDateTime.of(dateTime, ZoneOffset.systemDefault());
+      return zonedDateTime.toEpochSecond() * 1000000 + microsecond;
     } else {
       throw new UnsupportedOperationException("data, datetime, timestamp are already handled.");
     }
