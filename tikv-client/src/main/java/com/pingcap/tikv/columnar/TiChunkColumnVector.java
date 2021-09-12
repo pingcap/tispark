@@ -31,9 +31,8 @@ import com.pingcap.tikv.types.TimestampType;
 import com.pingcap.tikv.util.JsonUtils;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -158,8 +157,7 @@ public class TiChunkColumnVector extends TiColumnVector {
     } else if (type instanceof DateTimeType || type instanceof TimestampType) {
       LocalDateTime dateTime =
           LocalDateTime.of(year, month, day, hour, minute, second, microsecond * 1000);
-      ZonedDateTime zonedDateTime = ZonedDateTime.of(dateTime, ZoneOffset.systemDefault());
-      return zonedDateTime.toEpochSecond() * 1000000 + microsecond;
+      return Timestamp.valueOf(dateTime).getTime() * 1000;
     } else {
       throw new UnsupportedOperationException("data, datetime, timestamp are already handled.");
     }
