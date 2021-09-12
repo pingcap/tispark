@@ -49,6 +49,8 @@ class SequenceTestSuite extends BaseTiSparkTest {
       tidbStmt.execute("drop sequence if exists sq_test")
     } catch {
       case _: Exception =>
+    } finally {
+      super.afterAll()
     }
   }
 
