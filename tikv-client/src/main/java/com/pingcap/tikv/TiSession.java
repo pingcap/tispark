@@ -432,5 +432,8 @@ public class TiSession implements AutoCloseable {
     if (catalog != null) {
       getCatalog().close();
     }
+    if (channelFactory != null) {
+      channelFactory.close();
+    }
   }
 }
