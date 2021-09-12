@@ -157,7 +157,8 @@ public class TiChunkColumnVector extends TiColumnVector {
     } else if (type instanceof DateTimeType || type instanceof TimestampType) {
       LocalDateTime dateTime =
           LocalDateTime.of(year, month, day, hour, minute, second, microsecond * 1000);
-      return Timestamp.valueOf(dateTime).getTime() * 1000;
+      Timestamp ts = Timestamp.valueOf(dateTime);
+      return ts.getTime() / 1000 * 1000000 + ts.getNanos() / 1000;
     } else {
       throw new UnsupportedOperationException("data, datetime, timestamp are already handled.");
     }
