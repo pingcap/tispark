@@ -20,9 +20,9 @@ trait BaseRandomDataTypeTest extends BaseTiSparkTest with RandomTest {
       tidbStmt.execute(s"drop database $database")
     } catch {
       case _: Throwable =>
+    } finally {
+      super.afterAll()
     }
-
-    super.afterAll()
   }
 
   protected def loadToDB(schemaAndData: SchemaAndData): Unit = {

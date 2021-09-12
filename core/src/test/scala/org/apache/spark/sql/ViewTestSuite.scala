@@ -39,7 +39,11 @@ class ViewTestSuite extends BaseTiSparkTest {
   }
 
   override def afterAll(): Unit = {
-    dropTbl()
+    try {
+      dropTbl()
+    } finally {
+      super.afterAll()
+    }
   }
 
   private def dropTbl() = {
