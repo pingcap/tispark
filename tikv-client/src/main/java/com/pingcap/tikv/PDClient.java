@@ -334,9 +334,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     if (tiflashReplicaService != null) {
       tiflashReplicaService.shutdownNow();
     }
-    if (channelFactory != null) {
-      channelFactory.close();
-    }
   }
 
   @VisibleForTesting
