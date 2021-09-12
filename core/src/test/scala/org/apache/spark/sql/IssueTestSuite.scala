@@ -21,6 +21,16 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("test enum with empty sql_mode") {
+    tidbStmt.execute("set sql_mode=''")
+    tidbStmt.execute("create table t(c enum('good','bad'))")
+    tidbStmt.execute("insert into t values('')")
+    tidbStmt.execute("insert into t values('hello')")
+    tidbStmt.execute("insert into t values('bad')")
+    tidbStmt.execute("insert into t values(null)")
+    runTest("select * from t")
+  }
+
   test("test tiflash timestamp < 1970") {
     if (!enableTiFlashTest) {
       cancel("tiflash test not enabled")
