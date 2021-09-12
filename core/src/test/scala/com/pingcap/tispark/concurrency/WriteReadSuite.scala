@@ -40,17 +40,17 @@ class WriteReadSuite extends ConcurrencyTest {
       hasIndex = true)
   }
 
-  ignore("read conflict using tispark") {
+  test("read conflict using tispark") {
     doTestTiSpark(s"create table $dbtable(i int, s varchar(128))", hasIndex = false)
   }
 
-  ignore("read conflict using tispark: primary key") {
+  test("read conflict using tispark: primary key") {
     doTestTiSpark(
       s"create table $dbtable(i int, s varchar(128), PRIMARY KEY(i))",
       hasIndex = true)
   }
 
-  ignore("read conflict using tispark: unique key") {
+  test("read conflict using tispark: unique key") {
     doTestTiSpark(s"create table $dbtable(i int, s varchar(128), UNIQUE KEY(i))", hasIndex = true)
   }
 
