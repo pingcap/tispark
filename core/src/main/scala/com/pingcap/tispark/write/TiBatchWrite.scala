@@ -279,6 +279,9 @@ class TiBatchWrite(
 
     // start primary key ttl update
     if (isTTLUpdate) {
+      if (ttlManager != null) {
+        ttlManager.close()
+      }
       ttlManager = new TTLManager(tiConf, startTs, primaryKey.bytes)
       ttlManager.keepAlive()
     }

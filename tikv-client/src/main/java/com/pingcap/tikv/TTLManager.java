@@ -72,7 +72,7 @@ public class TTLManager {
     this.kvClient = TiSession.getInstance(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
 
-    scheduler =
+    this.scheduler =
         new ScheduledThreadPoolExecutor(
             1,
             new BasicThreadFactory.Builder()
@@ -82,14 +82,16 @@ public class TTLManager {
   }
 
   public void keepAlive() {
-    if (state.compareAndSet(STATE_UNINITIALIZED, STATE_RUNNING)) {
-      scheduler.scheduleAtFixedRate(
-          this::doKeepAlive, SCHEDULER_INITIAL_DELAY, SCHEDULER_PERIOD, TimeUnit.MILLISECONDS);
-    } else {
-      LOG.warn(
-          "keepAlive failed state={} key={}",
-          state.get(),
-          LogDesensitization.hide(KeyUtils.formatBytes(primaryLock)));
+    synchronized (state) {
+      if (state.compareAndSet(STATE_UNINITIALIZED, STATE_RUNNING)) {
+        scheduler.scheduleAtFixedRate(
+            this::doKeepAlive, SCHEDULER_INITIAL_DELAY, SCHEDULER_PERIOD, TimeUnit.MILLISECONDS);
+      } else {
+        LOG.warn(
+            "keepAlive failed state={} key={}",
+            state.get(),
+            LogDesensitization.hide(KeyUtils.formatBytes(primaryLock)));
+      }
     }
   }
 
@@ -152,8 +154,10 @@ public class TTLManager {
   }
 
   public void close() throws InterruptedException {
-    if (state.compareAndSet(STATE_RUNNING, STATE_CLOSED)) {
-      scheduler.shutdown();
+    synchronized (state) {
+      if (state.compareAndSet(STATE_RUNNING, STATE_CLOSED)) {
+        scheduler.shutdown();
+      }
     }
   }
 }
