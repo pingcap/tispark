@@ -134,12 +134,12 @@ public class TableCodecV2Test {
                 new Object[] {new byte[] {49, 48, 48}}),
             // test date
             TestCase.createNew(
-                new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 69, 77, 105, 166, 25},
+                new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 0, 0, 104, 166, 25},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
                     .addColumn("c1", DateType.DATE)
                     .build(),
-                new Object[] {new Date(1590007985000L - timezoneOffset)}),
+                new Object[] {Date.valueOf("2020-05-20")}),
             // test datetime
             TestCase.createNew(
                 new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 69, 77, 105, 166, 25},
@@ -307,7 +307,36 @@ public class TableCodecV2Test {
     testCase.test();
   }
 
-  public static class TestCase {
+  @Test
+  public void testSpecialDateTimeType() {
+    TestCase testCase =
+        TestCase.createNew(
+            new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 0, 0, 66, 178, 12},
+            MetaUtils.TableBuilder.newBuilder()
+                .name("t")
+                .addColumn("c1", DateTimeType.DATETIME)
+                .build(),
+            new Object[] {Timestamp.valueOf("1000-01-01 00:00:00")});
+    testCase.test();
+    testCase =
+        TestCase.createNew(
+            new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 0, 0, 255, 177, 12},
+            MetaUtils.TableBuilder.newBuilder()
+                .name("t")
+                .addColumn("c1", TimestampType.TIMESTAMP)
+                .build(),
+            new Object[] {Timestamp.valueOf("1000-01-01 00:00:00")});
+    testCase.test();
+    // test date
+    testCase =
+        TestCase.createNew(
+            new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 0, 0, 66, 178, 12},
+            MetaUtils.TableBuilder.newBuilder().name("t").addColumn("c1", DateType.DATE).build(),
+            new Object[] {Date.valueOf("1000-01-01")});
+    testCase.test();
+  }
+
+  private static class TestCase {
     private final byte[] bytes;
     private final TiTableInfo tableInfo;
     private final Long handle;
@@ -391,7 +420,7 @@ public class TableCodecV2Test {
         } else if (o instanceof byte[]) {
           s.append(Arrays.toString((byte[]) o));
         } else {
-          s.append(o.toString());
+          s.append(o);
         }
       }
       return s.toString();

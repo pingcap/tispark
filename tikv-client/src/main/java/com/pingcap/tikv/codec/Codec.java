@@ -476,8 +476,8 @@ public class Codec {
      */
     static long toPackedLong(
         int year, int month, int day, int hour, int minute, int second, int micro) {
-      long ymd = (year * 13 + month) << 5 | day;
-      long hms = hour << 12 | minute << 6 | second;
+      long ymd = (year * 13L + month) << 5 | day;
+      long hms = (long) hour << 12 | (long) minute << 6 | second;
       return ((ymd << 17 | hms) << 24) | micro;
     }
 
@@ -618,11 +618,11 @@ public class Codec {
      * @return a packed long.
      */
     static long toPackedLong(int year, int month, int day) {
-      long ymd = (year * 13 + month) << 5 | day;
+      long ymd = (year * 13L + month) << 5 | day;
       return ymd << 41;
     }
 
-    static LocalDate fromPackedLong(long packed) {
+    public static LocalDate fromPackedLong(long packed) {
       // TODO: As for JDBC behavior, it can be configured to "round" or "toNull"
       // for now we didn't pass in session so we do a toNull behavior
       if (packed == 0) {
