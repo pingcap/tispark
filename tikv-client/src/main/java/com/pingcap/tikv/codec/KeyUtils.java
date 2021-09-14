@@ -18,9 +18,19 @@ package com.pingcap.tikv.codec;
 import com.google.common.primitives.UnsignedBytes;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.TextFormat;
+import com.pingcap.tikv.key.Key;
 import org.tikv.kvproto.Coprocessor;
 
 public class KeyUtils {
+
+  public static Key getEncodedKey(ByteString key) {
+    if (key.isEmpty()) {
+      // if key is empty, it must be the start key.
+      return Key.toRawKey(key, true);
+    } else {
+      return Key.toRawKey(key);
+    }
+  }
 
   public static String formatBytes(byte[] bytes) {
     if (bytes == null) return "null";
