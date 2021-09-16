@@ -30,28 +30,32 @@ public class ChannelFactory implements AutoCloseable {
     this.maxFrameSize = maxFrameSize;
   }
 
-  public ManagedChannel getChannel(String addressStr) {
-    return connPool.computeIfAbsent(
-        addressStr,
-        key -> {
-          URI address;
-          try {
-            address = URI.create("http://" + key);
-          } catch (Exception e) {
-            throw new IllegalArgumentException("failed to form address " + key);
-          }
-          // Channel should be lazy without actual connection until first call
-          // So a coarse grain lock is ok here
-          return ManagedChannelBuilder.forAddress(address.getHost(), address.getPort())
-              .maxInboundMessageSize(maxFrameSize)
-              .usePlaintext()
-              .idleTimeout(60, TimeUnit.SECONDS)
-              .build();
-        });
+  private ManagedChannel addrToChannel(String addressStr) {
+    URI address;
+    try {
+      address = URI.create("http://" + addressStr);
+    } catch (Exception e) {
+      throw new IllegalArgumentException("failed to form address " + addressStr);
+    }
+    // Channel should be lazy without actual connection until first call
+    // So a coarse grain lock is ok here
+    return ManagedChannelBuilder.forAddress(address.getHost(), address.getPort())
+        .maxInboundMessageSize(maxFrameSize)
+        .usePlaintext()
+        .idleTimeout(60, TimeUnit.SECONDS)
+        .build();
+  }
+
+  public synchronized ManagedChannel getChannel(String addressStr) {
+    ManagedChannel channel = connPool.computeIfAbsent(addressStr, this::addrToChannel);
+    if (channel.isShutdown()) {
+      return connPool.put(addressStr, addrToChannel(addressStr));
+    }
+    return channel;
   }
 
   @Override
-  public void close() {
+  public synchronized void close() {
     connPool.forEach(
         (k, v) -> {
           v.shutdownNow();

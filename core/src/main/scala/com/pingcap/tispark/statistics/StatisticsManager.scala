@@ -276,9 +276,10 @@ object StatisticsManager {
     dbPrefix = tiSession.getConf.getDBPrefix
     // An estimator used to calculate table size.
     tableSizeEstimator = DefaultTableSizeEstimator
-    metaTable = catalog.getTable(s"${dbPrefix}mysql", "stats_meta")
-    histTable = catalog.getTable(s"${dbPrefix}mysql", "stats_histograms")
-    bucketTable = catalog.getTable(s"${dbPrefix}mysql", "stats_buckets")
+    val mysqlDB = catalog.getDatabaseFromCache(s"${dbPrefix}mysql")
+    metaTable = catalog.getTableFromCache(mysqlDB, "stats_meta")
+    histTable = catalog.getTableFromCache(mysqlDB, "stats_histograms")
+    bucketTable = catalog.getTableFromCache(mysqlDB, "stats_buckets")
     statisticsMap.invalidateAll()
   }
 

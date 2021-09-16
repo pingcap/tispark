@@ -152,16 +152,16 @@ case class TiDBRelation(
 
   private def getTableOrThrow(database: String, table: String): TiTableInfo =
     meta.getTable(database, table).getOrElse {
-      val db = meta.getDatabase(database)
+      val db = meta.getDatabaseFromCache(database)
       if (db.isEmpty) {
         throw new TiClientInternalException(
-          "Database not exist " + database + " valid databases are: " + meta.getDatabases
+          "Database not exist " + database + " valid databases are: " + meta.getDatabasesFromCache
             .map(_.getName)
             .mkString("[", ",", "]"))
       } else {
         throw new TiClientInternalException(
           "Table not exist " + tableRef + " valid tables are: " + meta
-            .getTables(db.get)
+            .getTablesFromCache(db.get)
             .map(_.getName)
             .mkString("[", ",", "]"))
       }
