@@ -18,7 +18,7 @@
 package com.pingcap.tikv;
 
 import static com.pingcap.tikv.util.ClientUtils.getBatches;
-import static com.pingcap.tikv.util.ClientUtils.getKvPairs;
+import static com.pingcap.tikv.util.ClientUtils.getTasksWithOutput;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.GrpcException;
@@ -30,9 +30,12 @@ import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.Batch;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import org.slf4j.Logger;
@@ -94,55 +97,56 @@ public class KVClient implements AutoCloseable {
   }
 
   private List<KvPair> doSendBatchGet(BackOffer backOffer, List<ByteString> keys, long version) {
-    ExecutorCompletionService<List<KvPair>> completionService =
+    ExecutorCompletionService<Pair<List<Batch>, List<KvPair>>> completionService =
         new ExecutorCompletionService<>(batchGetThreadPool);
 
     List<Batch> batches =
         getBatches(backOffer, keys, BATCH_GET_SIZE, MAX_BATCH_LIMIT, this.clientBuilder);
 
-    for (Batch batch : batches) {
-      completionService.submit(
-          () -> doSendBatchGetInBatchesWithRetry(batch.getBackOffer(), batch, version));
+    // prevent stack overflow
+    Queue<List<Batch>> taskQueue = new LinkedList<>();
+    List<KvPair> result = new ArrayList<>();
+    taskQueue.offer(batches);
+
+    while (!taskQueue.isEmpty()) {
+      List<Batch> task = taskQueue.poll();
+      for (Batch batch : task) {
+        completionService.submit(
+            () -> doSendBatchGetInBatchesWithRetry(batch.getBackOffer(), batch, version));
+      }
+      result.addAll(
+          getTasksWithOutput(completionService, taskQueue, task, BackOffer.RAWKV_MAX_BACKOFF));
     }
 
-    return getKvPairs(completionService, batches, BackOffer.BATCH_GET_MAX_BACKOFF);
+    return result;
   }
 
-  private List<KvPair> doSendBatchGetInBatchesWithRetry(
+  private Pair<List<Batch>, List<KvPair>> doSendBatchGetInBatchesWithRetry(
       BackOffer backOffer, Batch batch, long version) {
     TiRegion oldRegion = batch.getRegion();
     TiRegion currentRegion =
-        clientBuilder.getRegionManager().getRegionByKey(oldRegion.getStartKey());
-
+        clientBuilder.getRegionManager().getRegionByKey(batch.getRegion().getStartKey());
     if (oldRegion.equals(currentRegion)) {
       RegionStoreClient client = clientBuilder.build(batch.getRegion());
       try {
-        return client.batchGet(backOffer, batch.getKeys(), version);
+        List<KvPair> partialResult = client.batchGet(backOffer, batch.getKeys(), version);
+        return Pair.create(new ArrayList<>(), partialResult);
       } catch (final TiKVException e) {
         backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
         clientBuilder.getRegionManager().invalidateRegion(batch.getRegion());
-        logger.warn("ReSplitting ranges for BatchGetRequest", e);
-
-        // retry
-        return doSendBatchGetWithRefetchRegion(backOffer, batch, version);
+        logger.debug("ReSplitting ranges for BatchGetRequest", e);
+        return doRetryBatchGet(backOffer, batch);
       }
     } else {
-      return doSendBatchGetWithRefetchRegion(backOffer, batch, version);
+      return doRetryBatchGet(backOffer, batch);
     }
   }
 
-  private List<KvPair> doSendBatchGetWithRefetchRegion(
-      BackOffer backOffer, Batch batch, long version) {
-    List<Batch> retryBatches =
-        getBatches(backOffer, batch.getKeys(), BATCH_GET_SIZE, MAX_BATCH_LIMIT, this.clientBuilder);
+  private Pair<List<Batch>, List<KvPair>> doRetryBatchGet(BackOffer backOffer, Batch batch) {
+    return Pair.create(doSendBatchGetWithRefetchRegion(backOffer, batch), new ArrayList<>());
+  }
 
-    ArrayList<KvPair> results = new ArrayList<>();
-    for (Batch retryBatch : retryBatches) {
-      // recursive calls
-      List<KvPair> batchResult =
-          doSendBatchGetInBatchesWithRetry(retryBatch.getBackOffer(), retryBatch, version);
-      results.addAll(batchResult);
-    }
-    return results;
+  private List<Batch> doSendBatchGetWithRefetchRegion(BackOffer backOffer, Batch batch) {
+    return getBatches(backOffer, batch.getKeys(), BATCH_GET_SIZE, MAX_BATCH_LIMIT, clientBuilder);
   }
 }
