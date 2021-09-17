@@ -343,6 +343,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       Kvrpcpb.KeyError keyError = getKeyError.apply(resp);
       if (keyError != null) {
         try {
+          logger.warn(resp.getClass().getName() + " contains lock");
           Lock lock = AbstractLockResolverClient.extractLockFromKeyErr(keyError);
           resolveLock(backOffer, lock);
           retry = true;
