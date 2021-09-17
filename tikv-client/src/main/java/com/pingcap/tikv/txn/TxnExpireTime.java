@@ -32,6 +32,8 @@ public class TxnExpireTime {
   public void update(long lockExpire) {
     if (lockExpire < 0) {
       lockExpire = 0;
+    } else if (lockExpire > 1000) {
+      lockExpire = 1000;
     }
 
     if (!this.initialized) {
