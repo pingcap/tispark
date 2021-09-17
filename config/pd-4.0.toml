@@ -1,3 +1,11 @@
+[pd-server]
+## Disable dashboard
+dashboard-address = "none"
+
 [replication]
 enable-placement-rules = true
 max-replicas = 1
+
+[dashboard]
+## When enabled, usage data will be sent to PingCAP for improving user experience.
+enable-telemetry = false
