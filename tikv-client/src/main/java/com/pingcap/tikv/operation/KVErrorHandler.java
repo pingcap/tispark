@@ -168,6 +168,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         backOffer.doBackOffWithMaxSleep(
             BoTxnLockFast, msBeforeExpired, new KeyException(lock.toString()));
       }
+      logger.warn("resolve lock complete");
     }
   }
 

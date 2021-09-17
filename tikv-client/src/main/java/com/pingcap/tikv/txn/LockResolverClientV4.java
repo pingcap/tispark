@@ -28,6 +28,7 @@ import com.pingcap.tikv.exception.RegionException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TxnNotFoundException;
 import com.pingcap.tikv.exception.WriteConflictException;
+import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.region.AbstractRegionStoreClient;
 import com.pingcap.tikv.region.RegionManager;
@@ -112,7 +113,9 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     Set<Long> pushed = new HashSet<>(locks.size());
 
     for (Lock l : locks) {
+      logger.warn("lockts=" + TiTimestamp.extractPhysical(l.getTxnID()));
       TxnStatus status = getTxnStatusFromLock(bo, l, callerStartTS);
+      logger.warn("ttl=" + status.getTtl());
 
       if (status.getTtl() == 0) {
         Set<RegionVerID> cleanRegion =
@@ -126,6 +129,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
 
       } else {
         long msBeforeLockExpired = TsoUtils.untilExpired(l.getTxnID(), status.getTtl());
+        logger.warn(msBeforeLockExpired + "ms before lock expired");
         msBeforeTxnExpired.update(msBeforeLockExpired);
 
         if (forWrite) {

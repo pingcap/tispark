@@ -701,7 +701,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
 
     if (response.hasLocked()) {
       Lock lock = new Lock(response.getLocked());
-      logger.debug(String.format("coprocessor encounters locks: %s", lock));
+      logger.warn(String.format("coprocessor encounters locks: %s", lock));
       ResolveLockResult resolveLockResult =
           lockResolverClient.resolveLocks(
               backOffer, startTs, Collections.singletonList(lock), forWrite);
