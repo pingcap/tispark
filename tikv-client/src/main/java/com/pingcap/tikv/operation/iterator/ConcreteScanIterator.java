@@ -41,6 +41,7 @@ import org.tikv.kvproto.Metapb;
 public class ConcreteScanIterator extends ScanIterator {
   private final long version;
   private final Logger logger = LoggerFactory.getLogger(ConcreteScanIterator.class);
+  private final BackOffer backOffer = ConcreteBackOffer.newScannerNextMaxBackOff();
 
   public ConcreteScanIterator(
       TiConfiguration conf,
@@ -55,7 +56,6 @@ public class ConcreteScanIterator extends ScanIterator {
 
   @Override
   TiRegion loadCurrentRegionToCache() throws GrpcException {
-    BackOffer backOffer = ConcreteBackOffer.newScannerNextMaxBackOff();
     while (true) {
       try (RegionStoreClient client = builder.build(startKey)) {
         TiRegion region = client.getRegion();
