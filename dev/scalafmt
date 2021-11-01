@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
 echo $MAVEN_HOME
-
-mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false
+SCALA_VERSION="$@"
+if [ -z $SCALA_VERSION ]; then
+  SCALA_VERSION="2.12"
+fi
+echo $SCALA_VERSION
+mvn mvn-scalafmt_${SCALA_VERSION}:format -Dscalafmt.skip=false
