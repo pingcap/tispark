@@ -30,8 +30,8 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                         export LANGUAGE=en_US.UTF-8
                         cp -R /home/jenkins/agent/git/tispark/. ./
                         git checkout -f ${ghprbActualCommit}
-                        mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false
-                        mvn com.coveo:fmt-maven-plugin:format
+                        ./dev/scalafmt
+                        ./dev/javafmt
                         git diff --quiet
                         formatted="\$?"
                         if [[ "\${formatted}" -eq 1 ]]
