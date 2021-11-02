@@ -18,7 +18,13 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                         if (sh(returnStatus: true, script: '[ -d .git ] && [ -f Makefile ] && git rev-parse --git-dir > /dev/null 2>&1') != 0) {
                             deleteDir()
                         }
-                        checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: 'master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'PruneStaleBranch'], [$class: 'CleanBeforeCheckout']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: credentialsId, refspec: '+refs/pull/*:refs/remotes/origin/pr/*', url: 'git@github.com:pingcap/tispark.git']]]
+
+                        def specStr = "+refs/heads/*:refs/remotes/origin/*"
+                        if (ghprbPullId != null && ghprbPullId != "") {
+                            specStr = "+refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*"
+                        }
+
+                        checkout changelog: false, poll: false, scm: [$class: 'GitSCM', branches: [[name: 'master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'PruneStaleBranch'], [$class: 'CleanBeforeCheckout']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: credentialsId, refspec: specStr, url: 'git@github.com:pingcap/tispark.git']]]
                     }
                 }
     
@@ -30,8 +36,8 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                         export LANGUAGE=en_US.UTF-8
                         cp -R /home/jenkins/agent/git/tispark/. ./
                         git checkout -f ${ghprbActualCommit}
-                        mvn mvn-scalafmt_2.11:format -Dscalafmt.skip=false
-                        mvn com.coveo:fmt-maven-plugin:format
+                        ./dev/scalafmt
+                        ./dev/javafmt
                         git diff --quiet
                         formatted="\$?"
                         if [[ "\${formatted}" -eq 1 ]]

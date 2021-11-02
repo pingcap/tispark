@@ -9,8 +9,8 @@
     </parent>
 
     <groupId>com.pingcap.tispark</groupId>
-    <artifactId>tispark-parent</artifactId>
-    <version>2.4.2-SNAPSHOT</version>
+    <artifactId>tispark-parent-${scala.binary.version}</artifactId>
+    <version>2.4.2</version>
     <packaging>pom</packaging>
     <name>TiSpark Project Parent POM</name>
     <url>http://github.copm/pingcap/tispark</url>
@@ -70,10 +70,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-        <spark.version.compile>2.3.4</spark.version.compile>
+        <spark.version.compile>2.4.6</spark.version.compile>
         <spark.version.test>2.4.6</spark.version.test>
-        <scala.binary.version>2.11</scala.binary.version>
-        <scala.version>2.11.12</scala.version>
+        <scala.binary.version>2.12</scala.binary.version>
+        <scala.version>2.12.10</scala.version>
         <!-- for now, not running scalafmt as part of default verify pipeline -->
         <scalafmt.skip>true</scalafmt.skip>
         <scalatest.version>3.0.8</scalatest.version>
@@ -163,7 +163,6 @@
         <module>db-random-test</module>
         <module>tikv-client</module>
         <module>core</module>
-        <module>spark-wrapper/spark-2.3</module>
         <module>spark-wrapper/spark-2.4</module>
         <module>assembly</module>
     </modules>
@@ -186,6 +185,13 @@
             </activation>
             <properties>
                 <test.java.home>${env.JAVA_HOME}</test.java.home>
+            </properties>
+        </profile>
+        <profile>
+            <id>scala-2.11</id>
+            <properties>
+                <scala.version>2.11.12</scala.version>
+                <scala.binary.version>2.12</scala.binary.version>
             </properties>
         </profile>
     </profiles>

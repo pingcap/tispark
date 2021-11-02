@@ -27,7 +27,7 @@ class ExpressionIndexSuite extends BaseTiSparkTest {
     tidbStmt.execute("CREATE INDEX idx ON t ((lower(name)))")
     tidbStmt.execute("insert into t values ('a'), ('b'), ('PingCAP')")
 
-    val query = "select * from t  where lower(name) = 'pingcap';"
+    val query = "select * from t  where lower(name) = 'pingcap'"
     spark.sql(s"explain $query").show(false)
     spark.sql(query).show()
     val queryResult = spark.sql(query).collect()
