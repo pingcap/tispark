@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.pingcap.tispark</groupId>
-        <artifactId>tispark-parent-${scala.binary.version}</artifactId>
+        <artifactId>tispark-parent_${scala.binary.version}</artifactId>
         <version>2.4.2</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
