@@ -147,8 +147,8 @@ public final class RowIDAllocator implements Serializable {
     if (pairs.size() > 1) {
       Iterator<BytePairWrapper> iterator = pairs.iterator();
       iterator.next();
-      twoPhaseCommitter.prewriteSecondaryKeys(primaryPair.getKey(), iterator,
-          BackOffer.PREWRITE_MAX_BACKOFF);
+      twoPhaseCommitter.prewriteSecondaryKeys(
+          primaryPair.getKey(), iterator, BackOffer.PREWRITE_MAX_BACKOFF);
     }
 
     twoPhaseCommitter.commitPrimaryKey(
@@ -162,8 +162,8 @@ public final class RowIDAllocator implements Serializable {
     }
   }
 
-  private Optional<BytePairWrapper> getMetaToUpdate(ByteString key, byte[] oldVal,
-      Snapshot snapshot) {
+  private Optional<BytePairWrapper> getMetaToUpdate(
+      ByteString key, byte[] oldVal, Snapshot snapshot) {
     // 1. encode hash meta key
     // 2. load meta via hash meta key from TiKV
     // 3. update meta's filed count and set it back to TiKV
