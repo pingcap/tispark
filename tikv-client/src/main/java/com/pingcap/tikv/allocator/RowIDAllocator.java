@@ -35,9 +35,9 @@ import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -218,7 +218,7 @@ public final class RowIDAllocator implements Serializable {
       return 0L;
     }
 
-    List<BytePairWrapper> pairs = new LinkedList<>();
+    List<BytePairWrapper> pairs = new ArrayList<>(2);
     pairs.add(new BytePairWrapper(dataKey.toByteArray(), newVal));
     getMetaToUpdate(key, oldVal, snapshot).ifPresent(pairs::add);
     set(pairs);
