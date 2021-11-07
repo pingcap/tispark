@@ -35,12 +35,13 @@ import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +52,7 @@ import org.slf4j.LoggerFactory;
  * <p>(start, end] is allocated
  */
 public final class RowIDAllocator implements Serializable {
+
   private final long maxShardRowIDBits;
   private final long dbId;
   private final TiConfiguration conf;
@@ -131,22 +133,21 @@ public final class RowIDAllocator implements Serializable {
   }
 
   // set key value pairs to tikv via two phase committer protocol.
-  private void set(List<BytePairWrapper> pairs) {
-    if (pairs == null || pairs.size() == 0) {
+  private void set(@Nonnull List<BytePairWrapper> pairs) {
+    Iterator<BytePairWrapper> iterator = pairs.iterator();
+    if (!iterator.hasNext()) {
       return;
     }
     TiSession session = TiSession.getInstance(conf);
     TwoPhaseCommitter twoPhaseCommitter =
         new TwoPhaseCommitter(conf, session.getTimestamp().getVersion());
-    BytePairWrapper primaryPair = pairs.get(0);
+    BytePairWrapper primaryPair = iterator.next();
     twoPhaseCommitter.prewritePrimaryKey(
         ConcreteBackOffer.newCustomBackOff(BackOffer.PREWRITE_MAX_BACKOFF),
         primaryPair.getKey(),
         primaryPair.getValue());
 
-    if (pairs.size() > 1) {
-      Iterator<BytePairWrapper> iterator = pairs.iterator();
-      iterator.next();
+    if (iterator.hasNext()) {
       twoPhaseCommitter.prewriteSecondaryKeys(
           primaryPair.getKey(), iterator, BackOffer.PREWRITE_MAX_BACKOFF);
     }
@@ -217,7 +218,7 @@ public final class RowIDAllocator implements Serializable {
       return 0L;
     }
 
-    ArrayList<BytePairWrapper> pairs = new ArrayList<>();
+    List<BytePairWrapper> pairs = new LinkedList<>();
     pairs.add(new BytePairWrapper(dataKey.toByteArray(), newVal));
     getMetaToUpdate(key, oldVal, snapshot).ifPresent(pairs::add);
     set(pairs);
