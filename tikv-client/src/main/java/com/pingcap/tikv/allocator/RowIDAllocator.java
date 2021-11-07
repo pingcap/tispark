@@ -31,6 +31,7 @@ import com.pingcap.tikv.codec.MetaCodec;
 import com.pingcap.tikv.exception.AllocateRowIDOverflowException;
 import com.pingcap.tikv.exception.TiBatchWriteException;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
@@ -58,6 +59,7 @@ public final class RowIDAllocator implements Serializable {
   private final TiConfiguration conf;
   private final long step;
   private long end;
+  private TiTimestamp timestamp;
 
   private static final Logger LOG = LoggerFactory.getLogger(RowIDAllocator.class);
 
@@ -133,14 +135,13 @@ public final class RowIDAllocator implements Serializable {
   }
 
   // set key value pairs to tikv via two phase committer protocol.
-  private void set(@Nonnull List<BytePairWrapper> pairs) {
+  private void set(@Nonnull List<BytePairWrapper> pairs, @Nonnull TiTimestamp timestamp) {
     Iterator<BytePairWrapper> iterator = pairs.iterator();
     if (!iterator.hasNext()) {
       return;
     }
     TiSession session = TiSession.getInstance(conf);
-    TwoPhaseCommitter twoPhaseCommitter =
-        new TwoPhaseCommitter(conf, session.getTimestamp().getVersion());
+    TwoPhaseCommitter twoPhaseCommitter = new TwoPhaseCommitter(conf, timestamp.getVersion());
     BytePairWrapper primaryPair = iterator.next();
     twoPhaseCommitter.prewritePrimaryKey(
         ConcreteBackOffer.newCustomBackOff(BackOffer.PREWRITE_MAX_BACKOFF),
@@ -221,7 +222,7 @@ public final class RowIDAllocator implements Serializable {
     List<BytePairWrapper> pairs = new ArrayList<>(2);
     pairs.add(new BytePairWrapper(dataKey.toByteArray(), newVal));
     getMetaToUpdate(key, oldVal, snapshot).ifPresent(pairs::add);
-    set(pairs);
+    set(pairs, snapshot.getTimestamp());
     return Long.parseLong(new String(newVal));
   }
 
