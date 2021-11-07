@@ -18,6 +18,7 @@ import static com.pingcap.tikv.util.BackOffer.ROW_ID_ALLOCATOR_BACKOFF;
 
 import com.google.common.primitives.UnsignedLongs;
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.BytePairWrapper;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
@@ -34,7 +35,11 @@ import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,20 +130,30 @@ public final class RowIDAllocator implements Serializable {
     return end;
   }
 
-  // set key value pair to tikv via two phase committer protocol.
-  private void set(ByteString key, byte[] value) {
+  // set key value pairs to tikv via two phase committer protocol.
+  private void set(List<BytePairWrapper> pairs) {
+    if (pairs == null || pairs.size() == 0) {
+      return;
+    }
     TiSession session = TiSession.getInstance(conf);
     TwoPhaseCommitter twoPhaseCommitter =
         new TwoPhaseCommitter(conf, session.getTimestamp().getVersion());
-
+    BytePairWrapper primaryPair = pairs.get(0);
     twoPhaseCommitter.prewritePrimaryKey(
         ConcreteBackOffer.newCustomBackOff(BackOffer.PREWRITE_MAX_BACKOFF),
-        key.toByteArray(),
-        value);
+        primaryPair.getKey(),
+        primaryPair.getValue());
+
+    if (pairs.size() > 1) {
+      Iterator<BytePairWrapper> iterator = pairs.iterator();
+      iterator.next();
+      twoPhaseCommitter.prewriteSecondaryKeys(primaryPair.getKey(), iterator,
+          BackOffer.PREWRITE_MAX_BACKOFF);
+    }
 
     twoPhaseCommitter.commitPrimaryKey(
         ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF),
-        key.toByteArray(),
+        primaryPair.getKey(),
         session.getTimestamp().getVersion());
 
     try {
@@ -147,7 +162,8 @@ public final class RowIDAllocator implements Serializable {
     }
   }
 
-  private void updateMeta(ByteString key, byte[] oldVal, Snapshot snapshot) {
+  private Optional<BytePairWrapper> getMetaToUpdate(ByteString key, byte[] oldVal,
+      Snapshot snapshot) {
     // 1. encode hash meta key
     // 2. load meta via hash meta key from TiKV
     // 3. update meta's filed count and set it back to TiKV
@@ -172,8 +188,9 @@ public final class RowIDAllocator implements Serializable {
       cdo.reset();
       cdo.writeLong(fieldCount);
 
-      set(metaKey, cdo.toBytes());
+      return Optional.of(new BytePairWrapper(metaKey.toByteArray(), cdo.toBytes()));
     }
+    return Optional.empty();
   }
 
   private long updateHash(
@@ -200,8 +217,10 @@ public final class RowIDAllocator implements Serializable {
       return 0L;
     }
 
-    set(dataKey, newVal);
-    updateMeta(key, oldVal, snapshot);
+    ArrayList<BytePairWrapper> pairs = new ArrayList<>();
+    pairs.add(new BytePairWrapper(dataKey.toByteArray(), newVal));
+    getMetaToUpdate(key, oldVal, snapshot).ifPresent(pairs::add);
+    set(pairs);
     return Long.parseLong(new String(newVal));
   }
 
