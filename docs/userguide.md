@@ -70,13 +70,30 @@ Download the TiSpark's jar package from [here](https://github.com/pingcap/tispar
 
 You do not need to reboot the existing Spark cluster for TiSpark to run on it. Instead, use Spark's `--jars` parameter to introduce TiSpark as a dependency:
 
+For TiSpark version >= 2.0:
+
+```bash
+./bin/spark-shell --jars /wherever-it-is/tispark-assembly-${tispark_version}.jar:/wherever-it-is/spark-wrapper-${spark_version}-${tispark_version}.jar
 ```
-spark-shell --jars $your_path_to/tispark-${name_with_version}.jar
+
+For TiSpark version < 2.0:
+
+```bash
+./bin/spark-shell --jars /wherever-it-is/tispark-${name_with_version}.jar
 ```
 
 To deploy TiSpark as a default component, place the TiSpark jar package into each node's jar path on the Spark cluster and restart the Spark cluster:
 
+For TiSpark version >= 2.0:
+
+```bash
+cp $your_path_to/tispark-assembly-${tispark_version}.jar $SPARK_HOME/jars
+cp $your_path_to/spark-wrapper-${spark_version}-${tispark_version}.jar $SPARK_HOME/jars
 ```
+
+For TiSpark version < 2.0:
+
+```bash
 cp $your_path_to/tispark-${name_with_version}.jar $SPARK_HOME/jars
 ```
 
