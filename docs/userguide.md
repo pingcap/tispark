@@ -246,6 +246,7 @@ customer.write
 .format("tidb")
 .option("database", "tpch_test")
 .option("table", "cust_test_select")
+.options(tidbOptions)
 .mode("append")
 .save()
 ```
