@@ -18,6 +18,7 @@ package org.apache.spark.sql
 import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
 import org.apache.spark.sql.extensions.{
+  TiAuthRuleFactory,
   TiDDLRuleFactory,
   TiParserFactory,
   TiResolutionRuleFactory
@@ -33,6 +34,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 
     e.injectParser(new TiParserFactory(getOrCreateTiContext))
     e.injectResolutionRule(new TiDDLRuleFactory(getOrCreateTiContext))
+    e.injectResolutionRule(new TiAuthRuleFactory(getOrCreateTiContext))
     e.injectResolutionRule(new TiResolutionRuleFactory(getOrCreateTiContext))
     e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
@@ -42,7 +44,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
     synchronized {
       tiContextMap.get(sparkSession) match {
         case Some(tiContext) => tiContext
-        case None =>
+        case None            =>
           // TODO: make Meta and RegionManager independent to sparkSession
           val tiContext = new TiContext(sparkSession)
           tiContextMap.put(sparkSession, tiContext)
@@ -52,7 +54,15 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 }
 
 object TiExtensions {
-  def enabled(sparkSession: SparkSession): Boolean = getTiContext(sparkSession).isDefined
+  def authEnable(sparkSession: SparkSession): Boolean = {
+    sparkSession.sparkContext.conf
+      .get("spark.sql.auth.enable", "false")
+      .equalsIgnoreCase("true")
+  }
+
+  def enabled(sparkSession: SparkSession): Boolean = getTiContext(
+    sparkSession
+  ).isDefined
 
   def catalogPluginMode(sparkSession: SparkSession): Boolean = {
     sparkSession.sparkContext.conf
@@ -67,17 +77,21 @@ object TiExtensions {
   def getTiContext(sparkSession: SparkSession): Option[TiContext] = {
     if (sparkSession.sessionState.planner.extraPlanningStrategies.nonEmpty &&
       sparkSession.sessionState.planner.extraPlanningStrategies.head
-        .isInstanceOf[TiStrategy]) {
+        .isInstanceOf[TiStrategy]
+    ) {
       Some(
         sparkSession.sessionState.planner.extraPlanningStrategies.head
           .asInstanceOf[TiStrategy]
-          .getOrCreateTiContext(sparkSession))
+          .getOrCreateTiContext(sparkSession)
+      )
     } else if (sparkSession.experimental.extraStrategies.nonEmpty &&
-      sparkSession.experimental.extraStrategies.head.isInstanceOf[TiStrategy]) {
+      sparkSession.experimental.extraStrategies.head.isInstanceOf[TiStrategy]
+    ) {
       Some(
         sparkSession.experimental.extraStrategies.head
           .asInstanceOf[TiStrategy]
-          .getOrCreateTiContext(sparkSession))
+          .getOrCreateTiContext(sparkSession)
+      )
     } else {
       None
     }

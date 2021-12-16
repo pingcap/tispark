@@ -20,6 +20,7 @@ import java.lang
 import com.pingcap.tikv.tools.RegionUtils
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
+import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.TiUtil
@@ -40,6 +41,15 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   final val version: String = TiSparkVersion.version
   final val conf: SparkConf = sparkSession.sparkContext.conf
   final val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(conf)
+  lazy final val tiAuthorization: TiAuthorization = TiAuthorization(
+    Map(
+      "tidb.addr" -> sparkSession.sqlContext.getConf("tidb.addr"),
+      "tidb.port" -> sparkSession.sqlContext.getConf("tidb.port"),
+      "tidb.user" -> sparkSession.sqlContext.getConf("tidb.user"),
+      "tidb.password" -> sparkSession.sqlContext.getConf("tidb.password"),
+      "multiTables"-> "true"
+    ), tiConf
+  )
   final val tiSession: TiSession = TiSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
   lazy val tiConcreteCatalog: TiSessionCatalog =

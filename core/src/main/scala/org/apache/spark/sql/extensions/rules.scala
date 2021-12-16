@@ -14,11 +14,27 @@
  */
 package org.apache.spark.sql.extensions
 
+import com.pingcap.tispark.auth.TiAuthorization
 import org.apache.spark.sql.catalyst.plans.logical.{Command, LogicalPlan}
 import com.pingcap.tispark.utils.ReflectionUtil
 import org.apache.spark.sql.{SparkSession, TiContext, TiExtensions}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.slf4j.LoggerFactory
+
+class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
+  extends (SparkSession => Rule[LogicalPlan]) {
+  private val logger = LoggerFactory.getLogger(getClass.getName)
+  override def apply(sparkSession: SparkSession): Rule[LogicalPlan] = {
+    if (TiExtensions.authEnable(sparkSession)) {
+      // set the class loader to Reflection class loader to avoid class not found exception while loading TiCatalog
+      logger.info("TiSpark running in auth mode")
+      TiAuthorization.setEnableAuth(true)
+      ReflectionUtil.newTiAuthRule(getOrCreateTiContext, sparkSession)
+    } else {
+      TiNopAuthRule(getOrCreateTiContext)(sparkSession)
+    }
+  }
+}
 
 class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Rule[LogicalPlan]) {
@@ -50,6 +66,13 @@ case class NopCommand(name: String) extends Command {}
 case class TiDDLRuleV2(getOrCreateTiContext: SparkSession => TiContext)(
     sparkSession: SparkSession)
     extends Rule[LogicalPlan] {
+
+  override def apply(plan: LogicalPlan): LogicalPlan = plan
+}
+
+case class TiNopAuthRule(getOrCreateTiContext: SparkSession => TiContext)(
+  sparkSession: SparkSession)
+  extends Rule[LogicalPlan] {
 
   override def apply(plan: LogicalPlan): LogicalPlan = plan
 }

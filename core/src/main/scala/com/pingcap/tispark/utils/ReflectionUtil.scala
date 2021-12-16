@@ -64,6 +64,8 @@ object ReflectionUtil {
     "org.apache.spark.sql.extensions.TiResolutionRule"
   private val TI_RESOLUTION_RULE_V2_CLASS =
     "org.apache.spark.sql.extensions.TiResolutionRuleV2"
+  private val TI_AUTHORIZATION_RULE_CLASS =
+    "org.apache.spark.sql.extensions.TiAuthorizationRule"
   private val TI_PARSER_CLASS =
     "org.apache.spark.sql.extensions.TiParser"
   private val TI_DDL_RULE_CLASS =
@@ -124,6 +126,16 @@ object ReflectionUtil {
       sparkSession: SparkSession): Rule[LogicalPlan] = {
     classLoader
       .loadClass(TI_RESOLUTION_RULE_V2_CLASS)
+      .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])
+      .newInstance(getOrCreateTiContext, sparkSession)
+      .asInstanceOf[Rule[LogicalPlan]]
+  }
+
+  def newTiAuthRule(
+                             getOrCreateTiContext: SparkSession => TiContext,
+                             sparkSession: SparkSession): Rule[LogicalPlan] = {
+    classLoader
+      .loadClass(TI_AUTHORIZATION_RULE_CLASS)
       .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])
       .newInstance(getOrCreateTiContext, sparkSession)
       .asInstanceOf[Rule[LogicalPlan]]

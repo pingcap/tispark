@@ -15,19 +15,12 @@
 
 package org.apache.spark.sql.extensions
 
+import com.pingcap.tispark.auth.{MySQLPriv, TiAuthorization}
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
-import org.apache.spark.sql.catalyst.analysis.{
-  EliminateSubqueryAliases,
-  UnresolvedRelation,
-  UnresolvedTableOrView
-}
+import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation, UnresolvedTableOrView}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
-import org.apache.spark.sql.catalyst.plans.logical.{
-  InsertIntoStatement,
-  LogicalPlan,
-  SubqueryAlias
-}
+import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoStatement, LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.{AnalysisException, SparkSession, TiContext}
@@ -41,6 +34,7 @@ case class TiResolutionRule(
   private lazy val tiCatalog = tiContext.tiCatalog
   private lazy val tiSession = tiContext.tiSession
   private lazy val sqlContext = tiContext.sqlContext
+  private lazy val tiAuth = tiContext.tiAuthorization
   protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
 
   protected def resolveTiDBRelation(
@@ -63,6 +57,9 @@ case class TiResolutionRule(
       if (withSubQueryAlias) {
         // Use SubqueryAlias so that projects and joins can correctly resolve
         // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
+        if(TiAuthorization.enableAuth){
+            tiAuth.checkPrivs(dbName, tableName, MySQLPriv.SelectPriv)
+        }
         SubqueryAlias(tableName, LogicalRelation(tiDBRelation))
       } else {
         LogicalRelation(tiDBRelation)
