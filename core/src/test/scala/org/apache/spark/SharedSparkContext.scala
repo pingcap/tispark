@@ -21,6 +21,7 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 
 trait SharedSparkContext extends BeforeAndAfterAll with BeforeAndAfterEach { self: Suite =>
 
+  protected var _isAuthEnabled: Boolean = false
   protected var _isHiveEnabled: Boolean = false
   protected var conf: SparkConf = new SparkConf(false)
 

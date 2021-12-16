@@ -457,6 +457,9 @@ trait SharedSQLContext
         conf.set("spark.sql.catalog.tidb_catalog", TiCatalog.className)
         conf.set("spark.sql.catalog.tidb_catalog.pd.addresses", pdAddresses)
       }
+      if (_isAuthEnabled) {
+        conf.set("spark.sql.auth.enable", "true")
+      }
     }
 
   private class TiContextCache {
