@@ -103,9 +103,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       // First we check if our chunk list has remaining chunk
       if (tryAdvanceChunkIndex()) {
         createDataInputReader();
-      }
-      // If not, check next region/response
-      else if (pushDownType == STREAMING) {
+      } else if (pushDownType == STREAMING) { // If not, check next region/response
         if (!advanceNextResponse() && !readNextRegionChunks()) {
           return false;
         }

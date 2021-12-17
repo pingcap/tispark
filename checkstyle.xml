@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN" "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<module name="Checker">
+    <!-- 字符集编码 -->
+    <property name="charset" value="UTF-8"/>
+    <!-- 违规级别 -->
+    <property name="severity" value="warning"/>
+    <!-- 需要检查的文件扩展名 -->
+    <property name="fileExtensions" value="java, properties, xml"/>
+
+    <!-- 行长度 -->
+    <module name="LineLength">
+        <property name="severity" value="error"/>
+        <property name="fileExtensions" value="java"/>
+        <property name="max" value="200"/>
+        <property name="ignorePattern" value="^implements.*|^extends.*|^package.*|^import.*|a href|href|http://|https://|ftp://"/>
+    </module>
+
+    <!-- property 文件中是否有相同的 key -->
+    <module name="Translation">
+        <property name="severity" value="error"/>
+    </module>
+
+    <!-- 为 Java 文件创建语法树，调用子模块检查 -->
+    <module name="TreeWalker">
+
+        <!--命名规范-->
+        <module name="OuterTypeFilename"/>
+        <module name="PackageName" />
+        <module name="TypeName"/>
+        <module name="MemberName"/>
+        <module name="ParameterName"/>
+        <module name="CatchParameterName"/>
+        <module name="LocalVariableName"/>
+        <module name="MethodName"/>
+        <module name="ConstantName">
+            <property name="applyToPrivate" value="false" />
+        </module>
+        <module name="StaticVariableName"/>
+
+        <!-- import 规范 -->
+        <module name="AvoidStarImport">
+            <property name="severity" value="error"/>
+            <property name="allowStaticMemberImports" value="true" />
+        </module>
+        <module name="UnusedImports">
+            <property name="severity" value="error"/>
+        </module>
+        <module name="RedundantImport">
+            <property name="severity" value="error"/>
+        </module>
+
+        <!-- 修饰符检查 -->
+        <!-- 检查修饰符的顺序是否遵照 java 语言规范，默认 public、protected、private、abstract、static、final、transient、volatile、synchronized、native、strictfp -->
+        <module name="ModifierOrder">
+            <property name="severity" value="error"/>
+        </module>
+        <!-- 检查接口和 annotation 中是否有多余修饰符，如接口方法不必使用 public -->
+        <module name="RedundantModifier"/>
+
+        <!--代码块检查 -->
+        <!--是否有嵌套代码块 -->
+        <module name="AvoidNestedBlocks">
+            <property name="severity" value="error"/>
+        </module>
+        <!-- 是否有空代码块 -->
+        <module name="EmptyBlock"/>
+        <!-- 代码块是否缺失 {} -->
+        <module name="NeedBraces">
+            <property name="severity" value="error"/>
+        </module>
+        <!-- 左大括号位置 -->
+        <module name="LeftCurly">
+            <property name="severity" value="error"/>
+        </module>
+        <!-- 右大括号位置 -->
+        <module name="RightCurly">
+            <property name="severity" value="error"/>
+        </module>
+
+        <!-- 代码检查 -->
+        <!-- 检查是否有过度复杂的布尔表达式 -->
+        <module name="SimplifyBooleanExpression">
+            <property name="severity" value="error"/>
+        </module>
+        <!-- 检查是否有过于复杂的布尔返回代码段 -->
+        <module name="SimplifyBooleanReturn">
+            <property name="severity" value="error"/>
+        </module>
+        <!-- 检查在重写了equals方法后是否重写了hashCode方法 -->
+        <module name="EqualsHashCode"/>
+        <!-- 检查 switch 语句是否具有“default”子句 -->
+        <module name="MissingSwitchDefault"/>
+        <!-- 检查 switch 语句(跨越分支) -->
+        <module name="FallThrough" />
+
+        <!--书写检查-->
+        <!-- 检查数组类型定义的样式 -->
+        <module name="ArrayTypeStyle" >
+            <property name="severity" value="error"/>
+        </module>
+        <!-- 检查 long 型定义是否有大写的“L” -->
+        <module name="UpperEll" >
+            <property name="severity" value="error"/>
+        </module>
+
+        <!-- 空格空行检查 -->
+        <module name="EmptyLineSeparator">
+            <property name="allowNoEmptyLineBetweenFields" value="true" />
+        </module>
+        <module name="MethodParamPad"/>
+        <module name="NoLineWrap"/>
+        <module name="OperatorWrap"/>
+        <module name="ParenPad"/>
+        <module name="SingleSpaceSeparator"/>
+        <module name="TypecastParenPad"/>
+        <module name="WhitespaceAfter"/>
+
+        <!-- 代码质量 -->
+        <!-- 检查圈复杂度 -->
+        <module name="CyclomaticComplexity">
+            <property name="max" value="15"/>
+        </module>
+        <!-- 布尔表达式复杂度 -->
+        <module name="BooleanExpressionComplexity">
+            <property name="max" value="10"/>
+        </module>
+        <!-- 可以理解成圈复杂度的改良-->
+        <module name="NPathComplexity">
+            <property name="max" value="15"/>
+        </module>
+    </module>
+</module>

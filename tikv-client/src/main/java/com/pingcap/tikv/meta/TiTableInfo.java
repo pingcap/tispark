@@ -186,7 +186,9 @@ public class TiTableInfo implements Serializable {
 
   public boolean isAutoIncColUnsigned() {
     TiColumnInfo col = getAutoIncrementColInfo();
-    if (col == null) return false;
+    if (col == null) {
+      return false;
+    }
     return col.getType().isUnsigned();
   }
 
@@ -393,7 +395,9 @@ public class TiTableInfo implements Serializable {
   }
 
   public boolean isPartitionEnabled() {
-    if (partitionInfo == null) return false;
+    if (partitionInfo == null) {
+      return false;
+    }
     return partitionInfo.isEnable();
   }
 

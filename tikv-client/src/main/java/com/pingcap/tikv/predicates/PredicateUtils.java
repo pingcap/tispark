@@ -40,8 +40,12 @@ import java.util.Set;
 public class PredicateUtils {
   public static Expression mergeCNFExpressions(List<Expression> exprs) {
     requireNonNull(exprs, "Expression list is null");
-    if (exprs.size() == 0) return null;
-    if (exprs.size() == 1) return exprs.get(0);
+    if (exprs.size() == 0) {
+      return null;
+    }
+    if (exprs.size() == 1) {
+      return exprs.get(0);
+    }
 
     return and(exprs.get(0), mergeCNFExpressions(exprs.subList(1, exprs.size())));
   }

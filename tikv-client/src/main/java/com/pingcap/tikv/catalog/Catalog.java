@@ -234,7 +234,9 @@ public class Catalog implements AutoCloseable {
       TiTableInfo tbl = tableMap.get(tableName.toLowerCase());
       // https://github.com/pingcap/tispark/issues/961
       // TODO: support reading from view table in the future.
-      if (tbl != null && (tbl.isView() || tbl.isSequence())) return null;
+      if (tbl != null && (tbl.isView() || tbl.isSequence())) {
+        return null;
+      }
       return tbl;
     }
 

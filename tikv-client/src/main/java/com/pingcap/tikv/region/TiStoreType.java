@@ -32,7 +32,9 @@ public enum TiStoreType {
 
   @Override
   public String toString() {
-    if (labelKey == null || labelValue == null) return name();
+    if (labelKey == null || labelValue == null) {
+      return name();
+    }
     return name() + "(" + labelKey + "=" + labelValue + ")";
   }
 

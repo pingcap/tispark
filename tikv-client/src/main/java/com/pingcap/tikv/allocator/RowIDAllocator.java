@@ -282,7 +282,9 @@ public final class RowIDAllocator implements Serializable {
       ByteString dbKey = MetaCodec.encodeDatabaseID(dbId);
       ByteString tblKey = MetaCodec.autoTableIDKey(tableId);
       ByteString val = MetaCodec.hashGet(dbKey, tblKey, snapshot);
-      if (val.isEmpty()) return 0L;
+      if (val.isEmpty()) {
+        return 0L;
+      }
       return Long.parseLong(val.toStringUtf8());
     }
 

@@ -166,7 +166,9 @@ public class TiChunkColumnVector extends TiColumnVector {
 
   private long getLongFromBinary(int rowId) {
     byte[] bytes = getBinary(rowId);
-    if (bytes.length == 0) return 0;
+    if (bytes.length == 0) {
+      return 0;
+    }
     long result = 0;
     for (byte b : bytes) {
       result = (result << 8) | b;

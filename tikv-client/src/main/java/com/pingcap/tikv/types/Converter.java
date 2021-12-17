@@ -341,9 +341,10 @@ public class Converter {
     // length expect to be 3.
     try {
       String[] splitBySemiColon = value.split(":");
-      if (splitBySemiColon.length != 3)
+      if (splitBySemiColon.length != 3) {
         throw new IllegalArgumentException(
             String.format("%s is not a valid time type in mysql", value));
+      }
       int sign, hour, minute, second, frac;
       sign = 1;
       hour = Integer.parseInt(splitBySemiColon[0]);
