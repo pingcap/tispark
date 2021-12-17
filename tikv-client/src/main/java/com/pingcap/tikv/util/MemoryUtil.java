@@ -449,10 +449,15 @@ public class MemoryUtil {
   public static void setBytes(long address, ByteBuffer buffer) {
     int start = buffer.position();
     int count = buffer.limit() - start;
-    if (count == 0) return;
+    if (count == 0) {
+      return;
+    }
 
-    if (buffer.isDirect()) setBytes(((DirectBuffer) buffer).address() + start, address, count);
-    else setBytes(address, buffer.array(), buffer.arrayOffset() + start, count);
+    if (buffer.isDirect()) {
+      setBytes(((DirectBuffer) buffer).address() + start, address, count);
+    } else {
+      setBytes(address, buffer.array(), buffer.arrayOffset() + start, count);
+    }
   }
 
   /**
@@ -499,10 +504,13 @@ public class MemoryUtil {
    * @param count number of bytes to transfer
    */
   public static void getBytes(long address, byte[] buffer, int bufferOffset, int count) {
-    if (buffer == null) throw new NullPointerException();
-    else if (bufferOffset < 0 || count < 0 || count > buffer.length - bufferOffset)
+    if (buffer == null) {
+      throw new NullPointerException();
+    } else if (bufferOffset < 0 || count < 0 || count > buffer.length - bufferOffset) {
       throw new IndexOutOfBoundsException();
-    else if (count == 0) return;
+    } else if (count == 0) {
+      return;
+    }
 
     unsafe.copyMemory(null, address, buffer, BYTE_ARRAY_BASE_OFFSET + bufferOffset, count);
   }

@@ -39,7 +39,9 @@ public class TiParser extends MySqlParserBaseVisitor {
   }
 
   public Expression parseExpression(String command) {
-    if (command.equals("")) throw new UnsupportedSyntaxException("cannot parse empty command");
+    if (command.equals("")) {
+      throw new UnsupportedSyntaxException("cannot parse empty command");
+    }
     MySqlLexer lexer =
         new MySqlLexer(new CaseChangingCharStream(CharStreams.fromString(command), true));
     CommonTokenStream cmnTokStrm = new CommonTokenStream(lexer);

@@ -64,8 +64,9 @@ public class MetaResolver extends DefaultVisitor<Void, Expression> {
           || !predicate
               .getValue()
               .getDataType()
-              .isSameCatalog(predicate.getColumnRef().getDataType()))
+              .isSameCatalog(predicate.getColumnRef().getDataType())) {
         predicate.getValue().setDataType(predicate.getColumnRef().getDataType());
+      }
     }
     return null;
   }

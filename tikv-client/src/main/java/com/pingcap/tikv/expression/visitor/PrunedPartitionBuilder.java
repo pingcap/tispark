@@ -63,9 +63,12 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<TypedKey> {
     NormalizedPredicate predicate = node.normalize();
     // when meet a comparison binary expression cannot be normalized
     // which indicates it cannot be pruned such as a > b + 1
-    if (predicate == null) return TreeRangeSet.<TypedKey>create().complement();
-    if (!partExprColRefs.contains(predicate.getColumnRef()))
+    if (predicate == null) {
       return TreeRangeSet.<TypedKey>create().complement();
+    }
+    if (!partExprColRefs.contains(predicate.getColumnRef())) {
+      return TreeRangeSet.<TypedKey>create().complement();
+    }
     TypedKey literal;
     literal = predicate.getTypedLiteral(-1);
     return visitComparisonBinaryExpr(node, context, literal, false);

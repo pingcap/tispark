@@ -234,8 +234,9 @@ public abstract class DataType implements Serializable {
     for (int i = 0; i < numNullBitMapBytes; ) {
       // allNotNullBitNMap's actual length
       int numAppendBytes = Math.min(numNullBitMapBytes - i, 128);
-      if (numAppendBytes >= 0)
+      if (numAppendBytes >= 0) {
         System.arraycopy(allNotNullBitMap, 0, nullBitMaps, i, numAppendBytes);
+      }
       i += numAppendBytes;
     }
     return nullBitMaps;
@@ -461,7 +462,9 @@ public abstract class DataType implements Serializable {
   }
 
   public Object getOriginDefaultValue(String value, long version) {
-    if (value == null) return null;
+    if (value == null) {
+      return null;
+    }
     return getOriginDefaultValueNonNull(value, version);
   }
 

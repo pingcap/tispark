@@ -86,7 +86,9 @@ public class FuncCallExpr extends Expression {
   // input literal.
   public Constant eval(Constant literal) {
     Function<Constant, Constant> evalFn = FuncCallExprEval.getEvalFn(funcTp);
-    if (evalFn != null) return evalFn.apply(literal);
+    if (evalFn != null) {
+      return evalFn.apply(literal);
+    }
     return literal;
   }
 

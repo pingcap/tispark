@@ -33,7 +33,9 @@ public class KeyUtils {
   }
 
   public static String formatBytes(byte[] bytes) {
-    if (bytes == null) return "null";
+    if (bytes == null) {
+      return "null";
+    }
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < bytes.length; i++) {
       int unsignedByte = UnsignedBytes.toInt(bytes[i]);
@@ -46,7 +48,9 @@ public class KeyUtils {
   }
 
   public static String formatBytes(ByteString bytes) {
-    if (bytes == null) return "null";
+    if (bytes == null) {
+      return "null";
+    }
     return formatBytes(bytes.toByteArray());
   }
 
@@ -55,12 +59,16 @@ public class KeyUtils {
   }
 
   public static String formatBytesUTF8(byte[] bytes) {
-    if (bytes == null) return "null";
+    if (bytes == null) {
+      return "null";
+    }
     return TextFormat.escapeBytes(bytes);
   }
 
   public static String formatBytesUTF8(ByteString bytes) {
-    if (bytes == null) return "null";
+    if (bytes == null) {
+      return "null";
+    }
     return formatBytesUTF8(bytes.toByteArray());
   }
 

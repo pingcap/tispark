@@ -128,7 +128,9 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
 
   @Override
   public Expression visitBooleanLiteral(MySqlParser.BooleanLiteralContext ctx) {
-    if (ctx.FALSE() != null) return Constant.create(0);
+    if (ctx.FALSE() != null) {
+      return Constant.create(0);
+    }
     return Constant.create(1, BOOLEAN);
   }
 
