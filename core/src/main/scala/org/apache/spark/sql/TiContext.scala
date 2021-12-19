@@ -41,15 +41,18 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   final val version: String = TiSparkVersion.version
   final val conf: SparkConf = sparkSession.sparkContext.conf
   final val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(conf)
-  lazy final val tiAuthorization: TiAuthorization = TiAuthorization(
-    Map(
-      "tidb.addr" -> sparkSession.sqlContext.getConf("tidb.addr"),
-      "tidb.port" -> sparkSession.sqlContext.getConf("tidb.port"),
-      "tidb.user" -> sparkSession.sqlContext.getConf("tidb.user"),
-      "tidb.password" -> sparkSession.sqlContext.getConf("tidb.password"),
-      "multiTables"-> "true"
-    ), tiConf
-  )
+  lazy final val tiAuthorization: TiAuthorization = {
+    TiAuthorization.initTiAuthorization(
+      Map(
+        "tidb.addr" -> sparkSession.sqlContext.getConf("tidb.addr"),
+        "tidb.port" -> sparkSession.sqlContext.getConf("tidb.port"),
+        "tidb.user" -> sparkSession.sqlContext.getConf("tidb.user"),
+        "tidb.password" -> sparkSession.sqlContext.getConf("tidb.password"),
+        "multiTables" -> "true"
+      ), tiConf
+    )
+    TiAuthorization.tiAuthorization
+  }
   final val tiSession: TiSession = TiSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
   lazy val tiConcreteCatalog: TiSessionCatalog =
@@ -133,6 +136,14 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
           "Duplicate table [" + tableName + "] exist in catalog, you might want to set dbNameAsPrefix = true")
       }
     }
+
+  def getDatabaseFromOption(option: Option[String]): String = {
+    if (option.isDefined) {
+      option.get
+    } else {
+      tiCatalog.getCurrentDatabase
+    }
+  }
 
   // add backtick for table name in case it contains, e.g., a minus sign
   private def getViewName(dbName: String, tableName: String, dbNameAsPrefix: Boolean): String =

@@ -1,6 +1,6 @@
 package org.apache.spark.sql.extensions
 
-import com.pingcap.tispark.auth.MySQLPriv
+import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.{MetaManager, TiDBRelation}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.rules.Rule
@@ -13,50 +13,68 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
 ) extends Rule[LogicalPlan] {
 
   protected lazy val meta: MetaManager = tiContext.meta
-  private lazy val tiAuth = tiContext.tiAuthorization
   protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
+  private lazy val tiAuthorization: TiAuthorization = tiContext.tiAuthorization
 
   protected def checkForAuth: PartialFunction[LogicalPlan, LogicalPlan] = {
     case sa @ SubqueryAlias(identifier, child) =>
       if (identifier.qualifier.nonEmpty) {
-        tiAuth.checkPrivs(
-          identifier.qualifier.last,
+        TiAuthorization.authorizeForSelect(
           identifier.name,
-          MySQLPriv.SelectPriv
+          identifier.qualifier.last,
+          tiAuthorization
         )
       }
       sa
     case sd: ShowNamespaces =>
       sd
-    case sd: SetCatalogAndNamespace =>
+    case sd @ SetCatalogAndNamespace(catalogManager, catalogName, namespace) =>
+      namespace.get
+        .filter(_ != "tidb_catalog")
+        .foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization
+        ))
       sd
     case st: ShowTablesCommand =>
       st
-    case st: ShowColumnsCommand =>
+    case st @ ShowColumnsCommand(databaseName, tableName) =>
+      TiAuthorization.authorizeForDescribeTable(
+        tableName.table,
+        tiContext.getDatabaseFromOption(databaseName),
+        tiAuthorization
+      )
       st
-    case dt: DescribeTableCommand =>
+    case dt @ DescribeTableCommand(table, _, _) =>
+      TiAuthorization.authorizeForDescribeTable(
+        table.table,
+        tiContext.getDatabaseFromOption(table.database),
+        tiAuthorization
+      )
       dt
     case dt @ DescribeRelation(
           LogicalRelation(TiDBRelation(_, tableRef, _, _, _), _, _, _),
           _,
           _
         ) =>
+      TiAuthorization.authorizeForDescribeTable(
+        tableRef.tableName,
+        tableRef.databaseName,
+        tiAuthorization
+      )
       dt
-    case dc: DescribeColumnCommand =>
+    case dc @ DescribeColumnCommand(table, _, _) =>
+      TiAuthorization.authorizeForDescribeTable(
+        table.table,
+        tiContext.getDatabaseFromOption(table.database),
+        tiAuthorization
+      )
       dc
     case ct @ CreateTableLikeCommand(target, source, _, _, _, _) =>
-      if (target.database.nonEmpty && source.database.nonEmpty) {
-        tiAuth.checkPrivs(
-          target.database.get,
-          target.table,
-          MySQLPriv.CreatePriv
-        )
-        tiAuth.checkPrivs(
-          source.database.get,
-          source.table,
-          MySQLPriv.SelectPriv
-        )
-      }
+      TiAuthorization.authorizeForCreateTableLike(
+        tiContext.getDatabaseFromOption(target.database),
+        target.table,
+        tiContext.getDatabaseFromOption(source.database),
+        source.table,
+        tiContext.tiAuthorization)
       TiCreateTableLikeCommand(tiContext, ct)
   }
 

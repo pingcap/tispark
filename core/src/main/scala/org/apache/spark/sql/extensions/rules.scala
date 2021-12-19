@@ -28,7 +28,7 @@ class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     if (TiExtensions.authEnable(sparkSession)) {
       // set the class loader to Reflection class loader to avoid class not found exception while loading TiCatalog
       logger.info("TiSpark running in auth mode")
-      TiAuthorization.setEnableAuth(true)
+      TiAuthorization.enableAuth = true
       ReflectionUtil.newTiAuthRule(getOrCreateTiContext, sparkSession)
     } else {
       TiNopAuthRule(getOrCreateTiContext)(sparkSession)

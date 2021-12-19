@@ -2,17 +2,26 @@ package com.pingcap.tispark.auth
 
 import com.pingcap.tikv.{TiConfiguration, TiDBJDBCClient}
 import com.pingcap.tispark.TiDBUtils
-import com.pingcap.tispark.auth.TiAuthorization.{extractRoles, parsePrivilegeFromRow, refreshInterval}
+import com.pingcap.tispark.auth.TiAuthorization.{
+  extractRoles,
+  parsePrivilegeFromRow,
+  refreshInterval
+}
 import com.pingcap.tispark.write.TiDBOptions
+import org.slf4j.LoggerFactory
 
 import java.sql.SQLException
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
 import scala.collection.JavaConverters
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.control.Breaks.{break, breakable}
 
-case class TiAuthorization(parameters: Map[String, String], tiConf:TiConfiguration) {
+case class TiAuthorization private (
+    parameters: Map[String, String],
+    tiConf: TiConfiguration
+) {
 
   private var tiDBJDBCClient: TiDBJDBCClient = _
 
@@ -25,7 +34,8 @@ case class TiAuthorization(parameters: Map[String, String], tiConf:TiConfigurati
   val databasePrivs: AtomicReference[Map[String, List[MySQLPriv.Value]]] =
     new AtomicReference(Map())
 
-  val tablePrivs: AtomicReference[Map[String, List[MySQLPriv.Value]]] =
+  val tablePrivs
+      : AtomicReference[Map[String, Map[String, List[MySQLPriv.Value]]]] =
     new AtomicReference(Map())
 
   val task: Runnable = () => {
@@ -43,7 +53,12 @@ case class TiAuthorization(parameters: Map[String, String], tiConf:TiConfigurati
     )
 
     task.run()
-    scheduler.scheduleWithFixedDelay(task, refreshInterval, refreshInterval, TimeUnit.SECONDS)
+    scheduler.scheduleWithFixedDelay(
+      task,
+      refreshInterval,
+      refreshInterval,
+      TimeUnit.SECONDS
+    )
   }
 
   def getPrivileges: PrivilegeObject = {
@@ -79,7 +94,8 @@ case class TiAuthorization(parameters: Map[String, String], tiConf:TiConfigurati
       table: String,
       mySQLPriv: MySQLPriv.Value
   ): Boolean = {
-    val privs = tablePrivs.get().getOrElse(f"${db.trim}.${table.trim}", List())
+    val privs =
+      tablePrivs.get().getOrElse(db.trim, Map()).getOrElse(table.trim, List())
     if (privs.contains(MySQLPriv.AllPriv) || privs.contains(mySQLPriv)) true
     else false
   }
@@ -94,31 +110,90 @@ case class TiAuthorization(parameters: Map[String, String], tiConf:TiConfigurati
         db,
         requiredPriv
       ) && !checkTablePiv(db, table, requiredPriv)
-    ) throw new SQLException(
+    )
+      throw new SQLException(
         f"Lack of privilege:$requiredPriv on database:$db table:$table"
       )
+  }
+
+  def visible(db: String, table: String): Boolean = {
+    // Account who has ShowDBPriv is able to see all databases and tables regardless of revokes.
+    if (
+      globalPriv.get().contains(MySQLPriv.AllPriv) || globalPriv
+        .get()
+        .contains(MySQLPriv.ShowDBPriv)
+    ) {
+      return true
+    }
+
+    // Account who has any Priv of the database/table can see the database/table
+    if (table.isEmpty) {
+      databasePrivs.get().keySet.contains(db) || tablePrivs
+        .get()
+        .keySet
+        .contains(db)
+    } else {
+      databasePrivs.get().keySet.contains(db) || tablePrivs
+        .get()
+        .keySet
+        .contains(db) || tablePrivs
+        .get()
+        .getOrElse(db, Map())
+        .keySet
+        .contains(table)
+    }
+
   }
 }
 
 case class PrivilegeObject(
     globalPriv: List[MySQLPriv.Value],
     databasePrivs: Map[String, List[MySQLPriv.Value]],
-    tablePrivs: Map[String, List[MySQLPriv.Value]]
+    tablePrivs: Map[String, Map[String, List[MySQLPriv.Value]]]
 ) {}
 
 object TiAuthorization {
 
-  val refreshInterval: Int = 10
+  private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  private[this] var _enableAuth: Boolean = false
+  private final val lock = new ReentrantLock()
 
-  def enableAuth: Boolean = _enableAuth
+  private var initialized = false
 
-  def setEnableAuth(value: Boolean): Unit = {
-  _enableAuth = value
+  private[this] var _tiAuthorization: TiAuthorization = _
+
+  def tiAuthorization: TiAuthorization = {
+    if (initialized) {
+      _tiAuthorization
+    } else {
+      throw new IllegalArgumentException(
+        "TiAuthorization has not been initialized"
+      )
+    }
   }
 
-  private var dbPrefix:String = ""
+  def initTiAuthorization(
+      parameters: Map[String, String],
+      tiConf: TiConfiguration
+  ): Unit = {
+    lock.lock()
+    try {
+      if (initialized) {
+        logger.warn("TiAuthorization has already been initialized")
+      } else {
+        _tiAuthorization = new TiAuthorization(parameters, tiConf)
+        initialized = true
+      }
+    } finally {
+      lock.unlock()
+    }
+  }
+
+  val refreshInterval: Int = 10
+
+  var enableAuth: Boolean = false
+
+  var dbPrefix: String = ""
 
   /**  Currently, There are 2 kinds of grant output format in TiDB:
     * - GRANT [grants] ON [db.table] TO [user]
@@ -133,11 +208,12 @@ object TiAuthorization {
   private val userGrantPattern =
     "GRANT\\s+(.+)\\s+ON\\s+(\\S+\\.\\S+)\\s+TO.+".r
   private val roleGrantPattern = "GRANT\\s+('\\w+'@.+)+TO.+".r
+  private val rolePattern = "'(\\w+)'@.+".r
 
   def parsePrivilegeFromRow(privStrings: List[String]): PrivilegeObject = {
     var globalPriv: List[MySQLPriv.Value] = List()
     var databasePrivs: Map[String, List[MySQLPriv.Value]] = Map()
-    var tablePrivs: Map[String, List[MySQLPriv.Value]] = Map()
+    var tablePrivs: Map[String, Map[String, List[MySQLPriv.Value]]] = Map()
 
     for (elem <- privStrings) {
       breakable {
@@ -152,14 +228,16 @@ object TiAuthorization {
           .map(m => { MySQLPriv.Str2Priv(m.trim) })
           .toList
         val database: String = matchResult.get.group(2).split("\\.").head
-        val table: String = matchResult.get.group(2).split("\\.").tail.head
+        val table: String = matchResult.get.group(2).split("\\.").last
 
         if (database == "*" && table == "*") {
           globalPriv ++= privs
         } else if (table == "*") {
-          databasePrivs += ( f"$dbPrefix$database" -> privs)
+          databasePrivs += (f"$dbPrefix$database" -> privs)
         } else {
-          tablePrivs += (matchResult.get.group(2) -> privs)
+          tablePrivs += (f"$dbPrefix$database" -> Map(
+            table -> privs
+          ))
         }
       }
     }
@@ -174,10 +252,58 @@ object TiAuthorization {
       if matchResult.isDefined
       roles = matchResult.get.group(1);
       rawRole <- roles.split(",")
-      roleMatch = "'(\\w+)'@.+".r findFirstMatchIn rawRole
+      roleMatch = rolePattern findFirstMatchIn rawRole
       if roleMatch.isDefined
       role = roleMatch.get.group(1)
       if role.trim.nonEmpty
     } yield role.trim
+  }
+
+  /** Authorization for statement
+    */
+  def authorizeForSelect(
+      table: String,
+      database: String,
+      tiAuth: TiAuthorization
+  ): Unit = {
+    tiAuth.checkPrivs(
+      database,
+      table,
+      MySQLPriv.SelectPriv
+    )
+  }
+
+  def authorizeForCreateTableLike(
+      targetDb: String,
+      targetTable: String,
+      sourceDb: String,
+      sourceTable: String,
+      tiAuth: TiAuthorization
+  ) = {
+    tiAuth.checkPrivs(
+      targetDb,
+      targetTable,
+      MySQLPriv.CreatePriv
+    )
+    tiAuth.checkPrivs(
+      sourceDb,
+      sourceTable,
+      MySQLPriv.SelectPriv
+    )
+  }
+
+  def authorizeForSetDatabase(database: String, tiAuth: TiAuthorization) = {
+    if (!tiAuth.visible(database, "")) {
+      throw new SQLException(f"Lack of privilege to set database:${database}")
+    }
+  }
+
+  def authorizeForDescribeTable(
+      table: String,
+      database: String,
+      tiAuth: TiAuthorization
+  ) = {
+    if (!tiAuth.visible(database, table))
+      throw new SQLException(f"Lack of privilege to describe table:${table}")
   }
 }
