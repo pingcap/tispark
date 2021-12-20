@@ -35,6 +35,7 @@ class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
         TiUtil.sparkConfToTiConfWithoutPD(sparkSession.sparkContext.conf, new TiConfiguration())
       ReflectionUtil.newTiAuthRule(getOrCreateTiContext, sparkSession)
     } else {
+      TiAuthorization.enableAuth = false
       TiNopAuthRule(getOrCreateTiContext)(sparkSession)
     }
   }
