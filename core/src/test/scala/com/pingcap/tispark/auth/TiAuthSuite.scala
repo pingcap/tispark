@@ -17,8 +17,8 @@ class TiAuthSuite extends UnitSuite {
       Map(
         "mysql" -> List(MySQLPriv.CreatePriv, MySQLPriv.UpdatePriv),
         "tpch_test" -> List(MySQLPriv.InsertPriv, MySQLPriv.UpdatePriv, MySQLPriv.DeletePriv)))
-    result.tablePrivs should equal(
-      Map("test.table" -> List(MySQLPriv.DeletePriv), "test.user" -> List(MySQLPriv.DeletePriv)))
+    result.tablePrivs should equal(Map(
+      "test" -> Map("table" -> List(MySQLPriv.DeletePriv), "user" -> List(MySQLPriv.DeletePriv))))
   }
 
   test("Extract role from jdbc result should be correct") {

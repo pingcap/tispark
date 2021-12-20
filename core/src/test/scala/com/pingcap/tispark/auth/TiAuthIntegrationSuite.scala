@@ -53,6 +53,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     tidbStmt.execute(s"DROP DATABASE IF EXISTS `$database`")
     tidbStmt.execute(s"DROP DATABASE IF EXISTS `$dummyDatabase`")
     super.afterAll()
+    _isAuthEnabled = false
   }
 
   test("Get PD address from TiDB should be correct") {

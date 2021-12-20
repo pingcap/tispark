@@ -174,8 +174,7 @@ object TiAuthorization {
             "tidb.addr" -> sqlConf.getConfString("spark.sql.tidb.addr"),
             "tidb.port" -> sqlConf.getConfString("spark.sql.tidb.port"),
             "tidb.user" -> sqlConf.getConfString("spark.sql.tidb.user"),
-            "tidb.password" -> sqlConf.getConfString(
-              "spark.sql.tidb.password"),
+            "tidb.password" -> sqlConf.getConfString("spark.sql.tidb.password"),
             "multiTables" -> "true"),
           tiConf)
         initialized = true
@@ -231,7 +230,8 @@ object TiAuthorization {
         } else if (table == "*") {
           databasePrivs += (f"$dbPrefix$database" -> privs)
         } else {
-          tablePrivs += (f"$dbPrefix$database" -> Map(table -> privs))
+          val prevTable = tablePrivs.getOrElse(f"$dbPrefix$database", Map.empty)
+          tablePrivs += (f"$dbPrefix$database" -> (prevTable + (table -> privs)))
         }
       }
     }
