@@ -106,18 +106,8 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   private var _name: Option[String] = None
   private var _current_namespace: Option[Array[String]] = None
   private val logger = LoggerFactory.getLogger(getClass.getName)
-  private var _sparkConf: CaseInsensitiveStringMap = _
-  private var conf: TiConfiguration = _
   private lazy final val tiAuthorization: TiAuthorization = {
-    TiAuthorization.initTiAuthorization(
-      Map(
-        "tidb.addr" -> _sparkConf.get("tidb.addr"),
-        "tidb.port" -> _sparkConf.get("tidb.port"),
-        "tidb.user" -> _sparkConf.get("tidb.user"),
-        "tidb.password" -> _sparkConf.get("tidb.password"),
-        "multiTables" -> "true"
-      ), conf
-    )
+    TiAuthorization.initTiAuthorization()
     TiAuthorization.tiAuthorization
   }
 
@@ -128,16 +118,21 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
   override def initialize(name: String, options: CaseInsensitiveStringMap): Unit = {
     _name = Some(name)
-    if (!options.containsKey("pd.addresses") && !options.containsKey("pd.address")) {
-      throw new Exception("missing configuration spark.sql.catalog.tidb_catalog.pd.addresses")
+
+    val pdAddress:String =
+    if (TiAuthorization.enableAuth) {
+      tiAuthorization.getPDAddress()
+    } else {
+      if (!options.containsKey("pd.addresses") && !options.containsKey("pd.address")) {
+        throw new Exception("missing configuration spark.sql.catalog.tidb_catalog.pd.addresses")
+      }
+      options.getOrDefault("pd.addresses", options.get("pd.address"))
     }
-    val pdAddress = options.getOrDefault("pd.addresses", options.get("pd.address"))
+
     logger.info(s"Initialize TiCatalog with name: $name, pd address: $pdAddress")
-    conf = TiConfiguration.createDefault(pdAddress)
+    val conf = TiConfiguration.createDefault(pdAddress)
     val session = TiSession.getInstance(conf)
     meta = Some(new MetaManager(session.getCatalog))
-
-    _sparkConf = options
   }
 
   override def name(): String = _name.get

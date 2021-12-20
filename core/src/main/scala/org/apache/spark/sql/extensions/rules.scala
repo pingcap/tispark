@@ -14,11 +14,12 @@
  */
 package org.apache.spark.sql.extensions
 
+import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tispark.auth.TiAuthorization
+import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
 import org.apache.spark.sql.catalyst.plans.logical.{Command, LogicalPlan}
-import com.pingcap.tispark.utils.ReflectionUtil
-import org.apache.spark.sql.{SparkSession, TiContext, TiExtensions}
 import org.apache.spark.sql.catalyst.rules.Rule
+import org.apache.spark.sql.{SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
 
 class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
@@ -29,6 +30,8 @@ class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
       // set the class loader to Reflection class loader to avoid class not found exception while loading TiCatalog
       logger.info("TiSpark running in auth mode")
       TiAuthorization.enableAuth = true
+      TiAuthorization.sqlConf = sparkSession.sqlContext.conf
+      TiAuthorization.tiConf = TiUtil.sparkConfToTiConfWithoutPD(sparkSession.sparkContext.conf, new TiConfiguration())
       ReflectionUtil.newTiAuthRule(getOrCreateTiContext, sparkSession)
     } else {
       TiNopAuthRule(getOrCreateTiContext)(sparkSession)

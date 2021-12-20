@@ -16,8 +16,8 @@
 package com.pingcap.tispark.write
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.util.{BackOffFunction, BackOffer, ConcreteBackOffer}
-import com.pingcap.tikv.{TTLManager, TiDBJDBCClient, TwoPhaseCommitter, _}
+import com.pingcap.tikv.util.ConcreteBackOffer
+import com.pingcap.tikv._
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkConf
@@ -539,7 +539,7 @@ class TiBatchWrite(
     val clonedConf = conf.clone()
     // priority: data source config > spark config
     clonedConf.setAll(options.parameters)
-    TiUtil.sparkConfToTiConf(clonedConf)
+    TiUtil.sparkConfToTiConf(clonedConf, Option.empty)
   }
 
   private def checkConnectionLost(): Unit = {

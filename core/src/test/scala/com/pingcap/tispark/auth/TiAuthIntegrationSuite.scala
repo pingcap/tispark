@@ -2,14 +2,7 @@ package com.pingcap.tispark.auth
 
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.test.SharedSQLContext
-import org.scalatest.Matchers.{
-  an,
-  be,
-  contain,
-  convertToAnyShouldWrapper,
-  noException,
-  not
-}
+import org.scalatest.Matchers.{an, be, contain, convertToAnyShouldWrapper, noException, not}
 
 import java.sql.SQLException
 
@@ -24,11 +17,6 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   override def beforeAll(): Unit = {
     _isAuthEnabled = true
     super.beforeAll()
-    // set tidb config
-    spark.sqlContext.setConf("tidb.addr", "127.0.0.1")
-    spark.sqlContext.setConf("tidb.port", "4000")
-    spark.sqlContext.setConf("tidb.user", "tispark_unit_test_user")
-    spark.sqlContext.setConf("tidb.password", "")
 
     // create database
     tidbStmt.execute(s"CREATE DATABASE IF NOT EXISTS `$database`")
@@ -52,6 +40,9 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     tidbStmt.execute(
       f"GRANT CREATE ON $dummyDatabase.* TO 'tispark_unit_test_user'@'%%'"
     )
+    tidbStmt.execute(
+      f"GRANT PROCESS ON *.* TO 'tispark_unit_test_user'@'%%'"
+    )
 
     // set namespace "tidb_catalog"
     if (catalogPluginMode) {
@@ -67,6 +58,10 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     tidbStmt.execute(s"DROP DATABASE IF EXISTS `$database`")
     tidbStmt.execute(s"DROP DATABASE IF EXISTS `$dummyDatabase`")
     super.afterAll()
+  }
+
+  test("Get PD address from TiDB should be correct") {
+    ti.tiAuthorization.getPDAddress() should be(pdAddresses)
   }
 
   test("Select without privilege should not be passed") {

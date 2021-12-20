@@ -55,6 +55,9 @@ public class TiDBJDBCClient implements AutoCloseable {
 
   public static final String SQL_SHOW_GRANTS = "SHOW GRANTS";
 
+  public static final String GET_PD_ADDRESS =
+      "SELECT `INSTANCE` FROM `INFORMATION_SCHEMA`.`CLUSTER_INFO` WHERE `TYPE` = 'pd'";
+
   private static final String SQL_SHOW_GRANTS_USING_ROLE = "SHOW GRANTS FOR CURRENT_USER USING ";
 
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
@@ -103,6 +106,27 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
 
     return result;
+  }
+
+  public String getPDAddress() {
+    List<String> result = new ArrayList<>();
+    try (Statement tidbStmt = connection.createStatement()) {
+
+      ResultSet resultSet = tidbStmt.executeQuery(GET_PD_ADDRESS);
+      ResultSetMetaData rsMetaData = resultSet.getMetaData();
+
+      while (resultSet.next()) {
+        for (int i = 1; i <= rsMetaData.getColumnCount(); i++) {
+          result.add(resultSet.getString(i));
+        }
+      }
+    } catch (SQLException e) {
+      throw new IllegalArgumentException(
+          "Failed to get pdAddress from TiDB, please make sure user has `PROCESS` privilege on `INFORMATION_SCHEMA`.`CLUSTER_INFO`",
+          e);
+    }
+
+    return result.get(0);
   }
 
   public List<String> showGrantsUsingRole(List<String> roles) {

@@ -2,12 +2,9 @@ package com.pingcap.tispark.auth
 
 import com.pingcap.tikv.{TiConfiguration, TiDBJDBCClient}
 import com.pingcap.tispark.TiDBUtils
-import com.pingcap.tispark.auth.TiAuthorization.{
-  extractRoles,
-  parsePrivilegeFromRow,
-  refreshInterval
-}
+import com.pingcap.tispark.auth.TiAuthorization.{parsePrivilegeFromRow, refreshInterval}
 import com.pingcap.tispark.write.TiDBOptions
+import org.apache.spark.sql.internal.SQLConf
 import org.slf4j.LoggerFactory
 
 import java.sql.SQLException
@@ -15,7 +12,6 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
 import scala.collection.JavaConverters
-import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.control.Breaks.{break, breakable}
 
 case class TiAuthorization private (
@@ -63,18 +59,35 @@ case class TiAuthorization private (
 
   def getPrivileges: PrivilegeObject = {
     var input = JavaConverters.asScalaBuffer(tiDBJDBCClient.showGrants).toList
-    val roles = extractRoles(input)
 
-    input =
-      if (roles.nonEmpty)
-        JavaConverters
-          .asScalaBuffer(
-            tiDBJDBCClient.showGrantsUsingRole(roles.asJava)
-          )
-          .toList
-      else input
+    /**
+     * TODO: role-based privilege
+     *
+     * Show grants using more than two roles return incorrect result
+     * https://github.com/pingcap/tidb/issues/30855
+     *
+     * val roles = extractRoles(input)
+     * input =
+     * if (roles.nonEmpty)
+     * JavaConverters
+     * .asScalaBuffer(
+     * tiDBJDBCClient.showGrantsUsingRole(roles.asJava)
+     * ).toList
+     * else input
+     *
+     */
 
     parsePrivilegeFromRow(input)
+  }
+
+  def getPDAddress(): String ={
+    try {
+      tiDBJDBCClient.getPDAddress
+    } catch {
+      case e: Throwable => throw new IllegalArgumentException(
+        "Failed to get pdAddress from TiDB, please make sure user has `PROCESS` privilege on `INFORMATION_SCHEMA`.`CLUSTER_INFO`"
+      )
+    }
   }
 
   def checkGlobalPiv(mySQLPriv: MySQLPriv.Value): Boolean = {
@@ -133,7 +146,7 @@ case class TiAuthorization private (
         .keySet
         .contains(db)
     } else {
-      databasePrivs.get().keySet.contains(db)  || tablePrivs
+      databasePrivs.get().keySet.contains(db) || tablePrivs
         .get()
         .getOrElse(db, Map())
         .keySet
@@ -150,12 +163,15 @@ case class PrivilegeObject(
 ) {}
 
 object TiAuthorization {
-
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
   private final val lock = new ReentrantLock()
 
   private var initialized = false
+
+  var sqlConf: SQLConf = _
+
+  var tiConf: TiConfiguration = _
 
   private[this] var _tiAuthorization: TiAuthorization = _
 
@@ -169,16 +185,22 @@ object TiAuthorization {
     }
   }
 
-  def initTiAuthorization(
-      parameters: Map[String, String],
-      tiConf: TiConfiguration
-  ): Unit = {
+  def initTiAuthorization(): Unit = {
     lock.lock()
     try {
       if (initialized) {
         logger.warn("TiAuthorization has already been initialized")
       } else {
-        _tiAuthorization = new TiAuthorization(parameters, tiConf)
+        _tiAuthorization = new TiAuthorization(
+          Map(
+            "tidb.addr" -> sqlConf.getConfString("spark.sql.catalog.tidb_catalog.tidb.addr"),
+            "tidb.port" -> sqlConf.getConfString("spark.sql.catalog.tidb_catalog.tidb.port"),
+            "tidb.user" -> sqlConf.getConfString("spark.sql.catalog.tidb_catalog.tidb.user"),
+            "tidb.password" -> sqlConf.getConfString("spark.sql.catalog.tidb_catalog.tidb.password"),
+            "multiTables" -> "true"
+          ),
+          tiConf
+        )
         initialized = true
       }
     } finally {

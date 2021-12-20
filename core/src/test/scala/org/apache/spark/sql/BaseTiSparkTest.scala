@@ -18,7 +18,6 @@
 package org.apache.spark.sql
 
 import java.sql.Statement
-
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient, Version}
 import com.pingcap.tispark.{TiConfigConst, TiDBUtils}

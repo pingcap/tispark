@@ -43,5 +43,6 @@ class TiAuthSuite extends UnitSuite {
         "GRANT INSERT,UPDATE,DELETE ON tpch_test.* TO 'root'@'%'" ::
         "GRANT 'app_read'@'%','app_write'@'%' TO 'rw_user1'@'localhost'" :: Nil
     )
+    roles should equal(List("app_read", "app_write"))
   }
 }
