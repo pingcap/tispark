@@ -1,4 +1,4 @@
-def call(ghprbActualCommit, ghprbComghprbCommentBodymentBody, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPullDescription, credentialsId, channel, teamDomain, tokenCredentialId) {
+def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPullDescription, credentialsId, channel, teamDomain, tokenCredentialId) {
     env.GOROOT = "/usr/local/go"
     env.GOPATH = "/go"
     env.PATH = "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"

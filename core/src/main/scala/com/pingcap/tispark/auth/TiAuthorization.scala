@@ -2,7 +2,7 @@ package com.pingcap.tispark.auth
 
 import com.pingcap.tikv.{TiConfiguration, TiDBJDBCClient}
 import com.pingcap.tispark.TiDBUtils
-import com.pingcap.tispark.auth.TiAuthorization.{parsePrivilegeFromRow, refreshInterval}
+import com.pingcap.tispark.auth.TiAuthorization.{logger, parsePrivilegeFromRow, refreshInterval}
 import com.pingcap.tispark.write.TiDBOptions
 import org.apache.spark.sql.internal.SQLConf
 import org.slf4j.LoggerFactory
@@ -44,9 +44,16 @@ case class TiAuthorization private (
   {
     TiAuthorization.dbPrefix = tiConf.getDBPrefix
     val option = new TiDBOptions(parameters)
-    this.tiDBJDBCClient = new TiDBJDBCClient(
-      TiDBUtils.createConnectionFactory(option.url)()
-    )
+    try {
+      this.tiDBJDBCClient = new TiDBJDBCClient(
+        TiDBUtils.createConnectionFactory(option.url)()
+      )
+    } catch {
+      case e: Throwable => {
+        logger.error(f"Failed to create tidb jdbc client with url ${option.url}", e)
+        System.exit(-1)
+      }
+    }
 
     task.run()
     scheduler.scheduleWithFixedDelay(
@@ -60,33 +67,33 @@ case class TiAuthorization private (
   def getPrivileges: PrivilegeObject = {
     var input = JavaConverters.asScalaBuffer(tiDBJDBCClient.showGrants).toList
 
-    /**
-     * TODO: role-based privilege
-     *
-     * Show grants using more than two roles return incorrect result
-     * https://github.com/pingcap/tidb/issues/30855
-     *
-     * val roles = extractRoles(input)
-     * input =
-     * if (roles.nonEmpty)
-     * JavaConverters
-     * .asScalaBuffer(
-     * tiDBJDBCClient.showGrantsUsingRole(roles.asJava)
-     * ).toList
-     * else input
-     *
-     */
+    /** TODO: role-based privilege
+      *
+      * Show grants using more than two roles return incorrect result
+      * https://github.com/pingcap/tidb/issues/30855
+      *
+      * val roles = extractRoles(input)
+      * input =
+      * if (roles.nonEmpty)
+      * JavaConverters
+      * .asScalaBuffer(
+      * tiDBJDBCClient.showGrantsUsingRole(roles.asJava)
+      * ).toList
+      * else input
+      */
 
     parsePrivilegeFromRow(input)
   }
 
-  def getPDAddress(): String ={
+  def getPDAddress(): String = {
     try {
       tiDBJDBCClient.getPDAddress
     } catch {
-      case e: Throwable => throw new IllegalArgumentException(
-        "Failed to get pdAddress from TiDB, please make sure user has `PROCESS` privilege on `INFORMATION_SCHEMA`.`CLUSTER_INFO`"
-      )
+      case e: Throwable =>
+        throw new IllegalArgumentException(
+          "Failed to get pdAddress from TiDB, please make sure user has `PROCESS` privilege on `INFORMATION_SCHEMA`.`CLUSTER_INFO`",
+          e
+        )
     }
   }
 
@@ -193,10 +200,18 @@ object TiAuthorization {
       } else {
         _tiAuthorization = new TiAuthorization(
           Map(
-            "tidb.addr" -> sqlConf.getConfString("spark.sql.catalog.tidb_catalog.tidb.addr"),
-            "tidb.port" -> sqlConf.getConfString("spark.sql.catalog.tidb_catalog.tidb.port"),
-            "tidb.user" -> sqlConf.getConfString("spark.sql.catalog.tidb_catalog.tidb.user"),
-            "tidb.password" -> sqlConf.getConfString("spark.sql.catalog.tidb_catalog.tidb.password"),
+            "tidb.addr" -> sqlConf.getConfString(
+              "spark.sql.catalog.tidb_catalog.tidb.addr"
+            ),
+            "tidb.port" -> sqlConf.getConfString(
+              "spark.sql.catalog.tidb_catalog.tidb.port"
+            ),
+            "tidb.user" -> sqlConf.getConfString(
+              "spark.sql.catalog.tidb_catalog.tidb.user"
+            ),
+            "tidb.password" -> sqlConf.getConfString(
+              "spark.sql.catalog.tidb_catalog.tidb.password"
+            ),
             "multiTables" -> "true"
           ),
           tiConf

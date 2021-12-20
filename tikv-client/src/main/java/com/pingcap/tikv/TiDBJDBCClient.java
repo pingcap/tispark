@@ -108,7 +108,7 @@ public class TiDBJDBCClient implements AutoCloseable {
     return result;
   }
 
-  public String getPDAddress() {
+  public String getPDAddress() throws SQLException {
     List<String> result = new ArrayList<>();
     try (Statement tidbStmt = connection.createStatement()) {
 
@@ -120,10 +120,6 @@ public class TiDBJDBCClient implements AutoCloseable {
           result.add(resultSet.getString(i));
         }
       }
-    } catch (SQLException e) {
-      throw new IllegalArgumentException(
-          "Failed to get pdAddress from TiDB, please make sure user has `PROCESS` privilege on `INFORMATION_SCHEMA`.`CLUSTER_INFO`",
-          e);
     }
 
     return result.get(0);
