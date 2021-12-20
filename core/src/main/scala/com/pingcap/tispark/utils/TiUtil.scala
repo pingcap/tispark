@@ -89,11 +89,9 @@ object TiUtil {
   }
 
   def sparkConfToTiConf(conf: SparkConf, option: Option[String]): TiConfiguration = {
-    val tiConf = TiConfiguration.createDefault(
-      if (option.isDefined){
-        option.get
-      } else conf.get(TiConfigConst.PD_ADDRESSES)
-    )
+    val tiConf = TiConfiguration.createDefault(if (option.isDefined) {
+      option.get
+    } else conf.get(TiConfigConst.PD_ADDRESSES))
 
     sparkConfToTiConfWithoutPD(conf, tiConf)
   }
@@ -109,21 +107,15 @@ object TiUtil {
     }
 
     if (conf.contains(TiConfigConst.INDEX_SCAN_BATCH_SIZE)) {
-      tiConf.setIndexScanBatchSize(
-        conf.get(TiConfigConst.INDEX_SCAN_BATCH_SIZE).toInt
-      )
+      tiConf.setIndexScanBatchSize(conf.get(TiConfigConst.INDEX_SCAN_BATCH_SIZE).toInt)
     }
 
     if (conf.contains(TiConfigConst.INDEX_SCAN_CONCURRENCY)) {
-      tiConf.setIndexScanConcurrency(
-        conf.get(TiConfigConst.INDEX_SCAN_CONCURRENCY).toInt
-      )
+      tiConf.setIndexScanConcurrency(conf.get(TiConfigConst.INDEX_SCAN_CONCURRENCY).toInt)
     }
 
     if (conf.contains(TiConfigConst.TABLE_SCAN_CONCURRENCY)) {
-      tiConf.setTableScanConcurrency(
-        conf.get(TiConfigConst.TABLE_SCAN_CONCURRENCY).toInt
-      )
+      tiConf.setTableScanConcurrency(conf.get(TiConfigConst.TABLE_SCAN_CONCURRENCY).toInt)
     }
 
     if (conf.contains(TiConfigConst.REQUEST_ISOLATION_LEVEL)) {
@@ -154,48 +146,35 @@ object TiUtil {
     }
 
     if (conf.contains(TiConfigConst.WRITE_WITHOUT_LOCK_TABLE)) {
-      tiConf.setWriteWithoutLockTable(
-        conf.get(TiConfigConst.WRITE_WITHOUT_LOCK_TABLE).toBoolean
-      )
+      tiConf.setWriteWithoutLockTable(conf.get(TiConfigConst.WRITE_WITHOUT_LOCK_TABLE).toBoolean)
     }
 
     if (conf.contains(TiConfigConst.WRITE_ALLOW_SPARK_SQL)) {
-      tiConf.setWriteAllowSparkSQL(
-        conf.get(TiConfigConst.WRITE_ALLOW_SPARK_SQL).toBoolean
-      )
+      tiConf.setWriteAllowSparkSQL(conf.get(TiConfigConst.WRITE_ALLOW_SPARK_SQL).toBoolean)
     }
 
     if (conf.contains(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB)) {
       tiConf.setTikvRegionSplitSizeInMB(
-        conf.get(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB).toInt
-      )
+        conf.get(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB).toInt)
     }
 
     if (conf.contains(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD)) {
       tiConf.setDowngradeThreshold(
-        conf.get(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toInt
-      )
+        conf.get(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toInt)
     }
 
     if (conf.contains(TiConfigConst.PARTITION_PER_SPLIT)) {
-      tiConf.setPartitionPerSplit(
-        conf.get(TiConfigConst.PARTITION_PER_SPLIT).toInt
-      )
+      tiConf.setPartitionPerSplit(conf.get(TiConfigConst.PARTITION_PER_SPLIT).toInt)
     }
 
     if (conf.contains(TiConfigConst.ISOLATION_READ_ENGINES)) {
       import scala.collection.JavaConversions._
       tiConf.setIsolationReadEngines(
-        getIsolationReadEnginesFromString(
-          conf.get(TiConfigConst.ISOLATION_READ_ENGINES)
-        ).toList
-      )
+        getIsolationReadEnginesFromString(conf.get(TiConfigConst.ISOLATION_READ_ENGINES)).toList)
     }
 
     if (conf.contains(TiConfigConst.KV_CLIENT_CONCURRENCY)) {
-      tiConf.setKvClientConcurrency(
-        conf.get(TiConfigConst.KV_CLIENT_CONCURRENCY).toInt
-      )
+      tiConf.setKvClientConcurrency(conf.get(TiConfigConst.KV_CLIENT_CONCURRENCY).toInt)
     }
 
     tiConf

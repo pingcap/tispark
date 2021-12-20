@@ -119,15 +119,15 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   override def initialize(name: String, options: CaseInsensitiveStringMap): Unit = {
     _name = Some(name)
 
-    val pdAddress:String =
-    if (TiAuthorization.enableAuth) {
-      tiAuthorization.getPDAddress()
-    } else {
-      if (!options.containsKey("pd.addresses") && !options.containsKey("pd.address")) {
-        throw new Exception("missing configuration spark.sql.catalog.tidb_catalog.pd.addresses")
+    val pdAddress: String =
+      if (TiAuthorization.enableAuth) {
+        tiAuthorization.getPDAddress()
+      } else {
+        if (!options.containsKey("pd.addresses") && !options.containsKey("pd.address")) {
+          throw new Exception("missing configuration spark.sql.catalog.tidb_catalog.pd.addresses")
+        }
+        options.getOrDefault("pd.addresses", options.get("pd.address"))
       }
-      options.getOrDefault("pd.addresses", options.get("pd.address"))
-    }
 
     logger.info(s"Initialize TiCatalog with name: $name, pd address: $pdAddress")
     val conf = TiConfiguration.createDefault(pdAddress)
@@ -146,12 +146,13 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     }
 
   override def listNamespaces(): Array[Array[String]] =
-    meta.get.getDatabases.filter(
-      db =>
+    meta.get.getDatabases
+      .filter(db =>
         if (TiAuthorization.enableAuth) {
           tiAuthorization.visible(db.getName, "")
-        } else true
-    ).map(dbInfo => Array(dbInfo.getName)).toArray
+        } else true)
+      .map(dbInfo => Array(dbInfo.getName))
+      .toArray
 
   override def listNamespaces(namespace: Array[String]): Array[Array[String]] = {
     namespace match {
@@ -219,10 +220,9 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
         meta.get
           .getTables(meta.get.getDatabase(db).getOrElse(throw new NoSuchNamespaceException(db)))
           .filter(tbl =>
-            if (TiAuthorization.enableAuth){
+            if (TiAuthorization.enableAuth) {
               TiAuthorization.tiAuthorization.visible(db, tbl.getName)
-            } else true
-          )
+            } else true)
           .map(tbl => Identifier.of(Array(db), tbl.getName))
           .toArray
       case _ =>

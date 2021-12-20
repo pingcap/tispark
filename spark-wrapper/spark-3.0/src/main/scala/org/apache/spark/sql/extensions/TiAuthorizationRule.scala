@@ -9,8 +9,8 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.{SparkSession, TiContext}
 
 case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
-    sparkSession: SparkSession
-) extends Rule[LogicalPlan] {
+    sparkSession: SparkSession)
+    extends Rule[LogicalPlan] {
 
   protected lazy val meta: MetaManager = tiContext.meta
   protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
@@ -22,8 +22,7 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
         TiAuthorization.authorizeForSelect(
           identifier.name,
           identifier.qualifier.last,
-          tiAuthorization
-        )
+          tiAuthorization)
       }
       sa
     case sd: ShowNamespaces =>
@@ -39,33 +38,28 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
       TiAuthorization.authorizeForDescribeTable(
         tableName.table,
         tiContext.getDatabaseFromOption(databaseName),
-        tiAuthorization
-      )
+        tiAuthorization)
       st
     case dt @ DescribeTableCommand(table, _, _) =>
       TiAuthorization.authorizeForDescribeTable(
         table.table,
         tiContext.getDatabaseFromOption(table.database),
-        tiAuthorization
-      )
+        tiAuthorization)
       dt
     case dt @ DescribeRelation(
           LogicalRelation(TiDBRelation(_, tableRef, _, _, _), _, _, _),
           _,
-          _
-        ) =>
+          _) =>
       TiAuthorization.authorizeForDescribeTable(
         tableRef.tableName,
         tableRef.databaseName,
-        tiAuthorization
-      )
+        tiAuthorization)
       dt
     case dc @ DescribeColumnCommand(table, _, _) =>
       TiAuthorization.authorizeForDescribeTable(
         table.table,
         tiContext.getDatabaseFromOption(table.database),
-        tiAuthorization
-      )
+        tiAuthorization)
       dc
     case ct @ CreateTableLikeCommand(target, source, _, _, _, _) =>
       TiAuthorization.authorizeForCreateTableLike(
@@ -73,8 +67,7 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
         target.table,
         tiContext.getDatabaseFromOption(source.database),
         source.table,
-        tiContext.tiAuthorization
-      )
+        tiContext.tiAuthorization)
       TiCreateTableLikeCommand(tiContext, ct)
   }
 

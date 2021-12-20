@@ -46,10 +46,9 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
       .map(tiCatalog.listTables(db, _))
       .getOrElse(tiCatalog.listTables(db, "*"))
       .filter(t =>
-        if (TiAuthorization.enableAuth){
+        if (TiAuthorization.enableAuth) {
           tiContext.tiAuthorization.visible(db, t.table)
-        } else true
-      )
+        } else true)
 
     tables.map { tableIdent =>
       val database = tableIdent.database.getOrElse("")

@@ -30,25 +30,16 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
 
     // create table
     tidbStmt.execute(
-      s"create table IF NOT EXISTS $database.$invisibleTable(i int, s varchar(128))"
-    )
-    tidbStmt.execute(
-      s"create table IF NOT EXISTS $dbtable(i int, s varchar(128))"
-    )
+      s"create table IF NOT EXISTS $database.$invisibleTable(i int, s varchar(128))")
+    tidbStmt.execute(s"create table IF NOT EXISTS $dbtable(i int, s varchar(128))")
     tidbStmt.execute(s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')")
 
     // create user
-    tidbStmt.execute(
-      "CREATE USER IF NOT EXISTS 'tispark_unit_test_user' IDENTIFIED BY ''"
-    )
+    tidbStmt.execute("CREATE USER IF NOT EXISTS 'tispark_unit_test_user' IDENTIFIED BY ''")
 
     // grant user
-    tidbStmt.execute(
-      f"GRANT CREATE ON $dummyDatabase.* TO 'tispark_unit_test_user'@'%%'"
-    )
-    tidbStmt.execute(
-      f"GRANT PROCESS ON *.* TO 'tispark_unit_test_user'@'%%'"
-    )
+    tidbStmt.execute(f"GRANT CREATE ON $dummyDatabase.* TO 'tispark_unit_test_user'@'%%'")
+    tidbStmt.execute(f"GRANT PROCESS ON *.* TO 'tispark_unit_test_user'@'%%'")
 
     // set namespace "tidb_catalog"
     if (catalogPluginMode) {
@@ -57,9 +48,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   override def afterAll(): Unit = {
-    tidbStmt.execute(
-      "DROP USER IF EXISTS 'tispark_unit_test_user'"
-    )
+    tidbStmt.execute("DROP USER IF EXISTS 'tispark_unit_test_user'")
     tidbStmt.execute(s"DROP TABLE IF EXISTS `$database`.`$table`")
     tidbStmt.execute(s"DROP DATABASE IF EXISTS `$database`")
     tidbStmt.execute(s"DROP DATABASE IF EXISTS `$dummyDatabase`")
@@ -72,22 +61,16 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
 
   test("Select without privilege should not be passed") {
     an[SQLException] should be thrownBy {
-      spark.sql(
-        s"select * from `$databaseWithPrefix`.`$table`"
-      )
+      spark.sql(s"select * from `$databaseWithPrefix`.`$table`")
     }
   }
 
   test("Use database and select without privilege should not be passed") {
     an[SQLException] should be thrownBy spark.sql(s"use $databaseWithPrefix")
     if (catalogPluginMode) {
-      an[AnalysisException] should be thrownBy spark.sql(
-        s"select * from $table"
-      )
+      an[AnalysisException] should be thrownBy spark.sql(s"select * from $table")
     } else {
-      an[SQLException] should be thrownBy spark.sql(
-        s"select * from $table"
-      )
+      an[SQLException] should be thrownBy spark.sql(s"select * from $table")
     }
 
   }
@@ -108,8 +91,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
 
     an[SQLException] should be thrownBy {
       spark.sql(
-        s"create table `$databaseWithPrefix`.`${table}1`  like `$databaseWithPrefix`.`${table}`"
-      )
+        s"create table `$databaseWithPrefix`.`${table}1`  like `$databaseWithPrefix`.`${table}`")
     }
 
     tidbStmt.execute(s"drop table if exsit `$database`.`${table}1`")
@@ -117,23 +99,18 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
 
   test("Give privilege") {
     tidbStmt.execute(
-      f"GRANT UPDATE,SELECT on `$database`.`$table` TO 'tispark_unit_test_user'@'%%';"
-    )
+      f"GRANT UPDATE,SELECT on `$database`.`$table` TO 'tispark_unit_test_user'@'%%';")
 
     Thread.sleep((TiAuthorization.refreshInterval + 5) * 1000)
   }
 
   test("Select with privilege should be passed") {
-    noException should be thrownBy spark.sql(
-      s"select * from `$databaseWithPrefix`.`$table`"
-    )
+    noException should be thrownBy spark.sql(s"select * from `$databaseWithPrefix`.`$table`")
   }
 
   test("Use database and select with privilege should not be passed") {
     noException should be thrownBy spark.sql(s"use $databaseWithPrefix")
-    noException should be thrownBy spark.sql(
-      s"select * from $table"
-    )
+    noException should be thrownBy spark.sql(s"select * from $table")
   }
 
   test(f"Show databases with privilege should contains db") {
@@ -163,35 +140,27 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   test(f"Describe tables should not success with invisible table") {
-    noException should be thrownBy spark.sql(
-      s"DESCRIBE TABLE `$databaseWithPrefix`.`$table`"
-    )
+    noException should be thrownBy spark.sql(s"DESCRIBE TABLE `$databaseWithPrefix`.`$table`")
     an[SQLException] should be thrownBy spark.sql(
-      s"DESCRIBE TABLE `$databaseWithPrefix`.`$invisibleTable`"
-    )
+      s"DESCRIBE TABLE `$databaseWithPrefix`.`$invisibleTable`")
   }
 
   // SHOW COLUMNS is only supported with temp views or v1 tables.;
   test(f"SHOW COLUMNS should not success with invisible table") {
     if (!catalogPluginMode) {
       noException should be thrownBy spark.sql(
-        s"SHOW COLUMNS FROM `$databaseWithPrefix`.`$table`"
-      )
+        s"SHOW COLUMNS FROM `$databaseWithPrefix`.`$table`")
       an[SQLException] should be thrownBy spark.sql(
-        s"SHOW COLUMNS FROM `$databaseWithPrefix`.`$invisibleTable`"
-      )
+        s"SHOW COLUMNS FROM `$databaseWithPrefix`.`$invisibleTable`")
     }
   }
 
   //Describing columns is not supported for v2 tables.
   test(f"DESCRIBE COLUMN should not success with invisible table") {
     if (!catalogPluginMode) {
-      noException should be thrownBy spark.sql(
-        s"DESCRIBE `$databaseWithPrefix`.`$table` s"
-      )
+      noException should be thrownBy spark.sql(s"DESCRIBE `$databaseWithPrefix`.`$table` s")
       an[SQLException] should be thrownBy spark.sql(
-        s"DESCRIBE `$databaseWithPrefix`.`$invisibleTable` s"
-      )
+        s"DESCRIBE `$databaseWithPrefix`.`$invisibleTable` s")
     }
   }
 
@@ -202,8 +171,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
 
     noException should be thrownBy {
       spark.sql(
-        s"create table `$databaseWithPrefix`.`${table}1`  like `$databaseWithPrefix`.`${table}`"
-      )
+        s"create table `$databaseWithPrefix`.`${table}1`  like `$databaseWithPrefix`.`${table}`")
     }
 
     tidbStmt.execute(s"drop table if exsit `$database`.`${table}1`")

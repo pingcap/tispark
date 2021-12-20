@@ -11,27 +11,14 @@ class TiAuthSuite extends UnitSuite {
         "GRANT CREATE,UPDATE ON mysql.* TO 'root'@'%' WITH GRANT OPTION" ::
         "GRANT CREATE TABLESPACE,SELECT ON *.* TO 'root'@'%' WITH GRANT OPTION" ::
         "GRANT INSERT,UPDATE,DELETE ON tpch_test.* TO 'root'@'%'" ::
-        "GRANT 'app_write'@'%' TO 'dev1'@'%'" :: Nil
-    )
-    result.globalPriv should equal(
-      List(MySQLPriv.CreateTablespacePriv, MySQLPriv.SelectPriv)
-    )
+        "GRANT 'app_write'@'%' TO 'dev1'@'%'" :: Nil)
+    result.globalPriv should equal(List(MySQLPriv.CreateTablespacePriv, MySQLPriv.SelectPriv))
     result.databasePrivs should equal(
       Map(
         "mysql" -> List(MySQLPriv.CreatePriv, MySQLPriv.UpdatePriv),
-        "tpch_test" -> List(
-          MySQLPriv.InsertPriv,
-          MySQLPriv.UpdatePriv,
-          MySQLPriv.DeletePriv
-        )
-      )
-    )
+        "tpch_test" -> List(MySQLPriv.InsertPriv, MySQLPriv.UpdatePriv, MySQLPriv.DeletePriv)))
     result.tablePrivs should equal(
-      Map(
-        "test.table" -> List(MySQLPriv.DeletePriv),
-        "test.user" -> List(MySQLPriv.DeletePriv)
-      )
-    )
+      Map("test.table" -> List(MySQLPriv.DeletePriv), "test.user" -> List(MySQLPriv.DeletePriv)))
   }
 
   test("Extract role from jdbc result should be correct") {
@@ -41,8 +28,7 @@ class TiAuthSuite extends UnitSuite {
         "GRANT CREATE,UPDATE ON mysql.* TO 'root'@'%' WITH GRANT OPTION" ::
         "GRANT CREATE TABLESPACE,SELECT ON *.* TO 'root'@'%' WITH GRANT OPTION" ::
         "GRANT INSERT,UPDATE,DELETE ON tpch_test.* TO 'root'@'%'" ::
-        "GRANT 'app_read'@'%','app_write'@'%' TO 'rw_user1'@'localhost'" :: Nil
-    )
+        "GRANT 'app_read'@'%','app_write'@'%' TO 'rw_user1'@'localhost'" :: Nil)
     roles should equal(List("app_read", "app_write"))
   }
 }

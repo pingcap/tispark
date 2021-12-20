@@ -132,8 +132,8 @@ object ReflectionUtil {
   }
 
   def newTiAuthRule(
-                             getOrCreateTiContext: SparkSession => TiContext,
-                             sparkSession: SparkSession): Rule[LogicalPlan] = {
+      getOrCreateTiContext: SparkSession => TiContext,
+      sparkSession: SparkSession): Rule[LogicalPlan] = {
     classLoader
       .loadClass(TI_AUTHORIZATION_RULE_CLASS)
       .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])

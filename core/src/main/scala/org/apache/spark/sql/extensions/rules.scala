@@ -23,7 +23,7 @@ import org.apache.spark.sql.{SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
 
 class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
-  extends (SparkSession => Rule[LogicalPlan]) {
+    extends (SparkSession => Rule[LogicalPlan]) {
   private val logger = LoggerFactory.getLogger(getClass.getName)
   override def apply(sparkSession: SparkSession): Rule[LogicalPlan] = {
     if (TiExtensions.authEnable(sparkSession)) {
@@ -31,7 +31,8 @@ class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
       logger.info("TiSpark running in auth mode")
       TiAuthorization.enableAuth = true
       TiAuthorization.sqlConf = sparkSession.sqlContext.conf
-      TiAuthorization.tiConf = TiUtil.sparkConfToTiConfWithoutPD(sparkSession.sparkContext.conf, new TiConfiguration())
+      TiAuthorization.tiConf =
+        TiUtil.sparkConfToTiConfWithoutPD(sparkSession.sparkContext.conf, new TiConfiguration())
       ReflectionUtil.newTiAuthRule(getOrCreateTiContext, sparkSession)
     } else {
       TiNopAuthRule(getOrCreateTiContext)(sparkSession)
@@ -74,8 +75,8 @@ case class TiDDLRuleV2(getOrCreateTiContext: SparkSession => TiContext)(
 }
 
 case class TiNopAuthRule(getOrCreateTiContext: SparkSession => TiContext)(
-  sparkSession: SparkSession)
-  extends Rule[LogicalPlan] {
+    sparkSession: SparkSession)
+    extends Rule[LogicalPlan] {
 
   override def apply(plan: LogicalPlan): LogicalPlan = plan
 }

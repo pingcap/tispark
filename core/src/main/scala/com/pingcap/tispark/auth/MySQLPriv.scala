@@ -4,66 +4,64 @@ object MySQLPriv extends Enumeration {
 
   // UsagePriv is a synonym for “no privileges”
   val UsagePriv,
-  // CreatePriv is the privilege to create schema/table.
+      // CreatePriv is the privilege to create schema/table.
   CreatePriv,
-  // SelectPriv is the privilege to read from table.
+      // SelectPriv is the privilege to read from table.
   SelectPriv,
-  // InsertPriv is the privilege to insert data into table.
+      // InsertPriv is the privilege to insert data into table.
   InsertPriv,
-  // UpdatePriv is the privilege to update data in table.
+      // UpdatePriv is the privilege to update data in table.
   UpdatePriv,
-  // DeletePriv is the privilege to delete data from table.
+      // DeletePriv is the privilege to delete data from table.
   DeletePriv,
-  // ShowDBPriv is the privilege to run show databases statement.
+      // ShowDBPriv is the privilege to run show databases statement.
   ShowDBPriv,
-  // SuperPriv enables many operations and server behaviors.
+      // SuperPriv enables many operations and server behaviors.
   SuperPriv,
-  // CreateUserPriv is the privilege to create user.
+      // CreateUserPriv is the privilege to create user.
   CreateUserPriv,
-  // TriggerPriv is not checked yet.
+      // TriggerPriv is not checked yet.
   TriggerPriv,
-  // DropPriv is the privilege to drop schema/table.
+      // DropPriv is the privilege to drop schema/table.
   DropPriv,
-  // ProcessPriv pertains to display of information about the threads executing within the server.
+      // ProcessPriv pertains to display of information about the threads executing within the server.
   ProcessPriv,
-  // GrantPriv is the privilege to grant privilege to user.
+      // GrantPriv is the privilege to grant privilege to user.
   GrantPriv,
-  // ReferencesPriv is not checked yet.
+      // ReferencesPriv is not checked yet.
   ReferencesPriv,
-  // AlterPriv is the privilege to run alter statement.
+      // AlterPriv is the privilege to run alter statement.
   AlterPriv,
-  // ExecutePriv is the privilege to run execute statement.
+      // ExecutePriv is the privilege to run execute statement.
   ExecutePriv,
-  // IndexPriv is the privilege to create/drop index.
+      // IndexPriv is the privilege to create/drop index.
   IndexPriv,
-  // CreateViewPriv is the privilege to create view.
+      // CreateViewPriv is the privilege to create view.
   CreateViewPriv,
-  // ShowViewPriv is the privilege to show create view.
+      // ShowViewPriv is the privilege to show create view.
   ShowViewPriv,
-  // CreateRolePriv the privilege to create a role.
+      // CreateRolePriv the privilege to create a role.
   CreateRolePriv,
-  // DropRolePriv is the privilege to drop a role.
+      // DropRolePriv is the privilege to drop a role.
   DropRolePriv,
-  // CreateTMPTablePriv is the privilege to create a temporary table.
-  CreateTMPTablePriv, LockTablesPriv, CreateRoutinePriv, AlterRoutinePriv,
-      EventPriv,
-  // ShutdownPriv the privilege to shutdown a server.
+      // CreateTMPTablePriv is the privilege to create a temporary table.
+  CreateTMPTablePriv, LockTablesPriv, CreateRoutinePriv, AlterRoutinePriv, EventPriv,
+      // ShutdownPriv the privilege to shutdown a server.
   ShutdownPriv,
-  // ReloadPriv is the privilege to enable the use of the FLUSH statement.
+      // ReloadPriv is the privilege to enable the use of the FLUSH statement.
   ReloadPriv,
-  // FilePriv is the privilege to enable the use of LOAD DATA and SELECT ... INTO OUTFILE.
+      // FilePriv is the privilege to enable the use of LOAD DATA and SELECT ... INTO OUTFILE.
   FilePriv,
-  // ConfigPriv is the privilege to enable the use SET CONFIG statements.
+      // ConfigPriv is the privilege to enable the use SET CONFIG statements.
   ConfigPriv,
-  // CreateTablespacePriv is the privilege to create tablespace.
+      // CreateTablespacePriv is the privilege to create tablespace.
   CreateTablespacePriv,
-  // ReplicationClientPriv is used in MySQL replication
+      // ReplicationClientPriv is used in MySQL replication
   ReplicationClientPriv,
-  // ReplicationSlavePriv is used in MySQL replication
+      // ReplicationSlavePriv is used in MySQL replication
   ReplicationSlavePriv,
-  // AllPriv is the privilege for all actions.
-  AllPriv,
-  /*
+      // AllPriv is the privilege for all actions.
+  AllPriv, /*
    *  Please add the new priv before AllPriv to keep the values consistent across versions.
    */
 
@@ -105,8 +103,7 @@ object MySQLPriv extends Enumeration {
     "USAGE" -> MySQLPriv.UsagePriv,
     "REPLICATION CLIENT" -> MySQLPriv.ReplicationClientPriv,
     "REPLICATION SLAVE" -> MySQLPriv.ReplicationSlavePriv,
-    "ALL PRIVILEGES" -> MySQLPriv.AllPriv
-  )
+    "ALL PRIVILEGES" -> MySQLPriv.AllPriv)
 
   def main(args: Array[String]): Unit = {
     println(this.Str2Priv("SELECT"))

@@ -8,6 +8,7 @@ abstract class UnitSuite
     extends FunSuite
     with BeforeAndAfterEach
     with BeforeAndAfterAll
-    with Matchers with Logging{
+    with Matchers
+    with Logging {
   protected val logger: Logger = log
 }

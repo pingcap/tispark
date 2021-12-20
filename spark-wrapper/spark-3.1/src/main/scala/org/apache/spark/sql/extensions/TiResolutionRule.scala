@@ -18,9 +18,17 @@ package org.apache.spark.sql.extensions
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
-import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation, UnresolvedTableOrView}
+import org.apache.spark.sql.catalyst.analysis.{
+  EliminateSubqueryAliases,
+  UnresolvedRelation,
+  UnresolvedTableOrView
+}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
-import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoStatement, LogicalPlan, SubqueryAlias}
+import org.apache.spark.sql.catalyst.plans.logical.{
+  InsertIntoStatement,
+  LogicalPlan,
+  SubqueryAlias
+}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.{AnalysisException, SparkSession, TiContext}
@@ -58,12 +66,8 @@ case class TiResolutionRule(
         // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
 
         // Authorize for Select statement
-        if(TiAuthorization.enableAuth){
-          TiAuthorization.authorizeForSelect(
-            tableName,
-            dbName,
-            tiContext.tiAuthorization
-          )
+        if (TiAuthorization.enableAuth) {
+          TiAuthorization.authorizeForSelect(tableName, dbName, tiContext.tiAuthorization)
         }
 
         SubqueryAlias(tableName, LogicalRelation(tiDBRelation))
