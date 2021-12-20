@@ -459,6 +459,8 @@ trait SharedSQLContext
       }
       if (_isAuthEnabled) {
         conf.set("spark.sql.auth.enable", "true")
+      } else {
+        conf.set("spark.sql.auth.enable", "false")
       }
     }
 
