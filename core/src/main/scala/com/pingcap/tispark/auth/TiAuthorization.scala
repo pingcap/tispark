@@ -171,11 +171,11 @@ object TiAuthorization {
       } else {
         _tiAuthorization = new TiAuthorization(
           Map(
-            "tidb.addr" -> sqlConf.getConfString("spark.sql.catalog.tidb_catalog.tidb.addr"),
-            "tidb.port" -> sqlConf.getConfString("spark.sql.catalog.tidb_catalog.tidb.port"),
-            "tidb.user" -> sqlConf.getConfString("spark.sql.catalog.tidb_catalog.tidb.user"),
+            "tidb.addr" -> sqlConf.getConfString("spark.sql.tidb.addr"),
+            "tidb.port" -> sqlConf.getConfString("spark.sql.tidb.port"),
+            "tidb.user" -> sqlConf.getConfString("spark.sql.tidb.user"),
             "tidb.password" -> sqlConf.getConfString(
-              "spark.sql.catalog.tidb_catalog.tidb.password"),
+              "spark.sql.tidb.password"),
             "multiTables" -> "true"),
           tiConf)
         initialized = true

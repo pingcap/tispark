@@ -19,10 +19,10 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     super.beforeAll()
 
     // set sql conf
-    spark.sqlContext.setConf("spark.sql.catalog.tidb_catalog.tidb.addr", "127.0.0.1")
-    spark.sqlContext.setConf("spark.sql.catalog.tidb_catalog.tidb.port", "4000")
-    spark.sqlContext.setConf("spark.sql.catalog.tidb_catalog.tidb.user", "tispark_unit_test_user")
-    spark.sqlContext.setConf("spark.sql.catalog.tidb_catalog.tidb.password", "")
+    spark.sqlContext.setConf("spark.sql.tidb.addr", "127.0.0.1")
+    spark.sqlContext.setConf("spark.sql.tidb.port", "4000")
+    spark.sqlContext.setConf("spark.sql.tidb.user", "tispark_unit_test_user")
+    spark.sqlContext.setConf("spark.sql.tidb.password", "")
 
     // create database
     tidbStmt.execute(s"CREATE DATABASE IF NOT EXISTS `$database`")
