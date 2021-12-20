@@ -133,10 +133,7 @@ case class TiAuthorization private (
         .keySet
         .contains(db)
     } else {
-      databasePrivs.get().keySet.contains(db) || tablePrivs
-        .get()
-        .keySet
-        .contains(db) || tablePrivs
+      databasePrivs.get().keySet.contains(db)  || tablePrivs
         .get()
         .getOrElse(db, Map())
         .keySet

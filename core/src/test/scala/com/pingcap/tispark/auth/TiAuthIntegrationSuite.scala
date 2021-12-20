@@ -2,7 +2,14 @@ package com.pingcap.tispark.auth
 
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.test.SharedSQLContext
-import org.scalatest.Matchers.{an, be, contain, convertToAnyShouldWrapper, noException, not}
+import org.scalatest.Matchers.{
+  an,
+  be,
+  contain,
+  convertToAnyShouldWrapper,
+  noException,
+  not
+}
 
 import java.sql.SQLException
 
@@ -28,19 +35,18 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     tidbStmt.execute(s"CREATE DATABASE IF NOT EXISTS `$dummyDatabase`")
 
     // create table
-    tidbStmt.execute(s"create table $database.$invisibleTable(i int, s varchar(128))")
-    tidbStmt.execute(s"create table $dbtable(i int, s varchar(128))")
+    tidbStmt.execute(
+      s"create table IF NOT EXISTS $database.$invisibleTable(i int, s varchar(128))"
+    )
+    tidbStmt.execute(
+      s"create table IF NOT EXISTS $dbtable(i int, s varchar(128))"
+    )
     tidbStmt.execute(s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')")
 
-    // create role
-    tidbStmt.execute(f"CREATE ROLE 'test_read', 'test_write'")
-    tidbStmt.execute(f"GRANT SELECT ON $database.$table TO 'test_read'@'%%'")
-    tidbStmt.execute(
-      f"GRANT UPDATE ON $database.$table TO 'test_write'@'%%'"
-    )
-
     // create user
-    tidbStmt.execute("CREATE USER 'tispark_unit_test_user' IDENTIFIED BY ''")
+    tidbStmt.execute(
+      "CREATE USER IF NOT EXISTS 'tispark_unit_test_user' IDENTIFIED BY ''"
+    )
 
     // grant user
     tidbStmt.execute(
@@ -54,9 +60,8 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   override def afterAll(): Unit = {
-    tidbStmt.execute("DROP ROLE 'test_read', 'test_write'")
     tidbStmt.execute(
-      "DROP USER 'tispark_unit_test_user'"
+      "DROP USER IF EXISTS 'tispark_unit_test_user'"
     )
     tidbStmt.execute(s"DROP TABLE IF EXISTS `$database`.`$table`")
     tidbStmt.execute(s"DROP DATABASE IF EXISTS `$database`")
@@ -74,9 +79,16 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
 
   test("Use database and select without privilege should not be passed") {
     an[SQLException] should be thrownBy spark.sql(s"use $databaseWithPrefix")
-    an[AnalysisException] should be thrownBy spark.sql(
-      s"select * from $table"
-    )
+    if (catalogPluginMode) {
+      an[AnalysisException] should be thrownBy spark.sql(
+        s"select * from $table"
+      )
+    } else {
+      an[SQLException] should be thrownBy spark.sql(
+        s"select * from $table"
+      )
+    }
+
   }
 
   test(f"Show databases without privilege should not contains db") {
@@ -104,7 +116,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
 
   test("Give privilege") {
     tidbStmt.execute(
-      "GRANT 'test_read','test_write' TO 'tispark_unit_test_user'@'%';"
+      f"GRANT UPDATE,SELECT on `$database`.`$table` TO 'tispark_unit_test_user'@'%%';"
     )
 
     Thread.sleep((TiAuthorization.refreshInterval + 5) * 1000)
@@ -140,8 +152,46 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
       .collect()
       .map(row => row.toString())
       .toList
-    tables should contain (f"[$table]")
-    tables should not contain (f"[$invisibleTable]")
+    if (catalogPluginMode) {
+      tables should contain(f"[$databaseWithPrefix,$table]")
+      tables should not contain (f"[$databaseWithPrefix,$invisibleTable]")
+    } else {
+      tables should contain(f"[$databaseWithPrefix,$table,false]")
+      tables should not contain (f"[$databaseWithPrefix,$invisibleTable,false]")
+    }
+  }
+
+  test(f"Describe tables should not success with invisible table") {
+    noException should be thrownBy spark.sql(
+      s"DESCRIBE TABLE `$databaseWithPrefix`.`$table`"
+    )
+    an[SQLException] should be thrownBy spark.sql(
+      s"DESCRIBE TABLE `$databaseWithPrefix`.`$invisibleTable`"
+    )
+  }
+
+  // SHOW COLUMNS is only supported with temp views or v1 tables.;
+  test(f"SHOW COLUMNS should not success with invisible table") {
+    if (!catalogPluginMode) {
+      noException should be thrownBy spark.sql(
+        s"SHOW COLUMNS FROM `$databaseWithPrefix`.`$table`"
+      )
+      an[SQLException] should be thrownBy spark.sql(
+        s"SHOW COLUMNS FROM `$databaseWithPrefix`.`$invisibleTable`"
+      )
+    }
+  }
+
+  //Describing columns is not supported for v2 tables.
+  test(f"DESCRIBE COLUMN should not success with invisible table") {
+    if (!catalogPluginMode) {
+      noException should be thrownBy spark.sql(
+        s"DESCRIBE `$databaseWithPrefix`.`$table` s"
+      )
+      an[SQLException] should be thrownBy spark.sql(
+        s"DESCRIBE `$databaseWithPrefix`.`$invisibleTable` s"
+      )
+    }
   }
 
   ignore("CreateTableLike with privilege should be passed") {

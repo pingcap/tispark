@@ -29,47 +29,64 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
     case sd: ShowNamespaces =>
       sd
     case sd @ SetCatalogAndNamespace(catalogManager, catalogName, namespace) =>
-      namespace.get.foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
+      namespace.get.foreach(
+        TiAuthorization.authorizeForSetDatabase(_, tiAuthorization)
+      )
       sd
     case st: ShowTablesCommand =>
       st
     case st @ ShowColumnsCommand(databaseName, tableName) =>
-      TiAuthorization.authorizeForDescribeTable(tableName.table,
+      TiAuthorization.authorizeForDescribeTable(
+        tableName.table,
         tiContext.getDatabaseFromOption(databaseName),
-        tiAuthorization)
+        tiAuthorization
+      )
       st
     case sc @ ShowColumns(
           LogicalRelation(TiDBRelation(_, tableRef, _, _, _), _, _, _),
           _
         ) =>
-      TiAuthorization.authorizeForDescribeTable(tableRef.tableName,
-        tableRef.databaseName, tiAuthorization)
+      TiAuthorization.authorizeForDescribeTable(
+        tableRef.tableName,
+        tableRef.databaseName,
+        tiAuthorization
+      )
       sc
     case dt @ DescribeTableCommand(table, _, _) =>
-      TiAuthorization.authorizeForDescribeTable(table.table,
+      TiAuthorization.authorizeForDescribeTable(
+        table.table,
         tiContext.getDatabaseFromOption(table.database),
-        tiAuthorization)
+        tiAuthorization
+      )
       dt
     case dt @ DescribeRelation(
           LogicalRelation(TiDBRelation(_, tableRef, _, _, _), _, _, _),
           _,
           _
         ) =>
-      TiAuthorization.authorizeForDescribeTable(tableRef.tableName,
-        tableRef.databaseName, tiAuthorization)
+      TiAuthorization.authorizeForDescribeTable(
+        tableRef.tableName,
+        tableRef.databaseName,
+        tiAuthorization
+      )
       dt
     case dc @ DescribeColumnCommand(table, _, _) =>
-      TiAuthorization.authorizeForDescribeTable(table.table,
+      TiAuthorization.authorizeForDescribeTable(
+        table.table,
         tiContext.getDatabaseFromOption(table.database),
-        tiAuthorization)
+        tiAuthorization
+      )
       dc
     case dc @ DescribeColumn(
           LogicalRelation(TiDBRelation(_, tableRef, _, _, _), _, _, _),
           colNameParts,
           isExtended
         ) =>
-      TiAuthorization.authorizeForDescribeTable(tableRef.tableName,
-        tableRef.databaseName, tiAuthorization)
+      TiAuthorization.authorizeForDescribeTable(
+        tableRef.tableName,
+        tableRef.databaseName,
+        tiAuthorization
+      )
       dc
     case ct @ CreateTableLikeCommand(target, source, _, _, _, _) =>
       TiAuthorization.authorizeForCreateTableLike(
@@ -77,7 +94,8 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
         target.table,
         tiContext.getDatabaseFromOption(source.database),
         source.table,
-        tiContext.tiAuthorization)
+        tiContext.tiAuthorization
+      )
       TiCreateTableLikeCommand(tiContext, ct)
   }
 

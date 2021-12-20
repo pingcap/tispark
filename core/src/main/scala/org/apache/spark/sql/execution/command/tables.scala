@@ -45,7 +45,12 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
     val tables = delegate.tableIdentifierPattern
       .map(tiCatalog.listTables(db, _))
       .getOrElse(tiCatalog.listTables(db, "*"))
-      .filter(t => tiContext.tiAuthorization.visible(db, t.table))
+      .filter(t =>
+        if (TiAuthorization.enableAuth){
+          tiContext.tiAuthorization.visible(db, t.table)
+        } else true
+      )
+
     tables.map { tableIdent =>
       val database = tableIdent.database.getOrElse("")
       val tableName = tableIdent.table
@@ -111,10 +116,12 @@ case class TiDescribeTablesCommand(
 
       result
     } else {
-      TiAuthorization.authorizeForDescribeTable(
-        tableInfo.tableName.table,
-        tiContext.getDatabaseFromOption(tableInfo.tableName.database),
-        tiContext.tiAuthorization)
+      if (TiAuthorization.enableAuth) {
+        TiAuthorization.authorizeForDescribeTable(
+          tableInfo.tableName.table,
+          tiContext.getDatabaseFromOption(tableInfo.tableName.database),
+          tiContext.tiAuthorization)
+      }
 
       tiCatalog
         .catalogOf(tableInfo.tableName.database)
@@ -218,10 +225,12 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
   }
 
   private def doRun(sparkSession: SparkSession, tableWithDBName: TableIdentifier): Seq[Row] = {
-    TiAuthorization.authorizeForDescribeTable(
-      tableWithDBName.table,
-      tiContext.getDatabaseFromOption(tableWithDBName.database),
-      tiContext.tiAuthorization)
+    if (TiAuthorization.enableAuth) {
+      TiAuthorization.authorizeForDescribeTable(
+        tableWithDBName.table,
+        tiContext.getDatabaseFromOption(tableWithDBName.database),
+        tiContext.tiAuthorization)
+    }
 
     val resolver = sparkSession.sessionState.conf.resolver
 
@@ -302,10 +311,12 @@ case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsComma
   }
 
   private def doRun(tableName: String, databaseName: Option[String]): Seq[Row] = {
-    TiAuthorization.authorizeForDescribeTable(
-      tableName,
-      tiContext.getDatabaseFromOption(databaseName),
-      tiContext.tiAuthorization)
+    if (TiAuthorization.enableAuth) {
+      TiAuthorization.authorizeForDescribeTable(
+        tableName,
+        tiContext.getDatabaseFromOption(databaseName),
+        tiContext.tiAuthorization)
+    }
 
     val lookupTable = TableIdentifier(tableName, databaseName)
     val table = tiCatalog.getTempViewOrPermanentTableMetadata(lookupTable)
@@ -319,13 +330,14 @@ case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableL
     extends RunnableCommand {
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
-
-    TiAuthorization.authorizeForCreateTableLike(
-      tiContext.getDatabaseFromOption(delegate.targetTable.database),
-      delegate.targetTable.table,
-      tiContext.getDatabaseFromOption(delegate.sourceTable.database),
-      delegate.sourceTable.table,
-      tiContext.tiAuthorization)
+    if (TiAuthorization.enableAuth) {
+      TiAuthorization.authorizeForCreateTableLike(
+        tiContext.getDatabaseFromOption(delegate.targetTable.database),
+        delegate.targetTable.table,
+        tiContext.getDatabaseFromOption(delegate.sourceTable.database),
+        delegate.sourceTable.table,
+        tiContext.tiAuthorization)
+    }
 
     val catalog = tiContext.tiCatalog
     val sourceTableDesc = catalog.getTempViewOrPermanentTableMetadata(delegate.sourceTable)

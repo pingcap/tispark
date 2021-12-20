@@ -152,7 +152,10 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
   override def listNamespaces(): Array[Array[String]] =
     meta.get.getDatabases.filter(
-      db => tiAuthorization.visible(db.getName, "")
+      db =>
+        if (TiAuthorization.enableAuth) {
+          tiAuthorization.visible(db.getName, "")
+        } else true
     ).map(dbInfo => Array(dbInfo.getName)).toArray
 
   override def listNamespaces(namespace: Array[String]): Array[Array[String]] = {
@@ -193,7 +196,9 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
         case _ => throw new NoSuchTableException(ident)
       }
 
-    TiAuthorization.authorizeForDescribeTable(ident.name, dbName, tiAuthorization)
+    if (TiAuthorization.enableAuth) {
+      TiAuthorization.authorizeForDescribeTable(ident.name, dbName, tiAuthorization)
+    }
 
     val table = meta.get
       .getTable(dbName, ident.name())
@@ -218,7 +223,11 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
       case Array(db) =>
         meta.get
           .getTables(meta.get.getDatabase(db).getOrElse(throw new NoSuchNamespaceException(db)))
-          .filter(tbl => TiAuthorization.tiAuthorization.visible(db, tbl.getName))
+          .filter(tbl =>
+            if (TiAuthorization.enableAuth){
+              TiAuthorization.tiAuthorization.visible(db, tbl.getName)
+            } else true
+          )
           .map(tbl => Identifier.of(Array(db), tbl.getName))
           .toArray
       case _ =>

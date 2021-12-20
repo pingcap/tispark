@@ -31,8 +31,7 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
     case sd @ SetCatalogAndNamespace(catalogManager, catalogName, namespace) =>
       namespace.get
         .filter(_ != "tidb_catalog")
-        .foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization
-        ))
+        .foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
       sd
     case st: ShowTablesCommand =>
       st
@@ -74,7 +73,8 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
         target.table,
         tiContext.getDatabaseFromOption(source.database),
         source.table,
-        tiContext.tiAuthorization)
+        tiContext.tiAuthorization
+      )
       TiCreateTableLikeCommand(tiContext, ct)
   }
 
