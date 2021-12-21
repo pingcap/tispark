@@ -32,9 +32,9 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
 
   val task: Runnable = () => {
     val privs = getPrivileges
-    globalPrivs.getAndSet(privs.globalPriv)
-    databasePrivs.getAndSet(privs.databasePrivs)
-    tablePrivs.getAndSet(privs.tablePrivs)
+    globalPrivs.set(privs.globalPriv)
+    databasePrivs.set(privs.databasePrivs)
+    tablePrivs.set(privs.tablePrivs)
   }
 
   /**
@@ -155,15 +155,13 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
 
     // Account who has any Priv of the database/table can see the database/table
     if (table.isEmpty) {
-      databasePrivs.get().keySet.contains(db) || tablePrivs
+      databasePrivs.get().contains(db) || tablePrivs
         .get()
-        .keySet
         .contains(db)
     } else {
-      databasePrivs.get().keySet.contains(db) || tablePrivs
+      databasePrivs.get().contains(db) || tablePrivs
         .get()
         .getOrElse(db, Map())
-        .keySet
         .contains(table)
     }
 

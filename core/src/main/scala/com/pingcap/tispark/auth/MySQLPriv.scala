@@ -104,8 +104,4 @@ object MySQLPriv extends Enumeration {
     "REPLICATION CLIENT" -> MySQLPriv.ReplicationClientPriv,
     "REPLICATION SLAVE" -> MySQLPriv.ReplicationSlavePriv,
     "ALL PRIVILEGES" -> MySQLPriv.AllPriv)
-
-  def main(args: Array[String]): Unit = {
-    println(this.Str2Priv("SELECT"))
-  }
 }
