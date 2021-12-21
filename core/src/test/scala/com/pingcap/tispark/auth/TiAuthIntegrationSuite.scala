@@ -56,14 +56,14 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     _isAuthEnabled = false
   }
 
-  test("Get PD address from TiDB should be correct") {
-    ti.tiAuthorization.getPDAddress() should be(pdAddresses)
-  }
-
   test("Select without privilege should not be passed") {
     an[SQLException] should be thrownBy {
       spark.sql(s"select * from `$databaseWithPrefix`.`$table`")
     }
+  }
+
+  test("Get PD address from TiDB should be correct") {
+    ti.tiAuthorization.getPDAddress() should be(pdAddresses)
   }
 
   test("Use database and select without privilege should not be passed") {

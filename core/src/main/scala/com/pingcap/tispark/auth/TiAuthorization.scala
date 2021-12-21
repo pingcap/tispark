@@ -21,7 +21,7 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
   private val scheduler: ScheduledExecutorService =
     Executors.newScheduledThreadPool(1)
 
-  val globalPriv: AtomicReference[List[MySQLPriv.Value]] =
+  val globalPrivs: AtomicReference[List[MySQLPriv.Value]] =
     new AtomicReference(List())
 
   val databasePrivs: AtomicReference[Map[String, List[MySQLPriv.Value]]] =
@@ -32,11 +32,14 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
 
   val task: Runnable = () => {
     val privs = getPrivileges
-    globalPriv.getAndSet(privs.globalPriv)
+    globalPrivs.getAndSet(privs.globalPriv)
     databasePrivs.getAndSet(privs.databasePrivs)
     tablePrivs.getAndSet(privs.tablePrivs)
   }
 
+  /**
+   * Initialization
+   */
   {
     TiAuthorization.dbPrefix = tiConf.getDBPrefix
     val option = new TiDBOptions(parameters)
@@ -44,12 +47,14 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
       this.tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(option.url)())
     } catch {
       case e: Throwable => {
+        // If failed to tiDBJDBCClient, which means authentication failed, the spark session should be shutdown
         logger.error(f"Failed to create tidb jdbc client with url ${option.url}", e)
         System.exit(-1)
       }
     }
 
     task.run()
+    // Periodically update privileges from TiDB
     scheduler.scheduleWithFixedDelay(task, refreshInterval, refreshInterval, TimeUnit.SECONDS)
   }
 
@@ -85,25 +90,46 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
     }
   }
 
-  def checkGlobalPiv(mySQLPriv: MySQLPriv.Value): Boolean = {
-    val privs = globalPriv.get()
+  /**
+   *  globalPrivs stores privileges of global dimension for the current user.
+   *     List($globalPrivileges)
+   */
+  private def checkGlobalPiv(mySQLPriv: MySQLPriv.Value): Boolean = {
+    val privs = globalPrivs.get()
     if (privs.contains(MySQLPriv.AllPriv) || privs.contains(mySQLPriv)) true
     else false
   }
 
-  def checkDatabasePiv(db: String, mySQLPriv: MySQLPriv.Value): Boolean = {
+  /**
+   *  databasePrivs stores privileges of database dimension for the current user.
+   *      Map($databaseName -> List($databasePrivileges))
+   */
+  private def checkDatabasePiv(db: String, mySQLPriv: MySQLPriv.Value): Boolean = {
     val privs = databasePrivs.get().getOrElse(db, List())
     if (privs.contains(MySQLPriv.AllPriv) || privs.contains(mySQLPriv)) true
     else false
   }
 
-  def checkTablePiv(db: String, table: String, mySQLPriv: MySQLPriv.Value): Boolean = {
+  /**
+   *  tablePrivs stores privileges of table dimension for the current user.
+   *      Map($databaseName -> Map($tableName -> List($tablePrivileges)))
+   */
+  private def checkTablePiv(db: String, table: String, mySQLPriv: MySQLPriv.Value): Boolean = {
+    // If tablePrivs not contains the table, it will return an empty privilegeList for the table
     val privs =
       tablePrivs.get().getOrElse(db.trim, Map()).getOrElse(table.trim, List())
     if (privs.contains(MySQLPriv.AllPriv) || privs.contains(mySQLPriv)) true
     else false
   }
 
+  /**
+   * Check whether user has the required privilege of database/table
+   *
+   * @param db the name of database
+   * @param table the name of table, is empty when check for privilege of database
+   * @param requiredPriv
+   * @return If the check not passes, throw @SQLException
+   */
   def checkPrivs(db: String, table: String, requiredPriv: MySQLPriv.Value): Unit = {
     if (!checkGlobalPiv(requiredPriv) && !checkDatabasePiv(db, requiredPriv) && !checkTablePiv(
         db,
@@ -112,9 +138,16 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
       throw new SQLException(f"Lack of privilege:$requiredPriv on database:$db table:$table")
   }
 
+  /**
+   * Check whether the database/table be visible for the user or not
+   *
+   * @param db the name of database
+   * @param table the name of table, is empty when check for privilege of database
+   * @return
+   */
   def visible(db: String, table: String): Boolean = {
     // Account who has ShowDBPriv is able to see all databases and tables regardless of revokes.
-    if (globalPriv.get().contains(MySQLPriv.AllPriv) || globalPriv
+    if (globalPrivs.get().contains(MySQLPriv.AllPriv) || globalPrivs
         .get()
         .contains(MySQLPriv.ShowDBPriv)) {
       return true
@@ -145,15 +178,20 @@ case class PrivilegeObject(
 object TiAuthorization {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  private final val lock = new ReentrantLock()
-
-  private var initialized = false
-
+  /**
+   * the required conf for initialization.
+   * Must be set before the initialization.
+   */
   var sqlConf: SQLConf = _
-
   var tiConf: TiConfiguration = _
 
+  /**
+   * lazy global singleton for Authorization
+   * Use initTiAuthorization() to init singleton
+   */
   private[this] var _tiAuthorization: TiAuthorization = _
+  private var initialized = false
+  private final val lock = new ReentrantLock()
 
   def tiAuthorization: TiAuthorization = {
     if (initialized) {
@@ -188,6 +226,7 @@ object TiAuthorization {
 
   var enableAuth: Boolean = false
 
+  // Compatible with feature `spark.tispark.db_prefix`
   var dbPrefix: String = ""
 
   /**  Currently, There are 2 kinds of grant output format in TiDB:
@@ -202,8 +241,6 @@ object TiAuthorization {
    */
   private val userGrantPattern =
     "GRANT\\s+(.+)\\s+ON\\s+(\\S+\\.\\S+)\\s+TO.+".r
-  private val roleGrantPattern = "GRANT\\s+('\\w+'@.+)+TO.+".r
-  private val rolePattern = "'(\\w+)'@.+".r
 
   def parsePrivilegeFromRow(privStrings: List[String]): PrivilegeObject = {
     var globalPriv: List[MySQLPriv.Value] = List()
@@ -217,6 +254,7 @@ object TiAuthorization {
           break
         }
 
+        // use regex to parse [GRANTS](group1) and [db.table](group2)
         val privs: List[MySQLPriv.Value] = matchResult.get
           .group(1)
           .split(",")
@@ -225,6 +263,7 @@ object TiAuthorization {
         val database: String = matchResult.get.group(2).split("\\.").head
         val table: String = matchResult.get.group(2).split("\\.").last
 
+        // generate privileges store objects
         if (database == "*" && table == "*") {
           globalPriv ++= privs
         } else if (table == "*") {
@@ -238,6 +277,9 @@ object TiAuthorization {
 
     PrivilegeObject(globalPriv, databasePrivs, tablePrivs)
   }
+
+  private val roleGrantPattern = "GRANT\\s+('\\w+'@.+)+TO.+".r
+  private val rolePattern = "'(\\w+)'@.+".r
 
   def extractRoles(privStrings: List[String]): List[String] = {
     for {
@@ -253,7 +295,8 @@ object TiAuthorization {
     } yield role.trim
   }
 
-  /** Authorization for statement
+  /**
+   * Authorization for statement
    */
   def authorizeForSelect(table: String, database: String, tiAuth: TiAuthorization): Unit = {
     tiAuth.checkPrivs(database, table, MySQLPriv.SelectPriv)

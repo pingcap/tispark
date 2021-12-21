@@ -43,6 +43,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
     TiAuthorization.initTiAuthorization()
     TiAuthorization.tiAuthorization
   }
+  // If enableAuth, get PDAddress from TiDB else from spark conf
   final val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(
     conf,
     if (TiAuthorization.enableAuth) {

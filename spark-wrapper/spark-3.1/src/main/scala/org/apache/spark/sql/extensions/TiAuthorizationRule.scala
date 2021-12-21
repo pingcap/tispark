@@ -8,6 +8,9 @@ import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.{SparkSession, TiContext}
 
+/**
+ * Only work for table v2(catalog plugin)
+ */
 case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
     sparkSession: SparkSession)
     extends Rule[LogicalPlan] {
