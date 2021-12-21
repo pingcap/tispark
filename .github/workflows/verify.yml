@@ -1,0 +1,66 @@
+# this workflow contains fmt,build,ut fot tikv-client
+name: verify
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: '8'
+          distribution: 'adopt'
+          cache: maven
+      - name: fmt
+        run: |
+          export LC_ALL=en_US.UTF-8
+          export LANG=en_US.UTF-8
+          export LANGUAGE=en_US.UTF-8
+          mvn mvn-scalafmt_2.12:format -Dscalafmt.skip=false
+          mvn com.coveo:fmt-maven-plugin:format
+          git diff --quiet
+          formatted="$?"
+          if [[ "${formatted}" -eq 1 ]]
+          then
+          echo "code format error, please run the following commands:"
+          echo "   mvn mvn-scalafmt_2.12:format -Dscalafmt.skip=false"
+          echo "   mvn com.coveo:fmt-maven-plugin:format"
+          exit 1
+          fi
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: '8'
+          distribution: 'adopt'
+          cache: maven
+      - name: build
+        run: |
+          mvn clean package -Dmaven.test.skip=true
+  tikv-client-ut:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: '8'
+          distribution: 'adopt'
+          cache: maven
+      - name: ut
+        run: |
+          cd tikv-client
+          mvn -DsomeModule.test.excludes="**/txn/*" test
