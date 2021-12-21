@@ -9,7 +9,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TIFLASH_BRANCH = "master"
     def MVN_PROFILE = "-Pjenkins"
     def TEST_MODE = "full"
-    def PARALLEL_NUMBER = 18
+    def PARALLEL_NUMBER = 20
     def TEST_REGION_SIZE = "normal"
     def TEST_TIFLASH = "false"
     def TEST_ALTER_PRIMARY_KEY = "true"
@@ -110,7 +110,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
 
     def label = "regression-test-tispark"
 
-    podTemplate(name: label, label: label, instanceCap: 18, idleMinutes: 10, containers: [
+    podTemplate(name: label, label: label, instanceCap  : 20, idleMinutes: 10, containers: [
             containerTemplate(name: 'golang', image: 'hub.pingcap.net/jenkins/centos7_golang-1.12:cached',
                     envVars: [
                             envVar(key: 'DOCKER_HOST', value: 'tcp://localhost:2375'),
