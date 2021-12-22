@@ -26,8 +26,8 @@ jobs:
           export LC_ALL=en_US.UTF-8
           export LANG=en_US.UTF-8
           export LANGUAGE=en_US.UTF-8
-          mvn mvn-scalafmt_2.12:format -Dscalafmt.skip=false
-          mvn com.coveo:fmt-maven-plugin:format
+          mvn mvn-scalafmt_2.12:format -Dscalafmt.skip=false -B
+          mvn com.coveo:fmt-maven-plugin:format -B
           git diff --quiet
           formatted="$?"
           if [[ "${formatted}" -eq 1 ]]
@@ -50,7 +50,7 @@ jobs:
           cache: maven
       - name: build
         run: |
-          mvn clean package -Dmaven.test.skip=true
+          mvn clean package -Dmaven.test.skip=true -B
   tikv-client-ut:
     runs-on: ubuntu-latest
     steps:
@@ -64,4 +64,4 @@ jobs:
           cache: maven
       - name: ut
         run: |
-          mvn test -am -pl tikv-client -DsomeModule.test.excludes="**/txn/*"
+          mvn test -am -pl tikv-client -DsomeModule.test.excludes="**/txn/*" -B
