@@ -88,6 +88,7 @@
         <test.exclude.tags/>
         <test.include.tags/>
         <scalaj.version>2.3.0</scalaj.version>
+        <someModule.test.excludes></someModule.test.excludes>
     </properties>
     <repositories>
         <repository>
@@ -209,6 +210,9 @@
                         <parallel>suites</parallel>
                         <useUnlimitedThreads>true</useUnlimitedThreads>
                         <forkMode>always</forkMode>
+                        <excludes>
+                            <exclude>${someModule.test.excludes}</exclude>
+                        </excludes>
                     </configuration>
                     <version>3.0.0-M3</version>
                 </plugin>
