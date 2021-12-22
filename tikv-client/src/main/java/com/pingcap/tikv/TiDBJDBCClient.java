@@ -33,31 +33,19 @@ import org.slf4j.LoggerFactory;
 
 public class TiDBJDBCClient implements AutoCloseable {
 
-  private static final String UNLOCK_TABLES_SQL = "unlock tables";
-
-  private static final String SELECT_TIDB_CONFIG_SQL = "select @@tidb_config";
-
-  private static final String ENABLE_TABLE_LOCK_KEY = "enable-table-lock";
-
-  private static final Boolean ENABLE_TABLE_LOCK_DEFAULT = false;
-
-  private static final String DELAY_CLEAN_TABLE_LOCK = "delay-clean-table-lock";
-
-  private static final int DELAY_CLEAN_TABLE_LOCK_DEFAULT = 0;
-
-  private static final String TIDB_ROW_FORMAT_VERSION_SQL = "select @@tidb_row_format_version";
-
-  private static final int TIDB_ROW_FORMAT_VERSION_DEFAULT = 1;
-
-  private static final String ALTER_PRIMARY_KEY_KEY = "alter-primary-key";
-
-  private static final Boolean ALTER_PRIMARY_KEY_DEFAULT = false;
-
   public static final String SQL_SHOW_GRANTS = "SHOW GRANTS";
-
   public static final String GET_PD_ADDRESS =
       "SELECT `INSTANCE` FROM `INFORMATION_SCHEMA`.`CLUSTER_INFO` WHERE `TYPE` = 'pd'";
-
+  private static final String UNLOCK_TABLES_SQL = "unlock tables";
+  private static final String SELECT_TIDB_CONFIG_SQL = "select @@tidb_config";
+  private static final String ENABLE_TABLE_LOCK_KEY = "enable-table-lock";
+  private static final Boolean ENABLE_TABLE_LOCK_DEFAULT = false;
+  private static final String DELAY_CLEAN_TABLE_LOCK = "delay-clean-table-lock";
+  private static final int DELAY_CLEAN_TABLE_LOCK_DEFAULT = 0;
+  private static final String TIDB_ROW_FORMAT_VERSION_SQL = "select @@tidb_row_format_version";
+  private static final int TIDB_ROW_FORMAT_VERSION_DEFAULT = 1;
+  private static final String ALTER_PRIMARY_KEY_KEY = "alter-primary-key";
+  private static final Boolean ALTER_PRIMARY_KEY_DEFAULT = false;
   private static final String SQL_SHOW_GRANTS_USING_ROLE = "SHOW GRANTS FOR CURRENT_USER USING ";
 
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
