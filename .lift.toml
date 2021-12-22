@@ -1,0 +1,14 @@
+build = "mvn"
+
+ignoreFiles = """
+assembly/**
+db-random-test/**
+spark-wrapper/**
+tikv-client/target/**
+core/target/**
+**/build/**
+"""
+
+tools = [ "infer", "findsecbugs","errorprone" ]
+
+jdk11 = false
