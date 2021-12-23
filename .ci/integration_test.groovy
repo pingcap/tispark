@@ -177,7 +177,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         pwd
                         cp -R /home/jenkins/agent/git/tispark/. ./
                         git checkout -f ${ghprbActualCommit}
-                        find core/src -name '*Suite*' | grep -v 'MultiColumnPKDataTypeSuite' > test
+                        find core/src -name '*Suite*' | grep -v 'MultiColumnPKDataTypeSuite\\|PartitionTableSuite' > test
                         shuf test -o  test2
                         mv test2 test
                         """
