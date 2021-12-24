@@ -49,7 +49,7 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
       case e: Throwable => {
         // If failed to tiDBJDBCClient, which means authentication failed, the spark session should be shutdown
         logger.error(f"Failed to create tidb jdbc client with url ${option.url}", e)
-        System.exit(-1)
+        throw e
       }
     }
 
@@ -63,10 +63,10 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
 
     /** TODO: role-based privilege
      *
-      * Show grants using more than two roles return incorrect result
+     * Show grants using more than two roles return incorrect result
      * https://github.com/pingcap/tidb/issues/30855
      *
-      * val roles = extractRoles(input)
+     * val roles = extractRoles(input)
      * input =
      * if (roles.nonEmpty)
      * JavaConverters
@@ -91,8 +91,8 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
   }
 
   /**
-   *  globalPrivs stores privileges of global dimension for the current user.
-   *     List($globalPrivileges)
+   * globalPrivs stores privileges of global dimension for the current user.
+   * List($globalPrivileges)
    */
   private def checkGlobalPiv(mySQLPriv: MySQLPriv.Value): Boolean = {
     val privs = globalPrivs.get()
@@ -101,8 +101,8 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
   }
 
   /**
-   *  databasePrivs stores privileges of database dimension for the current user.
-   *      Map($databaseName -> List($databasePrivileges))
+   * databasePrivs stores privileges of database dimension for the current user.
+   * Map($databaseName -> List($databasePrivileges))
    */
   private def checkDatabasePiv(db: String, mySQLPriv: MySQLPriv.Value): Boolean = {
     val privs = databasePrivs.get().getOrElse(db, List())
@@ -111,8 +111,8 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
   }
 
   /**
-   *  tablePrivs stores privileges of table dimension for the current user.
-   *      Map($databaseName -> Map($tableName -> List($tablePrivileges)))
+   * tablePrivs stores privileges of table dimension for the current user.
+   * Map($databaseName -> Map($tableName -> List($tablePrivileges)))
    */
   private def checkTablePiv(db: String, table: String, mySQLPriv: MySQLPriv.Value): Boolean = {
     // If tablePrivs not contains the table, it will return an empty privilegeList for the table
@@ -125,7 +125,7 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
   /**
    * Check whether user has the required privilege of database/table
    *
-   * @param db the name of database
+   * @param db    the name of database
    * @param table the name of table, is empty when check for privilege of database
    * @param requiredPriv
    * @return If the check not passes, throw @SQLException
@@ -141,7 +141,7 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
   /**
    * Check whether the database/table be visible for the user or not
    *
-   * @param db the name of database
+   * @param db    the name of database
    * @param table the name of table, is empty when check for privilege of database
    * @return
    */
@@ -188,35 +188,32 @@ object TiAuthorization {
    * Use initTiAuthorization() to init singleton
    */
   private[this] var _tiAuthorization: TiAuthorization = _
-  private var initialized = false
+  @volatile private var initialized = false
   private final val lock = new ReentrantLock()
 
   def tiAuthorization: TiAuthorization = {
-    if (initialized) {
-      _tiAuthorization
-    } else {
-      throw new IllegalArgumentException("TiAuthorization has not been initialized")
-    }
-  }
-
-  def initTiAuthorization(): Unit = {
-    lock.lock()
-    try {
-      if (initialized) {
-        logger.warn("TiAuthorization has already been initialized")
-      } else {
-        _tiAuthorization = new TiAuthorization(
-          Map(
-            "tidb.addr" -> sqlConf.getConfString("spark.sql.tidb.addr"),
-            "tidb.port" -> sqlConf.getConfString("spark.sql.tidb.port"),
-            "tidb.user" -> sqlConf.getConfString("spark.sql.tidb.user"),
-            "tidb.password" -> sqlConf.getConfString("spark.sql.tidb.password"),
-            "multiTables" -> "true"),
-          tiConf)
-        initialized = true
+    if (!initialized) {
+      try {
+        lock.lock()
+        if (!initialized) {
+          _tiAuthorization = new TiAuthorization(
+            Map(
+              "tidb.addr" -> sqlConf.getConfString("spark.sql.tidb.addr"),
+              "tidb.port" -> sqlConf.getConfString("spark.sql.tidb.port"),
+              "tidb.user" -> sqlConf.getConfString("spark.sql.tidb.user"),
+              "tidb.password" -> sqlConf.getConfString("spark.sql.tidb.password"),
+              "multiTables" -> "true"),
+            tiConf)
+          initialized = true
+          _tiAuthorization
+        } else {
+          _tiAuthorization
+        }
+      } finally {
+        lock.unlock()
       }
-    } finally {
-      lock.unlock()
+    } else {
+      _tiAuthorization
     }
   }
 
@@ -227,14 +224,14 @@ object TiAuthorization {
   // Compatible with feature `spark.tispark.db_prefix`
   var dbPrefix: String = ""
 
-  /**  Currently, There are 2 kinds of grant output format in TiDB:
+  /** Currently, There are 2 kinds of grant output format in TiDB:
    * - GRANT [grants] ON [db.table] TO [user]
    * - GRANT [roles] TO [user]
    * Examples:
    * - GRANT PROCESS,SHOW DATABASES,CONFIG ON *.* TO 'dashboardAdmin'@'%'
    * - GRANT 'app_read'@'%' TO 'test'@'%'
    *
-    * In order to get role's privilege:
+   * In order to get role's privilege:
    * > SHOW GRANTS FOR ${user} USING ${role};
    */
   private val userGrantPattern =
@@ -256,7 +253,9 @@ object TiAuthorization {
         val privs: List[MySQLPriv.Value] = matchResult.get
           .group(1)
           .split(",")
-          .map(m => { MySQLPriv.Str2Priv(m.trim) })
+          .map(m => {
+            MySQLPriv.Str2Priv(m.trim)
+          })
           .toList
         val database: String = matchResult.get.group(2).split("\\.").head
         val table: String = matchResult.get.group(2).split("\\.").last

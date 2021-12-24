@@ -39,10 +39,7 @@ import scala.collection.mutable
 class TiContext(val sparkSession: SparkSession) extends Serializable with Logging {
   final val version: String = TiSparkVersion.version
   final val conf: SparkConf = sparkSession.sparkContext.conf
-  lazy final val tiAuthorization: TiAuthorization = {
-    TiAuthorization.initTiAuthorization()
-    TiAuthorization.tiAuthorization
-  }
+  lazy final val tiAuthorization: TiAuthorization = TiAuthorization.tiAuthorization
   // If enableAuth, get PDAddress from TiDB else from spark conf
   final val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(
     conf,

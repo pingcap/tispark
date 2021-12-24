@@ -106,11 +106,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   private var _name: Option[String] = None
   private var _current_namespace: Option[Array[String]] = None
   private val logger = LoggerFactory.getLogger(getClass.getName)
-  private lazy final val tiAuthorization: TiAuthorization = {
-    TiAuthorization.initTiAuthorization()
-    TiAuthorization.tiAuthorization
-  }
-
+  private lazy final val tiAuthorization: TiAuthorization = TiAuthorization.tiAuthorization
   def setCurrentNamespace(namespace: Option[Array[String]]): Unit =
     synchronized {
       _current_namespace = namespace
@@ -221,7 +217,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
           .getTables(meta.get.getDatabase(db).getOrElse(throw new NoSuchNamespaceException(db)))
           .filter(tbl =>
             if (TiAuthorization.enableAuth) {
-              TiAuthorization.tiAuthorization.visible(db, tbl.getName)
+              tiAuthorization.visible(db, tbl.getName)
             } else true)
           .map(tbl => Identifier.of(Array(db), tbl.getName))
           .toArray
