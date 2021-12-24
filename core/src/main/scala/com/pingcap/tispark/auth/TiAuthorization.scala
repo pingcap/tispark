@@ -4,6 +4,7 @@ import com.pingcap.tikv.{TiConfiguration, TiDBJDBCClient}
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.auth.TiAuthorization.{logger, parsePrivilegeFromRow, refreshInterval}
 import com.pingcap.tispark.write.TiDBOptions
+import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.internal.SQLConf
 import org.slf4j.LoggerFactory
 
@@ -239,8 +240,8 @@ object TiAuthorization {
 
   def parsePrivilegeFromRow(privStrings: List[String]): PrivilegeObject = {
     var globalPriv: List[MySQLPriv.Value] = List()
-    var databasePrivs: Map[String, List[MySQLPriv.Value]] = Map()
-    var tablePrivs: Map[String, Map[String, List[MySQLPriv.Value]]] = Map()
+    var databasePrivs: Map[String, List[MySQLPriv.Value]] = CaseInsensitiveMap(Map())
+    var tablePrivs: Map[String, Map[String, List[MySQLPriv.Value]]] = CaseInsensitiveMap(Map())
 
     for (elem <- privStrings) {
       breakable {
@@ -266,7 +267,8 @@ object TiAuthorization {
         } else if (table == "*") {
           databasePrivs += (f"$dbPrefix$database" -> privs)
         } else {
-          val prevTable = tablePrivs.getOrElse(f"$dbPrefix$database", Map.empty)
+          val prevTable =
+            tablePrivs.getOrElse(f"$dbPrefix$database", CaseInsensitiveMap(Map.empty))
           tablePrivs += (f"$dbPrefix$database" -> (prevTable + (table -> privs)))
         }
       }

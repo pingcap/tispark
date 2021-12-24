@@ -109,6 +109,11 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     noException should be thrownBy spark.sql(s"select * from `$databaseWithPrefix`.`$table`")
   }
 
+  test("Select case insensitive with privilege should be passed") {
+    noException should be thrownBy spark.sql(
+      s"select * from `$databaseWithPrefix`.`${table.toUpperCase()}`")
+  }
+
   test("Use database and select with privilege should not be passed") {
     noException should be thrownBy spark.sql(s"use $databaseWithPrefix")
     noException should be thrownBy spark.sql(s"select * from $table")
