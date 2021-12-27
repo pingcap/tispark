@@ -110,7 +110,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
 
     def label = "regression-test-tispark"
 
-    podTemplate(name: label, label: label, instanceCap: 20, namespace: 'jenkins-tispark' , containers: [
+    podTemplate(name: label, label: label, instanceCap: 20, idleMinutes: 10, containers: [
             containerTemplate(name: 'golang', image: 'hub.pingcap.net/jenkins/centos7_golang-1.12:cached',
                     envVars: [
                             envVar(key: 'DOCKER_HOST', value: 'tcp://localhost:2375'),
