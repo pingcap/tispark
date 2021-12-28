@@ -17,7 +17,7 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
 
   protected lazy val meta: MetaManager = tiContext.meta
   protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
-  private lazy val tiAuthorization: TiAuthorization = tiContext.tiAuthorization
+  private lazy val tiAuthorization: Option[TiAuthorization] = tiContext.tiAuthorization
 
   protected def checkForAuth: PartialFunction[LogicalPlan, LogicalPlan] = {
     case sa @ SubqueryAlias(identifier, child) =>

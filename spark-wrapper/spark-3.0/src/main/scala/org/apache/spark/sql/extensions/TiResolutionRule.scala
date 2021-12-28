@@ -67,9 +67,7 @@ case class TiResolutionRule(
         // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
 
         // Authorize for Select statement
-        if (TiAuthorization.enableAuth) {
-          TiAuthorization.authorizeForSelect(tableName, dbName, tiContext.tiAuthorization)
-        }
+        TiAuthorization.authorizeForSelect(tableName, dbName, tiContext.tiAuthorization)
 
         SubqueryAlias(tableName, LogicalRelation(tiDBRelation))
       } else {

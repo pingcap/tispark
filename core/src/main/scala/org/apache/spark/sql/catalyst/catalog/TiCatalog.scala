@@ -106,7 +106,8 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   private var _name: Option[String] = None
   private var _current_namespace: Option[Array[String]] = None
   private val logger = LoggerFactory.getLogger(getClass.getName)
-  private lazy final val tiAuthorization: TiAuthorization = TiAuthorization.tiAuthorization
+  private lazy final val tiAuthorization: Option[TiAuthorization] =
+    TiAuthorization.tiAuthorization
   def setCurrentNamespace(namespace: Option[Array[String]]): Unit =
     synchronized {
       _current_namespace = namespace
@@ -117,7 +118,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
     val pdAddress: String =
       if (TiAuthorization.enableAuth) {
-        tiAuthorization.getPDAddress()
+        tiAuthorization.get.getPDAddress()
       } else {
         if (!options.containsKey("pd.addresses") && !options.containsKey("pd.address")) {
           throw new Exception("missing configuration spark.sql.catalog.tidb_catalog.pd.addresses")
@@ -143,7 +144,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
   override def listNamespaces(): Array[Array[String]] =
     meta.get.getDatabases
-      .filter(db => !TiAuthorization.enableAuth || tiAuthorization.visible(db.getName, ""))
+      .filter(db => TiAuthorization.checkVisible(db.getName, "", tiAuthorization))
       .map(dbInfo => Array(dbInfo.getName))
       .toArray
 
@@ -185,9 +186,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
         case _ => throw new NoSuchTableException(ident)
       }
 
-    if (TiAuthorization.enableAuth) {
-      TiAuthorization.authorizeForDescribeTable(ident.name, dbName, tiAuthorization)
-    }
+    TiAuthorization.authorizeForDescribeTable(ident.name, dbName, tiAuthorization)
 
     val table = meta.get
       .getTable(dbName, ident.name())
@@ -212,9 +211,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
       case Array(db) =>
         meta.get
           .getTables(meta.get.getDatabase(db).getOrElse(throw new NoSuchNamespaceException(db)))
-          .filter(tbl =>
-            !TiAuthorization.enableAuth ||
-              tiAuthorization.visible(db, tbl.getName))
+          .filter(tbl => TiAuthorization.checkVisible(db, tbl.getName, tiAuthorization))
           .map(tbl => Identifier.of(Array(db), tbl.getName))
           .toArray
       case _ =>

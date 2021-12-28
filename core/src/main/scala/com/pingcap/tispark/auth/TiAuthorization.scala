@@ -189,7 +189,10 @@ object TiAuthorization {
   @volatile private var initialized = false
   private final val lock = new ReentrantLock()
 
-  def tiAuthorization: TiAuthorization = {
+  def tiAuthorization: Option[TiAuthorization] = {
+    if (!enableAuth) {
+      return Option.empty
+    }
     if (!initialized) {
       try {
         lock.lock()
@@ -203,15 +206,15 @@ object TiAuthorization {
               "multiTables" -> "true"),
             tiConf)
           initialized = true
-          _tiAuthorization
+          Option(_tiAuthorization)
         } else {
-          _tiAuthorization
+          Option(_tiAuthorization)
         }
       } finally {
         lock.unlock()
       }
     } else {
-      _tiAuthorization
+      Option(_tiAuthorization)
     }
   }
 
@@ -294,8 +297,13 @@ object TiAuthorization {
   /**
    * Authorization for statement
    */
-  def authorizeForSelect(table: String, database: String, tiAuth: TiAuthorization): Unit = {
-    tiAuth.checkPrivs(database, table, MySQLPriv.SelectPriv)
+  def authorizeForSelect(
+      table: String,
+      database: String,
+      tiAuth: Option[TiAuthorization]): Unit = {
+    if (enableAuth) {
+      tiAuth.get.checkPrivs(database, table, MySQLPriv.SelectPriv)
+    }
   }
 
   def authorizeForCreateTableLike(
@@ -303,19 +311,28 @@ object TiAuthorization {
       targetTable: String,
       sourceDb: String,
       sourceTable: String,
-      tiAuth: TiAuthorization) = {
-    tiAuth.checkPrivs(targetDb, targetTable, MySQLPriv.CreatePriv)
-    tiAuth.checkPrivs(sourceDb, sourceTable, MySQLPriv.SelectPriv)
+      tiAuth: Option[TiAuthorization]) = {
+    if (enableAuth) {
+      tiAuth.get.checkPrivs(targetDb, targetTable, MySQLPriv.CreatePriv)
+      tiAuth.get.checkPrivs(sourceDb, sourceTable, MySQLPriv.SelectPriv)
+    }
   }
 
-  def authorizeForSetDatabase(database: String, tiAuth: TiAuthorization) = {
-    if (!tiAuth.visible(database, "")) {
+  def authorizeForSetDatabase(database: String, tiAuth: Option[TiAuthorization]) = {
+    if (enableAuth && !tiAuth.get.visible(database, "")) {
       throw new SQLException(f"Lack of privilege to set database:${database}")
     }
   }
 
-  def authorizeForDescribeTable(table: String, database: String, tiAuth: TiAuthorization) = {
-    if (!tiAuth.visible(database, table))
+  def authorizeForDescribeTable(
+      table: String,
+      database: String,
+      tiAuth: Option[TiAuthorization]) = {
+    if (enableAuth && !tiAuth.get.visible(database, table))
       throw new SQLException(f"Lack of privilege to describe table:${table}")
+  }
+
+  def checkVisible(db: String, table: String, tiAuth: Option[TiAuthorization]): Boolean = {
+    !enableAuth || tiAuth.get.visible(db, table)
   }
 }

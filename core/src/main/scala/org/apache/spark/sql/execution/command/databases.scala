@@ -28,11 +28,9 @@ case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetCatalogAndNam
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
     tiCatalog.setCurrentDatabase(delegate.namespace.get.head)
-    if (TiAuthorization.enableAuth) {
-      TiAuthorization.authorizeForSetDatabase(
-        delegate.namespace.get.head,
-        tiContext.tiAuthorization)
-    }
+    TiAuthorization.authorizeForSetDatabase(
+      delegate.namespace.get.head,
+      tiContext.tiAuthorization)
 
     Seq.empty[Row]
   }
@@ -52,9 +50,7 @@ case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowNamespaces
       delegate.pattern
         .map(tiCatalog.listDatabases)
         .getOrElse(tiCatalog.listDatabases())
-        .filter(database =>
-          !TiAuthorization.enableAuth ||
-            tiContext.tiAuthorization.visible(database, ""))
+        .filter(database => TiAuthorization.checkVisible(database, "", tiContext.tiAuthorization))
     databases.map { d =>
       Row(d)
     }
