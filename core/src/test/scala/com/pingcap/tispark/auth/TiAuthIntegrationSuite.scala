@@ -102,7 +102,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     tidbStmt.execute(
       f"GRANT UPDATE,SELECT on `$database`.`$table` TO 'tispark_unit_test_user'@'%%';")
 
-    Thread.sleep((TiAuthorization.refreshInterval + 5) * 1000)
+    Thread.sleep((TiAuthorization.refreshIntervalSecond + 5) * 1000)
   }
 
   test("Select with privilege should be passed") {

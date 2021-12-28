@@ -38,6 +38,12 @@ spark.sqlContext.setConf("spark.sql.tidb.password", your_tidb_server_password)
 
 ```
 
+## Configuration
+
+|    Key    | Default Value | Description |
+| ---------- | --- | --- |
+| `spark.sql.tidb.auth.refreshInterval` |  `10` | The time interval for refreshing authorization information, in seconds. Values range from 5 to 3600 |
+
 ## Compatibility with catalog plugin
 
 Currently, Supported statements are as follows:
