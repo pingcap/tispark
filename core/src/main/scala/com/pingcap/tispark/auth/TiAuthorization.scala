@@ -1,7 +1,11 @@
 package com.pingcap.tispark.auth
 
 import com.pingcap.tikv.{JDBCClient, TiConfiguration}
-import com.pingcap.tispark.auth.TiAuthorization.{logger, parsePrivilegeFromRow, refreshIntervalSecond}
+import com.pingcap.tispark.auth.TiAuthorization.{
+  logger,
+  parsePrivilegeFromRow,
+  refreshIntervalSecond
+}
 import com.pingcap.tispark.write.TiDBOptions
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.internal.SQLConf
@@ -56,7 +60,11 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
 
     task.run()
     // Periodically update privileges from TiDB
-    scheduler.scheduleWithFixedDelay(task, refreshIntervalSecond, refreshIntervalSecond, TimeUnit.SECONDS)
+    scheduler.scheduleWithFixedDelay(
+      task,
+      refreshIntervalSecond,
+      refreshIntervalSecond,
+      TimeUnit.SECONDS)
   }
 
   def getPrivileges: PrivilegeObject = {
@@ -221,7 +229,11 @@ object TiAuthorization {
     }
   }
 
-  lazy val refreshIntervalSecond: Int = sqlConf.getConfString("spark.sql.tidb.auth.refreshInterval", defaultInterval.toString).toInt.max(intervalLowerBound).min(intervalUpperBound)
+  lazy val refreshIntervalSecond: Int = sqlConf
+    .getConfString("spark.sql.tidb.auth.refreshInterval", defaultInterval.toString)
+    .toInt
+    .max(intervalLowerBound)
+    .min(intervalUpperBound)
 
   var enableAuth: Boolean = false
 
