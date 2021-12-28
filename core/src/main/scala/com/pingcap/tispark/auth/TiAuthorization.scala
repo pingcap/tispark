@@ -1,7 +1,6 @@
 package com.pingcap.tispark.auth
 
-import com.pingcap.tikv.{TiConfiguration, TiDBJDBCClient}
-import com.pingcap.tispark.TiDBUtils
+import com.pingcap.tikv.{JDBCClient, TiConfiguration}
 import com.pingcap.tispark.auth.TiAuthorization.{logger, parsePrivilegeFromRow, refreshInterval}
 import com.pingcap.tispark.write.TiDBOptions
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
@@ -9,6 +8,7 @@ import org.apache.spark.sql.internal.SQLConf
 import org.slf4j.LoggerFactory
 
 import java.sql.SQLException
+import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
@@ -17,19 +17,19 @@ import scala.util.control.Breaks.{break, breakable}
 
 case class TiAuthorization private (parameters: Map[String, String], tiConf: TiConfiguration) {
 
-  private var tiDBJDBCClient: TiDBJDBCClient = _
+  private var jdbcClient: JDBCClient = _
 
   private val scheduler: ScheduledExecutorService =
     Executors.newScheduledThreadPool(1)
 
   val globalPrivs: AtomicReference[List[MySQLPriv.Value]] =
-    new AtomicReference(List())
+    new AtomicReference(List.empty)
 
   val databasePrivs: AtomicReference[Map[String, List[MySQLPriv.Value]]] =
-    new AtomicReference(Map())
+    new AtomicReference(Map.empty)
 
   val tablePrivs: AtomicReference[Map[String, Map[String, List[MySQLPriv.Value]]]] =
-    new AtomicReference(Map())
+    new AtomicReference(Map.empty)
 
   val task: Runnable = () => {
     val privs = getPrivileges
@@ -45,10 +45,10 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
     TiAuthorization.dbPrefix = tiConf.getDBPrefix
     val option = new TiDBOptions(parameters)
     try {
-      this.tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(option.url)())
+      this.jdbcClient = new JDBCClient(option.url, new Properties())
     } catch {
       case e: Throwable => {
-        // If failed to tiDBJDBCClient, which means authentication failed, the spark session should be shutdown
+        // Failed to create jdbcClient renders authentication impossible. Log and throw exception to shutdown spark session.
         logger.error(f"Failed to create tidb jdbc client with url ${option.url}", e)
         throw e
       }
@@ -60,7 +60,7 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
   }
 
   def getPrivileges: PrivilegeObject = {
-    var input = JavaConverters.asScalaBuffer(tiDBJDBCClient.showGrants).toList
+    var input = JavaConverters.asScalaBuffer(jdbcClient.showGrants).toList
 
     /** TODO: role-based privilege
      *
@@ -72,7 +72,7 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
      * if (roles.nonEmpty)
      * JavaConverters
      * .asScalaBuffer(
-     * tiDBJDBCClient.showGrantsUsingRole(roles.asJava)
+     * jdbcClient.showGrantsUsingRole(roles.asJava)
      * ).toList
      * else input
      */
@@ -82,11 +82,11 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
 
   def getPDAddress(): String = {
     try {
-      tiDBJDBCClient.getPDAddress
+      jdbcClient.getPDAddress
     } catch {
       case e: Throwable =>
         throw new IllegalArgumentException(
-          "Failed to get pdAddress from TiDB, please make sure user has `PROCESS` privilege on `INFORMATION_SCHEMA`.`CLUSTER_INFO`",
+          "Failed to get pd addresses from TiDB, please make sure user has `PROCESS` privilege on `INFORMATION_SCHEMA`.`CLUSTER_INFO`",
           e)
     }
   }
@@ -95,32 +95,29 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
    * globalPrivs stores privileges of global dimension for the current user.
    * List($globalPrivileges)
    */
-  private def checkGlobalPiv(mySQLPriv: MySQLPriv.Value): Boolean = {
+  private def checkGlobalPiv(priv: MySQLPriv.Value): Boolean = {
     val privs = globalPrivs.get()
-    if (privs.contains(MySQLPriv.AllPriv) || privs.contains(mySQLPriv)) true
-    else false
+    privs.contains(MySQLPriv.AllPriv) || privs.contains(priv)
   }
 
   /**
    * databasePrivs stores privileges of database dimension for the current user.
    * Map($databaseName -> List($databasePrivileges))
    */
-  private def checkDatabasePiv(db: String, mySQLPriv: MySQLPriv.Value): Boolean = {
-    val privs = databasePrivs.get().getOrElse(db, List())
-    if (privs.contains(MySQLPriv.AllPriv) || privs.contains(mySQLPriv)) true
-    else false
+  private def checkDatabasePiv(db: String, priv: MySQLPriv.Value): Boolean = {
+    val privs = databasePrivs.get().getOrElse(db, List.empty)
+    privs.contains(MySQLPriv.AllPriv) || privs.contains(priv)
   }
 
   /**
    * tablePrivs stores privileges of table dimension for the current user.
    * Map($databaseName -> Map($tableName -> List($tablePrivileges)))
    */
-  private def checkTablePiv(db: String, table: String, mySQLPriv: MySQLPriv.Value): Boolean = {
+  private def checkTablePiv(db: String, table: String, priv: MySQLPriv.Value): Boolean = {
     // If tablePrivs not contains the table, it will return an empty privilegeList for the table
     val privs =
-      tablePrivs.get().getOrElse(db.trim, Map()).getOrElse(table.trim, List())
-    if (privs.contains(MySQLPriv.AllPriv) || privs.contains(mySQLPriv)) true
-    else false
+      tablePrivs.get().getOrElse(db.trim, Map.empty).getOrElse(table.trim, List.empty)
+    privs.contains(MySQLPriv.AllPriv) || privs.contains(priv)
   }
 
   /**
@@ -162,7 +159,7 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
     } else {
       databasePrivs.get().contains(db) || tablePrivs
         .get()
-        .getOrElse(db, Map())
+        .getOrElse(db, Map.empty)
         .contains(table)
     }
 
@@ -268,7 +265,7 @@ object TiAuthorization {
           databasePrivs += (f"$dbPrefix$database" -> privs)
         } else {
           val prevTable =
-            tablePrivs.getOrElse(f"$dbPrefix$database", CaseInsensitiveMap(Map.empty))
+            tablePrivs.getOrElse(f"$dbPrefix$database", CaseInsensitiveMap(Map()))
           tablePrivs += (f"$dbPrefix$database" -> (prevTable + (table -> privs)))
         }
       }

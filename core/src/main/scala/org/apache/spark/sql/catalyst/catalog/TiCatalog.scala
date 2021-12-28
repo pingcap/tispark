@@ -143,10 +143,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
   override def listNamespaces(): Array[Array[String]] =
     meta.get.getDatabases
-      .filter(db =>
-        if (TiAuthorization.enableAuth) {
-          tiAuthorization.visible(db.getName, "")
-        } else true)
+      .filter(db => !TiAuthorization.enableAuth || tiAuthorization.visible(db.getName, ""))
       .map(dbInfo => Array(dbInfo.getName))
       .toArray
 
@@ -216,9 +213,8 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
         meta.get
           .getTables(meta.get.getDatabase(db).getOrElse(throw new NoSuchNamespaceException(db)))
           .filter(tbl =>
-            if (TiAuthorization.enableAuth) {
-              tiAuthorization.visible(db, tbl.getName)
-            } else true)
+            !TiAuthorization.enableAuth ||
+              tiAuthorization.visible(db, tbl.getName))
           .map(tbl => Identifier.of(Array(db), tbl.getName))
           .toArray
       case _ =>

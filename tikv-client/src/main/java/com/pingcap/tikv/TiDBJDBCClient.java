@@ -19,7 +19,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -33,9 +32,6 @@ import org.slf4j.LoggerFactory;
 
 public class TiDBJDBCClient implements AutoCloseable {
 
-  public static final String SQL_SHOW_GRANTS = "SHOW GRANTS";
-  public static final String GET_PD_ADDRESS =
-      "SELECT `INSTANCE` FROM `INFORMATION_SCHEMA`.`CLUSTER_INFO` WHERE `TYPE` = 'pd'";
   private static final String UNLOCK_TABLES_SQL = "unlock tables";
   private static final String SELECT_TIDB_CONFIG_SQL = "select @@tidb_config";
   private static final String ENABLE_TABLE_LOCK_KEY = "enable-table-lock";
@@ -46,7 +42,6 @@ public class TiDBJDBCClient implements AutoCloseable {
   private static final int TIDB_ROW_FORMAT_VERSION_DEFAULT = 1;
   private static final String ALTER_PRIMARY_KEY_KEY = "alter-primary-key";
   private static final Boolean ALTER_PRIMARY_KEY_DEFAULT = false;
-  private static final String SQL_SHOW_GRANTS_USING_ROLE = "SHOW GRANTS FOR CURRENT_USER USING ";
 
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
 
@@ -75,70 +70,6 @@ public class TiDBJDBCClient implements AutoCloseable {
       return false;
     }
     return true;
-  }
-
-  public List<String> showGrants() {
-    List<String> result = new ArrayList<>();
-    try (Statement tidbStmt = connection.createStatement()) {
-
-      ResultSet resultSet = tidbStmt.executeQuery(SQL_SHOW_GRANTS);
-      ResultSetMetaData rsMetaData = resultSet.getMetaData();
-
-      while (resultSet.next()) {
-        for (int i = 1; i <= rsMetaData.getColumnCount(); i++) {
-          result.add(resultSet.getString(i));
-        }
-      }
-    } catch (SQLException e) {
-      return new ArrayList<>();
-    }
-
-    return result;
-  }
-
-  public String getPDAddress() throws SQLException {
-    List<String> result = new ArrayList<>();
-    try (Statement tidbStmt = connection.createStatement()) {
-
-      ResultSet resultSet = tidbStmt.executeQuery(GET_PD_ADDRESS);
-      ResultSetMetaData rsMetaData = resultSet.getMetaData();
-
-      while (resultSet.next()) {
-        for (int i = 1; i <= rsMetaData.getColumnCount(); i++) {
-          result.add(resultSet.getString(i));
-        }
-      }
-    }
-
-    return result.get(0);
-  }
-
-  public List<String> showGrantsUsingRole(List<String> roles) {
-    StringBuilder builder = new StringBuilder(SQL_SHOW_GRANTS_USING_ROLE);
-    for (int i = 0; i < roles.size(); i++) {
-      builder.append("?").append(",");
-    }
-    String statement = builder.deleteCharAt(builder.length() - 1).toString();
-
-    List<String> result = new ArrayList<>();
-    try (PreparedStatement tidbStmt = connection.prepareStatement(statement)) {
-      for (int i = 0; i < roles.size(); i++) {
-        tidbStmt.setString(i + 1, roles.get(i));
-      }
-      ResultSet resultSet = tidbStmt.executeQuery();
-      ResultSetMetaData rsMetaData = resultSet.getMetaData();
-
-      while (resultSet.next()) {
-        for (int i = 1; i <= rsMetaData.getColumnCount(); i++) {
-          result.add(resultSet.getString(i));
-        }
-      }
-    } catch (SQLException e) {
-      logger.warn("Failed to show grants using role", e);
-      return new ArrayList<>();
-    }
-
-    return result;
   }
 
   /**

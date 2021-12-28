@@ -53,9 +53,8 @@ case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowNamespaces
         .map(tiCatalog.listDatabases)
         .getOrElse(tiCatalog.listDatabases())
         .filter(database =>
-          if (TiAuthorization.enableAuth) {
-            tiContext.tiAuthorization.visible(database, "")
-          } else true)
+          !TiAuthorization.enableAuth ||
+            tiContext.tiAuthorization.visible(database, ""))
     databases.map { d =>
       Row(d)
     }

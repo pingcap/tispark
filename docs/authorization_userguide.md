@@ -6,7 +6,7 @@ certain user.
 Authorization is a process that occurs after authentication to determine what actions an account is permitted to
 perform.
 
-This feature allows you to execute SQL in TiSpark with Authorization and authentication, behavior the same as TiDB
+This feature allows you to execute SQL in TiSpark with Authorization and authentication, the same behavior as TiDB
 
 ## Prerequisites
 
@@ -46,11 +46,11 @@ Currently, Supported statements are as follows:
 |---|---|---|---|
 | SELECT        | ✅ | ✅ | ✅ |   
 | USE DATABASE  | ✅ | ✅ | ✅ |   
-| SHOW DATABASES| ✅ |  ✅| ✅ |   
+| SHOW DATABASES| ✅ | ✅ | ✅ |   
 | SHOW TABLES   | ✅ | ✅ | ✅ |
-| DESCRIBE TABLE|✅  |✅  |✅  |
-| SHOW COLUMNS  |❌  |✅  |✅  |
-| DESCRIBE COLUMN|❌  |✅  |✅  |
+| DESCRIBE TABLE| ✅ | ✅ | ✅ |
+| SHOW COLUMNS  | ❌ | ✅ | ✅ |
+| DESCRIBE COLUMN| ❌ | ✅ | ✅ |
 
 ## limitations
 

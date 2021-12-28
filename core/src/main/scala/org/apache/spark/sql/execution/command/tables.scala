@@ -30,7 +30,7 @@ import scala.collection.mutable.ArrayBuffer
  * CHECK Spark [[org.apache.spark.sql.execution.command.ShowTablesCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
- * @param delegate original ShowTablesCommand
+ * @param delegate  original ShowTablesCommand
  */
 case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand)
     extends TiCommand(delegate) {
@@ -46,9 +46,8 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
       .map(tiCatalog.listTables(db, _))
       .getOrElse(tiCatalog.listTables(db, "*"))
       .filter(t =>
-        if (TiAuthorization.enableAuth) {
-          tiContext.tiAuthorization.visible(db, t.table)
-        } else true)
+        !TiAuthorization.enableAuth ||
+          tiContext.tiAuthorization.visible(db, t.table))
 
     tables.map { tableIdent =>
       val database = tableIdent.database.getOrElse("")
@@ -73,7 +72,7 @@ case class DescribeTableInfo(
  * CHECK Spark [[org.apache.spark.sql.execution.command.DescribeTableCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
- * @param delegate original DescribeTableCommand
+ * @param delegate  original DescribeTableCommand
  */
 case class TiDescribeTablesCommand(
     tiContext: TiContext,
@@ -207,7 +206,7 @@ case class TiDescribeTablesCommand(
  * CHECK Spark [[org.apache.spark.sql.execution.command.DescribeColumnCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
- * @param delegate original DescribeColumnCommand
+ * @param delegate  original DescribeColumnCommand
  */
 case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColumnCommand)
     extends TiCommand(delegate) {
@@ -295,7 +294,7 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
  * CHECK Spark [[org.apache.spark.sql.execution.command.ShowColumnsCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
- * @param delegate original ShowColumnsCommand
+ * @param delegate  original ShowColumnsCommand
  */
 case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsCommand)
     extends TiCommand(delegate) {

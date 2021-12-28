@@ -57,7 +57,7 @@ object TiExtensions {
   def authEnable(sparkSession: SparkSession): Boolean = {
     sparkSession.sparkContext.conf
       .get("spark.sql.auth.enable", "false")
-      .equalsIgnoreCase("true")
+      .toBoolean
   }
 
   def enabled(sparkSession: SparkSession): Boolean = getTiContext(sparkSession).isDefined
