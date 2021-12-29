@@ -104,15 +104,9 @@ Before everything starts,
 + add `spark.sql.extensions  org.apache.spark.sql.TiExtensions` in `spark-defaults.conf`.
 + ensure that `spark.tispark.pd.addresses` is set correctly.
 
-From Spark-shell for TiSpark version >= 2.0:
+From Spark-shell:
 
-```bash
-./bin/spark-shell --jars /wherever-it-is/tispark-assembly-${tispark_version}.jar:/wherever-it-is/spark-wrapper-${spark_version}-${tispark_version}.jar
 ```
-
-From Spark-shell for TiSpark version < 2.0
-
-```bash
 ./bin/spark-shell --jars /wherever-it-is/tispark-${name_with_version}.jar
 ```
 
