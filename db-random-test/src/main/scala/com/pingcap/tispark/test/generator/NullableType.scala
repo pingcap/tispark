@@ -16,5 +16,5 @@
 package com.pingcap.tispark.test.generator
 
 object NullableType extends Enumeration {
-  val Nullable, NotNullable, NumericNotNullable = Value
+  val Nullable, NotNullable, NumericNotNullable, NotNullablePK = Value
 }
