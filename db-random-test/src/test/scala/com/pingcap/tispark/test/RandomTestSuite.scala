@@ -30,10 +30,12 @@ class RandomTestSuite extends FunSuite with RandomTest {
 
   private val database = "random_test"
 
-  test("random test") {
+  test("random test with isClusteredIndex") {
     val schemaAndDataList = genSchemaAndData(
       rowCount,
-      List(INT, INT).map(d => genDescription(d, NullableType.NumericNotNullable)),
+      List(
+        genDescription(INT, NullableType.NotNullablePK),
+        genDescription(INT, NullableType.NumericNotNullable)),
       database,
       isClusteredIndex = true)
 
@@ -47,10 +49,39 @@ class RandomTestSuite extends FunSuite with RandomTest {
                    |DROP TABLE IF EXISTS `test_351626634_1517918040`;
                    |CREATE TABLE `random_test`.`test_351626634_1517918040` (
                    |  `col_int0` int(11) not null,
-                   |  `col_int1` int(11) not null
+                   |  `col_int1` int(11) not null,
+                   |  PRIMARY KEY (`col_int0`) /*T![clustered_index] CLUSTERED */
                    |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
                    |INSERT INTO `test_351626634_1517918040` VALUES (-1,-1);""".stripMargin
     println(schemaAndData.getInitSQLList.mkString("\n"))
+    assert(answer.equals(schemaAndData.getInitSQLList.mkString("\n")))
+  }
+
+  test("random test without isClusteredIndex") {
+    val schemaAndDataList = genSchemaAndData(
+      rowCount,
+      List(
+        genDescription(INT, NullableType.NotNullablePK),
+        genDescription(INT, NullableType.NumericNotNullable)),
+      database,
+      isClusteredIndex = false)
+
+    assert(1 == schemaAndDataList.size)
+    val schemaAndData = schemaAndDataList.head
+
+    assert(rowCount == schemaAndData.data.size)
+
+    val answer = """CREATE DATABASE IF NOT EXISTS `random_test`;
+                   |USE `random_test`;
+                   |DROP TABLE IF EXISTS `test_351626634_1115789266`;
+                   |CREATE TABLE `random_test`.`test_351626634_1115789266` (
+                   |  `col_int0` int(11) not null,
+                   |  `col_int1` int(11) not null,
+                   |  PRIMARY KEY (`col_int0`)
+                   |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+                   |INSERT INTO `test_351626634_1115789266` VALUES (-1,-1);""".stripMargin
+    println(schemaAndData.getInitSQLList.mkString("\n"))
+    println(answer)
     assert(answer.equals(schemaAndData.getInitSQLList.mkString("\n")))
   }
 }
