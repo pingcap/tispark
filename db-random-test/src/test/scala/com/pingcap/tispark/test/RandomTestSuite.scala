@@ -30,7 +30,7 @@ class RandomTestSuite extends FunSuite with RandomTest {
 
   private val database = "random_test"
 
-  test("random test with isClusteredIndex") {
+  test("random test with ClusteredIndex") {
     val schemaAndDataList = genSchemaAndData(
       rowCount,
       List(
@@ -53,11 +53,10 @@ class RandomTestSuite extends FunSuite with RandomTest {
                    |  PRIMARY KEY (`col_int0`) /*T![clustered_index] CLUSTERED */
                    |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
                    |INSERT INTO `test_351626634_1517918040` VALUES (-1,-1);""".stripMargin
-    println(schemaAndData.getInitSQLList.mkString("\n"))
     assert(answer.equals(schemaAndData.getInitSQLList.mkString("\n")))
   }
 
-  test("random test without isClusteredIndex") {
+  test("random test without ClusteredIndex") {
     val schemaAndDataList = genSchemaAndData(
       rowCount,
       List(
@@ -80,8 +79,6 @@ class RandomTestSuite extends FunSuite with RandomTest {
                    |  PRIMARY KEY (`col_int0`)
                    |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
                    |INSERT INTO `test_351626634_1115789266` VALUES (-1,-1);""".stripMargin
-    println(schemaAndData.getInitSQLList.mkString("\n"))
-    println(answer)
     assert(answer.equals(schemaAndData.getInitSQLList.mkString("\n")))
   }
 }
