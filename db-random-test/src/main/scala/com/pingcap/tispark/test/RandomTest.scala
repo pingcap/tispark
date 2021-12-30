@@ -60,7 +60,7 @@ trait RandomTest {
           (dataType, len, s"$desc null")
         }
       case NullableType.NotNullablePK =>
-          (dataType, len, s"$desc not null primary key")
+        (dataType, len, s"$desc not null primary key")
 
     }
   }
