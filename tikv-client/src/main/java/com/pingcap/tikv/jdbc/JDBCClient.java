@@ -1,4 +1,19 @@
-package com.pingcap.tikv;
+/*
+ * Copyright 2021 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.pingcap.tikv.jdbc;
 
 import java.sql.Connection;
 import java.sql.Driver;
@@ -38,57 +53,19 @@ public class JDBCClient {
   }
 
   public List<String> showGrants() {
-    try (Connection connection = driver.connect(url, properties);
-        Statement tidbStmt = connection.createStatement();
-        ResultSet resultSet = tidbStmt.executeQuery(SQL_SHOW_GRANTS)) {
-
-      List<String> result = new ArrayList<>();
-      ResultSetMetaData rsMetaData = resultSet.getMetaData();
-
-      while (resultSet.next()) {
-        for (int i = 1; i <= rsMetaData.getColumnCount(); i++) {
-          result.add(resultSet.getString(i));
-        }
-      }
-
-      return result;
+    try {
+      return query(SQL_SHOW_GRANTS, (rs, rowNum) -> rs.getString(1));
     } catch (SQLException e) {
       return Collections.emptyList();
     }
   }
 
   public String getPDAddress() throws SQLException {
-    try (Connection connection = driver.connect(url, properties);
-        Statement tidbStmt = connection.createStatement();
-        ResultSet resultSet = tidbStmt.executeQuery(GET_PD_ADDRESS)) {
-
-      List<String> result = new ArrayList<>();
-      ResultSetMetaData rsMetaData = resultSet.getMetaData();
-
-      while (resultSet.next()) {
-        for (int i = 1; i <= rsMetaData.getColumnCount(); i++) {
-          result.add(resultSet.getString(i));
-        }
-      }
-      return result.get(0);
-    }
+    return queryForObject(GET_PD_ADDRESS, (rs, rowNum) -> rs.getString("INSTANCE"));
   }
 
   public String getCurrentUser() throws SQLException {
-    try (Connection connection = driver.connect(url, properties);
-        Statement tidbStmt = connection.createStatement();
-        ResultSet resultSet = tidbStmt.executeQuery(SELECT_CURRENT_USER)) {
-
-      List<String> result = new ArrayList<>();
-      ResultSetMetaData rsMetaData = resultSet.getMetaData();
-
-      while (resultSet.next()) {
-        for (int i = 1; i <= rsMetaData.getColumnCount(); i++) {
-          result.add(resultSet.getString(i));
-        }
-      }
-      return result.get(0);
-    }
+    return queryForObject(SELECT_CURRENT_USER, (rs, rowNum) -> rs.getString("current_user()"));
   }
 
   public List<String> showGrantsUsingRole(List<String> roles) {
@@ -117,6 +94,32 @@ public class JDBCClient {
       logger.warn("Failed to show grants using role", e);
       return Collections.emptyList();
     }
+  }
+
+  private <T> List<T> query(String sql, RowMapper<T> rowMapper) throws SQLException {
+    try (Connection connection = driver.connect(url, properties);
+        Statement tidbStmt = connection.createStatement();
+        ResultSet resultSet = tidbStmt.executeQuery(sql)) {
+      return extractData(resultSet, rowMapper);
+    }
+  }
+
+  private <T> T queryForObject(String sql, RowMapper<T> rowMapper) throws SQLException {
+    List<T> result = query(sql, rowMapper);
+    if (result.size() != 1) {
+      throw new IllegalArgumentException(
+          "queryForObject() result size: expected 1, acctually " + result.size());
+    }
+    return result.get(0);
+  }
+
+  private <T> List<T> extractData(ResultSet rs, RowMapper<T> rowMapper) throws SQLException {
+    List<T> results = new ArrayList<>();
+    int rowNum = 0;
+    while (rs.next()) {
+      results.add(rowMapper.mapRow(rs, rowNum++));
+    }
+    return results;
   }
 
   @SneakyThrows
