@@ -2,7 +2,16 @@ package com.pingcap.tispark.auth
 
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.test.SharedSQLContext
-import org.scalatest.Matchers.{an, be, contain, convertToAnyShouldWrapper, noException, not}
+import org.scalatest.Matchers.{
+  an,
+  be,
+  contain,
+  convertToAnyShouldWrapper,
+  have,
+  noException,
+  not,
+  the
+}
 
 import java.sql.SQLException
 
@@ -13,6 +22,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   val dbtable = f"$database.$table"
   val databaseWithPrefix = f"$dbPrefix$database"
   val dummyDatabase = "tispark_test_auth_dummy"
+  val user = "tispark_unit_test_user"
 
   override def beforeAll(): Unit = {
     _isAuthEnabled = true
@@ -21,7 +31,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     // set sql conf
     spark.sqlContext.setConf("spark.sql.tidb.addr", "127.0.0.1")
     spark.sqlContext.setConf("spark.sql.tidb.port", "4000")
-    spark.sqlContext.setConf("spark.sql.tidb.user", "tispark_unit_test_user")
+    spark.sqlContext.setConf("spark.sql.tidb.user", user)
     spark.sqlContext.setConf("spark.sql.tidb.password", "")
 
     // create database
@@ -35,11 +45,11 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     tidbStmt.execute(s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')")
 
     // create user
-    tidbStmt.execute("CREATE USER IF NOT EXISTS 'tispark_unit_test_user' IDENTIFIED BY ''")
+    tidbStmt.execute(f"CREATE USER IF NOT EXISTS '$user' IDENTIFIED BY ''")
 
     // grant user
-    tidbStmt.execute(f"GRANT CREATE ON $dummyDatabase.* TO 'tispark_unit_test_user'@'%%'")
-    tidbStmt.execute(f"GRANT PROCESS ON *.* TO 'tispark_unit_test_user'@'%%'")
+    tidbStmt.execute(f"GRANT CREATE ON $dummyDatabase.* TO '$user'@'%%'")
+    tidbStmt.execute(f"GRANT PROCESS ON *.* TO '$user'@'%%'")
 
     // set namespace "tidb_catalog"
     if (catalogPluginMode) {
@@ -48,7 +58,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   override def afterAll(): Unit = {
-    tidbStmt.execute("DROP USER IF EXISTS 'tispark_unit_test_user'")
+    tidbStmt.execute(f"DROP USER IF EXISTS '$user'")
     tidbStmt.execute(s"DROP TABLE IF EXISTS `$database`.`$table`")
     tidbStmt.execute(s"DROP DATABASE IF EXISTS `$database`")
     tidbStmt.execute(s"DROP DATABASE IF EXISTS `$dummyDatabase`")
@@ -57,9 +67,9 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   test("Select without privilege should not be passed") {
-    an[SQLException] should be thrownBy {
+    the[SQLException] thrownBy {
       spark.sql(s"select * from `$databaseWithPrefix`.`$table`")
-    }
+    } should have message s"SELECT command denied to user $user@% for table $databaseWithPrefix.$table"
   }
 
   test("Get PD address from TiDB should be correct") {
@@ -67,13 +77,14 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   test("Use database and select without privilege should not be passed") {
-    an[SQLException] should be thrownBy spark.sql(s"use $databaseWithPrefix")
+    the[SQLException] thrownBy spark.sql(
+      f"use $databaseWithPrefix") should have message s"Access denied for user $user@% to database ${databaseWithPrefix}"
     if (catalogPluginMode) {
       an[AnalysisException] should be thrownBy spark.sql(s"select * from $table")
     } else {
-      an[SQLException] should be thrownBy spark.sql(s"select * from $table")
+      the[SQLException] thrownBy spark.sql(
+        s"select * from $table") should have message s"SELECT command denied to user $user@% for table $databaseWithPrefix.$table"
     }
-
   }
 
   test(f"Show databases without privilege should not contains db") {
@@ -99,8 +110,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   test("Give privilege") {
-    tidbStmt.execute(
-      f"GRANT UPDATE,SELECT on `$database`.`$table` TO 'tispark_unit_test_user'@'%%';")
+    tidbStmt.execute(f"GRANT UPDATE,SELECT on `$database`.`$table` TO '$user'@'%%';")
 
     Thread.sleep((TiAuthorization.refreshIntervalSecond + 5) * 1000)
   }
@@ -147,8 +157,8 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
 
   test(f"Describe tables should not success with invisible table") {
     noException should be thrownBy spark.sql(s"DESCRIBE TABLE `$databaseWithPrefix`.`$table`")
-    an[SQLException] should be thrownBy spark.sql(
-      s"DESCRIBE TABLE `$databaseWithPrefix`.`$invisibleTable`")
+    the[SQLException] thrownBy spark.sql(
+      s"DESCRIBE `$databaseWithPrefix`.`$invisibleTable`") should have message s"SELECT command denied to user $user@% for table $databaseWithPrefix.$invisibleTable"
   }
 
   // SHOW COLUMNS is only supported with temp views or v1 tables.;
@@ -156,8 +166,8 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     if (!catalogPluginMode) {
       noException should be thrownBy spark.sql(
         s"SHOW COLUMNS FROM `$databaseWithPrefix`.`$table`")
-      an[SQLException] should be thrownBy spark.sql(
-        s"SHOW COLUMNS FROM `$databaseWithPrefix`.`$invisibleTable`")
+      the[SQLException] thrownBy spark.sql(
+        s"SHOW COLUMNS FROM `$databaseWithPrefix`.`$invisibleTable`") should have message s"SELECT command denied to user $user@% for table $databaseWithPrefix.$invisibleTable"
     }
   }
 
@@ -165,8 +175,8 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   test(f"DESCRIBE COLUMN should not success with invisible table") {
     if (!catalogPluginMode) {
       noException should be thrownBy spark.sql(s"DESCRIBE `$databaseWithPrefix`.`$table` s")
-      an[SQLException] should be thrownBy spark.sql(
-        s"DESCRIBE `$databaseWithPrefix`.`$invisibleTable` s")
+      the[SQLException] thrownBy spark.sql(
+        s"DESCRIBE `$databaseWithPrefix`.`$invisibleTable` s") should have message s"SELECT command denied to user $user@% for table $databaseWithPrefix.$invisibleTable"
     }
   }
 

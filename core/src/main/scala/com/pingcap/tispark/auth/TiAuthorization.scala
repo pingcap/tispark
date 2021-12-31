@@ -43,29 +43,33 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
   }
 
   /**
-   * Initialization
+   * Initialization start
    */
-  {
-    TiAuthorization.dbPrefix = tiConf.getDBPrefix
-    val option = new TiDBOptions(parameters)
-    try {
-      this.jdbcClient = new JDBCClient(option.url, new Properties())
-    } catch {
-      case e: Throwable => {
-        // Failed to create jdbcClient renders authentication impossible. Log and throw exception to shutdown spark session.
-        logger.error(f"Failed to create tidb jdbc client with url ${option.url}", e)
-        throw e
-      }
+  TiAuthorization.dbPrefix = tiConf.getDBPrefix
+  val option = new TiDBOptions(parameters)
+  try {
+    this.jdbcClient = new JDBCClient(option.url, new Properties())
+  } catch {
+    case e: Throwable => {
+      // Failed to create jdbcClient renders authentication impossible. Log and throw exception to shutdown spark session.
+      logger.error(f"Failed to create tidb jdbc client with url ${option.url}", e)
+      throw e
     }
-
-    task.run()
-    // Periodically update privileges from TiDB
-    scheduler.scheduleWithFixedDelay(
-      task,
-      refreshIntervalSecond,
-      refreshIntervalSecond,
-      TimeUnit.SECONDS)
   }
+
+  val user: String = jdbcClient.getCurrentUser
+
+  task.run()
+  // Periodically update privileges from TiDB
+  scheduler.scheduleWithFixedDelay(
+    task,
+    refreshIntervalSecond,
+    refreshIntervalSecond,
+    TimeUnit.SECONDS)
+
+  /**
+   * Initialization end
+   */
 
   def getPrivileges: PrivilegeObject = {
     var input = JavaConverters.asScalaBuffer(jdbcClient.showGrants).toList
@@ -136,12 +140,21 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
    * @param requiredPriv
    * @return If the check not passes, throw @SQLException
    */
-  def checkPrivs(db: String, table: String, requiredPriv: MySQLPriv.Value): Unit = {
+  def checkPrivs(
+      db: String,
+      table: String,
+      requiredPriv: MySQLPriv.Value,
+      commandName: String): Unit = {
     if (!checkGlobalPiv(requiredPriv) && !checkDatabasePiv(db, requiredPriv) && !checkTablePiv(
         db,
         table,
-        requiredPriv))
-      throw new SQLException(f"Lack of privilege:$requiredPriv on database:$db table:$table")
+        requiredPriv)) {
+      if (table.isEmpty) {
+        throw new SQLException(f"$commandName command denied to user $user for database $db")
+      } else {
+        throw new SQLException(f"$commandName command denied to user $user for table $db.$table")
+      }
+    }
   }
 
   /**
@@ -317,7 +330,7 @@ object TiAuthorization {
       database: String,
       tiAuth: Option[TiAuthorization]): Unit = {
     if (enableAuth) {
-      tiAuth.get.checkPrivs(database, table, MySQLPriv.SelectPriv)
+      tiAuth.get.checkPrivs(database, table, MySQLPriv.SelectPriv, "SELECT")
     }
   }
 
@@ -328,14 +341,14 @@ object TiAuthorization {
       sourceTable: String,
       tiAuth: Option[TiAuthorization]) = {
     if (enableAuth) {
-      tiAuth.get.checkPrivs(targetDb, targetTable, MySQLPriv.CreatePriv)
-      tiAuth.get.checkPrivs(sourceDb, sourceTable, MySQLPriv.SelectPriv)
+      tiAuth.get.checkPrivs(targetDb, targetTable, MySQLPriv.CreatePriv, "CREATE")
+      tiAuth.get.checkPrivs(sourceDb, sourceTable, MySQLPriv.SelectPriv, "SELECT")
     }
   }
 
   def authorizeForSetDatabase(database: String, tiAuth: Option[TiAuthorization]) = {
     if (enableAuth && !tiAuth.get.visible(database, "")) {
-      throw new SQLException(f"Lack of privilege to set database:${database}")
+      throw new SQLException(f"Access denied for user ${tiAuth.get.user} to database ${database}")
     }
   }
 
@@ -344,7 +357,8 @@ object TiAuthorization {
       database: String,
       tiAuth: Option[TiAuthorization]) = {
     if (enableAuth && !tiAuth.get.visible(database, table))
-      throw new SQLException(f"Lack of privilege to describe table:${table}")
+      throw new SQLException(
+        f"SELECT command denied to user ${tiAuth.get.user} for table $database.$table")
   }
 
   def checkVisible(db: String, table: String, tiAuth: Option[TiAuthorization]): Boolean = {
