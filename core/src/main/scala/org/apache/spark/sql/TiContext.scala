@@ -15,11 +15,10 @@
 
 package org.apache.spark.sql
 
-import java.lang
-
 import com.pingcap.tikv.tools.RegionUtils
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
+import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.TiUtil
@@ -33,13 +32,20 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import scalaj.http.Http
 
+import java.lang
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 class TiContext(val sparkSession: SparkSession) extends Serializable with Logging {
   final val version: String = TiSparkVersion.version
   final val conf: SparkConf = sparkSession.sparkContext.conf
-  final val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(conf)
+  lazy final val tiAuthorization: Option[TiAuthorization] = TiAuthorization.tiAuthorization
+  // If enableAuth, get PDAddress from TiDB else from spark conf
+  final val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(
+    conf,
+    if (TiAuthorization.enableAuth) {
+      Option(tiAuthorization.get.getPDAddress())
+    } else Option.empty)
   final val tiSession: TiSession = TiSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
   lazy val tiConcreteCatalog: TiSessionCatalog =
@@ -123,6 +129,14 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
           "Duplicate table [" + tableName + "] exist in catalog, you might want to set dbNameAsPrefix = true")
       }
     }
+
+  def getDatabaseFromOption(option: Option[String]): String = {
+    if (option.isDefined) {
+      option.get
+    } else {
+      tiCatalog.getCurrentDatabase
+    }
+  }
 
   // add backtick for table name in case it contains, e.g., a minus sign
   private def getViewName(dbName: String, tableName: String, dbNameAsPrefix: Boolean): String =

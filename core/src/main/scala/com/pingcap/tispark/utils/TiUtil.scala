@@ -15,13 +15,12 @@
 
 package com.pingcap.tispark.utils
 
-import java.util.concurrent.TimeUnit
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.datatype.TypeMapping
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.TiStoreType
 import com.pingcap.tikv.types._
-import com.pingcap.tispark.{TiConfigConst, _}
+import com.pingcap.tispark._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
@@ -31,6 +30,7 @@ import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import java.time.{Instant, LocalDate, ZoneId}
 import java.util.TimeZone
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.NANOSECONDS
 
 object TiUtil {
@@ -88,9 +88,15 @@ object TiUtil {
     df.rdd.isEmpty()
   }
 
-  def sparkConfToTiConf(conf: SparkConf): TiConfiguration = {
-    val tiConf = TiConfiguration.createDefault(conf.get(TiConfigConst.PD_ADDRESSES))
+  def sparkConfToTiConf(conf: SparkConf, option: Option[String]): TiConfiguration = {
+    val tiConf = TiConfiguration.createDefault(if (option.isDefined) {
+      option.get
+    } else conf.get(TiConfigConst.PD_ADDRESSES))
 
+    sparkConfToTiConfWithoutPD(conf, tiConf)
+  }
+
+  def sparkConfToTiConfWithoutPD(conf: SparkConf, tiConf: TiConfiguration): TiConfiguration = {
     if (conf.contains(TiConfigConst.GRPC_FRAME_SIZE)) {
       tiConf.setMaxFrameSize(conf.get(TiConfigConst.GRPC_FRAME_SIZE).toInt)
     }
@@ -122,7 +128,8 @@ object TiUtil {
     }
 
     if (conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {
-      val priority = CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
+      val priority =
+        CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
       tiConf.setCommandPriority(priority)
     }
 

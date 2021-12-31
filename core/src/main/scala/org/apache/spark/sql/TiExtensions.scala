@@ -18,6 +18,7 @@ package org.apache.spark.sql
 import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
 import org.apache.spark.sql.extensions.{
+  TiAuthRuleFactory,
   TiDDLRuleFactory,
   TiParserFactory,
   TiResolutionRuleFactory
@@ -33,6 +34,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 
     e.injectParser(new TiParserFactory(getOrCreateTiContext))
     e.injectResolutionRule(new TiDDLRuleFactory(getOrCreateTiContext))
+    e.injectResolutionRule(new TiAuthRuleFactory(getOrCreateTiContext))
     e.injectResolutionRule(new TiResolutionRuleFactory(getOrCreateTiContext))
     e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
@@ -52,6 +54,12 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 }
 
 object TiExtensions {
+  def authEnable(sparkSession: SparkSession): Boolean = {
+    sparkSession.sparkContext.conf
+      .get("spark.sql.auth.enable", "false")
+      .toBoolean
+  }
+
   def enabled(sparkSession: SparkSession): Boolean = getTiContext(sparkSession).isDefined
 
   def catalogPluginMode(sparkSession: SparkSession): Boolean = {

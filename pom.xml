@@ -71,7 +71,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
         <spark.version.compile>3.0.2</spark.version.compile>
-        <spark.version.test>3.1.1</spark.version.test>
+        <spark.version.test>3.0.2</spark.version.test>
         <scala.binary.version>2.12</scala.binary.version>
         <scala.version>2.12.10</scala.version>
         <!-- for now, not running scalafmt as part of default verify pipeline -->
@@ -88,6 +88,7 @@
         <test.exclude.tags/>
         <test.include.tags/>
         <scalaj.version>2.3.0</scalaj.version>
+        <lombok.version>1.18.22</lombok.version>
         <someModule.test.excludes></someModule.test.excludes>
     </properties>
     <repositories>
@@ -177,6 +178,7 @@
             </activation>
             <properties>
                 <spark.version.compile>3.1.1</spark.version.compile>
+                <spark.version.test>3.1.1</spark.version.test>
             </properties>
         </profile>
         <profile>
