@@ -61,11 +61,11 @@ public class JDBCClient {
   }
 
   public String getPDAddress() throws SQLException {
-    return queryForObject(GET_PD_ADDRESS, (rs, rowNum) -> rs.getString("INSTANCE"));
+    return queryForObject(GET_PD_ADDRESS, (rs, rowNum) -> rs.getString(1));
   }
 
   public String getCurrentUser() throws SQLException {
-    return queryForObject(SELECT_CURRENT_USER, (rs, rowNum) -> rs.getString("current_user()"));
+    return queryForObject(SELECT_CURRENT_USER, (rs, rowNum) -> rs.getString(1));
   }
 
   public List<String> showGrantsUsingRole(List<String> roles) {
