@@ -112,11 +112,6 @@ case class TiDescribeTablesCommand(
 
       result
     } else {
-      TiAuthorization.authorizeForDescribeTable(
-        tableInfo.tableName.table,
-        tiContext.getDatabaseFromOption(tableInfo.tableName.database),
-        tiContext.tiAuthorization)
-
       tiCatalog
         .catalogOf(tableInfo.tableName.database)
         .getOrElse(throw new NoSuchDatabaseException(
@@ -219,11 +214,6 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
   }
 
   private def doRun(sparkSession: SparkSession, tableWithDBName: TableIdentifier): Seq[Row] = {
-    TiAuthorization.authorizeForDescribeTable(
-      tableWithDBName.table,
-      tiContext.getDatabaseFromOption(tableWithDBName.database),
-      tiContext.tiAuthorization)
-
     val resolver = sparkSession.sessionState.conf.resolver
 
     val relation = sparkSession.table(tableWithDBName).queryExecution.analyzed
@@ -303,11 +293,6 @@ case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsComma
   }
 
   private def doRun(tableName: String, databaseName: Option[String]): Seq[Row] = {
-    TiAuthorization.authorizeForDescribeTable(
-      tableName,
-      tiContext.getDatabaseFromOption(databaseName),
-      tiContext.tiAuthorization)
-
     val lookupTable = TableIdentifier(tableName, databaseName)
     val table = tiCatalog.getTempViewOrPermanentTableMetadata(lookupTable)
     table.schema.map { c =>
@@ -320,13 +305,6 @@ case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableL
     extends RunnableCommand {
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    TiAuthorization.authorizeForCreateTableLike(
-      tiContext.getDatabaseFromOption(delegate.targetTable.database),
-      delegate.targetTable.table,
-      tiContext.getDatabaseFromOption(delegate.sourceTable.database),
-      delegate.sourceTable.table,
-      tiContext.tiAuthorization)
-
     val catalog = tiContext.tiCatalog
     val sourceTableDesc = catalog.getTempViewOrPermanentTableMetadata(delegate.sourceTable)
 

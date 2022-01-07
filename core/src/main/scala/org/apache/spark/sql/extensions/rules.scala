@@ -33,12 +33,7 @@ class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
       TiAuthorization.sqlConf = sparkSession.sqlContext.conf
       TiAuthorization.tiConf =
         TiUtil.sparkConfToTiConfWithoutPD(sparkSession.sparkContext.conf, new TiConfiguration())
-      // TiAuthorizationRule only work with catalogPluginMode
-      if (TiExtensions.catalogPluginMode(sparkSession)) {
-        ReflectionUtil.newTiAuthRule(getOrCreateTiContext, sparkSession)
-      } else {
-        TiNopAuthRule(getOrCreateTiContext)(sparkSession)
-      }
+      ReflectionUtil.newTiAuthRule(getOrCreateTiContext, sparkSession)
     } else {
       TiAuthorization.enableAuth = false
       TiNopAuthRule(getOrCreateTiContext)(sparkSession)

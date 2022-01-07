@@ -67,6 +67,7 @@ case class TiResolutionRule(
         // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
 
         // Authorize for Select statement
+        //if return is SubqueryAlias(tableIdentifier, LogicalRelation(tiDBRelation)),this Authorize can be delete
         TiAuthorization.authorizeForSelect(tableName, dbName, tiContext.tiAuthorization)
 
         SubqueryAlias(tableName, LogicalRelation(tiDBRelation))
