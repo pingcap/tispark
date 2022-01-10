@@ -94,7 +94,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   test("Use database and select without privilege should not be passed") {
     the[SQLException] thrownBy spark.sql(
       f"use $databaseWithPrefix") should have message s"Access denied for user $user@% to database ${databaseWithPrefix}"
-      an[AnalysisException] should be thrownBy spark.sql(s"select * from $table")
+    an[AnalysisException] should be thrownBy spark.sql(s"select * from $table")
   }
 
   test(f"Show databases without privilege should not contains db") {
