@@ -15,6 +15,8 @@
 
 package com.pingcap.tispark.auth
 
+import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
+
 object MySQLPriv extends Enumeration {
 
   // UsagePriv is a synonym for “no privileges”
@@ -84,7 +86,7 @@ object MySQLPriv extends Enumeration {
   // these are dynamic privileges in MySQL 8.0 and other extended privileges like LOAD FROM S3 in Aurora.
   ExtendedPriv = Value
 
-  final val Str2Priv = Map(
+  final val Str2Priv = CaseInsensitiveMap(Map(
     "CREATE" -> MySQLPriv.CreatePriv,
     "SELECT" -> MySQLPriv.SelectPriv,
     "INSERT" -> MySQLPriv.InsertPriv,
@@ -118,5 +120,5 @@ object MySQLPriv extends Enumeration {
     "USAGE" -> MySQLPriv.UsagePriv,
     "REPLICATION CLIENT" -> MySQLPriv.ReplicationClientPriv,
     "REPLICATION SLAVE" -> MySQLPriv.ReplicationSlavePriv,
-    "ALL PRIVILEGES" -> MySQLPriv.AllPriv)
+    "ALL PRIVILEGES" -> MySQLPriv.AllPriv))
 }
