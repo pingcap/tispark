@@ -180,9 +180,9 @@ class CatalogTestSuite extends BaseTiSparkTest {
     spark.sql("show columns from m").show(200, truncate = false)
 
     spark
-      .sql("show columns from tidb_tispark_test.full_data_type_table")
+      .sql("show columns from ${dbPrefix}tispark_test.full_data_type_table")
       .show(200, truncate = false)
-    spark.sql("use tidb_tispark_test")
+    spark.sql("use ${dbPrefix}tispark_test")
     spark.sql("show columns from full_data_type_table").show(200, truncate = false)
 
     setCurrentDatabase("tispark_test")
