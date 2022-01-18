@@ -21,6 +21,15 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("test region split") {
+    tidbStmt.execute(s"""
+                        |DROP TABLE IF EXISTS `test_region_split`;
+                        |CREATE TABLE `test_region_split` (`id` bigint,`col_bit` bit(1));
+                        |INSERT INTO `t` VALUES ('1969-12-31 17:00:01.0',b'0');
+                        |ALTER TABLE `t` SET TIFLASH REPLICA 1;
+                        |""".stripMargin)
+  }
+
   test("test enum with empty sql_mode") {
     tidbStmt.execute("set sql_mode=''")
     tidbStmt.execute("create table t(c enum('good','bad'))")
