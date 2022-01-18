@@ -94,11 +94,14 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   test("Use database and select without privilege should not be passed") {
     the[SQLException] thrownBy spark.sql(
       f"use $databaseWithPrefix") should have message s"Access denied for user $user@% to database ${databaseWithPrefix}"
+    val caught = intercept[AnalysisException] {
+      spark.sql(s"select * from $table")
+    }
+    // catalogPluginMode has been set namespace with "use tidb_catalog.$dbPrefix$dummyDatabase" in beforeAll() method
     if (catalogPluginMode) {
-      an[AnalysisException] should be thrownBy spark.sql(s"select * from $table")
+      assert(caught.getMessage.contains(s"Table or view not found: test_auth_basic"))
     } else {
-      the[SQLException] thrownBy spark.sql(
-        s"select * from $table") should have message s"SELECT command denied to user $user@% for table $databaseWithPrefix.$table"
+      assert(caught.getMessage.contains("Table or view not found: default.test_auth_basic"))
     }
   }
 
@@ -139,7 +142,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
       s"select * from `$databaseWithPrefix`.`${table.toUpperCase()}`")
   }
 
-  test("Use database and select with privilege should not be passed") {
+  test("Use database and select with privilege should be passed") {
     noException should be thrownBy spark.sql(s"use $databaseWithPrefix")
     noException should be thrownBy spark.sql(s"select * from $table")
   }

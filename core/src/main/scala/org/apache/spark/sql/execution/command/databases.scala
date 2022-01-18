@@ -28,10 +28,6 @@ case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetCatalogAndNam
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
     tiCatalog.setCurrentDatabase(delegate.namespace.get.head)
-    TiAuthorization.authorizeForSetDatabase(
-      delegate.namespace.get.head,
-      tiContext.tiAuthorization)
-
     Seq.empty[Row]
   }
 }

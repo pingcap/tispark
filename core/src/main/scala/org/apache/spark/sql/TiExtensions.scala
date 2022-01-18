@@ -33,8 +33,8 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
     TiSparkInfo.checkVersion()
 
     e.injectParser(new TiParserFactory(getOrCreateTiContext))
-    e.injectResolutionRule(new TiDDLRuleFactory(getOrCreateTiContext))
     e.injectResolutionRule(new TiAuthRuleFactory(getOrCreateTiContext))
+    e.injectResolutionRule(new TiDDLRuleFactory(getOrCreateTiContext))
     e.injectResolutionRule(new TiResolutionRuleFactory(getOrCreateTiContext))
     e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
