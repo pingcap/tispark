@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory
 object TiSparkInfo {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  val SUPPORTED_SPARK_VERSION: List[String] = "2.4" :: Nil
+  val SUPPORTED_SPARK_VERSION: List[String] = "2.3" :: "2.4" :: Nil
 
   val SPARK_VERSION: String = org.apache.spark.SPARK_VERSION
 
@@ -42,6 +42,10 @@ object TiSparkInfo {
     logger.info(info)
     if (!versionSupport()) {
       logger.error("Current TiSpark Version is not compatible with current Spark Version!")
+      throw new TiInternalException("")
+    }
+    if (SPARK_MAJOR_VERSION == "2.3" && util.Properties.versionNumberString.startsWith("2.12")) {
+      logger.error("Spark-2.3 is not compatible with scala-2.12, please use version ${TiSpark.version}-scala_2.11")
       throw new TiInternalException("")
     }
   }

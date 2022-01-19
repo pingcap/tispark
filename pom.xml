@@ -10,7 +10,7 @@
 
     <groupId>com.pingcap.tispark</groupId>
     <artifactId>tispark-parent_${scala.binary.version}</artifactId>
-    <version>2.4.2</version>
+    <version>2.4.2-scala_${scala.binary.version}</version>
     <packaging>pom</packaging>
     <name>TiSpark Project Parent POM</name>
     <url>http://github.copm/pingcap/tispark</url>
@@ -191,7 +191,7 @@
             <id>scala-2.11</id>
             <properties>
                 <scala.version>2.11.12</scala.version>
-                <scala.binary.version>2.12</scala.binary.version>
+                <scala.binary.version>2.11</scala.binary.version>
             </properties>
         </profile>
     </profiles>
