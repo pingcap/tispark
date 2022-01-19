@@ -117,11 +117,11 @@ object TiAggregationImpl {
           (sumAndAvgEliminated ++ extraSumsAndCounts ++ rewriteSums).distinct
         }
 
-        Some(
+        Some((
           groupingExpressions,
           rewrittenAggregateExpressions,
           rewrittenResultExpressions,
-          child)
+          child))
 
       case _ => Option.empty[ReturnType]
     }

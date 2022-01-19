@@ -189,10 +189,16 @@
         </profile>
         <profile>
             <id>scala-2.11</id>
+          <activation>
+            <activeByDefault>false</activeByDefault>
+          </activation>
             <properties>
                 <scala.version>2.11.12</scala.version>
                 <scala.binary.version>2.11</scala.binary.version>
             </properties>
+            <modules>
+                <module>spark-wrapper/spark-2.3</module>
+            </modules>
         </profile>
     </profiles>
 
