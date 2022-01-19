@@ -16,18 +16,78 @@
 package org.apache.spark.sql
 
 import com.pingcap.tispark.TiConfigConst
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.util.resourceToString
-import org.apache.spark.sql.functions.{col, sum}
+import org.apache.spark.sql.functions.{array, col, sum}
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+
+import scala.collection.mutable.ListBuffer
 
 class IssueTestSuite extends BaseTiSparkTest {
 
-  test("test region split") {
+  test("test region split tiflash") {
+    if (!enableTiFlashTest) {
+      cancel("tiflash test not enabled")
+    }
+
     tidbStmt.execute(s"""
-                        |DROP TABLE IF EXISTS `test_region_split`;
-                        |CREATE TABLE `test_region_split` (`id` bigint,`col_bit` bit(1));
-                        |INSERT INTO `t` VALUES ('1969-12-31 17:00:01.0',b'0');
-                        |ALTER TABLE `t` SET TIFLASH REPLICA 1;
+                        |DROP TABLE IF EXISTS tispark_test.test_region_split;
+                        |CREATE TABLE tispark_test.test_region_split (
+                        |`col1` int(11) not null,
+                        |`col2` int(11) not null,
+                        | PRIMARY KEY (`col1`),
+                        | KEY `idx_col2` (`col2`)
+                        | );
+                        | ALTER TABLE tispark_test.test_region_split SET TIFLASH REPLICA 1;
                         |""".stripMargin)
+
+    Thread.sleep(10000)
+
+    val schema: StructType = StructType(
+      List(StructField("col1", IntegerType), StructField("col2", IntegerType)))
+
+    for (i <- 0 to 9) {
+      new Thread(() => {
+        val rows = ListBuffer[Row]()
+        for (a <- i * 100000 until (i + 1) * 100000) {
+          val row = Row(a, a)
+          rows += row
+        }
+
+        val sparkSession = spark.newSession()
+        val data: RDD[Row] = sparkSession.sparkContext.makeRDD(rows)
+        val df = sparkSession.createDataFrame(data, schema)
+        try {
+//          TiBatchWrite.write(
+//            df,
+//            ti,
+//            new TiDBOptions(
+//              tidbOptions + ("database" -> s"${dbPrefix}tispark_test", "table" -> "test_region_split","isTest" -> "true")))
+                    df.write
+                      .format("tidb")
+                      .options(tidbOptions)
+                      .option("database", "tispark_test")
+                      .option("table", "test_region_split")
+                      .option("isTest","true")
+                      .mode("append")
+                      .save()
+        } catch {
+          case ex:Exception => println(Thread.currentThread().getName)
+        }
+      }).start()
+    }
+
+    Thread.sleep(100000)
+
+    spark.conf
+      .set(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIKV_STORAGE_ENGINE)
+    val num1 = spark.sql("select count(*) from tispark_test.test_region_split").head().get(0)
+
+    spark.conf
+      .set(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIFLASH_STORAGE_ENGINE)
+    val num2 = spark.sql("select count(*) from tispark_test.test_region_split").head().get(0)
+
+    assert(num1 == num2)
   }
 
   test("test enum with empty sql_mode") {

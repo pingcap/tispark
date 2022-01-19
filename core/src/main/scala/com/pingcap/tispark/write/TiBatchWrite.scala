@@ -431,6 +431,11 @@ class TiBatchWrite(
     // check connection lost if using lock table
     checkConnectionLost()
 
+    if(options.isTest){
+      val a = scala.util.Random.nextInt(10)
+      if(a<7) throw new Exception
+    }
+
     logger.info(s"start to commitPrimaryKey, commitTsAttempt=$commitTsAttempt")
     ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTsAttempt)
     try {
