@@ -164,7 +164,6 @@
         <module>tikv-client</module>
         <module>core</module>
         <module>spark-wrapper/spark-2.4</module>
-        <module>assembly</module>
     </modules>
 
     <profiles>
@@ -198,6 +197,16 @@
             </properties>
             <modules>
                 <module>spark-wrapper/spark-2.3</module>
+                <module>assembly</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>scala-2.12</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <modules>
+                <module>assembly</module>
             </modules>
         </profile>
     </profiles>
