@@ -168,16 +168,6 @@
 
     <profiles>
         <profile>
-            <id>jenkins</id>
-            <modules>
-                <module>core-test</module>
-            </modules>
-            <properties>
-                <skipFetchTestData>true</skipFetchTestData>
-                <skipCloneProtoFiles>true</skipCloneProtoFiles>
-            </properties>
-        </profile>
-        <profile>
             <id>test-java-home</id>
             <activation>
                 <property><name>env.JAVA_HOME</name></property>
@@ -212,6 +202,16 @@
             <modules>
                 <module>assembly</module>
             </modules>
+        </profile>
+        <profile>
+            <id>jenkins</id>
+            <modules>
+                <module>core-test</module>
+            </modules>
+            <properties>
+                <skipFetchTestData>true</skipFetchTestData>
+                <skipCloneProtoFiles>true</skipCloneProtoFiles>
+            </properties>
         </profile>
     </profiles>
 
