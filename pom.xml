@@ -201,6 +201,16 @@
                 <module>assembly</module>
             </modules>
         </profile>
+         <profile>
+            <id>spark-2.3</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <spark.version.compile>2.3.4</spark.version.compile>
+                <spark.version.test>2.3.4</spark.version.test>
+            </properties>
+        </profile>
         <profile>
             <id>jenkins</id>
             <modules>
