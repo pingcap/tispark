@@ -18,26 +18,15 @@ package com.pingcap.tispark.utils
 import java.io.File
 import java.lang.reflect.Method
 import java.net.{URL, URLClassLoader}
-
 import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.TiContext
+import org.apache.spark.sql.{SparkSession, TiContext}
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.catalog.{
-  CatalogTable,
-  ExternalCatalog,
-  SessionCatalog,
-  TiSessionCatalog
-}
+import org.apache.spark.sql.catalyst.catalog.{CatalogTable, ExternalCatalog, SessionCatalog, TiSessionCatalog}
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.catalyst.expressions.{
-  Alias,
-  AttributeReference,
-  Expression,
-  NamedExpression,
-  UnsafeRow
-}
+import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, NamedExpression, UnsafeRow}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
+import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.types.{DataType, Metadata}
 import org.slf4j.LoggerFactory
 
@@ -78,6 +67,10 @@ object ReflectionUtil {
     "org.apache.spark.sql.catalyst.catalog.TiDirectExternalCatalog"
   private val TI_COMPOSITE_SESSION_CATALOG_CLASS =
     "org.apache.spark.sql.catalyst.catalog.TiCompositeSessionCatalog"
+  private val TI_DDL_RULE_CLASS =
+    "org.apache.spark.sql.extensions.TiDDLRule"
+  private val TI_RESOLUTION_RULE_CLASS =
+    "org.apache.spark.sql.extensions.TiResolutionRule"
 
   def newTiDirectExternalCatalog(tiContext: TiContext): ExternalCatalog = {
     classLoader
@@ -109,6 +102,24 @@ object ReflectionUtil {
       .getDeclaredConstructor(classOf[TiContext])
       .newInstance(tiContext)
       .asInstanceOf[TiSessionCatalog]
+  }
+
+  def newTiDDLRule(getOrCreateTiContext: SparkSession => TiContext, sparkSession: SparkSession): Rule[LogicalPlan] = {
+    classLoader
+      .loadClass(TI_DDL_RULE_CLASS)
+      .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])
+      .newInstance(getOrCreateTiContext, sparkSession)
+      .asInstanceOf[Rule[LogicalPlan]]
+  }
+
+  def newTiResolutionRule(
+                           getOrCreateTiContext: SparkSession => TiContext,
+                           sparkSession: SparkSession): Rule[LogicalPlan] = {
+    classLoader
+      .loadClass(TI_RESOLUTION_RULE_CLASS)
+      .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])
+      .newInstance(getOrCreateTiContext, sparkSession)
+      .asInstanceOf[Rule[LogicalPlan]]
   }
 
   def callTiAggregationImplUnapply(plan: LogicalPlan): Option[

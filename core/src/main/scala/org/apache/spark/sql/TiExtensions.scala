@@ -16,7 +16,7 @@
 package org.apache.spark.sql
 
 import com.pingcap.tispark.TiSparkInfo
-import org.apache.spark.sql.extensions.{TiDDLRule, TiParser, TiResolutionRule}
+import org.apache.spark.sql.extensions.{TiDDLRuleFactory, TiParser, TiResolutionRuleFactory}
 
 import scala.collection.mutable
 
@@ -27,8 +27,8 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
     TiSparkInfo.checkVersion()
 
     e.injectParser(TiParser(getOrCreateTiContext))
-    e.injectResolutionRule(TiDDLRule(getOrCreateTiContext))
-    e.injectResolutionRule(TiResolutionRule(getOrCreateTiContext))
+    e.injectResolutionRule(new TiDDLRuleFactory(getOrCreateTiContext))
+    e.injectResolutionRule(new TiResolutionRuleFactory(getOrCreateTiContext))
     e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
 

@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.pingcap.tispark</groupId>
         <artifactId>tispark-parent_${scala.binary.version}</artifactId>
-        <version>2.4.2</version>
+        <version>2.4.2-scala_${scala.binary.version}</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -26,17 +26,17 @@
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_${scala.binary.version}</artifactId>
+            <artifactId>spark-core_2.11</artifactId>
             <version>${spark.version.wrapper}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-catalyst_${scala.binary.version}</artifactId>
+            <artifactId>spark-catalyst_2.11</artifactId>
             <version>${spark.version.wrapper}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_${scala.binary.version}</artifactId>
+            <artifactId>spark-sql_2.11</artifactId>
             <version>${spark.version.wrapper}</version>
         </dependency>
     </dependencies>
@@ -73,7 +73,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <scalaVersion>${scala.version}</scalaVersion>
+                    <scalaVersion>2.11.12</scalaVersion>
                 </configuration>
             </plugin>
             <plugin>
@@ -105,7 +105,7 @@
             <!-- Scala Format Plug-in -->
             <plugin>
                 <groupId>org.antipathy</groupId>
-                <artifactId>mvn-scalafmt_${scala.binary.version}</artifactId>
+                <artifactId>mvn-scalafmt_2.11</artifactId>
                 <version>1.0.3</version>
                 <configuration>
                     <skipSources>${scalafmt.skip}</skipSources>

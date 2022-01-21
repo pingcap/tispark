@@ -10,7 +10,7 @@
 
     <groupId>com.pingcap.tispark</groupId>
     <artifactId>tispark-parent_${scala.binary.version}</artifactId>
-    <version>2.4.2</version>
+    <version>2.4.2-scala_${scala.binary.version}</version>
     <packaging>pom</packaging>
     <name>TiSpark Project Parent POM</name>
     <url>http://github.copm/pingcap/tispark</url>
@@ -72,8 +72,6 @@
         <protobuf.version>3.1.0</protobuf.version>
         <spark.version.compile>2.4.6</spark.version.compile>
         <spark.version.test>2.4.6</spark.version.test>
-        <scala.binary.version>2.12</scala.binary.version>
-        <scala.version>2.12.10</scala.version>
         <!-- for now, not running scalafmt as part of default verify pipeline -->
         <scalafmt.skip>true</scalafmt.skip>
         <scalatest.version>3.0.8</scalatest.version>
@@ -164,20 +162,9 @@
         <module>tikv-client</module>
         <module>core</module>
         <module>spark-wrapper/spark-2.4</module>
-        <module>assembly</module>
     </modules>
 
     <profiles>
-        <profile>
-            <id>jenkins</id>
-            <modules>
-                <module>core-test</module>
-            </modules>
-            <properties>
-                <skipFetchTestData>true</skipFetchTestData>
-                <skipCloneProtoFiles>true</skipCloneProtoFiles>
-            </properties>
-        </profile>
         <profile>
             <id>test-java-home</id>
             <activation>
@@ -189,9 +176,49 @@
         </profile>
         <profile>
             <id>scala-2.11</id>
+          <activation>
+            <activeByDefault>false</activeByDefault>
+          </activation>
             <properties>
                 <scala.version>2.11.12</scala.version>
+                <scala.binary.version>2.11</scala.binary.version>
+            </properties>
+            <modules>
+                <module>spark-wrapper/spark-2.3</module>
+                <module>assembly</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>scala-2.12</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
                 <scala.binary.version>2.12</scala.binary.version>
+                <scala.version>2.12.10</scala.version>
+            </properties>
+            <modules>
+                <module>assembly</module>
+            </modules>
+        </profile>
+         <profile>
+            <id>spark-2.3</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <spark.version.compile>2.3.4</spark.version.compile>
+                <spark.version.test>2.3.4</spark.version.test>
+            </properties>
+        </profile>
+        <profile>
+            <id>jenkins</id>
+            <modules>
+                <module>core-test</module>
+            </modules>
+            <properties>
+                <skipFetchTestData>true</skipFetchTestData>
+                <skipCloneProtoFiles>true</skipCloneProtoFiles>
             </properties>
         </profile>
     </profiles>
