@@ -79,6 +79,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     tidbStmt.execute(s"DROP DATABASE IF EXISTS `$dummyDatabase`")
     super.afterAll()
     _isAuthEnabled = false
+    TiAuthorization.enableAuth = false
   }
 
   test("Select without privilege should not be passed") {
