@@ -46,4 +46,9 @@ class TiAuthSuite extends UnitSuite {
         "GRANT 'app_read'@'%','app_write'@'%' TO 'rw_user1'@'localhost'" :: Nil)
     roles should equal(List("app_read", "app_write"))
   }
+
+  test("priv map should be case-insensitive") {
+    MySQLPriv.Str2Priv.get("Process") shouldEqual Some(MySQLPriv.ProcessPriv)
+    MySQLPriv.Str2Priv.get("ProCess") shouldEqual Some(MySQLPriv.ProcessPriv)
+  }
 }
