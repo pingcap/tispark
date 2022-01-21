@@ -45,8 +45,7 @@ object TiSparkInfo {
       throw new TiInternalException("")
     }
     if (SPARK_MAJOR_VERSION == "2.3" && util.Properties.versionNumberString.startsWith("2.12")) {
-      logger.error("Spark-2.3 is not compatible with scala-2.12, please use version ${TiSpark.version}-scala_2.11")
-      throw new TiInternalException("")
+      throw new TiInternalException("Spark-2.3 is not compatible with scala-2.12, please use version ${TiSpark.version}-scala_2.11")
     }
   }
 }
