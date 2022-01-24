@@ -35,7 +35,7 @@ If you are using maven (recommended), add the following code to your `pom.xml`:
 </dependencies>
 ```
 
-For TiSpark-2.4.x, you need to specify the scala version
+For TiSpark-2.4.x, you need to specify the scala version:
 ```xml
 <dependencies>
     <dependency>
