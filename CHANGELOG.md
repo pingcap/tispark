@@ -1,7 +1,7 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
-## [TiSpark 2.5.0] 2022-01-??
+## [TiSpark 2.5.0] 2022-01-25
 ### New feature
 - Support Spark 3.1.x and 3.0.x version.
 - Support Spark-Sql's authentication and authorization through TiDB [#2185](https://github.com/pingcap/tispark/pull/2185).
@@ -14,7 +14,10 @@ All notable changes to this project will be documented in this file.
 ### Documents
 - Fix in user docs forget to use options while using BatchWrite [#2169](https://github.com/pingcap/tispark/pull/2169)
 
-## [TiSpark 2.4.3] 2022-01-??
+## [TiSpark 2.4.3] 2022-01-25
+### New feature
+-  scala 2.11 and 2.12 are both supported
+
 ### Fixes
 - Fix duplicate range in RowIDAllocator [#2208](https://github.com/pingcap/tispark/pull/2208).
 - upgrade log4j to 2.17.1 [#2209](https://github.com/pingcap/tispark/pull/2209).
