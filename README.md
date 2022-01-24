@@ -52,7 +52,7 @@ You can download the nightly version (master branch) [here](https://download.pin
 
 ## How to build from sources
 
-TiSpark now supports Spark 2.3.0+、2.4.0+、3.0.0+ and 3.1.0+. The earlier TiSpark versions for Spark 2.1.0+ was not supported anymore. 
+TiSpark now supports Spark 2.3.0+、2.4.0+、3.0.0+ and 3.1.0+. The earlier TiSpark versions for Spark 2.1.0+ are not supported anymore. 
 
 Currently `java8` is the only choice to build TiSpark, run `mvn -version` to check.
 
