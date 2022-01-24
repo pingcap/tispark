@@ -13,7 +13,7 @@ Read the [Quick Start](./docs/userguide.md).
 
 ## Getting TiSpark
 
-+ Currently, TiSpark 2.4.3, 2.5.0 is the latest stable version, which is highly recommended. You can get compatibility information from [table](## How to choose TiSpark Version) .Please follow the [document](./docs/userguide.md).
++ Currently, TiSpark 2.4.3, 2.5.0 is the latest stable version, which is highly recommended. You can get compatibility information from [table](##How to choose TiSpark Version) .Please follow the [document](./docs/userguide.md).
 
 + If you are using TiDB-5.0 and Spark 2.3.0+/2.4.0+, TiSpark 2.4.3 is recommended.
 
@@ -70,7 +70,7 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 
 ## How to choose TiSpark Version
 
-| TiSpark 版本 | TiDB、TiKV、PD 版本 | Spark 版本 | Scala 版本 |
+| TiSpark version | TiDB、TiKV、PD version | Spark version | Scala version |
 | ---------------  | -------------------- | ------------- | ------------- |
 | 2.4.x-scala_2.11 | 5.x，4.x             | 2.3.x，2.4.x   | 2.11          |
 | 2.4.x-scala_2.12 | 5.x，4.x             | 2.4.x         | 2.12          |
