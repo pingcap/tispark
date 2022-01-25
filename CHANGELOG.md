@@ -1,6 +1,31 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.5.0] 2022-01-25
+### New feature
+- Support Spark 3.1.x and 3.0.x version.
+- Support Spark-Sql's authentication and authorization through TiDB [#2185](https://github.com/pingcap/tispark/pull/2185).
+
+### Fixes
+- Fix duplicate range in RowIDAllocator [#2156](https://github.com/pingcap/tispark/pull/2156).
+- upgrade log4j to 2.17.1 [#2197](https://github.com/pingcap/tispark/pull/2197).
+- upgrade jackson-databind to 2.9.10.8 [#2161](https://github.com/pingcap/tispark/pull/2197).
+
+### Documents
+- Fix in user docs forget to use options while using BatchWrite [#2169](https://github.com/pingcap/tispark/pull/2169)
+
+## [TiSpark 2.4.3] 2022-01-25
+### New feature
+-  scala 2.11 and 2.12 are both supported
+
+### Fixes
+- Fix duplicate range in RowIDAllocator [#2208](https://github.com/pingcap/tispark/pull/2208).
+- upgrade log4j to 2.17.1 [#2209](https://github.com/pingcap/tispark/pull/2209).
+- upgrade jackson-databind to 2.9.10.8 [#2209](https://github.com/pingcap/tispark/pull/2209).
+
+### Documents
+- Fix in user docs forget to use options while using BatchWrite [#2171](https://github.com/pingcap/tispark/pull/2171).
+
 ## [TiSpark 2.3.16] 2021-05-17
 ### Fixes
 - Change PARTITION_PER_SPLIT default value from 1 to 10 [#2029](https://github.com/pingcap/tispark/pull/2029)
