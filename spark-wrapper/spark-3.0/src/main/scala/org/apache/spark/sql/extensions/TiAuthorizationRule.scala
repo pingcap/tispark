@@ -45,7 +45,8 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
       sa
     case sd: ShowNamespaces =>
       sd
-    case sd @ SetCatalogAndNamespace(catalogManager, catalogName, namespace) if (namespace.isDefined) =>
+    case sd @ SetCatalogAndNamespace(catalogManager, catalogName, namespace)
+        if (namespace.isDefined) =>
       namespace.get
         .foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
       sd
