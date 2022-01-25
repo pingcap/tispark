@@ -82,6 +82,16 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     TiAuthorization.enableAuth = false
   }
 
+  test("Use catalog should success") {
+    if (catalogPluginMode) {
+      spark.sql(s"use tidb_catalog")
+      spark.sql(s"use $dbPrefix$dummyDatabase")
+    } else {
+      spark.sql(s"use spark_catalog")
+      spark.sql(s"use $dbPrefix$dummyDatabase")
+    }
+  }
+
   test("Select without privilege should not be passed") {
     the[SQLException] thrownBy {
       spark.sql(s"select * from `$databaseWithPrefix`.`$table`")
