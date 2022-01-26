@@ -30,6 +30,9 @@ All notable changes to this project will be documented in this file.
 ### Documents
 - Fix in user docs forget to use options while using BatchWrite [#2171](https://github.com/pingcap/tispark/pull/2171).
 
+### Known issue
+- Batch write needs more tests and may be unstable. See details in this issue [#2222](https://github.com/pingcap/tispark/issues/2222).
+
 ## [TiSpark 2.4.2] 2021-11-02
 Since TiSpark v2.4.2, Only Scala v2.12 is supported.
 ### New feature
