@@ -15,7 +15,7 @@ All notable changes to this project will be documented in this file.
 - Fix in user docs forget to use options while using BatchWrite [#2169](https://github.com/pingcap/tispark/pull/2169)
 
 ### Known issue
-- Spark-Sql's authentication and authorization through TiDB will affect other datasource such as hive.
+- Spark-Sql's authentication and authorization through TiDB will affect other datasource such as hive. See details in this issue [#2224](https://github.com/pingcap/tispark/issues/2224).
 - Batch write needs more tests and may be unstable. See details in this issue [#2222](https://github.com/pingcap/tispark/issues/2222).
 
 ## [TiSpark 2.4.3] 2022-01-25
