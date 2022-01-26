@@ -60,5 +60,6 @@ Currently, Supported statements are as follows:
 
 ## limitations
 
+- Not supported with hive as datasource
 - Not supported with role-based privileges
 - Not supported with TiDB Data Source API, such as TiBatchWrite
