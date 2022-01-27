@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TiDBJDBCClient implements AutoCloseable {
+
   private static final String UNLOCK_TABLES_SQL = "unlock tables";
   private static final String SELECT_TIDB_CONFIG_SQL = "select @@tidb_config";
   private static final String ENABLE_TABLE_LOCK_KEY = "enable-table-lock";
@@ -41,7 +42,9 @@ public class TiDBJDBCClient implements AutoCloseable {
   private static final int TIDB_ROW_FORMAT_VERSION_DEFAULT = 1;
   private static final String ALTER_PRIMARY_KEY_KEY = "alter-primary-key";
   private static final Boolean ALTER_PRIMARY_KEY_DEFAULT = false;
+
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
+
   private final Connection connection;
 
   public TiDBJDBCClient(Connection connection) {
@@ -158,6 +161,7 @@ public class TiDBJDBCClient implements AutoCloseable {
     ObjectMapper objectMapper = new ObjectMapper();
     TypeReference<HashMap<String, Object>> typeRef =
         new TypeReference<HashMap<String, Object>>() {};
+
     return objectMapper.readValue(configJSON, typeRef);
   }
 

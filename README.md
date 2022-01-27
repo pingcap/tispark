@@ -13,14 +13,14 @@ Read the [Quick Start](./docs/userguide.md).
 
 ## Getting TiSpark
 
-+ Currently, TiSpark 2.3.16 is the latest stable version, which is highly recommended. It is compatible with Spark 2.3.0+ and Spark 2.4.0+. It is also compatible with TiDB-2.x、TiDB-3.x and TiDB-4.x. Please follow the [document](./docs/userguide.md).
++ Currently, TiSpark 2.4.3, 2.5.0 is the latest stable version, which is highly recommended. You can get compatibility information from the [table](##-How-to-choose-TiSpark-Version). Please follow the [document](./docs/userguide.md).
 
-+ If you are using TiDB-5.0 and Spark 2.3.0+/2.4.0+, TiSpark 2.4.0 is recommended.
++ If you are using TiDB-5.0 and Spark 2.3.0+/2.4.0+, TiSpark 2.4.3 is recommended.
 
-+ If you are using Spark 3.0, TiSpark 2.5.0 is recommended.
++ If you are using Spark 3.0/3.1, TiSpark 2.5.0 is recommended.
   
-+ TiSpark 1.2.1 is the latest stable version compatible with Spark 2.1.0+.
-  - When using TiSpark 1.2.1, follow the [document for Spark 2.1](./docs/userguide_spark2.1.md).
++ TiSpark 1.2.1 is compatible with Spark 2.1.0+, which is not supported anymore 
+  - If you still want to use TiSpark 1.2.1, follow the [document for Spark 2.1](./docs/userguide_spark2.1.md).
 
 You might also [build from sources](#how-to-build-from-sources) to try the new features on TiSpark master branch.
 
@@ -30,19 +30,18 @@ If you are using maven (recommended), add the following code to your `pom.xml`:
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-assembly</artifactId>
-      <version>2.3.16</version>
+      <version>2.5.0</version>
     </dependency>
 </dependencies>
 ```
 
-If you want to use TiSpark-2.1.x, please use the following configuration:
-
+For TiSpark-2.4.x, you need to specify the scala version:
 ```xml
 <dependencies>
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
-      <artifactId>tispark-core</artifactId>
-      <version>2.1.9-spark_${spark.version}</version>
+      <artifactId>tispark-assembly</artifactId>
+      <version>2.4.3-scala_${scala.binary.version}</version>
     </dependency>
 </dependencies>
 ```
@@ -53,7 +52,7 @@ You can download the nightly version (master branch) [here](https://download.pin
 
 ## How to build from sources
 
-TiSpark now supports Spark 2.3.0+、2.4.0+ and 3.0.0+. The earlier TiSpark versions for Spark 2.1.0+ only contain bug-fixes. After these versions, you can still get support for Spark 2.1 until TiSpark 1.2.1.
+TiSpark now supports Spark 2.3.0+、2.4.0+、3.0.0+ and 3.1.0+. The earlier TiSpark versions for Spark 2.1.0+ are not supported anymore. 
 
 Currently `java8` is the only choice to build TiSpark, run `mvn -version` to check.
 
@@ -71,12 +70,11 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 
 ## How to choose TiSpark Version
 
-| TiSpark Version | TiDB/TiKV/PD Version | Spark Version | Scala Version |
-| --------------- | -------------------- | ------------- | ------------- |
-| 2.1.x           | <= 3.0.2             | 2.3.x, 2.4.x  | 2.11          |
-| 2.3.x           | <= 4.0.x             | 2.3.x, 2.4.x  | 2.11          |
-| 2.4.x           | <= 5.0.x             | 2.3.x, 2.4.x  | 2.11          |
-| 2.5.x           | <= 5.0.x             | 3.0.x         | 2.12          |
+| TiSpark version | TiDB、TiKV、PD version | Spark version | Scala version |
+| ---------------  | -------------------- | ------------- | ------------- |
+| 2.4.x-scala_2.11 | 5.x，4.x             | 2.3.x，2.4.x   | 2.11          |
+| 2.4.x-scala_2.12 | 5.x，4.x             | 2.4.x         | 2.12          |
+| 2.5.x            | 5.x，4.x             | 3.0.x，3.1.x   | 2.12          |
 
 ## How to upgrade from Spark 2.1 to Spark 2.3/2.4
 
@@ -88,7 +86,7 @@ The figure below show the architecture of TiSpark.
 
 ![architecture](./docs/architecture.png)
 
-+ TiSpark integrates well with the Spark Catalyst Engine. It provides precise control of comfputing, which allows Spark to read data from TiKV efficiently. It also supports index seek, which significantly improves the performance of the point query execution.
++ TiSpark integrates well with the Spark Catalyst Engine. It provides precise control of computing, which allows Spark to read data from TiKV efficiently. It also supports index seek, which significantly improves the performance of the point query execution.
 + It utilizes several strategies to push down computing to reduce the size of dataset handling by Spark SQL, which accelerates query execution. It also uses the TiDB built-in statistical information for the query plan optimization.
 + From the perspective of data integration, TiSpark + TiDB provides a solution that performs both transaction and analysis directly on the same platform without building and maintaining any ETLs. It simplifies the system architecture and reduces the cost of maintenance.
 + In addition, you can deploy and utilize the tools from the Spark ecosystem for further data processing and manipulation on TiDB. For example, using TiSpark for data analysis and ETL, retrieving data from TiKV as a data source for machine learning, generating reports from the scheduling system and so on.
@@ -114,16 +112,6 @@ For TiSpark version >= 2.0:
 
 ```
 spark.sql("use tpch_test")
-spark.sql("select count(*) from lineitem").show
-```
-
-For TiSpark version < 2.0:
-
-```
-import org.apache.spark.sql.TiContext
-val ti = new TiContext (spark)
-ti.tidbMapDatabase ("tpch_test")
-
 spark.sql("select count(*) from lineitem").show
 ```
 
@@ -225,6 +213,11 @@ Do not use `spark.sql.session.timeZone`.
 ## Statistics information
 
 For how TiSpark can benefit from TiDB's statistic information, see [here](./docs/userguide.md).
+
+## Authorization and authentication
+
+See [here](./docs/authorization_userguide.md).
+
 
 ## Compatibility with TiDB
 

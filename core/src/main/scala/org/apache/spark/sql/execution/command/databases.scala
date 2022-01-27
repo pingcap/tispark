@@ -14,8 +14,9 @@
  */
 package org.apache.spark.sql.execution.command
 
-import org.apache.spark.sql.{Row, SparkSession, TiContext}
+import com.pingcap.tispark.auth.TiAuthorization
 import org.apache.spark.sql.catalyst.plans.logical.{SetCatalogAndNamespace, ShowNamespaces}
+import org.apache.spark.sql.{Row, SparkSession, TiContext}
 
 /**
  * CHECK Spark [[org.apache.spark.sql.catalyst.plans.logical.SetCatalogAndNamespace]]
@@ -45,6 +46,7 @@ case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowNamespaces
       delegate.pattern
         .map(tiCatalog.listDatabases)
         .getOrElse(tiCatalog.listDatabases())
+        .filter(database => TiAuthorization.checkVisible(database, "", tiContext.tiAuthorization))
     databases.map { d =>
       Row(d)
     }

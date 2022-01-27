@@ -457,6 +457,11 @@ trait SharedSQLContext
         conf.set("spark.sql.catalog.tidb_catalog", TiCatalog.className)
         conf.set("spark.sql.catalog.tidb_catalog.pd.addresses", pdAddresses)
       }
+      if (_isAuthEnabled) {
+        conf.set("spark.sql.auth.enable", "true")
+      } else {
+        conf.set("spark.sql.auth.enable", "false")
+      }
     }
 
   private class TiContextCache {
@@ -555,7 +560,7 @@ object SharedSQLContext extends Logging {
 
     catalogPluginMode = !"".equals(getOrElse(tidbConf, "spark.sql.catalog.tidb_catalog", ""))
 
-    dbPrefix = if (catalogPluginMode) "" else getOrElse(tidbConf, DB_PREFIX, "tidb_")
+    dbPrefix = getOrElse(tidbConf, DB_PREFIX, "")
 
     // run TPC-H tests by default and disable TPC-DS tests by default
     tpchDBName = getOrElse(tidbConf, TPCH_DB_NAME, "tpch_test")

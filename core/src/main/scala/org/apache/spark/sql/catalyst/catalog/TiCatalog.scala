@@ -15,29 +15,20 @@
 
 package org.apache.spark.sql.catalyst.catalog
 
-import java.util
-
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.MetaManager
+import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{NoSuchNamespaceException, NoSuchTableException}
-import org.apache.spark.sql.connector.catalog.{
-  Identifier,
-  NamespaceChange,
-  SupportsNamespaces,
-  Table,
-  TableCapability,
-  TableCatalog,
-  TableChange,
-  V1Table
-}
+import org.apache.spark.sql.connector.catalog._
 import org.apache.spark.sql.connector.expressions.{FieldReference, LogicalExpressions, Transform}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.slf4j.LoggerFactory
 
+import java.util
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -115,7 +106,8 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   private var _name: Option[String] = None
   private var _current_namespace: Option[Array[String]] = None
   private val logger = LoggerFactory.getLogger(getClass.getName)
-
+  private lazy final val tiAuthorization: Option[TiAuthorization] =
+    TiAuthorization.tiAuthorization
   def setCurrentNamespace(namespace: Option[Array[String]]): Unit =
     synchronized {
       _current_namespace = namespace
@@ -123,10 +115,17 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
   override def initialize(name: String, options: CaseInsensitiveStringMap): Unit = {
     _name = Some(name)
-    if (!options.containsKey("pd.addresses") && !options.containsKey("pd.address")) {
-      throw new Exception("missing configuration spark.sql.catalog.tidb_catalog.pd.addresses")
-    }
-    val pdAddress = options.getOrDefault("pd.addresses", options.get("pd.address"))
+
+    val pdAddress: String =
+      if (TiAuthorization.enableAuth) {
+        tiAuthorization.get.getPDAddress()
+      } else {
+        if (!options.containsKey("pd.addresses") && !options.containsKey("pd.address")) {
+          throw new Exception("missing configuration spark.sql.catalog.tidb_catalog.pd.addresses")
+        }
+        options.getOrDefault("pd.addresses", options.get("pd.address"))
+      }
+
     logger.info(s"Initialize TiCatalog with name: $name, pd address: $pdAddress")
     val conf = TiConfiguration.createDefault(pdAddress)
     val session = TiSession.getInstance(conf)
@@ -144,7 +143,10 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     }
 
   override def listNamespaces(): Array[Array[String]] =
-    meta.get.getDatabases.map(dbInfo => Array(dbInfo.getName)).toArray
+    meta.get.getDatabases
+      .filter(db => TiAuthorization.checkVisible(db.getName, "", tiAuthorization))
+      .map(dbInfo => Array(dbInfo.getName))
+      .toArray
 
   override def listNamespaces(namespace: Array[String]): Array[Array[String]] = {
     namespace match {
@@ -184,6 +186,8 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
         case _ => throw new NoSuchTableException(ident)
       }
 
+    TiAuthorization.authorizeForDescribeTable(ident.name, dbName, tiAuthorization)
+
     val table = meta.get
       .getTable(dbName, ident.name())
       .getOrElse(throw new NoSuchTableException(dbName, ident.name()))
@@ -207,6 +211,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
       case Array(db) =>
         meta.get
           .getTables(meta.get.getDatabase(db).getOrElse(throw new NoSuchNamespaceException(db)))
+          .filter(tbl => TiAuthorization.checkVisible(db, tbl.getName, tiAuthorization))
           .map(tbl => Identifier.of(Array(db), tbl.getName))
           .toArray
       case _ =>

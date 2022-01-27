@@ -13,8 +13,17 @@
  * limitations under the License.
  */
 
-package com.pingcap.tispark.test.generator
+package com.pingcap.tispark
 
-object NullableType extends Enumeration {
-  val Nullable, NotNullable, NumericNotNullable, NotNullablePK = Value
+import org.apache.spark.internal.Logging
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuite, Matchers}
+import org.slf4j.Logger
+
+abstract class UnitSuite
+    extends FunSuite
+    with BeforeAndAfterEach
+    with BeforeAndAfterAll
+    with Matchers
+    with Logging {
+  protected val logger: Logger = log
 }

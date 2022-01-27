@@ -14,22 +14,23 @@
  */
 package org.apache.spark.sql.execution.command
 
+import com.pingcap.tispark.auth.TiAuthorization
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{NoSuchDatabaseException, UnresolvedAttribute}
 import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
+import org.apache.spark.sql.catalyst.plans.logical.{Command, Histogram}
 import org.apache.spark.sql.types.{MetadataBuilder, StringType, StructType}
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession, TiContext}
 
 import scala.collection.mutable.ArrayBuffer
-import org.apache.spark.sql.catalyst.plans.logical.{Command, Histogram}
 
 /**
  * CHECK Spark [[org.apache.spark.sql.execution.command.ShowTablesCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
- * @param delegate original ShowTablesCommand
+ * @param delegate  original ShowTablesCommand
  */
 case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand)
     extends TiCommand(delegate) {
@@ -44,6 +45,8 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
     val tables = delegate.tableIdentifierPattern
       .map(tiCatalog.listTables(db, _))
       .getOrElse(tiCatalog.listTables(db, "*"))
+      .filter(t => TiAuthorization.checkVisible(db, t.table, tiContext.tiAuthorization))
+
     tables.map { tableIdent =>
       val database = tableIdent.database.getOrElse("")
       val tableName = tableIdent.table
@@ -67,7 +70,7 @@ case class DescribeTableInfo(
  * CHECK Spark [[org.apache.spark.sql.execution.command.DescribeTableCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
- * @param delegate original DescribeTableCommand
+ * @param delegate  original DescribeTableCommand
  */
 case class TiDescribeTablesCommand(
     tiContext: TiContext,
@@ -194,7 +197,7 @@ case class TiDescribeTablesCommand(
  * CHECK Spark [[org.apache.spark.sql.execution.command.DescribeColumnCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
- * @param delegate original DescribeColumnCommand
+ * @param delegate  original DescribeColumnCommand
  */
 case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColumnCommand)
     extends TiCommand(delegate) {
@@ -275,7 +278,7 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
  * CHECK Spark [[org.apache.spark.sql.execution.command.ShowColumnsCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
- * @param delegate original ShowColumnsCommand
+ * @param delegate  original ShowColumnsCommand
  */
 case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsCommand)
     extends TiCommand(delegate) {
