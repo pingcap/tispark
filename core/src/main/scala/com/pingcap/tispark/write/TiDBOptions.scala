@@ -106,6 +106,8 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   //96M
   val bytesPerRegion: Int = getOrDefault(TIDB_BYTES_PER_REGION, "100663296").toInt
   val maxWriteTaskNumber: Int = getOrDefault(TIDB_MAX_WRITE_TASK_NUMBER, "0").toInt
+  //delete
+  val delete: Boolean = getOrDefault(TIDB_DELETE, "false").toBoolean
 
   // ------------------------------------------------------------
   // Calculated parameters
@@ -208,6 +210,7 @@ object TiDBOptions {
   val TIDB_COMMIT_PRIMARY_KEY_RETRY_NUMBER: String = newOption("commitPrimaryKeyRetryNumber")
   val TIDB_ENABLE_UPDATE_TABLE_STATISTICS: String = newOption("enableUpdateTableStatistics")
   val TIDB_DEDUPLICATE: String = newOption("deduplicate")
+  val TIDB_DELETE: String = newOption("delete")
 
   // region split
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")

@@ -125,6 +125,37 @@ class TiBatchWriteTable(
     deltaCount = count
     modifyCount = count
 
+    if (options.delete) {
+      // spark row -> tikv row
+      val tiRowRdd = df.rdd.map(row => sparkRow2TiKVRow(row))
+      // check value not null
+      checkValueNotNull(tiRowRdd)
+      // check pk
+      val primaryIndices = tiTableInfo.getIndices.asScala.filter(index => index.isPrimary)
+      if (!isCommonHandle && handleCol == null && primaryIndices.isEmpty) {
+        throw new TiBatchWriteException("table without pk is not allowed in delete")
+      }
+      // tiRowRdd -> wrappedRowRdd
+      val deletion = generateRDDWithHandle(tiRowRdd.map { row => WrappedRow(row, null) }, startTimeStamp)
+      // distinctDeletion
+      val distinctDeletion = deletion.map { wrappedRow =>
+        val rowKey = buildRowKey(wrappedRow.row, wrappedRow.handle)
+        (rowKey, wrappedRow)}
+        .reduceByKey((r1, _) => r1)
+        .map(_._2).persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+      persistedRDDList = distinctDeletion :: persistedRDDList
+      // encode record & index
+      val recordKV = generateRecordKV(distinctDeletion, remove = true)
+      val indexKV = generateIndexKV(sc, distinctDeletion, remove = true)
+      val keyValueRDD =(recordKV ++ indexKV).map(obj => (obj.encodedKey, obj.encodedValue))
+
+      // persist
+      val persistedKeyValueRDD =
+        keyValueRDD.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+      persistedRDDList = persistedKeyValueRDD :: persistedRDDList
+      return persistedKeyValueRDD
+    }
+
     // auto increment
     val rdd = if (tiTableInfo.hasAutoIncrementColumn) {
       val autoIncrementColName = tiTableInfo.getAutoIncrementColInfo.getName
@@ -429,6 +460,141 @@ class TiBatchWriteTable(
         }
       }
       .flatMap(identity)
+  }
+
+  private def generateRDDWithHandle(
+      rdd: RDD[WrappedRow],
+      startTs: TiTimestamp): RDD[WrappedRow] = {
+    rdd.mapPartitions { wrappedRows =>
+      val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs.getPrevious)
+      var rowBuf = mutable.ListBuffer.empty[WrappedRow]
+      var rowBufIterator = rowBuf.iterator
+
+      new Iterator[WrappedRow] {
+        override def hasNext: Boolean = {
+          while (true) {
+            if (!wrappedRows.hasNext && !rowBufIterator.hasNext) {
+              return false
+            }
+
+            if (rowBufIterator.hasNext) {
+              return true
+            }
+
+            processNextBatch()
+          }
+          assert(false)
+          false
+        }
+
+        override def next(): WrappedRow = {
+          if (hasNext) {
+            rowBufIterator.next
+          } else {
+            null
+          }
+        }
+
+        def getNextBatch(itor: Iterator[WrappedRow]): List[WrappedRow] = {
+          val buf = mutable.ListBuffer.empty[WrappedRow]
+          var i = 0
+          while (itor.hasNext && i < options.snapshotBatchGetSize) {
+            buf.append(itor.next())
+            i = i + 1
+          }
+          buf.toList
+        }
+
+        def genNextHandleBatch(
+            batch: List[WrappedRow]): (util.List[Array[Byte]], util.List[Handle]) = {
+          val list = new util.ArrayList[Array[Byte]]()
+          val handles = new util.ArrayList[Handle]()
+          batch.foreach { wrappedRow =>
+            val bytes = buildRowKey(wrappedRow.row, extractHandle(wrappedRow.row)).bytes
+            list.add(bytes)
+            handles.add(extractHandle(wrappedRow.row))
+          }
+          (list, handles)
+        }
+
+        def genNextUniqueIndexBatch(
+            batch: List[WrappedRow],
+            index: TiIndexInfo): (util.List[Array[Byte]], util.List[TiRow]) = {
+          val keyList = new util.ArrayList[Array[Byte]]()
+          val rowList = new util.ArrayList[TiRow]()
+          batch.foreach { wrappedRow =>
+            val encodeResult = buildUniqueIndexKey(wrappedRow.row, new IntHandle(-1), index)
+            if (!encodeResult._2) {
+              // only add the key if handle is not appended, since if handle is appened,
+              // the value must be a new value
+              val bytes = encodeResult._1.bytes
+              keyList.add(bytes)
+              rowList.add(wrappedRow.row)
+            }
+          }
+          (keyList, rowList)
+        }
+
+        def decodeHandle(row: Array[Byte]): Handle = {
+          RowKey.decode(row).getHandle
+        }
+
+        def processHandleDelete(
+            oldValueList: java.util.List[BytePairWrapper],
+            handleList: java.util.List[Handle]): Unit = {
+          for (i <- 0 until oldValueList.size) {
+            val oldValuePair = oldValueList.get(i)
+            val oldValue = oldValuePair.getValue
+            val handle = handleList.get(i)
+            if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
+              val oldRow = TableCodec.decodeRow(oldValue, handle, tiTableInfo)
+              rowBuf += WrappedRow(oldRow, handle)
+            }
+          }
+        }
+
+        def processNextBatch(): Unit = {
+          rowBuf = mutable.ListBuffer.empty[WrappedRow]
+
+          val batch = getNextBatch(wrappedRows)
+
+          if (handleCol != null || isCommonHandle) {
+            val (batchHandle, handleList) = genNextHandleBatch(batch)
+            val oldValueList = snapshot.batchGet(options.batchGetBackOfferMS, batchHandle)
+            processHandleDelete(oldValueList, handleList)
+          }else{
+            val oldIndicesBatch: util.List[Array[Byte]] = new util.ArrayList[Array[Byte]]()
+            val pkIndices = tiTableInfo.getIndices.asScala.filter(index => index.isPrimary)
+            pkIndices.foreach { index =>
+              val (batchIndices, rowList) = genNextUniqueIndexBatch(batch, index)
+              val oldValueList = snapshot.batchGet(options.batchGetBackOfferMS, batchIndices)
+              for (i <- 0 until oldValueList.size) {
+                val oldValuePair = oldValueList.get(i)
+                val oldValue = oldValuePair.getValue
+                if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
+                  val oldHandle = TableCodec.decodeHandle(oldValue, isCommonHandle)
+                  val tiRow = rowList.get(i)
+                  oldIndicesBatch.add(buildRowKey(tiRow, oldHandle).bytes)
+                }
+
+              }
+            }
+
+            val oldIndicesRowPairs = snapshot.batchGet(options.batchGetBackOfferMS, oldIndicesBatch)
+            oldIndicesRowPairs.asScala.foreach { oldIndicesRowPair =>
+              val oldRowKey = oldIndicesRowPair.getKey
+              val oldRowValue = oldIndicesRowPair.getValue
+              if (oldRowValue.nonEmpty && !isNullUniqueIndexValue(oldRowValue)) {
+                val oldHandle = decodeHandle(oldRowKey)
+                val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
+                rowBuf += WrappedRow(oldRow, oldHandle)
+              }
+            }
+          }
+          rowBufIterator = rowBuf.iterator
+        }
+      }
+    }
   }
 
   private def generateDataToBeRemovedRddV2(
