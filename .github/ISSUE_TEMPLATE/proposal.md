@@ -4,6 +4,8 @@ about: Propose a solution for a feature, architecture change, etc.
 labels: type/proposal
 ---
 
+<!-- Act as a tracking issue and start point for the whole procedure: design, code, review, test, release. This might close a feature request issue but it's not required. -->
+
 ## Problem:
 <!-- What is the problem to be solved and how valuable is it to the target users. -->
 
