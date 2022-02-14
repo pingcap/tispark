@@ -20,9 +20,10 @@ package com.pingcap.tikv.util;
 import com.google.common.base.Preconditions;
 import com.pingcap.tikv.exception.GrpcException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,8 +37,8 @@ public class ConcreteBackOffer implements BackOffer {
   private ConcreteBackOffer(int maxSleep) {
     Preconditions.checkArgument(maxSleep >= 0, "Max sleep time cannot be less than 0.");
     this.maxSleep = maxSleep;
-    this.errors = new ArrayList<>();
-    this.backOffFunctionMap = new HashMap<>();
+    this.errors = Collections.synchronizedList(new ArrayList<>());
+    this.backOffFunctionMap = new ConcurrentHashMap<>();
   }
 
   private ConcreteBackOffer(ConcreteBackOffer source) {
