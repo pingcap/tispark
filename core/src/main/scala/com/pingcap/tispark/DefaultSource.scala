@@ -18,4 +18,4 @@ package com.pingcap.tispark
 /**
  * Spark Data Source API requires that the class name must be `DefaultSource`
  */
-class DefaultSource extends TiDBDataSource {}
+class DefaultSource extends TiDBTableProvider {}
