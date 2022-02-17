@@ -26,6 +26,7 @@ public class ConcreteBackOffTest {
 
   private AtomicBoolean failed = new AtomicBoolean(false);
 
+  // If Exception(except GrpcException), the test should be failed
   private void runDoBackOffSafely(
       ConcreteBackOffer concreteBackOffer,
       BackOffFunction.BackOffFuncType funcType,
@@ -65,6 +66,7 @@ public class ConcreteBackOffTest {
       e.printStackTrace();
     }
 
+    // check the result of test
     Assert.assertFalse(failed.get());
   }
 }
