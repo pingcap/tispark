@@ -271,7 +271,7 @@ For more details about the test, see [here](./core/src/test/Readme.md).
 
 5. The dependency `tispark-assembly` should not be packaged into `JAR of JARS` file (for example, build with spring-boot-maven-plugin), or you will get `ClassNotFoundException`. You can solve it by adding `spark-wrapper-spark-version` in your dependency or constructing another forms of jar file.
 
-6. Tispark don't support collations now. If you use TiDB version > 5.4.0 or master, you need to change the config `new_collations_enabled_on_first_bootstrap` to false, for the defalut value change to `true` from `false`.
+6. Tispark don't support collations now. `new_collations_enabled_on_first_bootstrap` should not be set to `true`.
 
 
 ## Follow us
