@@ -126,7 +126,7 @@ class TiBatchWriteTable(
     modifyCount = count
 
     if (options.delete) {
-      deletePreCalculate(startTimeStamp)
+      return deletePreCalculate(startTimeStamp)
     }
 
     // auto increment
