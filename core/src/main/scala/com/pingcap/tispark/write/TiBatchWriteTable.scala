@@ -126,34 +126,7 @@ class TiBatchWriteTable(
     modifyCount = count
 
     if (options.delete) {
-      // spark row -> tikv row
-      val tiRowRdd = df.rdd.map(row => sparkRow2TiKVRow(row))
-      // check value not null
-      checkValueNotNull(tiRowRdd)
-      // check pk
-      val primaryIndices = tiTableInfo.getIndices.asScala.filter(index => index.isPrimary)
-      if (!isCommonHandle && handleCol == null && primaryIndices.isEmpty) {
-        throw new TiBatchWriteException("table without pk is not allowed in delete")
-      }
-      // tiRowRdd -> wrappedRowRdd
-      val deletion = generateRDDWithHandle(tiRowRdd.map { row => WrappedRow(row, null) }, startTimeStamp)
-      // distinctDeletion
-      val distinctDeletion = deletion.map { wrappedRow =>
-        val rowKey = buildRowKey(wrappedRow.row, wrappedRow.handle)
-        (rowKey, wrappedRow)}
-        .reduceByKey((r1, _) => r1)
-        .map(_._2).persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
-      persistedRDDList = distinctDeletion :: persistedRDDList
-      // encode record & index
-      val recordKV = generateRecordKV(distinctDeletion, remove = true)
-      val indexKV = generateIndexKV(sc, distinctDeletion, remove = true)
-      val keyValueRDD =(recordKV ++ indexKV).map(obj => (obj.encodedKey, obj.encodedValue))
-
-      // persist
-      val persistedKeyValueRDD =
-        keyValueRDD.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
-      persistedRDDList = persistedKeyValueRDD :: persistedRDDList
-      return persistedKeyValueRDD
+      deletePreCalculate(startTimeStamp)
     }
 
     // auto increment
@@ -351,6 +324,41 @@ class TiBatchWriteTable(
       keyValueRDD.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
     persistedRDDList = persistedKeyValueRDD :: persistedRDDList
     persistedKeyValueRDD
+  }
+
+  def deletePreCalculate(startTimeStamp: TiTimestamp): RDD[(SerializableKey, Array[Byte])] = {
+    // spark row -> tikv row
+    val tiRowRdd = df.rdd.map(row => sparkRow2TiKVRow(row))
+    // check value not null
+    checkValueNotNull(tiRowRdd)
+    // check pk
+    val primaryIndices = tiTableInfo.getIndices.asScala.filter(index => index.isPrimary)
+    if (!isCommonHandle && handleCol == null && primaryIndices.isEmpty) {
+      throw new TiBatchWriteException("table without pk is not allowed in delete")
+    }
+    // tiRowRdd -> wrappedRowRdd
+    val deletion =
+      generateRDDWithHandle(tiRowRdd.map { row => WrappedRow(row, null) }, startTimeStamp)
+    // distinctDeletion
+    val distinctDeletion = deletion
+      .map { wrappedRow =>
+        val rowKey = buildRowKey(wrappedRow.row, wrappedRow.handle)
+        (rowKey, wrappedRow)
+      }
+      .reduceByKey((r1, _) => r1)
+      .map(_._2)
+      .persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+    persistedRDDList = distinctDeletion :: persistedRDDList
+    // encode record & index
+    val recordKV = generateRecordKV(distinctDeletion, remove = true)
+    val indexKV = generateIndexKV(sc, distinctDeletion, remove = true)
+    val keyValueRDD = (recordKV ++ indexKV).map(obj => (obj.encodedKey, obj.encodedValue))
+
+    // persist
+    val persistedKeyValueRDD =
+      keyValueRDD.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+    persistedRDDList = persistedKeyValueRDD :: persistedRDDList
+    return persistedKeyValueRDD
   }
 
   def lockTable(): Unit = {
@@ -562,7 +570,7 @@ class TiBatchWriteTable(
             val (batchHandle, handleList) = genNextHandleBatch(batch)
             val oldValueList = snapshot.batchGet(options.batchGetBackOfferMS, batchHandle)
             processHandleDelete(oldValueList, handleList)
-          }else{
+          } else {
             val oldIndicesBatch: util.List[Array[Byte]] = new util.ArrayList[Array[Byte]]()
             val pkIndices = tiTableInfo.getIndices.asScala.filter(index => index.isPrimary)
             pkIndices.foreach { index =>
@@ -580,7 +588,8 @@ class TiBatchWriteTable(
               }
             }
 
-            val oldIndicesRowPairs = snapshot.batchGet(options.batchGetBackOfferMS, oldIndicesBatch)
+            val oldIndicesRowPairs =
+              snapshot.batchGet(options.batchGetBackOfferMS, oldIndicesBatch)
             oldIndicesRowPairs.asScala.foreach { oldIndicesRowPair =>
               val oldRowKey = oldIndicesRowPair.getKey
               val oldRowValue = oldIndicesRowPair.getValue
