@@ -327,6 +327,7 @@ class TiBatchWriteTable(
   }
 
   def deletePreCalculate(startTimeStamp: TiTimestamp): RDD[(SerializableKey, Array[Byte])] = {
+    val sc = tiContext.sparkSession.sparkContext
     // spark row -> tikv row
     val tiRowRdd = df.rdd.map(row => sparkRow2TiKVRow(row))
     // check value not null
@@ -358,7 +359,7 @@ class TiBatchWriteTable(
     val persistedKeyValueRDD =
       keyValueRDD.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
     persistedRDDList = persistedKeyValueRDD :: persistedRDDList
-    return persistedKeyValueRDD
+    persistedKeyValueRDD
   }
 
   def lockTable(): Unit = {
