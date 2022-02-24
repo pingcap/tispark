@@ -26,7 +26,8 @@ class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Rule[LogicalPlan]) {
   private val logger = LoggerFactory.getLogger(getClass.getName)
   override def apply(sparkSession: SparkSession): Rule[LogicalPlan] = {
-    if (TiExtensions.authEnable(sparkSession)) {
+    // auth only work for catalog plugin mode
+    if (TiExtensions.catalogPluginMode(sparkSession) && TiExtensions.authEnable(sparkSession)) {
       // set the class loader to Reflection class loader to avoid class not found exception while loading TiCatalog
       logger.info("TiSpark running in auth mode")
       TiAuthorization.enableAuth = true
