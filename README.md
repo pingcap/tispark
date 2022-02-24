@@ -277,11 +277,11 @@ For more details about the test, see [here](./core/src/test/Readme.md).
 
 [@PingCAP](https://twitter.com/PingCAP)
 
-### Mailing list
+### Forums
 
-tidb-user@googlegroups.com
+For English users, go to [TiDB internals](https://internals.tidb.io).
 
-[Google Group](https://groups.google.com/forum/#!forum/tidb-user)
+For Chinese users, go to [AskTUG](https://asktug.com).
 
 ## License
 
