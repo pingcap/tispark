@@ -17,10 +17,7 @@ package org.apache.spark.sql
 
 import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
-import org.apache.spark.sql.extensions.{
-  TiAuthRuleFactory,
-  TiResolutionRuleFactory
-}
+import org.apache.spark.sql.extensions.{TiAuthRuleFactory, TiResolutionRuleFactory}
 
 import scala.collection.mutable
 

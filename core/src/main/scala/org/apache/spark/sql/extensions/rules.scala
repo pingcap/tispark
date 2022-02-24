@@ -64,9 +64,10 @@ case class TiNopAuthRule(getOrCreateTiContext: SparkSession => TiContext)(
   override def apply(plan: LogicalPlan): LogicalPlan = plan
 }
 
-case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext,
-  sparkSession: SparkSession)
-  extends Rule[LogicalPlan] {
+case class TiResolutionRule(
+    getOrCreateTiContext: SparkSession => TiContext,
+    sparkSession: SparkSession)
+    extends Rule[LogicalPlan] {
 
   override def apply(plan: LogicalPlan): LogicalPlan = plan
 }
