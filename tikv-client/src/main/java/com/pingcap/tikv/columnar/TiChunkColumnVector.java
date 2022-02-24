@@ -169,7 +169,7 @@ public class TiChunkColumnVector extends TiColumnVector {
     if (bytes.length == 0) return 0;
     long result = 0;
     for (byte b : bytes) {
-      result = (result << 8) | b;
+      result = (result << 8) | (b & 0xff);
     }
     return result;
   }
