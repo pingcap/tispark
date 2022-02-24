@@ -111,16 +111,6 @@ object ReflectionUtil {
       .asInstanceOf[Option[TiExpression]]
   }
 
-  def newTiResolutionRule(
-      getOrCreateTiContext: SparkSession => TiContext,
-      sparkSession: SparkSession): Rule[LogicalPlan] = {
-    classLoader
-      .loadClass(TI_RESOLUTION_RULE_CLASS)
-      .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])
-      .newInstance(getOrCreateTiContext, sparkSession)
-      .asInstanceOf[Rule[LogicalPlan]]
-  }
-
   def newTiResolutionRuleV2(
       getOrCreateTiContext: SparkSession => TiContext,
       sparkSession: SparkSession): Rule[LogicalPlan] = {
@@ -136,30 +126,6 @@ object ReflectionUtil {
       sparkSession: SparkSession): Rule[LogicalPlan] = {
     classLoader
       .loadClass(TI_AUTHORIZATION_RULE_CLASS)
-      .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])
-      .newInstance(getOrCreateTiContext, sparkSession)
-      .asInstanceOf[Rule[LogicalPlan]]
-  }
-
-  def newTiParser(
-      getOrCreateTiContext: SparkSession => TiContext,
-      sparkSession: SparkSession,
-      parserInterface: ParserInterface): ParserInterface = {
-    classLoader
-      .loadClass(TI_PARSER_CLASS)
-      .getDeclaredConstructor(
-        classOf[SparkSession => TiContext],
-        classOf[SparkSession],
-        classOf[ParserInterface])
-      .newInstance(getOrCreateTiContext, sparkSession, parserInterface)
-      .asInstanceOf[ParserInterface]
-  }
-
-  def newTiDDLRule(
-      getOrCreateTiContext: SparkSession => TiContext,
-      sparkSession: SparkSession): Rule[LogicalPlan] = {
-    classLoader
-      .loadClass(TI_DDL_RULE_CLASS)
       .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])
       .newInstance(getOrCreateTiContext, sparkSession)
       .asInstanceOf[Rule[LogicalPlan]]

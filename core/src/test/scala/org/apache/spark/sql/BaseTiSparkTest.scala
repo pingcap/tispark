@@ -99,13 +99,6 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
         }
       }
     } else {
-      if (tiCatalog
-          .catalogOf(Some(dbPrefix + dbName))
-          .exists(_.isInstanceOf[TiSessionCatalog])) {
-        tidbConn.setCatalog(dbName)
-        initializeStatement()
-        spark.sql(s"use `$dbPrefix$dbName`")
-      } else {
         // should be an existing database in hive/meta_store
         try {
           spark.sql(s"use `$dbName`")
@@ -113,10 +106,8 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
         } catch {
           case e: NoSuchDatabaseException => fail(e)
         }
-      }
-    }
 
-  private def tiCatalog = ti.tiCatalog
+    }
 
   def beforeAllWithoutLoadData(): Unit = {
     super.beforeAll()

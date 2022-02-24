@@ -19,8 +19,6 @@ import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
 import org.apache.spark.sql.extensions.{
   TiAuthRuleFactory,
-  TiDDLRuleFactory,
-  TiParserFactory,
   TiResolutionRuleFactory
 }
 
@@ -32,9 +30,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
   override def apply(e: SparkSessionExtensions): Unit = {
     TiSparkInfo.checkVersion()
 
-    e.injectParser(new TiParserFactory(getOrCreateTiContext))
     e.injectResolutionRule(new TiAuthRuleFactory(getOrCreateTiContext))
-    e.injectResolutionRule(new TiDDLRuleFactory(getOrCreateTiContext))
     e.injectResolutionRule(new TiResolutionRuleFactory(getOrCreateTiContext))
     e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
