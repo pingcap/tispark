@@ -51,7 +51,7 @@ class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
       logger.info("TiSpark running in catalog plugin mode")
       ReflectionUtil.newTiResolutionRuleV2(getOrCreateTiContext, sparkSession)
     } else {
-      TiResolutionRule(getOrCreateTiContext, sparkSession)
+      TiNopResolutionRule(getOrCreateTiContext, sparkSession)
     }
   }
 }
@@ -65,7 +65,7 @@ case class TiNopAuthRule(getOrCreateTiContext: SparkSession => TiContext)(
   override def apply(plan: LogicalPlan): LogicalPlan = plan
 }
 
-case class TiResolutionRule(
+case class TiNopResolutionRule(
     getOrCreateTiContext: SparkSession => TiContext,
     sparkSession: SparkSession)
     extends Rule[LogicalPlan] {

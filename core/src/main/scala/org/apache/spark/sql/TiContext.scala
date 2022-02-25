@@ -127,14 +127,6 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
       }
     }
 
-//  def getDatabaseFromOption(option: Option[String]): String = {
-//    if (option.isDefined) {
-//      option.get
-//    } else {
-//      tiCatalog.getCurrentDatabase
-//    }
-//  }
-
   // add backtick for table name in case it contains, e.g., a minus sign
   private def getViewName(dbName: String, tableName: String, dbNameAsPrefix: Boolean): String =
     "`" + (if (dbNameAsPrefix) dbName + "_" + tableName else tableName) + "`"
