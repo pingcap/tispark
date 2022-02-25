@@ -368,7 +368,7 @@ class IssueTestSuite extends BaseTiSparkTest {
   }
 
   // https://github.com/pingcap/tispark/issues/1147
-  ignore("Fix Bit Type default value bug") {
+  test("Fix Bit Type default value bug") {
     def runBitTest(bitNumber: Int, bitString: String): Unit = {
       tidbStmt.execute("DROP TABLE IF EXISTS t_origin_default_value")
       tidbStmt.execute(
