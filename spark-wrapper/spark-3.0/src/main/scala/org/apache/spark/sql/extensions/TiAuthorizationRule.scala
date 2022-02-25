@@ -45,7 +45,6 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
       sa
     case sd @ SetCatalogAndNamespace(catalogManager, catalogName, namespace) =>
       namespace.get
-        .filter(_ != "tidb_catalog")
         .foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
       sd
     case dt @ DescribeRelation(
