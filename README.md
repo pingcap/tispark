@@ -11,25 +11,6 @@ TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to an
 
 Read the [Quick Start](./docs/userguide.md).
 
-## Version Compatibility
-
-+ Currently, TiSpark 2.4.3, 2.5.0 is the latest stable version, which is highly recommended. You can get compatibility information from the [table](##-How-to-choose-TiSpark-Version). Please follow the [document](./docs/userguide.md).
-
-+ If you are using TiDB-5.0 and Spark 2.3.0+/2.4.0+, TiSpark 2.4.3 is recommended.
-
-+ If you are using Spark 3.0/3.1, TiSpark 2.5.0 is recommended.
-
-+ TiSpark 1.2.1 is compatible with Spark 2.1.0+, which is not supported anymore
-  - If you still want to use TiSpark 1.2.1, follow the [document for Spark 2.1](./docs/userguide_spark2.1.md).
-
-You might also [build from sources](#how-to-build-from-sources) to try the new features on TiSpark master branch.
-
-| TiSpark version | TiDB、TiKV、PD version | Spark version | Scala version |
-| ---------------  | -------------------- | ------------- | ------------- |
-| 2.4.x-scala_2.11 | 5.x，4.x             | 2.3.x，2.4.x   | 2.11          |
-| 2.4.x-scala_2.12 | 5.x，4.x             | 2.4.x         | 2.12          |
-| 2.5.x            | 5.x，4.x             | 3.0.x，3.1.x   | 2.12          |
-
 ## Getting TiSpark
 
 + Currently, TiSpark 2.4.3, 2.5.0 is the latest stable version, which is highly recommended. You can get compatibility information from the [table](##-How-to-choose-TiSpark-Version). Please follow the [document](./docs/userguide.md).
