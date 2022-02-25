@@ -88,7 +88,6 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
       spark.sql(s"use $dbPrefix$dummyDatabase")
     } else {
       spark.sql(s"use spark_catalog")
-      spark.sql(s"use default")
     }
   }
 
