@@ -8,10 +8,10 @@
 * [Introduction](#introduction)
 * [Motivation or Background](#motivation-or-background)
 * [Detailed Design](#detailed-design)
-    * [Obsolete non catalog plugin mode](#obsolete-non-catalog-plugin mode)
-    * [Move the dependency of V1 in Catalyst](move-the-dependency-of-V1-in-Catalyst)
-    * [Replace API v1 to v2](replace-api-v1-to-v2)
-    * [rewrite writing code](rewrite-writing-code)
+    * [Obsolete non catalog plugin mode](#obsolete-non-catalog-plugin-mode)
+    * [Move the dependency of V1 in Catalyst](#move-the-dependency-of-v1-in-catalyst)
+    * [Replace API v1 to v2](#replace-api-v1-to-v2)
+    * [rewrite writing code](#rewrite-writing-code)
 * [Compatibility](#compatibility)
 * [Test Design](#test-design)
 * [Impacts & Risks](#impacts--risks)
@@ -87,11 +87,13 @@ API v2 has plenty of differences from v1
 
 The main APIs are described in the picture:
 ![image alt text](imgs/dsv2.png)
+
 We need to write the framework of API v2 just like the picture shows.
 
 ### rewrite writing code
 Now, the main writing process in TiSpark is as follows:
 ![image alt text](imgs/write.png)
+
 This can be simplified into three steps
 1. Check
 2. Pre-calculate
