@@ -92,6 +92,7 @@ We need to write the framework of API v2 just like the picture shows.
 
 ### rewrite writing code
 Now, the main writing process in TiSpark is as follows:
+
 ![image alt text](imgs/write.png)
 
 This can be simplified into three steps
