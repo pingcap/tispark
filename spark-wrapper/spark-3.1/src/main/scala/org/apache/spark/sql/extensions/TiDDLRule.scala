@@ -71,7 +71,8 @@ case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext, sparkSessi
       // TODO: support other commands that may concern TiSpark catalog.
       case sd: ShowNamespaces =>
         TiShowDatabasesCommand(tiContext, sd)
-      case sd: SetCatalogAndNamespace if isSupportedCatalog(sd) =>
+      case sd @ SetCatalogAndNamespace(catalogManager, catalogName, namespace)
+          if isSupportedCatalog(sd) && namespace.isDefined =>
         TiSetDatabaseCommand(tiContext, sd)
       case st: ShowTablesCommand =>
         TiShowTablesCommand(tiContext, st)
