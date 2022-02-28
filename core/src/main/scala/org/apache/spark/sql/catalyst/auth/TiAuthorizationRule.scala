@@ -13,14 +13,16 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.extensions
+package org.apache.spark.sql.catalyst.auth
 
+import com.pingcap.tispark.MetaManager
 import com.pingcap.tispark.auth.TiAuthorization
-import com.pingcap.tispark.{MetaManager, TiDBRelation}
-import org.apache.spark.sql.catalyst.plans.logical._
+import org.apache.spark.sql.catalyst.plans.logical.{
+  LogicalPlan,
+  SetCatalogAndNamespace,
+  SubqueryAlias
+}
 import org.apache.spark.sql.catalyst.rules.Rule
-import org.apache.spark.sql.execution.command._
-import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.{SparkSession, TiContext}
 
 /**
@@ -49,17 +51,15 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
           .foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
       }
       sd
-    case dt @ DescribeRelation(
-          LogicalRelation(TiDBRelation(_, tableRef, _, _, _), _, _, _),
-          _,
-          _) =>
-      TiAuthorization.authorizeForDescribeTable(
-        tableRef.tableName,
-        tableRef.databaseName,
-        tiAuthorization)
-      dt
   }
 
   override def apply(plan: LogicalPlan): LogicalPlan =
     plan transformUp checkForAuth
+}
+
+case class TiNopAuthRule(getOrCreateTiContext: SparkSession => TiContext)(
+    sparkSession: SparkSession)
+    extends Rule[LogicalPlan] {
+
+  override def apply(plan: LogicalPlan): LogicalPlan = plan
 }
