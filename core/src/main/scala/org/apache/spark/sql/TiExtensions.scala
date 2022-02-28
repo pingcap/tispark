@@ -15,13 +15,17 @@
 
 package org.apache.spark.sql
 
+import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tispark.TiSparkInfo
+import com.pingcap.tispark.TiSparkInfo.{getClass, logger}
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
 import org.apache.spark.sql.extensions.{TiAuthRuleFactory, TiResolutionRuleFactory}
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
 class TiExtensions extends (SparkSessionExtensions => Unit) {
+  private final val logger = LoggerFactory.getLogger(getClass.getName)
   private val tiContextMap = mutable.HashMap.empty[SparkSession, TiContext]
 
   override def apply(e: SparkSessionExtensions): Unit = {
@@ -34,14 +38,20 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 
   // call from pyspark only
   def getOrCreateTiContext(sparkSession: SparkSession): TiContext =
-    synchronized {
-      tiContextMap.get(sparkSession) match {
-        case Some(tiContext) => tiContext
-        case None =>
-          // TODO: make Meta and RegionManager independent to sparkSession
-          val tiContext = new TiContext(sparkSession)
-          tiContextMap.put(sparkSession, tiContext)
-          tiContext
+    // check catalog plugin mode
+    if (!TiExtensions.validateCatalog(sparkSession)) {
+      logger.error("TiSpark is not work in catalog plugin mode!")
+      throw new TiInternalException("TiSpark is not work in catalog plugin mode")
+    } else {
+      synchronized {
+        tiContextMap.get(sparkSession) match {
+          case Some(tiContext) => tiContext
+          case None =>
+            // TODO: make Meta and RegionManager independent to sparkSession
+            val tiContext = new TiContext(sparkSession)
+            tiContextMap.put(sparkSession, tiContext)
+            tiContext
+        }
       }
     }
 }
@@ -55,7 +65,7 @@ object TiExtensions {
 
   def enabled(sparkSession: SparkSession): Boolean = getTiContext(sparkSession).isDefined
 
-  def catalogPluginMode(sparkSession: SparkSession): Boolean = {
+  def validateCatalog(sparkSession: SparkSession): Boolean = {
     sparkSession.sparkContext.conf
       .getAllWithPrefix("spark.sql.catalog.")
       .toSeq

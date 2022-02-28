@@ -27,7 +27,7 @@ class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
   private val logger = LoggerFactory.getLogger(getClass.getName)
   override def apply(sparkSession: SparkSession): Rule[LogicalPlan] = {
     // auth only work for catalog plugin mode
-    if (TiExtensions.catalogPluginMode(sparkSession) && TiExtensions.authEnable(sparkSession)) {
+    if (TiExtensions.authEnable(sparkSession)) {
       // set the class loader to Reflection class loader to avoid class not found exception while loading TiCatalog
       logger.info("TiSpark running in auth mode")
       TiAuthorization.enableAuth = true
@@ -46,27 +46,14 @@ class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Rule[LogicalPlan]) {
   private val logger = LoggerFactory.getLogger(getClass.getName)
   override def apply(sparkSession: SparkSession): Rule[LogicalPlan] = {
-    if (TiExtensions.catalogPluginMode(sparkSession)) {
-      // set the class loader to Reflection class loader to avoid class not found exception while loading TiCatalog
-      logger.info("TiSpark running in catalog plugin mode")
-      ReflectionUtil.newTiResolutionRuleV2(getOrCreateTiContext, sparkSession)
-    } else {
-      TiNopResolutionRule(getOrCreateTiContext, sparkSession)
-    }
+    // set the class loader to Reflection class loader to avoid class not found exception while loading TiCatalog
+    ReflectionUtil.newTiResolutionRuleV2(getOrCreateTiContext, sparkSession)
   }
 }
 
 case class NopCommand(name: String) extends Command {}
 
 case class TiNopAuthRule(getOrCreateTiContext: SparkSession => TiContext)(
-    sparkSession: SparkSession)
-    extends Rule[LogicalPlan] {
-
-  override def apply(plan: LogicalPlan): LogicalPlan = plan
-}
-
-case class TiNopResolutionRule(
-    getOrCreateTiContext: SparkSession => TiContext,
     sparkSession: SparkSession)
     extends Rule[LogicalPlan] {
 
