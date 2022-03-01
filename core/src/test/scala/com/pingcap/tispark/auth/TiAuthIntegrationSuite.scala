@@ -109,7 +109,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     }
     // catalogPluginMode has been set namespace with "use tidb_catalog.$dbPrefix$dummyDatabase" in beforeAll() method
     if (catalogPluginMode) {
-      assert(caught.getMessage.contains(s"Table or view not found: test_auth_basic"))
+      assert(caught.getMessage.contains(s"Table or view 'test_auth_basic' not found"))
     }
   }
 

@@ -1,1 +1,1 @@
-com.pingcap.tispark.TiDBDataSource
+org.apache.spark.sql.execution.datasources.v2.TiDBTableProvider

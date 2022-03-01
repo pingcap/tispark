@@ -7,6 +7,7 @@ import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.write.TiDBOptions
 import com.pingcap.tispark.{MetaManager, TiTableReference}
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.connector.catalog.{SupportsRead, TableCapability}
 import org.apache.spark.sql.connector.read.ScanBuilder
@@ -40,7 +41,9 @@ case class TiDBTable(
     }
   }
 
-  lazy val table: TiTableInfo = getTableOrThrow(tableRef.databaseName, tableRef.tableName)
+  lazy val table: TiTableInfo = meta
+    .getTable(tableRef.databaseName, tableRef.tableName)
+    .getOrElse(throw new NoSuchTableException(tableRef.databaseName, tableRef.tableName))
   override lazy val schema: StructType = TiUtil.getSchemaFromTable(table)
 
   lazy val isTiFlashReplicaAvailable: Boolean = {
@@ -81,28 +84,10 @@ case class TiDBTable(
   override def capabilities(): util.Set[TableCapability] = {
     val capabilities = new util.HashSet[TableCapability]
     capabilities.add(TableCapability.BATCH_READ)
-    capabilities.add(TableCapability.BATCH_WRITE)
     capabilities
   }
 
   override def toString: String = s"TiDBTable($name)"
-
-  private def getTableOrThrow(database: String, table: String): TiTableInfo =
-    meta.getTable(database, table).getOrElse {
-      val db = meta.getDatabaseFromCache(database)
-      if (db.isEmpty) {
-        throw new TiClientInternalException(
-          "Database not exist " + database + " valid databases are: " + meta.getDatabasesFromCache
-            .map(_.getName)
-            .mkString("[", ",", "]"))
-      } else {
-        throw new TiClientInternalException(
-          "Table not exist " + tableRef + " valid tables are: " + meta
-            .getTablesFromCache(db.get)
-            .map(_.getName)
-            .mkString("[", ",", "]"))
-      }
-    }
 
   def getTiFlashReplicaProgress: Double = {
     import scala.collection.JavaConversions._
