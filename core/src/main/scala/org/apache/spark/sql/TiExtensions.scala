@@ -67,6 +67,7 @@ object TiExtensions {
         logger.error(
           "TiSpark is not work in catalog plugin mode! Please add catalog config in spark conf")
         throw new TiInternalException("TiSpark is not work in catalog plugin mode")
+      case _ =>
     }
   }
 

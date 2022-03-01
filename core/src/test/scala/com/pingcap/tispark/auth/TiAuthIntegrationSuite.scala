@@ -164,4 +164,10 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
       tables should not contain (f"[$databaseWithPrefix,$invisibleTable]")
     }
   }
+
+  test(f"Describe tables should not success with invisible table") {
+    noException should be thrownBy spark.sql(s"DESCRIBE TABLE `$databaseWithPrefix`.`$table`")
+    the[SQLException] thrownBy spark.sql(
+      s"DESCRIBE `$databaseWithPrefix`.`$invisibleTable`") should have message s"SELECT command denied to user $user@% for table $databaseWithPrefix.$invisibleTable"
+  }
 }
