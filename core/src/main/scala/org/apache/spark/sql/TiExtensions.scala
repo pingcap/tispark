@@ -65,8 +65,8 @@ object TiExtensions {
       .find(pair => TiCatalog.className.equals(pair._2)) match {
       case None =>
         logger.error(
-          "TiSpark is not work in catalog plugin mode! Please add catalog config in spark conf")
-        throw new TiInternalException("TiSpark is not work in catalog plugin mode")
+          "TiSpark must work in catalog plugin mode! Please add catalog config in spark conf")
+        throw new TiInternalException("TiSpark must work in catalog plugin mode")
       case _ =>
     }
   }
