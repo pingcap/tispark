@@ -33,7 +33,7 @@ class BasicSQLSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_
   }
 
   // temporarily not supported
-  test("Test Select") {
+  ignore("Test Select") {
     testSelectSQL(Seq(row1, row2))
   }
 
