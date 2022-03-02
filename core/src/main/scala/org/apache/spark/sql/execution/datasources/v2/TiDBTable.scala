@@ -47,9 +47,9 @@ case class TiDBTable(
     .getOrElse(throw new NoSuchTableException(tableRef.databaseName, tableRef.tableName))
   override lazy val schema: StructType = TiUtil.getSchemaFromTable(table)
   override lazy val properties: util.Map[String, String] = {
-    if(options.isEmpty){
+    if (options.isEmpty) {
       Collections.emptyMap()
-    }else{
+    } else {
       options.get.parameters.toMap.asJava
     }
   }
