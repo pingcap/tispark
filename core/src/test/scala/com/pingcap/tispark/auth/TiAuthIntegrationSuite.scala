@@ -66,8 +66,6 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     tidbStmt.execute(f"GRANT CREATE ON $dummyDatabase.* TO '$user'@'%%'")
     tidbStmt.execute(f"GRANT PROCESS ON *.* TO '$user'@'%%'")
 
-
-
     spark.sql(s"use tidb_catalog.$dbPrefix$dummyDatabase")
 
   }
@@ -83,8 +81,8 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   test("Use catalog should success") {
-      spark.sql(s"use tidb_catalog")
-      spark.sql(s"use $dbPrefix$dummyDatabase")
+    spark.sql(s"use tidb_catalog")
+    spark.sql(s"use $dbPrefix$dummyDatabase")
   }
 
   test("Select without privilege should not be passed") {

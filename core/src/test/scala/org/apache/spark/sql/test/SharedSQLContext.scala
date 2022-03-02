@@ -531,7 +531,6 @@ object SharedSQLContext extends Logging {
 
   readConf()
 
-  
   def initializeTiDBConf(): Properties = {
     val confStream = Thread
       .currentThread()

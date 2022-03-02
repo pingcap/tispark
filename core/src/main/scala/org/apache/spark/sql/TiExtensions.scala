@@ -64,9 +64,9 @@ object TiExtensions {
       .toSeq
       .find(pair => TiCatalog.className.equals(pair._2)) match {
       case None =>
-        logger.error(
+        logger.error("TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
+        throw new TiInternalException(
           "TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
-        throw new TiInternalException("TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
       case _ =>
     }
   }
