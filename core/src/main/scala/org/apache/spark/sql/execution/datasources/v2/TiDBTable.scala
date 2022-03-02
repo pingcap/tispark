@@ -1,7 +1,6 @@
 package org.apache.spark.sql.execution.datasources.v2
 
 import com.pingcap.tikv.TiSession
-import com.pingcap.tikv.exception.TiClientInternalException
 import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tispark.utils.TiUtil
@@ -19,6 +18,7 @@ import org.apache.spark.sql.{SQLContext, execution}
 
 import java.util
 import scala.collection.mutable.ListBuffer
+import collection.JavaConverters._
 
 case class TiDBTable(
     session: TiSession,
@@ -45,6 +45,7 @@ case class TiDBTable(
     .getTable(tableRef.databaseName, tableRef.tableName)
     .getOrElse(throw new NoSuchTableException(tableRef.databaseName, tableRef.tableName))
   override lazy val schema: StructType = TiUtil.getSchemaFromTable(table)
+  override lazy val properties: util.Map[String, String] = options.get.parameters.toMap.asJava
 
   lazy val isTiFlashReplicaAvailable: Boolean = {
     // Note:
