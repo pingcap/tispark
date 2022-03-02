@@ -17,6 +17,7 @@ import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.sql.{SQLContext, execution}
 
 import java.util
+import java.util.Collections
 import scala.collection.mutable.ListBuffer
 import collection.JavaConverters._
 
@@ -45,7 +46,13 @@ case class TiDBTable(
     .getTable(tableRef.databaseName, tableRef.tableName)
     .getOrElse(throw new NoSuchTableException(tableRef.databaseName, tableRef.tableName))
   override lazy val schema: StructType = TiUtil.getSchemaFromTable(table)
-  override lazy val properties: util.Map[String, String] = options.get.parameters.toMap.asJava
+  override lazy val properties: util.Map[String, String] = {
+    if(options.isEmpty){
+      Collections.emptyMap()
+    }else{
+      options.get.parameters.toMap.asJava
+    }
+  }
 
   lazy val isTiFlashReplicaAvailable: Boolean = {
     // Note:
