@@ -84,7 +84,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       .createOrReplaceTempView(s"`$viewName$postfix`")
 
   protected def setCurrentDatabase(dbName: String): Unit =
-    if (catalogPluginMode) {
+    if (validateCatalog) {
       if (dbName != "default") {
         tidbConn.setCatalog(dbName)
         initializeStatement()

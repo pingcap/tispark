@@ -30,7 +30,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
 
   test("test new catalog") {
     setCurrentDatabase("default")
-    val qSparkDatabase = if (catalogPluginMode) {
+    val qSparkDatabase = if (validateCatalog) {
       "tidb_catalog.tispark_test"
     } else {
       s"${dbPrefix}tispark_test"

@@ -38,7 +38,7 @@ class BasicSQLSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_
 
   test("Test Insert Into") {
     val tmpTable =
-      if (catalogPluginMode) "spark_catalog.default.testInsert" else "default.testInsert"
+      if (validateCatalog) "spark_catalog.default.testInsert" else "default.testInsert"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpTable
                       |USING tidb
@@ -62,7 +62,7 @@ class BasicSQLSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_
 
   test("Test Insert Overwrite") {
     val tmpTable =
-      if (catalogPluginMode) "spark_catalog.default.testOverwrite" else "default.testOverwrite"
+      if (validateCatalog) "spark_catalog.default.testOverwrite" else "default.testOverwrite"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpTable
                       |USING tidb
@@ -90,7 +90,7 @@ class BasicSQLSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_
 
   private def testSelectSQL(expectedAnswer: Seq[Row]): Unit = {
     val tmpTable =
-      if (catalogPluginMode)
+      if (validateCatalog)
         s"spark_catalog.default.`testSelect_${Math.abs(Random.nextLong())}_${System.currentTimeMillis()}`"
       else s"default.`testSelect_${Math.abs(Random.nextLong())}_${System.currentTimeMillis()}`"
 
