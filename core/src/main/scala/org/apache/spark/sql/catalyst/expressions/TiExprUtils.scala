@@ -28,6 +28,7 @@ import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tispark.TiDBRelation
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.execution.TiConverter.fromSparkType
+import org.apache.spark.sql.execution.datasources.v2.TiDBTable
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -171,7 +172,7 @@ object TiExprUtils {
 
   def isSupportedAggregate(
       aggExpr: AggregateExpression,
-      tiDBRelation: TiDBRelation,
+      tiDBRelation: TiDBTable,
       blocklist: ExpressionBlocklist): Boolean =
     aggExpr.aggregateFunction match {
       case Average(_) | Sum(_) | SumNotNullable(_) | PromotedSum(_) | Min(_) | Max(_) =>
@@ -183,12 +184,12 @@ object TiExprUtils {
 
   def isSupportedBasicExpression(
       expr: Expression,
-      tiDBRelation: TiDBRelation,
+      table: TiDBTable,
       blocklist: ExpressionBlocklist): Boolean = {
     if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG)) return false
 
     BasicExpression.convertToTiExpr(expr).fold(false) { expr: TiExpression =>
-      MetaResolver.resolve(expr, tiDBRelation.table)
+      MetaResolver.resolve(expr, table.table)
       return SupportedExpressionValidator.isSupportedExpression(expr, blocklist)
     }
   }
@@ -199,7 +200,7 @@ object TiExprUtils {
    * @param expr the expression to examine
    * @return whether expression can be pushed down
    */
-  def isPushDownSupported(expr: Expression, source: TiDBRelation): Boolean = {
+  def isPushDownSupported(expr: Expression, source: TiDBTable): Boolean = {
     val nameTypeMap = mutable.HashMap[String, com.pingcap.tikv.types.DataType]()
     source.table.getColumns
       .foreach((info: TiColumnInfo) => nameTypeMap(info.getName) = info.getType)
@@ -229,20 +230,20 @@ object TiExprUtils {
 
   def isSupportedOrderBy(
       expr: Expression,
-      source: TiDBRelation,
+      source: TiDBTable,
       blocklist: ExpressionBlocklist): Boolean =
     isSupportedBasicExpression(expr, source, blocklist) && isPushDownSupported(expr, source)
 
   def isSupportedFilter(
       expr: Expression,
-      source: TiDBRelation,
+      source: TiDBTable,
       blocklist: ExpressionBlocklist): Boolean =
     isSupportedBasicExpression(expr, source, blocklist) && isPushDownSupported(expr, source)
 
   // if contains UDF / functions that cannot be folded
   def isSupportedGroupingExpr(
       expr: NamedExpression,
-      source: TiDBRelation,
+      source: TiDBTable,
       blocklist: ExpressionBlocklist): Boolean =
     isSupportedBasicExpression(expr, source, blocklist) && isPushDownSupported(expr, source)
 }

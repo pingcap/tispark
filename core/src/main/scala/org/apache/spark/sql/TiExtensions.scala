@@ -18,7 +18,7 @@ package org.apache.spark.sql
 import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
-import org.apache.spark.sql.extensions.{TiAuthRuleFactory, TiResolutionRuleFactory}
+import org.apache.spark.sql.extensions.TiAuthRuleFactory
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -30,7 +30,6 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
     TiSparkInfo.checkVersion()
 
     e.injectResolutionRule(new TiAuthRuleFactory(getOrCreateTiContext))
-    e.injectResolutionRule(new TiResolutionRuleFactory(getOrCreateTiContext))
     e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
 

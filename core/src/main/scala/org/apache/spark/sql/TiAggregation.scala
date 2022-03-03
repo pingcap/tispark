@@ -21,6 +21,7 @@ import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, NamedEx
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2ScanRelation, TiDBTable}
 
 object TiAggregation {
   type ReturnType =
@@ -30,7 +31,7 @@ object TiAggregation {
 }
 
 object TiAggregationProjection {
-  type ReturnType = (Seq[Expression], LogicalPlan, TiDBRelation, Seq[NamedExpression])
+  type ReturnType = (Seq[Expression], LogicalPlan, TiDBTable, Seq[NamedExpression])
 
   def unapply(plan: LogicalPlan): Option[ReturnType] =
     plan match {
@@ -39,7 +40,7 @@ object TiAggregationProjection {
       case PhysicalOperation(
             projects,
             filters,
-            rel @ LogicalRelation(source: TiDBRelation, _, _, _))
+            rel @ DataSourceV2ScanRelation(source: TiDBTable, _, _))
           if projects.forall(_.isInstanceOf[Attribute]) =>
         Some((filters, rel, source, projects))
       case _ => Option.empty[ReturnType]

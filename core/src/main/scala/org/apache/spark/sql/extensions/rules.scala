@@ -17,6 +17,7 @@ package org.apache.spark.sql.extensions
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
+import org.apache.spark.sql.catalyst.auth.{TiAuthorizationRule, TiNopAuthRule}
 import org.apache.spark.sql.catalyst.plans.logical.{Command, LogicalPlan}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.{SparkSession, TiContext, TiExtensions}
@@ -34,28 +35,10 @@ class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
       TiAuthorization.sqlConf = sparkSession.sqlContext.conf
       TiAuthorization.tiConf =
         TiUtil.sparkConfToTiConfWithoutPD(sparkSession.sparkContext.conf, new TiConfiguration())
-      ReflectionUtil.newTiAuthRule(getOrCreateTiContext, sparkSession)
+      TiAuthorizationRule(getOrCreateTiContext)(sparkSession)
     } else {
       TiAuthorization.enableAuth = false
       TiNopAuthRule(getOrCreateTiContext)(sparkSession)
     }
   }
-}
-
-class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
-    extends (SparkSession => Rule[LogicalPlan]) {
-  override def apply(sparkSession: SparkSession): Rule[LogicalPlan] = {
-    TiExtensions.validateCatalog(sparkSession)
-    // set the class loader to Reflection class loader to avoid class not found exception while loading TiCatalog
-    ReflectionUtil.newTiResolutionRuleV2(getOrCreateTiContext, sparkSession)
-  }
-}
-
-case class NopCommand(name: String) extends Command {}
-
-case class TiNopAuthRule(getOrCreateTiContext: SparkSession => TiContext)(
-    sparkSession: SparkSession)
-    extends Rule[LogicalPlan] {
-
-  override def apply(plan: LogicalPlan): LogicalPlan = plan
 }

@@ -110,24 +110,4 @@ object ReflectionUtil {
       .invoke(null, expr)
       .asInstanceOf[Option[TiExpression]]
   }
-
-  def newTiResolutionRuleV2(
-      getOrCreateTiContext: SparkSession => TiContext,
-      sparkSession: SparkSession): Rule[LogicalPlan] = {
-    classLoader
-      .loadClass(TI_RESOLUTION_RULE_V2_CLASS)
-      .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])
-      .newInstance(getOrCreateTiContext, sparkSession)
-      .asInstanceOf[Rule[LogicalPlan]]
-  }
-
-  def newTiAuthRule(
-      getOrCreateTiContext: SparkSession => TiContext,
-      sparkSession: SparkSession): Rule[LogicalPlan] = {
-    classLoader
-      .loadClass(TI_AUTHORIZATION_RULE_CLASS)
-      .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])
-      .newInstance(getOrCreateTiContext, sparkSession)
-      .asInstanceOf[Rule[LogicalPlan]]
-  }
 }

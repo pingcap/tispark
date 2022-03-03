@@ -49,13 +49,13 @@ class CatalogTestSuite extends BaseTiSparkTest {
         .sql("explain select id_dt from full_data_type_table1")
         .head
         .getString(0)
-        .contains("AnalysisException"))
+        .contains("NoSuchTableException"))
     assert(
       !spark
         .sql("explain select id_dt from full_data_type_table")
         .head
         .getString(0)
-        .contains("AnalysisException"))
+        .contains("NoSuchTableException"))
   }
 
   test("support desc table") {
