@@ -48,10 +48,6 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
     } else Option.empty)
   final val tiSession: TiSession = TiSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
-  lazy val tiConcreteCatalog: TiSessionCatalog =
-    new TiConcreteSessionCatalog(this)(new TiDirectExternalCatalog(this))
-  lazy val sessionCatalog: SessionCatalog = sqlContext.sessionState.catalog
-  lazy val tiCatalog: TiSessionCatalog = new TiCompositeSessionCatalog(this)
 
   sparkSession.sparkContext.addSparkListener(new SparkListener() {
     override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {
@@ -129,14 +125,6 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
           "Duplicate table [" + tableName + "] exist in catalog, you might want to set dbNameAsPrefix = true")
       }
     }
-
-  def getDatabaseFromOption(option: Option[String]): String = {
-    if (option.isDefined) {
-      option.get
-    } else {
-      tiCatalog.getCurrentDatabase
-    }
-  }
 
   // add backtick for table name in case it contains, e.g., a minus sign
   private def getViewName(dbName: String, tableName: String, dbNameAsPrefix: Boolean): String =

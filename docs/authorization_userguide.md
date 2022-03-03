@@ -48,15 +48,15 @@ spark.sqlContext.setConf("spark.sql.tidb.password", your_tidb_server_password)
 
 Currently, Supported statements are as follows:
 
-|Statement   | Statement Support (Catalog Plugin)   | Statement Support | Authorization Support | 
-|---|---|---|---|
-| SELECT        | ✅ | ✅ | ✅ |   
-| USE DATABASE  | ✅ | ✅ | ✅ |   
-| SHOW DATABASES| ✅ | ✅ | ✅ |   
-| SHOW TABLES   | ✅ | ✅ | ✅ |
-| DESCRIBE TABLE| ✅ | ✅ | ✅ |
-| SHOW COLUMNS  | ❌ | ✅ | ✅ |
-| DESCRIBE COLUMN| ❌ | ✅ | ✅ |
+|Statement   | Statement Support (Catalog Plugin)  | Authorization Support | 
+|---|---|---|
+| SELECT        | ✅  | ✅ |   
+| USE DATABASE  | ✅ | ✅ |   
+| SHOW DATABASES| ✅  | ✅ |   
+| SHOW TABLES   | ✅  | ✅ |
+| DESCRIBE TABLE| ✅  | ✅ |
+| SHOW COLUMNS  | ❌ | ❌ |
+| DESCRIBE COLUMN| ❌ | ❌ |
 
 ## limitations
 

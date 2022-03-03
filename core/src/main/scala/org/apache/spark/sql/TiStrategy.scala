@@ -97,6 +97,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   }
 
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
+    TiExtensions.validateCatalog(sparkSession)
     val ts = tiContext.tiSession.getTimestamp
 
     if (plan.isStreaming) {

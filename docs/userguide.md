@@ -25,8 +25,8 @@ TiSpark relies on the availability of TiKV clusters and PDs. You also need to se
 
 ## Prerequisites for setting up TiSpark
 
-+ The current TiSpark version supports Spark 2.3+/2.4+, but does not support any Spark versions earlier than 2.3.
-+ TiSpark requires JDK 1.8+ and Scala 2.11 (Spark 2.0 + default Scala version).
++ The current TiSpark version supports Spark 2.3.x/2.4.x/3.0.x/3.1.x, but does not support any Spark versions earlier than 2.3.
++ TiSpark requires JDK 1.8+ and Scala 2.11/2.12.
 + TiSpark runs in any Spark mode such as `YARN`, `Mesos`, and `Standalone`.
 
 ## Recommended deployment configurations
@@ -50,13 +50,18 @@ SPARK_WORKER_CORES = 8
 Add the following lines in `spark-defaults.conf`.
 
 ```
-spark.tispark.pd.addresses $your_pd_servers
+spark.tispark.pd.addresses ${your_pd_servers}
 spark.sql.extensions org.apache.spark.sql.TiExtensions
 ```
 
 In the first line above, `your_pd_servers` is the PD addresses separated by commas, each in the format of `$your_pd_address:$port`.
-
 For example, `10.16.20.1:2379,10.16.20.2:2379,10.16.20.3:2379`, which means that you have multiple PD servers on `10.16.20.1,10.16.20.2,10.16.20.3` with the port `2379`.
+
+For TiSpark version >= 2.5.0, please add the following additional configuration to enable `Catalog` provided by `spark-3.0`.
+```
+spark.sql.catalog.tidb_catalog  org.apache.spark.sql.catalyst.catalog.TiCatalog`
+spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_adress}
+```
 
 ### For hybrid deployment of TiSpark and TiKV cluster
 
@@ -143,12 +148,14 @@ The following example uses a table named `lineitem` in the `tpch` database.
     ```
     spark.tispark.pd.addresses 192.168.1.100:2379
     spark.sql.extensions org.apache.spark.sql.TiExtensions
+    spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
+    spark.sql.catalog.tidb_catalog.pd.addresses 192.168.1.100:2379
     ```
 
 2. In the Spark-Shell, enter the following command:
 
     ```
-    spark.sql("use tpch")
+    spark.sql("use tidb_catalog.tpch")
     ```
 
 3. Call Spark SQL directly:

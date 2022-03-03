@@ -15,14 +15,11 @@
 
 package org.apache.spark.sql
 
+import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
-import org.apache.spark.sql.extensions.{
-  TiAuthRuleFactory,
-  TiDDLRuleFactory,
-  TiParserFactory,
-  TiResolutionRuleFactory
-}
+import org.apache.spark.sql.extensions.{TiAuthRuleFactory, TiResolutionRuleFactory}
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
@@ -32,9 +29,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
   override def apply(e: SparkSessionExtensions): Unit = {
     TiSparkInfo.checkVersion()
 
-    e.injectParser(new TiParserFactory(getOrCreateTiContext))
     e.injectResolutionRule(new TiAuthRuleFactory(getOrCreateTiContext))
-    e.injectResolutionRule(new TiDDLRuleFactory(getOrCreateTiContext))
     e.injectResolutionRule(new TiResolutionRuleFactory(getOrCreateTiContext))
     e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
@@ -54,6 +49,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 }
 
 object TiExtensions {
+  private final val logger = LoggerFactory.getLogger(getClass.getName)
   def authEnable(sparkSession: SparkSession): Boolean = {
     sparkSession.sparkContext.conf
       .get("spark.sql.auth.enable", "false")
@@ -62,13 +58,16 @@ object TiExtensions {
 
   def enabled(sparkSession: SparkSession): Boolean = getTiContext(sparkSession).isDefined
 
-  def catalogPluginMode(sparkSession: SparkSession): Boolean = {
+  def validateCatalog(sparkSession: SparkSession): Unit = {
     sparkSession.sparkContext.conf
       .getAllWithPrefix("spark.sql.catalog.")
       .toSeq
       .find(pair => TiCatalog.className.equals(pair._2)) match {
-      case Some(_) => true
-      case None => false
+      case None =>
+        logger.error("TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
+        throw new TiInternalException(
+          "TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
+      case _ =>
     }
   }
 

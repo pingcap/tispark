@@ -43,34 +43,12 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
           tiAuthorization)
       }
       sa
-    case sd: ShowNamespaces =>
-      sd
     case sd @ SetCatalogAndNamespace(catalogManager, catalogName, namespace) =>
       if (namespace.isDefined) {
         namespace.get
           .foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
       }
       sd
-    case st: ShowTablesCommand =>
-      st
-    case st @ ShowColumnsCommand(databaseName, tableName) =>
-      TiAuthorization.authorizeForDescribeTable(
-        tableName.table,
-        tiContext.getDatabaseFromOption(databaseName),
-        tiAuthorization)
-      st
-    case sc @ ShowColumns(LogicalRelation(TiDBRelation(_, tableRef, _, _, _), _, _, _), _) =>
-      TiAuthorization.authorizeForDescribeTable(
-        tableRef.tableName,
-        tableRef.databaseName,
-        tiAuthorization)
-      sc
-    case dt @ DescribeTableCommand(table, _, _) =>
-      TiAuthorization.authorizeForDescribeTable(
-        table.table,
-        tiContext.getDatabaseFromOption(table.database),
-        tiAuthorization)
-      dt
     case dt @ DescribeRelation(
           LogicalRelation(TiDBRelation(_, tableRef, _, _, _), _, _, _),
           _,
@@ -80,29 +58,6 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
         tableRef.databaseName,
         tiAuthorization)
       dt
-    case dc @ DescribeColumnCommand(table, _, _) =>
-      TiAuthorization.authorizeForDescribeTable(
-        table.table,
-        tiContext.getDatabaseFromOption(table.database),
-        tiAuthorization)
-      dc
-    case dc @ DescribeColumn(
-          LogicalRelation(TiDBRelation(_, tableRef, _, _, _), _, _, _),
-          colNameParts,
-          isExtended) =>
-      TiAuthorization.authorizeForDescribeTable(
-        tableRef.tableName,
-        tableRef.databaseName,
-        tiAuthorization)
-      dc
-    case ct @ CreateTableLikeCommand(target, source, _, _, _, _) =>
-      TiAuthorization.authorizeForCreateTableLike(
-        tiContext.getDatabaseFromOption(target.database),
-        target.table,
-        tiContext.getDatabaseFromOption(source.database),
-        source.table,
-        tiContext.tiAuthorization)
-      TiCreateTableLikeCommand(tiContext, ct)
   }
 
   override def apply(plan: LogicalPlan): LogicalPlan =
