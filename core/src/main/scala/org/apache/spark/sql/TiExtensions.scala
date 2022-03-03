@@ -17,8 +17,9 @@ package org.apache.spark.sql
 
 import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tispark.TiSparkInfo
+import org.apache.spark.sql.catalyst.analyzer.TiAuthRuleFactory
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
-import org.apache.spark.sql.extensions.TiAuthRuleFactory
+import org.apache.spark.sql.catalyst.planner.TiStrategy
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable

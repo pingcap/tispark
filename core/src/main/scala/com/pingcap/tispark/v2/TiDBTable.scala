@@ -1,4 +1,4 @@
-package org.apache.spark.sql.execution.datasources.v2
+package com.pingcap.tispark.v2
 
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.key.Handle
@@ -68,21 +68,6 @@ case class TiDBTable(
 
   def databaseName: String = tableRef.databaseName
   def tableName: String = tableRef.tableName
-
-//  override lazy val partitioning: Array[Transform] = {
-//    val partitions = new mutable.ArrayBuffer[Transform]()
-//
-//    v1Table.partitionColumnNames.foreach { col =>
-//      partitions += LogicalExpressions.identity(FieldReference(col))
-//    }
-//
-//    v1Table.bucketSpec.foreach { spec =>
-//      partitions += LogicalExpressions
-//        .bucket(spec.numBuckets, spec.bucketColumnNames.map(FieldReference(_)).toArray)
-//    }
-//
-//    partitions.toArray
-//  }
 
   override def newScanBuilder(options: CaseInsensitiveStringMap): ScanBuilder =
     () => () => schema

@@ -26,9 +26,9 @@ import com.pingcap.tikv.expression.{AggregateFunction, ByItem, ColumnRef, Expres
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tispark.TiDBRelation
+import com.pingcap.tispark.v2.TiDBTable
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.execution.TiConverter.fromSparkType
-import org.apache.spark.sql.execution.datasources.v2.TiDBTable
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._

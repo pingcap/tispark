@@ -13,15 +13,14 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql
+package org.apache.spark.sql.tispark
 
-import com.pingcap.tispark.TiDBRelation
+import com.pingcap.tispark.v2.TiDBTable
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2ScanRelation, TiDBTable}
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 
 object TiAggregation {
   type ReturnType =

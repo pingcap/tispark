@@ -1,4 +1,4 @@
-package org.apache.spark.sql.execution.datasources.v2
+package com.pingcap.tispark.v2
 
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.TiDBRelation

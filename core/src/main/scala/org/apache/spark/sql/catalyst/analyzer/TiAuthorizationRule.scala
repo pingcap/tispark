@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.catalyst.auth
+package org.apache.spark.sql.catalyst.analyzer
 
 import com.pingcap.tispark.MetaManager
 import com.pingcap.tispark.auth.TiAuthorization

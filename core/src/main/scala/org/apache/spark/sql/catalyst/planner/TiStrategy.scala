@@ -13,9 +13,8 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql
+package org.apache.spark.sql.catalyst.planner
 
-import java.util.concurrent.TimeUnit
 import com.pingcap.tidb.tipb.EncodeType
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression._
@@ -24,9 +23,10 @@ import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
 import com.pingcap.tikv.region.TiStoreType
 import com.pingcap.tikv.statistics.TableStatistics
+import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
-import com.pingcap.tispark.TiConfigConst
+import com.pingcap.tispark.v2.TiDBTable
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{
@@ -49,12 +49,14 @@ import org.apache.spark.sql.catalyst.expressions.{
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2ScanRelation, TiDBTable}
-import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, _}
+import org.apache.spark.sql.execution._
 import org.apache.spark.sql.internal.SQLConf
+import org.apache.spark.sql._
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
+import org.apache.spark.sql.tispark.{TiAggregation, TiAggregationProjection}
 import org.joda.time.{DateTime, DateTimeZone}
 
+import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 

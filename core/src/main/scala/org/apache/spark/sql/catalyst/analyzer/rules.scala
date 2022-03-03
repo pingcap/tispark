@@ -12,13 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.spark.sql.extensions
+package org.apache.spark.sql.catalyst.analyzer
 
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tispark.auth.TiAuthorization
-import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
-import org.apache.spark.sql.catalyst.auth.{TiAuthorizationRule, TiNopAuthRule}
-import org.apache.spark.sql.catalyst.plans.logical.{Command, LogicalPlan}
+import com.pingcap.tispark.utils.TiUtil
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.{SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
@@ -30,7 +29,7 @@ class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     TiExtensions.validateCatalog(sparkSession)
     if (TiExtensions.authEnable(sparkSession)) {
       // set the class loader to Reflection class loader to avoid class not found exception while loading TiCatalog
-      logger.info("TiSpark running in auth mode")
+      logger.info("TiSpark running in analyzer mode")
       TiAuthorization.enableAuth = true
       TiAuthorization.sqlConf = sparkSession.sqlContext.conf
       TiAuthorization.tiConf =
