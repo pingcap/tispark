@@ -35,6 +35,13 @@ class BasicBatchWriteSuite extends BaseBatchWriteWithoutDropTableTest("test_data
     jdbcUpdate(s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')")
   }
 
+  test("Test Datasource api v2 write") {
+    val data: RDD[Row] = sc.makeRDD(List(row3, row4))
+    val df = sqlContext.createDataFrame(data, schema)
+    df.writeTo(s"tidb_catalog.$database.$table").options(tidbOptions).append()
+    testTiDBSelect(Seq(row1, row2, row3, row4))
+  }
+
   test("Test Select") {
     testTiDBSelect(Seq(row1, row2))
   }

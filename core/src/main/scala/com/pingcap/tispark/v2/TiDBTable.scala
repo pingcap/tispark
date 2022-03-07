@@ -16,16 +16,19 @@
 package com.pingcap.tispark.v2
 
 import com.pingcap.tikv.TiSession
+import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
+import com.pingcap.tispark.v2.sink.TiDBWriterBuilder
 import com.pingcap.tispark.write.TiDBOptions
 import com.pingcap.tispark.{MetaManager, TiTableReference}
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
-import org.apache.spark.sql.connector.catalog.{SupportsRead, TableCapability}
+import org.apache.spark.sql.connector.catalog.{SupportsRead, SupportsWrite, TableCapability}
 import org.apache.spark.sql.connector.read.ScanBuilder
+import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, SparkPlan}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types._
@@ -43,7 +46,8 @@ case class TiDBTable(
     meta: MetaManager,
     var ts: TiTimestamp = null,
     options: Option[TiDBOptions] = None)(@transient val sqlContext: SQLContext)
-    extends SupportsRead {
+    extends SupportsRead
+    with SupportsWrite {
 
   implicit class IdentifierHelper(identifier: TiTableReference) {
     def quoted: String = {
@@ -95,6 +99,8 @@ case class TiDBTable(
   override def capabilities(): util.Set[TableCapability] = {
     val capabilities = new util.HashSet[TableCapability]
     capabilities.add(TableCapability.BATCH_READ)
+    capabilities.add(TableCapability.V1_BATCH_WRITE)
+    capabilities.add(TableCapability.BATCH_WRITE)
     capabilities
   }
 
@@ -106,6 +112,26 @@ case class TiDBTable(
 
   def logicalPlanToRDD(dagRequest: TiDAGRequest, output: Seq[Attribute]): List[TiRowRDD] = {
     getLogicalPlanToRDD(dagRequest, output, session, sqlContext, tableRef)
+  }
+
+  override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = {
+    var scalaMap = info.options().asScala.toMap
+    // insert sql
+    if (scalaMap.isEmpty) {
+      throw new TiBatchWriteException(
+        "option is neccessary. maybe you are using insert sql, it's not supported yet")
+    }
+    // support df.writeto:add db and table
+    if (!scalaMap.contains("database")) {
+      scalaMap += ("database" -> databaseName)
+    }
+    if (!scalaMap.contains("table")) {
+      scalaMap += ("database" -> databaseName)
+    }
+    scalaMap += ("table" -> tableName)
+    // get tiDBOptions
+    val tiDBOptions = new TiDBOptions(scalaMap)
+    TiDBWriterBuilder(info, tiDBOptions, sqlContext)
   }
 }
 
@@ -179,5 +205,4 @@ object TiDBTable {
     })
     tiRDDs.toList
   }
-
 }

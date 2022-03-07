@@ -16,22 +16,23 @@
 package com.pingcap.tispark.v2
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tispark.TiDBRelation
-import com.pingcap.tispark.write.{TiDBOptions, TiDBWriter}
-import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession, TiExtensions}
-import org.apache.spark.sql.connector.catalog.{Table, TableProvider}
+import com.pingcap.tispark.write.TiDBOptions
+import org.apache.spark.sql.{SparkSession, TiExtensions}
+import org.apache.spark.sql.connector.catalog.{
+  Identifier,
+  SupportsCatalogOptions,
+  Table,
+  TableProvider
+}
 import org.apache.spark.sql.connector.expressions.Transform
-import org.apache.spark.sql.sources.{BaseRelation, CreatableRelationProvider, DataSourceRegister}
+import org.apache.spark.sql.sources.DataSourceRegister
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 
 import java.util
 import scala.collection.JavaConverters._
 
-class TiDBTableProvider
-    extends TableProvider
-    with DataSourceRegister
-    with CreatableRelationProvider {
+class TiDBTableProvider extends SupportsCatalogOptions with DataSourceRegister {
   override def inferSchema(options: CaseInsensitiveStringMap): StructType = {
     getTable(null, Array.empty[Transform], options.asCaseSensitiveMap()).schema()
   }
@@ -60,32 +61,11 @@ class TiDBTableProvider
 
   override def shortName(): String = "tidb"
 
-  // TODO: replace v1 path in next pr
-  override def createRelation(
-      sqlContext: SQLContext,
-      mode: SaveMode,
-      parameters: Map[String, String],
-      data: DataFrame): BaseRelation = {
-    val options = new TiDBOptions(parameters)
-    TiDBWriter.write(data, sqlContext, mode, options)
-    createRelation(sqlContext, parameters)
+  override def extractIdentifier(options: CaseInsensitiveStringMap): Identifier = {
+    Identifier.of(Array(options.get("database")), options.get("table"))
   }
 
-  def createRelation(sqlContext: SQLContext, parameters: Map[String, String]): BaseRelation = {
-
-    val options = new TiDBOptions(parameters)
-    val sparkSession = sqlContext.sparkSession
-
-    TiExtensions.getTiContext(sparkSession) match {
-      case Some(tiContext) =>
-        val ts = tiContext.tiSession.getTimestamp
-        TiDBRelation(
-          tiContext.tiSession,
-          options.getTiTableRef(tiContext.tiConf),
-          tiContext.meta,
-          ts,
-          Some(options))(sqlContext)
-      case None => throw new TiBatchWriteException("TiExtensions is disable!")
-    }
+  override def extractCatalog(options: CaseInsensitiveStringMap): String = {
+    "tidb_catalog"
   }
 }
