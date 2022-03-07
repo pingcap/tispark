@@ -37,8 +37,8 @@ object TiCatalog {
 }
 
 class TiCatalog extends TableCatalog with SupportsNamespaces {
-  var tisession: Option[TiSession] = None
-  var meta: Option[MetaManager] = None
+  private var tiSession: Option[TiSession] = None
+  private var meta: Option[MetaManager] = None
   private var _name: Option[String] = None
   private var _current_namespace: Option[Array[String]] = None
   private val logger = LoggerFactory.getLogger(getClass.getName)
@@ -65,7 +65,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     logger.info(s"Initialize TiCatalog with name: $name, pd address: $pdAddress")
     val conf = TiConfiguration.createDefault(pdAddress)
     val session = TiSession.getInstance(conf)
-    tisession = Some(session)
+    tiSession = Some(session)
     meta = Some(new MetaManager(session.getCatalog))
   }
 
@@ -125,7 +125,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
     TiAuthorization.authorizeForDescribeTable(ident.name, dbName, tiAuthorization)
 
-    TiDBTable(tisession.get, TiTableReference(dbName, ident.name), meta.get)(
+    TiDBTable(tiSession.get, TiTableReference(dbName, ident.name), meta.get)(
       SparkSession.active.sqlContext)
   }
 

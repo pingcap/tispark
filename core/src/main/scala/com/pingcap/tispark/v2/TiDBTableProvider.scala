@@ -60,6 +60,7 @@ class TiDBTableProvider
 
   override def shortName(): String = "tidb"
 
+  // TODO: replace v1 path in next pr
   override def createRelation(
       sqlContext: SQLContext,
       mode: SaveMode,

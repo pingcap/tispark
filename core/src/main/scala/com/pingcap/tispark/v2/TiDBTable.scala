@@ -19,6 +19,7 @@ import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
 import com.pingcap.tispark.write.TiDBOptions
 import com.pingcap.tispark.{MetaManager, TiTableReference}
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -60,7 +61,9 @@ case class TiDBTable(
   lazy val table: TiTableInfo = meta
     .getTable(tableRef.databaseName, tableRef.tableName)
     .getOrElse(throw new NoSuchTableException(tableRef.databaseName, tableRef.tableName))
+
   override lazy val schema: StructType = TiUtil.getSchemaFromTable(table)
+
   override lazy val properties: util.Map[String, String] = {
     if (options.isEmpty) {
       Collections.emptyMap()
@@ -97,38 +100,26 @@ case class TiDBTable(
 
   override def toString: String = s"TiDBTable($name)"
 
-  def getTiFlashReplicaProgress: Double = {
-    import scala.collection.JavaConversions._
-    val progress = table.getPartitionInfo.getDefs
-      .map(partitonDef => session.getPDClient.getTiFlashReplicaProgress(partitonDef.getId))
-      .sum
-    progress / table.getPartitionInfo.getDefs.size()
+  def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
+    getDagRequestToRegionTaskExec(dagRequest, output, session, sqlContext, tableRef)
   }
 
   def logicalPlanToRDD(dagRequest: TiDAGRequest, output: Seq[Attribute]): List[TiRowRDD] = {
-    import scala.collection.JavaConverters._
-    val ids = dagRequest.getPrunedPhysicalIds.asScala
-    var tiRDDs = new ListBuffer[TiRowRDD]
-    val tiConf = session.getConf
-    tiConf.setPartitionPerSplit(TiUtil.getPartitionPerSplit(sqlContext))
-    ids.foreach(id => {
-      tiRDDs += new TiRowRDD(
-        dagRequest.copyReqWithPhysicalId(id),
-        id,
-        TiUtil.getChunkBatchSize(sqlContext),
-        tiConf,
-        output,
-        tableRef,
-        session,
-        sqlContext.sparkSession)
-    })
-    tiRDDs.toList
+    getLogicalPlanToRDD(dagRequest, output, session, sqlContext, tableRef)
   }
+}
 
-  def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
+object TiDBTable {
+
+  private def getDagRequestToRegionTaskExec(
+      dagRequest: TiDAGRequest,
+      output: Seq[Attribute],
+      session: TiSession,
+      sqlContext: SQLContext,
+      tableRef: TiTableReference): SparkPlan = {
     import scala.collection.JavaConverters._
     val ids = dagRequest.getPrunedPhysicalIds.asScala
-    var tiHandleRDDs = new ListBuffer[TiHandleRDD]()
+    val tiHandleRDDs = new ListBuffer[TiHandleRDD]()
     lazy val attributeRef = Seq(
       AttributeReference("RegionId", LongType, nullable = false, Metadata.empty)(),
       AttributeReference(
@@ -136,7 +127,6 @@ case class TiDBTable(
         ArrayType(ObjectType(classOf[Handle]), containsNull = false),
         nullable = false,
         Metadata.empty)())
-
     val tiConf = session.getConf
     tiConf.setPartitionPerSplit(TiUtil.getPartitionPerSplit(sqlContext))
     ids.foreach(id => {
@@ -163,6 +153,31 @@ case class TiDBTable(
       session.getTimestamp,
       session,
       sqlContext.sparkSession)
+  }
+
+  private def getLogicalPlanToRDD(
+      dagRequest: TiDAGRequest,
+      output: Seq[Attribute],
+      session: TiSession,
+      sqlContext: SQLContext,
+      tableRef: TiTableReference): List[TiRowRDD] = {
+    import scala.collection.JavaConverters._
+    val ids = dagRequest.getPrunedPhysicalIds.asScala
+    val tiRDDs = new ListBuffer[TiRowRDD]
+    val tiConf = session.getConf
+    tiConf.setPartitionPerSplit(TiUtil.getPartitionPerSplit(sqlContext))
+    ids.foreach(id => {
+      tiRDDs += new TiRowRDD(
+        dagRequest.copyReqWithPhysicalId(id),
+        id,
+        TiUtil.getChunkBatchSize(sqlContext),
+        tiConf,
+        output,
+        tableRef,
+        session,
+        sqlContext.sparkSession)
+    })
+    tiRDDs.toList
   }
 
 }
