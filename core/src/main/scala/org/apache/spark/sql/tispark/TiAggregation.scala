@@ -20,7 +20,10 @@ import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
+import org.apache.spark.sql.execution.datasources.v2.{
+  DataSourceV2Relation,
+  DataSourceV2ScanRelation
+}
 
 object TiAggregation {
   type ReturnType =
@@ -39,8 +42,10 @@ object TiAggregationProjection {
       case PhysicalOperation(
             projects,
             filters,
-            rel @ DataSourceV2ScanRelation(source: TiDBTable, _, _))
-          if projects.forall(_.isInstanceOf[Attribute]) =>
+            rel @ DataSourceV2ScanRelation(
+              DataSourceV2Relation(source: TiDBTable, _, _, _, _),
+              _,
+              _)) if projects.forall(_.isInstanceOf[Attribute]) =>
         Some((filters, rel, source, projects))
       case _ => Option.empty[ReturnType]
     }

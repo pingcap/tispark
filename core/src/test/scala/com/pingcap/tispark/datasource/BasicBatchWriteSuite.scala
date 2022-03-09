@@ -43,6 +43,8 @@ class BasicBatchWriteSuite extends BaseBatchWriteWithoutDropTableTest("test_data
     val data: RDD[Row] = sc.makeRDD(List(row3, row4))
     val df = sqlContext.createDataFrame(data, schema)
 
+    spark.sql(s"select * from $dbtable where i=2").show
+
     df.write
       .format("tidb")
       .options(tidbOptions)

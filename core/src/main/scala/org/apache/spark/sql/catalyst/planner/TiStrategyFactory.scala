@@ -7,7 +7,7 @@ import org.apache.spark.sql.{SparkSession, Strategy, TiContext}
 class TiStrategyFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Strategy) {
   override def apply(sparkSession: SparkSession): Strategy = {
-    TiStrategy(getOrCreateTiContext)(sparkSession)
+    TiStrategy1(getOrCreateTiContext)(sparkSession)
 
     //ReflectionUtil.newTiStrategy(getOrCreateTiContext, sparkSession)
   }
