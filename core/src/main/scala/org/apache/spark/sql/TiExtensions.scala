@@ -76,8 +76,7 @@ object TiExtensions {
     for (i <- extendedResolutionRules.indices) {
       extendedResolutionRules(i) match {
         case rule: TiAuthorizationRule =>
-          return Some(
-            rule.getOrCreateTiContext(sparkSession))
+          return Some(rule.getOrCreateTiContext(sparkSession))
         case _ =>
       }
     }

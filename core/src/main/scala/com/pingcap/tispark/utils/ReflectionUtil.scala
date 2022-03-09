@@ -102,7 +102,9 @@ object ReflectionUtil {
       .asInstanceOf[Option[TiExpression]]
   }
 
-  def newTiStrategy(getOrCreateTiContext: SparkSession => TiContext, sparkSession: SparkSession): Strategy = {
+  def newTiStrategy(
+      getOrCreateTiContext: SparkSession => TiContext,
+      sparkSession: SparkSession): Strategy = {
     classLoader
       .loadClass(TI_STRATEGY_CLASS)
       .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])
