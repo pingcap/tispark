@@ -120,7 +120,7 @@ case class TiStrategy1(getOrCreateTiContext: SparkSession => TiContext)(
 
     plan
       .collectFirst {
-        case DataSourceV2Relation(table: TiDBTable, _, _, _, _) =>
+        case DataSourceV2ScanRelation(DataSourceV2Relation(table: TiDBTable, _, _, _, _), _, _) =>
           doPlan(table, plan)
       }
       .toSeq
@@ -157,7 +157,10 @@ case class TiStrategy1(getOrCreateTiContext: SparkSession => TiContext)(
   protected def applyStartTs(
       ts: TiTimestamp,
       forceUpdate: Boolean = false): PartialFunction[LogicalPlan, Unit] = {
-    case DataSourceV2Relation(r @ TiDBTable(_, _, _, timestamp, _), _, _, _, _) =>
+    case DataSourceV2ScanRelation(
+          DataSourceV2Relation(r @ TiDBTable(_, _, _, timestamp, _), _, _, _, _),
+          _,
+          _) =>
       if (timestamp == null || forceUpdate) {
         r.ts = ts
       }
