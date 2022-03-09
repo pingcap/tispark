@@ -1,14 +1,12 @@
 package org.apache.spark.sql.catalyst.planner
 
-import com.pingcap.tispark.TiSparkInfo
 import com.pingcap.tispark.utils.ReflectionUtil
-import org.apache.spark.sql.{SparkSession, Strategy, TiContext}
+import org.apache.spark.sql.{SparkSession, Strategy, TiContext, TiExtensions}
 
 class TiStrategyFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Strategy) {
   override def apply(sparkSession: SparkSession): Strategy = {
-    TiStrategy1(getOrCreateTiContext)(sparkSession)
-
-    //ReflectionUtil.newTiStrategy(getOrCreateTiContext, sparkSession)
+    TiExtensions.validateCatalog(sparkSession)
+    ReflectionUtil.newTiStrategy(getOrCreateTiContext, sparkSession)
   }
 }

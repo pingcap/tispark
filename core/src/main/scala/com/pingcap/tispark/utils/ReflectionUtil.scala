@@ -20,8 +20,6 @@ import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.sql.{SparkSession, Strategy, TiContext}
 import org.apache.spark.sql.catalyst.expressions.BasicExpression.TiExpression
 import org.apache.spark.sql.catalyst.expressions.{Alias, ExprId, Expression, SortOrder}
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.catalyst.rules.Rule
 import org.slf4j.LoggerFactory
 
 import java.io.File

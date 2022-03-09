@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.catalyst.planner
+package org.apache.spark.sql.extensions
 
 import com.pingcap.tidb.tipb.EncodeType
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
@@ -28,6 +28,7 @@ import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
 import com.pingcap.tispark.v2.TiDBTable
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{
   Alias,
@@ -46,24 +47,20 @@ import org.apache.spark.sql.catalyst.expressions.{
   SubqueryExpression,
   TiExprUtils
 }
+import org.apache.spark.sql.catalyst.planner.TiAggregation
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution._
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql._
-import org.apache.spark.sql.execution.datasources.v2.{
-  DataSourceV2Relation,
-  DataSourceV2ScanRelation
-}
-import org.apache.spark.sql.tispark.{TiAggregation, TiAggregationProjection}
 import org.joda.time.{DateTime, DateTimeZone}
 
 import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-object TiStrategy1 {
+object TiStrategy {
   private val assignedTSPlanCache = new mutable.WeakHashMap[LogicalPlan, Boolean]()
 
   private def hasTSAssigned(plan: LogicalPlan): Boolean = {
@@ -87,8 +84,7 @@ object TiStrategy1 {
  * a plan tree might contain Join which causes a single tree
  * have multiple plans to push-down
  */
-case class TiStrategy1(getOrCreateTiContext: SparkSession => TiContext)(
-    sparkSession: SparkSession)
+case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
     extends Strategy
     with Logging {
   type TiExpression = com.pingcap.tikv.expression.Expression
@@ -110,9 +106,9 @@ case class TiStrategy1(getOrCreateTiContext: SparkSession => TiContext)(
     if (plan.isStreaming) {
       // We should use a new timestamp for next batch execution.
       // Otherwise Spark Structure Streaming will not see new data in TiDB.
-      if (!TiStrategy1.hasTSAssigned(plan)) {
+      if (!TiStrategy.hasTSAssigned(plan)) {
         plan foreachUp applyStartTs(ts, forceUpdate = true)
-        TiStrategy1.markTSAssigned(plan)
+        TiStrategy.markTSAssigned(plan)
       }
     } else {
       plan foreachUp applyStartTs(ts)
@@ -120,7 +116,7 @@ case class TiStrategy1(getOrCreateTiContext: SparkSession => TiContext)(
 
     plan
       .collectFirst {
-        case DataSourceV2ScanRelation(DataSourceV2Relation(table: TiDBTable, _, _, _, _), _, _) =>
+        case DataSourceV2ScanRelation(table: TiDBTable, _, _) =>
           doPlan(table, plan)
       }
       .toSeq
@@ -157,10 +153,7 @@ case class TiStrategy1(getOrCreateTiContext: SparkSession => TiContext)(
   protected def applyStartTs(
       ts: TiTimestamp,
       forceUpdate: Boolean = false): PartialFunction[LogicalPlan, Unit] = {
-    case DataSourceV2ScanRelation(
-          DataSourceV2Relation(r @ TiDBTable(_, _, _, timestamp, _), _, _, _, _),
-          _,
-          _) =>
+    case DataSourceV2ScanRelation(r @ TiDBTable(_, _, _, timestamp, _), _, _) =>
       if (timestamp == null || forceUpdate) {
         r.ts = ts
       }
@@ -598,10 +591,7 @@ case class TiStrategy1(getOrCreateTiContext: SparkSession => TiContext)(
       case PhysicalOperation(
             projectList,
             filters,
-            DataSourceV2ScanRelation(
-              DataSourceV2Relation(source: TiDBTable, _, _, _, _),
-              _,
-              _)) =>
+            DataSourceV2ScanRelation(source: TiDBTable, _, _)) =>
         pruneFilterProject(projectList, filters, source, newTiDAGRequest()) :: Nil
 
       // Basic logic of original Spark's aggregation plan is:

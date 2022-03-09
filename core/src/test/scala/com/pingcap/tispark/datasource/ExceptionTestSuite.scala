@@ -31,7 +31,8 @@ class ExceptionTestSuite extends BaseBatchWriteTest("test_datasource_exception_t
     val caught = intercept[NoSuchTableException] {
       tidbWrite(List(row1, row2), schema)
     }
-    assert(caught.getMessage.equals(s"Table or view '$table' not found in database '$database';"))
+    assert(
+      caught.getMessage.contains(s"Table or view '$table' not found in database '$database'"))
   }
 
   test("Test column does not exist") {
