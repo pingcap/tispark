@@ -100,7 +100,6 @@ case class TiDBTable(
     val capabilities = new util.HashSet[TableCapability]
     capabilities.add(TableCapability.BATCH_READ)
     capabilities.add(TableCapability.V1_BATCH_WRITE)
-    capabilities.add(TableCapability.BATCH_WRITE)
     capabilities
   }
 

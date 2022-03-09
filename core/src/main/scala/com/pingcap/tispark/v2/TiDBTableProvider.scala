@@ -16,18 +16,27 @@
 package com.pingcap.tispark.v2
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tispark.write.TiDBOptions
-import org.apache.spark.sql.{SparkSession, TiExtensions}
-import org.apache.spark.sql.connector.catalog.{Identifier, SupportsCatalogOptions, Table, TableProvider}
+import com.pingcap.tispark.TiDBRelation
+import com.pingcap.tispark.write.{TiDBOptions, TiDBWriter}
+import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession, TiExtensions}
+import org.apache.spark.sql.connector.catalog.{
+  Identifier,
+  SupportsCatalogOptions,
+  Table,
+  TableProvider
+}
 import org.apache.spark.sql.connector.expressions.Transform
-import org.apache.spark.sql.sources.DataSourceRegister
+import org.apache.spark.sql.sources.{BaseRelation, CreatableRelationProvider, DataSourceRegister}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 
 import java.util
 import scala.collection.JavaConverters._
 
-class TiDBTableProvider extends SupportsCatalogOptions with DataSourceRegister {
+class TiDBTableProvider
+    extends TableProvider
+    with DataSourceRegister
+    with CreatableRelationProvider {
   override def inferSchema(options: CaseInsensitiveStringMap): StructType = {
     getTable(null, Array.empty[Transform], options.asCaseSensitiveMap()).schema()
   }
@@ -56,13 +65,25 @@ class TiDBTableProvider extends SupportsCatalogOptions with DataSourceRegister {
 
   override def shortName(): String = "tidb"
 
-  override def extractIdentifier(options: CaseInsensitiveStringMap): Identifier = {
+  def extractIdentifier(options: CaseInsensitiveStringMap): Identifier = {
     require(options.get("database") != null, "Option 'database' is required.")
     require(options.get("table") != null, "Option 'table' is required.")
     Identifier.of(Array(options.get("database")), options.get("table"))
   }
 
-  override def extractCatalog(options: CaseInsensitiveStringMap): String = {
+  def extractCatalog(options: CaseInsensitiveStringMap): String = {
     "tidb_catalog"
+  }
+
+  // df.write still go v1 path. because v2 path will go through catalyst, which may block some scene like datatype convert.
+  // improve it later
+  override def createRelation(
+      sqlContext: SQLContext,
+      mode: SaveMode,
+      parameters: Map[String, String],
+      data: DataFrame): BaseRelation = {
+    val options = new TiDBOptions(parameters)
+    TiDBWriter.write(data, sqlContext, mode, options)
+    TiDBRelation(sqlContext)
   }
 }
