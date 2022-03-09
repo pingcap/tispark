@@ -17,10 +17,9 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tispark.TiSparkInfo
-import org.apache.spark.sql.{SparkSession, TiContext}
+import org.apache.spark.sql.{SparkSession, Strategy, TiContext}
 import org.apache.spark.sql.catalyst.expressions.BasicExpression.TiExpression
 import org.apache.spark.sql.catalyst.expressions.{Alias, ExprId, Expression, SortOrder}
-import org.apache.spark.sql.catalyst.parser.ParserInterface
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.slf4j.LoggerFactory
@@ -60,16 +59,8 @@ object ReflectionUtil {
   private val SPARK_WRAPPER_CLASS = "com.pingcap.tispark.SparkWrapper"
   private val TI_BASIC_EXPRESSION_CLASS =
     "org.apache.spark.sql.catalyst.expressions.TiBasicExpression"
-  private val TI_RESOLUTION_RULE_CLASS =
-    "org.apache.spark.sql.extensions.TiResolutionRule"
-  private val TI_RESOLUTION_RULE_V2_CLASS =
-    "org.apache.spark.sql.extensions.TiResolutionRuleV2"
-  private val TI_AUTHORIZATION_RULE_CLASS =
-    "org.apache.spark.sql.extensions.TiAuthorizationRule"
-  private val TI_PARSER_CLASS =
-    "org.apache.spark.sql.extensions.TiParser"
-  private val TI_DDL_RULE_CLASS =
-    "org.apache.spark.sql.extensions.TiDDLRule"
+  private val TI_STRATEGY_CLASS =
+    "org.apache.spark.sql.extensions.TiStrategy"
 
   def newAlias(child: Expression, name: String): Alias = {
     classLoader
@@ -109,5 +100,13 @@ object ReflectionUtil {
       .getDeclaredMethod("convertToTiExpr", classOf[Expression])
       .invoke(null, expr)
       .asInstanceOf[Option[TiExpression]]
+  }
+
+  def newTiStrategy(getOrCreateTiContext: SparkSession => TiContext, sparkSession: SparkSession): Strategy = {
+    classLoader
+      .loadClass(TI_STRATEGY_CLASS)
+      .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])
+      .newInstance(getOrCreateTiContext, sparkSession)
+      .asInstanceOf[Strategy]
   }
 }
