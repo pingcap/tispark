@@ -18,12 +18,7 @@ package com.pingcap.tispark.v2
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.write.TiDBOptions
 import org.apache.spark.sql.{SparkSession, TiExtensions}
-import org.apache.spark.sql.connector.catalog.{
-  Identifier,
-  SupportsCatalogOptions,
-  Table,
-  TableProvider
-}
+import org.apache.spark.sql.connector.catalog.{Identifier, SupportsCatalogOptions, Table, TableProvider}
 import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.sources.DataSourceRegister
 import org.apache.spark.sql.types.StructType
@@ -62,6 +57,8 @@ class TiDBTableProvider extends SupportsCatalogOptions with DataSourceRegister {
   override def shortName(): String = "tidb"
 
   override def extractIdentifier(options: CaseInsensitiveStringMap): Identifier = {
+    require(options.get("database") != null, "Option 'database' is required.")
+    require(options.get("table") != null, "Option 'table' is required.")
     Identifier.of(Array(options.get("database")), options.get("table"))
   }
 
