@@ -98,13 +98,14 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   test("Use database and select without privilege should not be passed") {
     the[SQLException] thrownBy spark.sql(
       f"use $databaseWithPrefix") should have message s"Access denied for user $user@% to database ${databaseWithPrefix}"
+
     val caught = intercept[AnalysisException] {
       spark.sql(s"select * from $table")
     }
     // validateCatalog has been set namespace with "use tidb_catalog.$dbPrefix$dummyDatabase" in beforeAll() method
     assert(
       caught.getMessage.contains(
-        s"Table or view '$table' not found in database '$dummyDatabase'"))
+        s"Table or view not found: $table"))
   }
 
   test(f"Show databases without privilege should not contains db") {
