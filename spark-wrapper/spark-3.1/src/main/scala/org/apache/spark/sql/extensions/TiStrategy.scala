@@ -157,7 +157,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       ts: TiTimestamp,
       forceUpdate: Boolean = false): PartialFunction[LogicalPlan, Unit] = {
     case DataSourceV2ScanRelation(
-          DataSourceV2Relation(r @ TiDBTable(_, _, timestamp, _), _, _, _, _),
+          DataSourceV2Relation(r @ TiDBTable(_, _, _, timestamp, _), _, _, _, _),
           _,
           _) =>
       if (timestamp == null || forceUpdate) {

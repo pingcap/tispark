@@ -54,7 +54,8 @@ class TiDBTableProvider
           .getTable(tiTableRef.databaseName, tiTableRef.tableName)
           .getOrElse(
             throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName))
-        TiDBTable(tiTableRef, table, ts, Some(mergeOptions))(sparkSession.sqlContext)
+        TiDBTable(tiContext.tiSession, tiTableRef, table, ts, Some(mergeOptions))(
+          sparkSession.sqlContext)
       case None => throw new TiBatchWriteException("TiExtensions is disable!")
     }
   }

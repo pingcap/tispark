@@ -37,6 +37,7 @@ object TiCatalog {
 }
 
 class TiCatalog extends TableCatalog with SupportsNamespaces {
+  private var tiSession: Option[TiSession] = None
   private var meta: Option[MetaManager] = None
   private var _name: Option[String] = None
   private var _current_namespace: Option[Array[String]] = None
@@ -65,6 +66,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     val conf = TiConfiguration.createDefault(pdAddress)
     val session = TiSession.getInstance(conf)
     meta = Some(new MetaManager(session.getCatalog))
+    tiSession = Some(session)
   }
 
   override def name(): String = _name.get
@@ -127,7 +129,8 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
       .getTable(dbName, ident.name)
       .getOrElse(throw new NoSuchTableException(dbName, ident.name))
 
-    TiDBTable(TiTableReference(dbName, ident.name), table)(SparkSession.active.sqlContext)
+    TiDBTable(tiSession.get, TiTableReference(dbName, ident.name), table)(
+      SparkSession.active.sqlContext)
   }
 
   override def listTables(namespace: Array[String]): Array[Identifier] = {
