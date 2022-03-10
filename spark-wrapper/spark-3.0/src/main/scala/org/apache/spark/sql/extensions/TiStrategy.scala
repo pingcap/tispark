@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 PingCAP, Inc.
+ * Copyright 2022 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -153,7 +153,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   protected def applyStartTs(
       ts: TiTimestamp,
       forceUpdate: Boolean = false): PartialFunction[LogicalPlan, Unit] = {
-    case DataSourceV2ScanRelation(r @ TiDBTable(_, _, _, timestamp, _), _, _) =>
+    case DataSourceV2ScanRelation(r @ TiDBTable(_, _, timestamp, _), _, _) =>
       if (timestamp == null || forceUpdate) {
         r.ts = ts
       }

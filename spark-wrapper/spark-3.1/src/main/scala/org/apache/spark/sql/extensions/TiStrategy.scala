@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 PingCAP, Inc.
+ * Copyright 2022 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -157,7 +157,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       ts: TiTimestamp,
       forceUpdate: Boolean = false): PartialFunction[LogicalPlan, Unit] = {
     case DataSourceV2ScanRelation(
-          DataSourceV2Relation(r @ TiDBTable(_, _, _, timestamp, _), _, _, _, _),
+          DataSourceV2Relation(r @ TiDBTable(_, _, timestamp, _), _, _, _, _),
           _,
           _) =>
       if (timestamp == null || forceUpdate) {
@@ -619,7 +619,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
             groupingExpressions,
             aggregateExpressions,
             resultExpressions,
-            TiAggregationProjection(filters, _, `source`, projects))
+            TiAggregationProjectionV2(filters, _, `source`, projects))
           if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
         val projectSet = AttributeSet((projects ++ filters).flatMap {
           _.references

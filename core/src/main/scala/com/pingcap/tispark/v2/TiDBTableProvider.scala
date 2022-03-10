@@ -18,6 +18,7 @@ package com.pingcap.tispark.v2
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.TiDBRelation
 import com.pingcap.tispark.write.{TiDBOptions, TiDBWriter}
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession, TiExtensions}
 import org.apache.spark.sql.connector.catalog.{Table, TableProvider}
 import org.apache.spark.sql.connector.expressions.Transform
@@ -48,12 +49,12 @@ class TiDBTableProvider
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
         val ts = tiContext.tiSession.getTimestamp
-        TiDBTable(
-          tiContext.tiSession,
-          mergeOptions.getTiTableRef(tiContext.tiConf),
-          tiContext.meta,
-          ts,
-          Some(mergeOptions))(sparkSession.sqlContext)
+        val tiTableRef = mergeOptions.getTiTableRef(tiContext.tiConf)
+        val table = tiContext.meta
+          .getTable(tiTableRef.databaseName, tiTableRef.tableName)
+          .getOrElse(
+            throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName))
+        TiDBTable(tiTableRef, table, ts, Some(mergeOptions))(sparkSession.sqlContext)
       case None => throw new TiBatchWriteException("TiExtensions is disable!")
     }
   }

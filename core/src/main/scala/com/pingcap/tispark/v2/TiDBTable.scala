@@ -16,13 +16,13 @@
 package com.pingcap.tispark.v2
 
 import com.pingcap.tikv.TiSession
+import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
 import com.pingcap.tispark.write.TiDBOptions
-import com.pingcap.tispark.{MetaManager, TiTableReference}
-import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+import com.pingcap.tispark.TiTableReference
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.connector.catalog.{SupportsRead, TableCapability}
 import org.apache.spark.sql.connector.read.ScanBuilder
@@ -30,7 +30,7 @@ import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, SparkPlan}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
-import org.apache.spark.sql.{SQLContext, execution}
+import org.apache.spark.sql.{SQLContext, SparkSession, TiExtensions, execution}
 
 import java.util
 import java.util.Collections
@@ -38,9 +38,8 @@ import scala.collection.mutable.ListBuffer
 import collection.JavaConverters._
 
 case class TiDBTable(
-    session: TiSession,
     tableRef: TiTableReference,
-    meta: MetaManager,
+    table: TiTableInfo,
     var ts: TiTimestamp = null,
     options: Option[TiDBOptions] = None)(@transient val sqlContext: SQLContext)
     extends SupportsRead {
@@ -57,10 +56,6 @@ case class TiDBTable(
       }
     }
   }
-
-  lazy val table: TiTableInfo = meta
-    .getTable(tableRef.databaseName, tableRef.tableName)
-    .getOrElse(throw new NoSuchTableException(tableRef.databaseName, tableRef.tableName))
 
   override lazy val schema: StructType = TiUtil.getSchemaFromTable(table)
 
@@ -101,20 +96,25 @@ case class TiDBTable(
   override def toString: String = s"TiDBTable($name)"
 
   def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
-    getDagRequestToRegionTaskExec(dagRequest, output, session, sqlContext, tableRef)
+    getDagRequestToRegionTaskExec(dagRequest, output, sqlContext, tableRef)
   }
 
   def logicalPlanToRDD(dagRequest: TiDAGRequest, output: Seq[Attribute]): List[TiRowRDD] = {
-    getLogicalPlanToRDD(dagRequest, output, session, sqlContext, tableRef)
+    getLogicalPlanToRDD(dagRequest, output, sqlContext, tableRef)
   }
 }
 
 object TiDBTable {
 
+  val session: TiSession = TiExtensions.getTiContext(SparkSession.active) match {
+    case Some(tiContext) =>
+      tiContext.tiSession
+    case None => throw new TiInternalException("TiExtensions is disable!")
+  }
+
   private def getDagRequestToRegionTaskExec(
       dagRequest: TiDAGRequest,
       output: Seq[Attribute],
-      session: TiSession,
       sqlContext: SQLContext,
       tableRef: TiTableReference): SparkPlan = {
     import scala.collection.JavaConverters._
@@ -158,7 +158,6 @@ object TiDBTable {
   private def getLogicalPlanToRDD(
       dagRequest: TiDAGRequest,
       output: Seq[Attribute],
-      session: TiSession,
       sqlContext: SQLContext,
       tableRef: TiTableReference): List[TiRowRDD] = {
     import scala.collection.JavaConverters._
