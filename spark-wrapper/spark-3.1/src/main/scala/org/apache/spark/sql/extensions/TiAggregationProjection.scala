@@ -9,7 +9,7 @@ import org.apache.spark.sql.execution.datasources.v2.{
   DataSourceV2ScanRelation
 }
 
-object TiAggregationProjectionV2 {
+object TiAggregationProjection {
   type ReturnType = (Seq[Expression], LogicalPlan, TiDBTable, Seq[NamedExpression])
 
   def unapply(plan: LogicalPlan): Option[ReturnType] =

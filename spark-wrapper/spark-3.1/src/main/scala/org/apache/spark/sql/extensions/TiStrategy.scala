@@ -619,7 +619,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
             groupingExpressions,
             aggregateExpressions,
             resultExpressions,
-            TiAggregationProjectionV2(filters, _, `source`, projects))
+            TiAggregationProjection(filters, _, `source`, projects))
           if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
         val projectSet = AttributeSet((projects ++ filters).flatMap {
           _.references
