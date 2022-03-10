@@ -103,9 +103,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
       spark.sql(s"select * from $table")
     }
     // validateCatalog has been set namespace with "use tidb_catalog.$dbPrefix$dummyDatabase" in beforeAll() method
-    assert(
-      caught.getMessage.contains(
-        s"Table or view not found: $table"))
+    assert(caught.getMessage.contains(s"Table or view not found: $table"))
   }
 
   test(f"Show databases without privilege should not contains db") {
