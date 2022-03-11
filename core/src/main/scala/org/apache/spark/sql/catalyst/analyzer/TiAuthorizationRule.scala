@@ -58,15 +58,9 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
   }
 
   override def apply(plan: LogicalPlan): LogicalPlan =
-    if (TiExtensions.authEnable(sparkSession)) {
-      logger.info("TiSpark running in auth mode")
-      TiAuthorization.enableAuth = true
-      TiAuthorization.sqlConf = sparkSession.sqlContext.conf
-      TiAuthorization.tiConf =
-        TiUtil.sparkConfToTiConfWithoutPD(sparkSession.sparkContext.conf, new TiConfiguration())
+    if (TiAuthorization.enableAuth) {
       plan transformUp checkForAuth
     } else {
-      TiAuthorization.enableAuth = false
       plan
     }
 }

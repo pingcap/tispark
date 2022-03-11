@@ -14,6 +14,9 @@
  */
 package org.apache.spark.sql.catalyst.analyzer
 
+import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tispark.auth.TiAuthorization
+import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.{SparkSession, TiContext, TiExtensions}
@@ -24,6 +27,15 @@ class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
   private val logger = LoggerFactory.getLogger(getClass.getName)
   override def apply(sparkSession: SparkSession): Rule[LogicalPlan] = {
     TiExtensions.validateCatalog(sparkSession)
+    if (TiExtensions.authEnable(sparkSession)) {
+      logger.info("TiSpark running in auth mode")
+      TiAuthorization.enableAuth = true
+      TiAuthorization.sqlConf = sparkSession.sqlContext.conf
+      TiAuthorization.tiConf =
+        TiUtil.sparkConfToTiConfWithoutPD(sparkSession.sparkContext.conf, new TiConfiguration())
+    } else {
+      TiAuthorization.enableAuth = false
+    }
     TiAuthorizationRule(getOrCreateTiContext)(sparkSession)
   }
 }
