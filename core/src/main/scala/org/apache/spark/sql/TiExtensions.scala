@@ -83,6 +83,7 @@ object TiExtensions {
       extendedResolutionRules(i) match {
         case rule: TiAuthorizationRule =>
           return Some(rule.getOrCreateTiContext(sparkSession))
+        case _ =>
       }
     }
     None
