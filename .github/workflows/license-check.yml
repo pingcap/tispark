@@ -17,4 +17,4 @@ jobs:
         uses: apache/skywalking-eyes@main
         with:
           log: info
-          config: .github/license-checker.yml
+          config: .github/license-checker-config.yml
