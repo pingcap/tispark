@@ -16,4 +16,5 @@ header:
     - '**/*.pem'
     - '**/*.crt'
     - '**/*.g4'
+    - '**/*.sql'
   comment: on-failure
