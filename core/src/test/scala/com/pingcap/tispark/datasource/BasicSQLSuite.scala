@@ -32,11 +32,12 @@ class BasicSQLSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_
     jdbcUpdate(s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')")
   }
 
-  test("Test Select") {
+  // temporarily not supported
+  ignore("Test Select") {
     testSelectSQL(Seq(row1, row2))
   }
 
-  test("Test Insert Into") {
+  ignore("Test Insert Into") {
     val tmpTable =
       if (validateCatalog) "spark_catalog.default.testInsert" else "default.testInsert"
     sqlContext.sql(s"""
@@ -60,7 +61,7 @@ class BasicSQLSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_
     testSelectSQL(Seq(row1, row2, row3, row4))
   }
 
-  test("Test Insert Overwrite") {
+  ignore("Test Insert Overwrite") {
     val tmpTable =
       if (validateCatalog) "spark_catalog.default.testOverwrite" else "default.testOverwrite"
     sqlContext.sql(s"""

@@ -17,8 +17,9 @@ package org.apache.spark.sql
 
 import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tispark.TiSparkInfo
+import org.apache.spark.sql.catalyst.analyzer.{TiAuthRuleFactory, TiAuthorizationRule}
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
-import org.apache.spark.sql.extensions.{TiAuthRuleFactory, TiResolutionRuleFactory}
+import org.apache.spark.sql.catalyst.planner.TiStrategyFactory
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -30,8 +31,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
     TiSparkInfo.checkVersion()
 
     e.injectResolutionRule(new TiAuthRuleFactory(getOrCreateTiContext))
-    e.injectResolutionRule(new TiResolutionRuleFactory(getOrCreateTiContext))
-    e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
+    e.injectPlannerStrategy(new TiStrategyFactory(getOrCreateTiContext))
   }
 
   // call from pyspark only
@@ -71,23 +71,22 @@ object TiExtensions {
     }
   }
 
+  /**
+   * use TiAuthorizationRule to judge if TiExtensions is enable.
+   * it needs to be changed if TiAuthorizationRule is deleted
+   * @param sparkSession
+   * @return
+   */
   def getTiContext(sparkSession: SparkSession): Option[TiContext] = {
-    if (sparkSession.sessionState.planner.extraPlanningStrategies.nonEmpty &&
-      sparkSession.sessionState.planner.extraPlanningStrategies.head
-        .isInstanceOf[TiStrategy]) {
-      Some(
-        sparkSession.sessionState.planner.extraPlanningStrategies.head
-          .asInstanceOf[TiStrategy]
-          .getOrCreateTiContext(sparkSession))
-    } else if (sparkSession.experimental.extraStrategies.nonEmpty &&
-      sparkSession.experimental.extraStrategies.head.isInstanceOf[TiStrategy]) {
-      Some(
-        sparkSession.experimental.extraStrategies.head
-          .asInstanceOf[TiStrategy]
-          .getOrCreateTiContext(sparkSession))
-    } else {
-      None
+    val extendedResolutionRules = sparkSession.sessionState.analyzer.extendedResolutionRules
+    for (i <- extendedResolutionRules.indices) {
+      extendedResolutionRules(i) match {
+        case rule: TiAuthorizationRule =>
+          return Some(rule.getOrCreateTiContext(sparkSession))
+        case _ =>
+      }
     }
+    None
   }
 
   // call from pyspark only

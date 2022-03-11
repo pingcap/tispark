@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 PingCAP, Inc.
+ * Copyright 2022 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql
+package org.apache.spark.sql.catalyst.planner
 
 import com.pingcap.tispark.utils.ReflectionUtil
 import org.apache.spark.sql.catalyst.expressions.NamedExpression.newExprId

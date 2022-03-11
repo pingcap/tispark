@@ -15,84 +15,19 @@
 
 package org.apache.spark.sql.catalyst.catalog
 
-import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.MetaManager
+import com.pingcap.tispark.{MetaManager, TiTableReference}
 import com.pingcap.tispark.auth.TiAuthorization
-import com.pingcap.tispark.utils.TiUtil
-import org.apache.spark.sql.catalyst.TableIdentifier
+import com.pingcap.tispark.v2.TiDBTable
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{NoSuchNamespaceException, NoSuchTableException}
 import org.apache.spark.sql.connector.catalog._
-import org.apache.spark.sql.connector.expressions.{FieldReference, LogicalExpressions, Transform}
+import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.slf4j.LoggerFactory
 
 import java.util
-import scala.collection.JavaConverters._
-import scala.collection.mutable
-
-/**
- * An implementation of catalog v2 `Table` to expose v1 table metadata.
- */
-case class TiDBTable(v1Table: CatalogTable) extends Table {
-  implicit class IdentifierHelper(identifier: TableIdentifier) {
-    def quoted: String = {
-      identifier.database match {
-        case Some(db) =>
-          Seq(db, identifier.table).map(quote).mkString(".")
-        case _ =>
-          quote(identifier.table)
-
-      }
-    }
-
-    private def quote(part: String): String = {
-      if (part.contains(".") || part.contains("`")) {
-        s"`${part.replace("`", "``")}`"
-      } else {
-        part
-      }
-    }
-  }
-
-  def databaseName: String = v1Table.identifier.database.get
-  def tableName: String = v1Table.identifier.table
-
-  lazy val options: Map[String, String] = {
-    v1Table.storage.locationUri match {
-      case Some(uri) =>
-        v1Table.storage.properties + ("path" -> uri.toString)
-      case _ =>
-        v1Table.storage.properties
-    }
-  }
-
-  override lazy val capabilities: util.Set[TableCapability] = new util.HashSet[TableCapability]()
-  override lazy val properties: util.Map[String, String] = v1Table.properties.asJava
-
-  var tiTableInfo: Option[TiTableInfo] = None
-  override lazy val schema: StructType = v1Table.schema
-
-  override lazy val partitioning: Array[Transform] = {
-    val partitions = new mutable.ArrayBuffer[Transform]()
-
-    v1Table.partitionColumnNames.foreach { col =>
-      partitions += LogicalExpressions.identity(FieldReference(col))
-    }
-
-    v1Table.bucketSpec.foreach { spec =>
-      partitions += LogicalExpressions
-        .bucket(spec.numBuckets, spec.bucketColumnNames.map(FieldReference(_)).toArray)
-    }
-
-    partitions.toArray
-  }
-
-  override def name: String = v1Table.identifier.quoted
-
-  override def toString: String = s"UnresolvedTiDBTable($name)"
-}
 
 object TiCatalog {
   val className = {
@@ -102,7 +37,8 @@ object TiCatalog {
 }
 
 class TiCatalog extends TableCatalog with SupportsNamespaces {
-  var meta: Option[MetaManager] = None
+  private var tiSession: Option[TiSession] = None
+  private var meta: Option[MetaManager] = None
   private var _name: Option[String] = None
   private var _current_namespace: Option[Array[String]] = None
   private val logger = LoggerFactory.getLogger(getClass.getName)
@@ -130,6 +66,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     val conf = TiConfiguration.createDefault(pdAddress)
     val session = TiSession.getInstance(conf)
     meta = Some(new MetaManager(session.getCatalog))
+    tiSession = Some(session)
   }
 
   override def name(): String = _name.get
@@ -189,21 +126,11 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     TiAuthorization.authorizeForDescribeTable(ident.name, dbName, tiAuthorization)
 
     val table = meta.get
-      .getTable(dbName, ident.name())
-      .getOrElse(throw new NoSuchTableException(dbName, ident.name()))
-    val schema = TiUtil.getSchemaFromTable(table)
+      .getTable(dbName, ident.name)
+      .getOrElse(throw new NoSuchTableException(dbName, ident.name))
 
-    val t = CatalogTable(
-      TableIdentifier(ident.name(), Some(dbName)),
-      CatalogTableType.EXTERNAL,
-      CatalogStorageFormat.empty,
-      schema)
-
-    val ret = TiDBTable(t)
-    // add BATCH_READ to just keep compiler happy
-    ret.capabilities.add(TableCapability.BATCH_READ)
-    ret.tiTableInfo = Some(table)
-    ret
+    TiDBTable(tiSession.get, TiTableReference(dbName, ident.name), table)(
+      SparkSession.active.sqlContext)
   }
 
   override def listTables(namespace: Array[String]): Array[Identifier] = {

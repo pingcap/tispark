@@ -20,6 +20,7 @@ class MultipleSparkSessionTestSuite extends BaseTiSparkTest {
     val sparkSession1 = spark
     assert(sparkSession1.sql("select ti_version()").count() === 1)
     val sparkSession2 = sparkSession1.newSession()
+    sparkSession2.sql("use tidb_catalog")
     assert(sparkSession2.sql("select ti_version()").count() === 1)
   }
 }
