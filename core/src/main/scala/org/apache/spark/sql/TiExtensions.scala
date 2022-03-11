@@ -58,6 +58,10 @@ object TiExtensions {
 
   def enabled(sparkSession: SparkSession): Boolean = getTiContext(sparkSession).isDefined
 
+  /**
+   * Catalog for tidb is necessary now.
+   * @param sparkSession
+   */
   def validateCatalog(sparkSession: SparkSession): Unit = {
     sparkSession.sparkContext.conf
       .getAllWithPrefix("spark.sql.catalog.")
@@ -72,8 +76,8 @@ object TiExtensions {
   }
 
   /**
-   * use TiAuthorizationRule to judge if TiExtensions is enable.
-   * it needs to be changed if TiAuthorizationRule is deleted
+   * Use TiAuthorizationRule to judge if TiExtensions is enable.
+   * It needs to be changed if TiAuthorizationRule is deleted
    * @param sparkSession
    * @return
    */
