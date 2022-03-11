@@ -1,20 +1,9 @@
 header:
   license:
     spdx-id: Apache-2.0
-    copyright-owner: PingCAP, Inc.
-  paths-ignore:
-    - 'config/'
-    - 'dev/'
-    - 'docs/'
-    - 'LICENSE'
-    - 'pom.xml'
-    - '.gitignore'
-    - '.github/'
-    - '**/*.md'
-    - '**/*.properties'
-    - '**/*.json'
-    - '**/*.pem'
-    - '**/*.crt'
-    - '**/*.g4'
-    - '**/*.sql'
+    copyright-owner: PingCAP.
+  paths:
+    - '**/*.java'
+    - '**/*.scala'
+    - '**/*.py'
   comment: on-failure
