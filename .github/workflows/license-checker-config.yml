@@ -1,7 +1,7 @@
 header:
   license:
     spdx-id: Apache-2.0
-    copyright-owner: PingCAP, Inc
+    copyright-owner: PingCAP Inc.
   paths:
     - '**/*.java'
     - '**/*.scala'
