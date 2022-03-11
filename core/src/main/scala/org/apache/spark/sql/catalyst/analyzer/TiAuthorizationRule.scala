@@ -15,17 +15,15 @@
 
 package org.apache.spark.sql.catalyst.analyzer
 
-import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tispark.MetaManager
 import com.pingcap.tispark.auth.TiAuthorization
-import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.catalyst.plans.logical.{
   LogicalPlan,
   SetCatalogAndNamespace,
   SubqueryAlias
 }
 import org.apache.spark.sql.catalyst.rules.Rule
-import org.apache.spark.sql.{SparkSession, TiContext, TiExtensions}
+import org.apache.spark.sql.{SparkSession, TiContext}
 import org.slf4j.LoggerFactory
 
 /**

@@ -71,13 +71,18 @@ object TiExtensions {
     }
   }
 
+  /**
+   * use TiAuthorizationRule to judge if TiExtensions is enable.
+   * it needs to be changed if TiAuthorizationRule is deleted
+   * @param sparkSession
+   * @return
+   */
   def getTiContext(sparkSession: SparkSession): Option[TiContext] = {
     val extendedResolutionRules = sparkSession.sessionState.analyzer.extendedResolutionRules
     for (i <- extendedResolutionRules.indices) {
       extendedResolutionRules(i) match {
         case rule: TiAuthorizationRule =>
           return Some(rule.getOrCreateTiContext(sparkSession))
-        case _ =>
       }
     }
     None
