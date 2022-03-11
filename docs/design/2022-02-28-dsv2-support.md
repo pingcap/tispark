@@ -42,10 +42,10 @@ DSV2 support is a big change to TiSpark framework. I think we need to do the fol
 ### Obsolete non catalog plugin mode
 Spark did not provide multiple catalog API in the early days. So, TiSpark inject Catalog by catalyst extension to support non catalog plugin mode. Also, it uses DataSource API V1 TiDBRelation to provide schema information.
 
-Now, TiSpark can extend catalog with multiple catalog API, and we want to replace v1 to v2. SO, I think it's a good time to obsolete non catalog plugin mode.
+Now, TiSpark can extend catalog with multiple catalog support, and we want to replace v1 to v2. So, I think it's a good time to obsolete non catalog plugin mode.
 
 We need to do the following things
-- Delete the corresponding codes
+1. Delete the corresponding codes
     - TiParser
     - TiDDLRule
     - org.apache.spark.sql.execution.command
@@ -53,30 +53,25 @@ We need to do the following things
     - TiCompositeSessionCatalog
     - TiConcreteSessionCatalog
     - TiDirectExternalCatalog
-- Fix some codes
+2. Fix some codes
     - Some tests
     - TiAuthIntegrationSuite
-- Update user doc
-- Update CI
+3. Update user doc
+4. Update CI
 
 ### Move the dependency of V1 in Catalyst
 TiSpark expanded spark with catalyst extension. However, it depends on `TiDBRelation` which is API v1. We need to use TiDBTable instead.
 
-In order to support catalog plugin, TiSpark already has TiDBTable. But it needs to extend more interface and needs more necessary information to replace `TiDBRelation`
+1. Add `TiDBTableProvider` as the entrance for datasource api v2
+2. ReWrite `TiDBTable`: in order to support catalog plugin, TiSpark already has `TiDBTable`. But it needs to extend more interface and needs more necessary information to replace `TiDBRelation`
+   - It's schema information should not depend on v1
+   - More information is needed: Tisession, table, TiTableReference, SqlContext
+   - Extend more interface: SupportsRead interface
+3. remove `TiResolutionRuleV2`
+4. Replace the use of `TiDBRelation` in `TiAuthorizationRule` and `TiStrategy`
+5. move the `TiAuthorizationRule` from wrapper to core becauase it is compatible with spark 3.0 and 3.1 now
+6. move the  `TiStrategy` from core to wrapper becauase the logical plan `DataSourceV2ScanRelation` is different in spark 3.0 and 3.1
 
-The following things need to do:
-1. Rewrite `TiDBTable` in TiCatalog
-    - It's schema information should not depend on v1
-    - More information is needed
-      - Tisession
-      - MetaManager
-      - TiTableReference
-      - SqlContext
-    - Extend more interface
-      - SupportsRead interface
-2. `TiDBRelation` -> `TiDBTable` in TiResolutionRuleV2
-3. Replace the use of `TiDBRelation` in `TiAuthorizationRule` and `TiStrategy`
-    - Need to research the logical plan of every statement we support, Because it may change in v2.
       
 ### Replace API v1 to v2
 API v2 has plenty of differences from v1
@@ -86,58 +81,67 @@ API v2 has plenty of differences from v1
 - Data is processed by every record in DataWrite.write
 
 The main APIs are described in the picture:
+
 ![image alt text](imgs/dsv2.png)
 
-We need to write the framework of API v2 just like the picture shows.
+We will extend SupportsRead and SupportsWrite.
+- As for SupportsRead, we just extend it for schema. the read logical and push down logical are in TiStrategy.
+- As for SupportsWrite, we implement v1WriteBuilder insteadof WriteBuilder. So we can use original write logical in v2 framework berfore rewrite writing code.
+
+Because we replace API v1 with v2, `dataset.writeto` is available now. but it is experimental because it will involved with catalyst
 
 ### rewrite writing code
-Now, the main writing process in TiSpark is as follows:
+Now, the main write step in TiSpark 
+1. Check
+2. Pre-calculate
+3. 2PCis 
+
+The detail is as follows:
 
 ![image alt text](imgs/write.png)
 
-This can be simplified into three steps
-1. Check
-2. Pre-calculate
-3. 2PC
 
-Original writing runs on spark driver, Ir relies heavily on RDD, and it needs TiConext which contains SparkSession and TiSession.
-
+Original write runs on spark driver, Ir relies heavily on RDD, and it needs TiConext which contains SparkSession and TiSession. 
 In DataSouce API V2, write runs in spark executor, It don't have concepts of RDD or SparkSession. Data will be processed in partition with every single record rather than the whole RDD.
 
 So, writing codes needs to be changed a lot:
-1. Cache data to a batch in memory
-2. Once the data reaches the max batch number, write to TiKV
-    1. Check
-    2. Rewrite the code which uses RDD and SparkSession in Pre-calculate
-    3. Rewrite the code which uses RDD in 2PC
+1. processing based on global data, like deduplication，pre split region, etc.
+2. pre-write primary key
+3. processing based on partition data
+   - transform and process datadata
+   - Cache data to a batch in memory
+   - Once the data reaches the max batch number pre-write secondary key
+4. after all partition's data have been handled, commit premary key
 
-TODO：How to guarantee global transaction in write？
+![image alt text](imgs/new_write.png)
 
-In TiKV, we should insert data in 2PC
-- Primary pre-write
-- secondary pre-write
-- Primary commit
-- secondary commit
+But now we don't do it for two reasons
+- we need to change the api expose to user because we have to deal with the global data in advance
+- the optimization of the catalyst conflicts with the write logical. such as data type convert
 
-DSV2 can support transactions at partition level easily. However, global transaction is hard to do. If you want support global transactions, a coordinator is needed. It used to be spark driver, but now it has some problems
-- Spark driver can't get data anymore
-- How can spark driver support 2PC ? It can only be informed after all executors finish their task and the execute commit. However, we need 2PC rather than 1PC
+we will do this task after solving these two problems.
 
 ## Compatibility
 
-Don't support operating TiDB in non catalog plugin anymore.
-For Example , if you want operate TiDB. You must do two things below:
-1. Enable Catalog by two configs
-   1. spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
-   2. spark.sql.catalog.tidb_catalog.pd.addresses $pdAdress
-2. Execute spark.sql("use tidb_catalog")
+1.Don't support operating TiDB without catalog config anymore. Now, you must:
+- Enable Catalog by these configs
+```
+spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
+spark.sql.catalog.tidb_catalog.pd.addresses $pdAdress
+```
+- use catalog for tidb before sql `spark.sql("use tidb_catalog")`
 
-If you miss any step, you can only operate hive rather than TiDB（It is supported before）
+2.The following usage is no longer supported, because is a datasource v1 read/write path
+```
+sprak.sql("use spark_catalog")  
+spark.sql("create table xxx using tidb")
+spark.sql("select * from xxx") 
+spark.sql("insert into xxx")  
+```
 
 ## Test Design
 
 Need to pass the currently IT.
 
-## Impacts & Risks
 
-The Tispark framework will be better :)
+
