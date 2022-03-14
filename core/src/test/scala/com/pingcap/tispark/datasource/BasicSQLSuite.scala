@@ -40,9 +40,8 @@ class BasicSQLSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_
     jdbcUpdate(s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')")
   }
 
-  test("Test Select") {
-    spark.sql(s"insert into $dbtable values(3, 'se') /*+ OPTIONS('test'='global') */")
-    // testSelectSQL(Seq(row1, row2))
+  ignore("Test Select") {
+    testSelectSQL(Seq(row1, row2))
   }
 
   ignore("Test Insert Into") {
