@@ -249,7 +249,7 @@ For more details about the test, see [here](./core/src/test/Readme.md).
 
 6. TiSpark doesn't support collations now. `new_collations_enabled_on_first_bootstrap` should not be set to `true`.
 
-7. TiSpark doesn't support TLS now. You can't visit TiDB with TLS.
+7. TiSpark doesn't support TLS now. You can't connect TiDB with TLS.
 
 
 ## Follow us
