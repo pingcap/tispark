@@ -355,7 +355,7 @@ public class TiTableInfo implements Serializable {
   }
 
   public TiTableInfo copyTableWithRowId() {
-    if (!isPkHandle()) {
+    if (!isPkHandle() && !isCommonHandle) {
       ImmutableList.Builder<TiColumnInfo> newColumns = ImmutableList.builder();
       for (TiColumnInfo col : getColumns(true)) {
         newColumns.add(copyColumn(col));

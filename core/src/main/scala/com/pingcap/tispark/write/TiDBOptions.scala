@@ -75,6 +75,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val isTest: Boolean = getOrDefault(TIDB_IS_TEST, "false").toBoolean
   val prewriteBackOfferMS: Int = getOrDefault(TIDB_PREWRITE_BACKOFFER_MS, "240000").toInt
   val commitBackOfferMS: Int = getOrDefault(TIDB_COMMIT_BACKOFFER_MS, "20000").toInt
+  //https://github.com/pingcap/tispark/pull/1599
   // 16 * 1024 = 16K
   val txnPrewriteBatchSize: Long = getOrDefault(TIDB_TXN_PREWITE_BATCH_SIZE, "16384").toLong
   // 16 * 1024 = 16K
@@ -90,6 +91,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val enableUpdateTableStatistics: Boolean =
     getOrDefault(TIDB_ENABLE_UPDATE_TABLE_STATISTICS, "false").toBoolean
   val deduplicate: Boolean = getOrDefault(TIDB_DEDUPLICATE, "true").toBoolean
+  val tidbRowId: Boolean = getOrDefault(TIDB_ROWID, "false").toBoolean
 
   // region split
   val enableRegionSplit: Boolean = getOrDefault(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
@@ -209,6 +211,7 @@ object TiDBOptions {
   val TIDB_COMMIT_PRIMARY_KEY_RETRY_NUMBER: String = newOption("commitPrimaryKeyRetryNumber")
   val TIDB_ENABLE_UPDATE_TABLE_STATISTICS: String = newOption("enableUpdateTableStatistics")
   val TIDB_DEDUPLICATE: String = newOption("deduplicate")
+  val TIDB_ROWID: String = newOption("tidbRowId")
 
   // region split
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
