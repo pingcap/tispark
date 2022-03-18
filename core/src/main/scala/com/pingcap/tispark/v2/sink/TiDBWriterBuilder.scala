@@ -26,7 +26,7 @@ case class TiDBWriterBuilder(
     sqlContext: SQLContext)
     extends V1WriteBuilder {
 
-  // TODO use V1WriteBuilder before turn to v2
+  // Use V1WriteBuilder before turn to v2
   override def buildForV1Write(): InsertableRelation = { (data: DataFrame, overwrite: Boolean) =>
     {
       val saveMode = if (overwrite) {

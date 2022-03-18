@@ -72,8 +72,8 @@ class TiDBTableProvider
     "tidb_catalog"
   }
 
-  // df.write still go v1 path now
-  // because v2 path will go through catalyst, which may block some thing like datatype convert.
+  // DF.write still go v1 path now
+  // Because v2 path will go through catalyst, which may block something like datatype convert.
   override def createRelation(
       sqlContext: SQLContext,
       mode: SaveMode,

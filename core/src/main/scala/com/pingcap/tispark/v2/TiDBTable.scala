@@ -110,19 +110,19 @@ case class TiDBTable(
 
   override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = {
     var scalaMap = info.options().asScala.toMap
-    // insert sql without option
+    // Some options are neccessary. insert sql is not supported, because it can't get option information
     if (scalaMap.isEmpty) {
       throw new TiBatchWriteException(
-        "option is neccessary. maybe you are using insert sql, it's not supported yet")
+        "option is neccessary. Maybe you are using insert sql, it's not supported yet")
     }
-    // support df.writeto：need add db and table for write
+    // Support df.writeto：need add db and table for write
     if (!scalaMap.contains("database")) {
       scalaMap += ("database" -> databaseName)
     }
     if (!scalaMap.contains("table")) {
       scalaMap += ("table" -> tableName)
     }
-    // get tiDBOptions
+    // Get TiDBOptions
     val tiDBOptions = new TiDBOptions(scalaMap)
     TiDBWriterBuilder(info, tiDBOptions, sqlContext)
   }

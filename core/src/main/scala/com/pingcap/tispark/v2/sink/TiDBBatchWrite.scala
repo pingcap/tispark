@@ -20,7 +20,7 @@ import org.apache.spark.sql.TiContext
 import org.apache.spark.sql.connector.write._
 
 /**
- * use V1WriteBuilder before turn to v2
+ * Use V1WriteBuilder before turn to v2
  */
 case class TiDBBatchWrite(logicalInfo: LogicalWriteInfo, tiDBOptions: TiDBOptions)(
     @transient val tiContext: TiContext)

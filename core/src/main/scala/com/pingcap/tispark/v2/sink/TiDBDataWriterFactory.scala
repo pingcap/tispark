@@ -22,7 +22,7 @@ import org.apache.spark.sql.connector.write.{DataWriter, DataWriterFactory}
 import org.apache.spark.sql.types.StructType
 
 /**
- * use V1WriteBuilder before turn to v2
+ * Use V1WriteBuilder before turn to v2
  */
 case class TiDBDataWriterFactory(
     schema: StructType,

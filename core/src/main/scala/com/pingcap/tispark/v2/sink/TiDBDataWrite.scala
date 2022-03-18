@@ -23,7 +23,7 @@ import org.apache.spark.sql.connector.write.{DataWriter, WriterCommitMessage}
 import org.apache.spark.sql.types.StructType
 
 /**
- * use V1WriteBuilder before turn to v2
+ * Use V1WriteBuilder before turn to v2
  */
 case class TiDBDataWrite(
     partitionId: Int,

@@ -19,7 +19,7 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.types.StructType
 
-// just for the build of v1 path
+// Just for the build of v1 path
 case class TiDBRelation(sqlContext: SQLContext) extends BaseRelation {
   override def schema: StructType = ???
 }

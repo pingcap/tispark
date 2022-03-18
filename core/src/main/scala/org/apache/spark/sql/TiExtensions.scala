@@ -77,7 +77,7 @@ object TiExtensions {
 
   /**
    * Use TiAuthorizationRule to judge if TiExtensions is enable.
-   * It needs to be changed if TiAuthorizationRule is deleted
+   * It needs to be changed when TiAuthorizationRule is not a must-have
    * @param sparkSession
    * @return
    */
