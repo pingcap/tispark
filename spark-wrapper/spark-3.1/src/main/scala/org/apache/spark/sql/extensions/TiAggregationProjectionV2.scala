@@ -25,6 +25,10 @@ import org.apache.spark.sql.execution.datasources.v2.{
   DataSourceV2ScanRelation
 }
 
+/**
+ * I'm afraid that the same name with the object under the spark-wrapper/spark3.0 will lead to some problems.
+ * Although the same name will pass the itegration test
+ */
 object TiAggregationProjectionV2 {
   type ReturnType = (Seq[Expression], LogicalPlan, TiDBTable, Seq[NamedExpression])
 
