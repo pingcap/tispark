@@ -110,12 +110,13 @@ case class TiDBTable(
 
   override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = {
     var scalaMap = info.options().asScala.toMap
-    // Some options are neccessary. insert sql is not supported, because it can't get option information
+    // TODO https://github.com/pingcap/tispark/issues/2269 we need to move TiDB dependencies which will block insert SQL.
+    // if we don't support it before release, insert SQL should throw exception in catalyst
     if (scalaMap.isEmpty) {
       throw new TiBatchWriteException(
-        "option is neccessary. Maybe you are using insert sql, it's not supported yet")
+        "tidbOption is neccessary.")
     }
-    // Support df.writeto：need add db and table for write
+    // Support df.writeto: need add db and table for write
     if (!scalaMap.contains("database")) {
       scalaMap += ("database" -> databaseName)
     }
