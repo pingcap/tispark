@@ -101,7 +101,7 @@ case class ColumnarCoprocessorRDD(
  * RegionTaskExec will downgrade a index scan plan to table scan plan if handles retrieved from one
  * region exceed spark.tispark.plan.downgrade.index_threshold in your spark config.
  *
- * Refer to code in [[com.pingcap.tispark.TiDBRelation]] and [[ColumnarCoprocessorRDD]] for further details.
+ * Refer to code in [[com.pingcap.tispark.v2.TiDBTable]] and [[ColumnarCoprocessorRDD]] for further details.
  *
  */
 case class ColumnarRegionTaskExec(
