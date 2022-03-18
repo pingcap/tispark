@@ -113,8 +113,7 @@ case class TiDBTable(
     // TODO https://github.com/pingcap/tispark/issues/2269 we need to move TiDB dependencies which will block insert SQL.
     // if we don't support it before release, insert SQL should throw exception in catalyst
     if (scalaMap.isEmpty) {
-      throw new TiBatchWriteException(
-        "tidbOption is neccessary.")
+      throw new TiBatchWriteException("tidbOption is neccessary.")
     }
     // Support df.writeto: need add db and table for write
     if (!scalaMap.contains("database")) {
