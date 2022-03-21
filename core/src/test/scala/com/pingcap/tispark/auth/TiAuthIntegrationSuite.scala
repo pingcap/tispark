@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -66,10 +67,8 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     tidbStmt.execute(f"GRANT CREATE ON $dummyDatabase.* TO '$user'@'%%'")
     tidbStmt.execute(f"GRANT PROCESS ON *.* TO '$user'@'%%'")
 
-    // set namespace "tidb_catalog"
-    if (catalogPluginMode) {
-      spark.sql(s"use tidb_catalog.$dbPrefix$dummyDatabase")
-    }
+    spark.sql(s"use tidb_catalog.$dbPrefix$dummyDatabase")
+
   }
 
   override def afterAll(): Unit = {
@@ -83,12 +82,8 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   test("Use catalog should success") {
-    if (catalogPluginMode) {
-      spark.sql(s"use tidb_catalog")
-      spark.sql(s"use $dbPrefix$dummyDatabase")
-    } else {
-      spark.sql(s"use spark_catalog")
-    }
+    spark.sql(s"use tidb_catalog")
+    spark.sql(s"use $dbPrefix$dummyDatabase")
   }
 
   test("Select without privilege should not be passed") {
@@ -104,15 +99,12 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   test("Use database and select without privilege should not be passed") {
     the[SQLException] thrownBy spark.sql(
       f"use $databaseWithPrefix") should have message s"Access denied for user $user@% to database ${databaseWithPrefix}"
+
     val caught = intercept[AnalysisException] {
       spark.sql(s"select * from $table")
     }
-    // catalogPluginMode has been set namespace with "use tidb_catalog.$dbPrefix$dummyDatabase" in beforeAll() method
-    if (catalogPluginMode) {
-      assert(caught.getMessage.contains(s"Table or view not found: test_auth_basic"))
-    } else {
-      assert(caught.getMessage.contains("Table or view not found: default.test_auth_basic"))
-    }
+    // validateCatalog has been set namespace with "use tidb_catalog.$dbPrefix$dummyDatabase" in beforeAll() method
+    assert(caught.getMessage.contains(s"Table or view not found: $table"))
   }
 
   test(f"Show databases without privilege should not contains db") {
@@ -122,19 +114,6 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
       .map(row => row.toString())
       .toList
     databases should not contain (f"[$databaseWithPrefix]")
-  }
-
-  ignore("CreateTableLike without privilege should not be passed") {
-    if (catalogPluginMode) {
-      cancel
-    }
-
-    an[SQLException] should be thrownBy {
-      spark.sql(
-        s"create table `$databaseWithPrefix`.`${table}1`  like `$databaseWithPrefix`.`${table}`")
-    }
-
-    tidbStmt.execute(s"drop table if exsit `$database`.`${table}1`")
   }
 
   test("Give privilege") {
@@ -174,12 +153,9 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
       .collect()
       .map(row => row.toString())
       .toList
-    if (catalogPluginMode) {
+    if (validateCatalog) {
       tables should contain(f"[$databaseWithPrefix,$table]")
       tables should not contain (f"[$databaseWithPrefix,$invisibleTable]")
-    } else {
-      tables should contain(f"[$databaseWithPrefix,$table,false]")
-      tables should not contain (f"[$databaseWithPrefix,$invisibleTable,false]")
     }
   }
 
@@ -187,37 +163,5 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     noException should be thrownBy spark.sql(s"DESCRIBE TABLE `$databaseWithPrefix`.`$table`")
     the[SQLException] thrownBy spark.sql(
       s"DESCRIBE `$databaseWithPrefix`.`$invisibleTable`") should have message s"SELECT command denied to user $user@% for table $databaseWithPrefix.$invisibleTable"
-  }
-
-  // SHOW COLUMNS is only supported with temp views or v1 tables.;
-  test(f"SHOW COLUMNS should not success with invisible table") {
-    if (!catalogPluginMode) {
-      noException should be thrownBy spark.sql(
-        s"SHOW COLUMNS FROM `$databaseWithPrefix`.`$table`")
-      the[SQLException] thrownBy spark.sql(
-        s"SHOW COLUMNS FROM `$databaseWithPrefix`.`$invisibleTable`") should have message s"SELECT command denied to user $user@% for table $databaseWithPrefix.$invisibleTable"
-    }
-  }
-
-  //Describing columns is not supported for v2 tables.
-  test(f"DESCRIBE COLUMN should not success with invisible table") {
-    if (!catalogPluginMode) {
-      noException should be thrownBy spark.sql(s"DESCRIBE `$databaseWithPrefix`.`$table` s")
-      the[SQLException] thrownBy spark.sql(
-        s"DESCRIBE `$databaseWithPrefix`.`$invisibleTable` s") should have message s"SELECT command denied to user $user@% for table $databaseWithPrefix.$invisibleTable"
-    }
-  }
-
-  ignore("CreateTableLike with privilege should be passed") {
-    if (catalogPluginMode) {
-      cancel
-    }
-
-    noException should be thrownBy {
-      spark.sql(
-        s"create table `$databaseWithPrefix`.`${table}1`  like `$databaseWithPrefix`.`${table}`")
-    }
-
-    tidbStmt.execute(s"drop table if exsit `$database`.`${table}1`")
   }
 }

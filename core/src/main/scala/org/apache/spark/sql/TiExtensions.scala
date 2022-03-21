@@ -9,20 +9,19 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
 package org.apache.spark.sql
 
+import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tispark.TiSparkInfo
+import org.apache.spark.sql.catalyst.analyzer.{TiAuthRuleFactory, TiAuthorizationRule}
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
-import org.apache.spark.sql.extensions.{
-  TiAuthRuleFactory,
-  TiDDLRuleFactory,
-  TiParserFactory,
-  TiResolutionRuleFactory
-}
+import org.apache.spark.sql.catalyst.planner.TiStrategyFactory
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 
@@ -32,11 +31,8 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
   override def apply(e: SparkSessionExtensions): Unit = {
     TiSparkInfo.checkVersion()
 
-    e.injectParser(new TiParserFactory(getOrCreateTiContext))
     e.injectResolutionRule(new TiAuthRuleFactory(getOrCreateTiContext))
-    e.injectResolutionRule(new TiDDLRuleFactory(getOrCreateTiContext))
-    e.injectResolutionRule(new TiResolutionRuleFactory(getOrCreateTiContext))
-    e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
+    e.injectPlannerStrategy(new TiStrategyFactory(getOrCreateTiContext))
   }
 
   // call from pyspark only
@@ -54,6 +50,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 }
 
 object TiExtensions {
+  private final val logger = LoggerFactory.getLogger(getClass.getName)
   def authEnable(sparkSession: SparkSession): Boolean = {
     sparkSession.sparkContext.conf
       .get("spark.sql.auth.enable", "false")
@@ -62,33 +59,39 @@ object TiExtensions {
 
   def enabled(sparkSession: SparkSession): Boolean = getTiContext(sparkSession).isDefined
 
-  def catalogPluginMode(sparkSession: SparkSession): Boolean = {
+  /**
+   * Catalog for tidb is necessary now.
+   * @param sparkSession
+   */
+  def validateCatalog(sparkSession: SparkSession): Unit = {
     sparkSession.sparkContext.conf
       .getAllWithPrefix("spark.sql.catalog.")
       .toSeq
       .find(pair => TiCatalog.className.equals(pair._2)) match {
-      case Some(_) => true
-      case None => false
+      case None =>
+        logger.error("TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
+        throw new TiInternalException(
+          "TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
+      case _ =>
     }
   }
 
+  /**
+   * Use TiAuthorizationRule to judge if TiExtensions is enable.
+   * It needs to be changed when TiAuthorizationRule is not a must-have
+   * @param sparkSession
+   * @return
+   */
   def getTiContext(sparkSession: SparkSession): Option[TiContext] = {
-    if (sparkSession.sessionState.planner.extraPlanningStrategies.nonEmpty &&
-      sparkSession.sessionState.planner.extraPlanningStrategies.head
-        .isInstanceOf[TiStrategy]) {
-      Some(
-        sparkSession.sessionState.planner.extraPlanningStrategies.head
-          .asInstanceOf[TiStrategy]
-          .getOrCreateTiContext(sparkSession))
-    } else if (sparkSession.experimental.extraStrategies.nonEmpty &&
-      sparkSession.experimental.extraStrategies.head.isInstanceOf[TiStrategy]) {
-      Some(
-        sparkSession.experimental.extraStrategies.head
-          .asInstanceOf[TiStrategy]
-          .getOrCreateTiContext(sparkSession))
-    } else {
-      None
+    val extendedResolutionRules = sparkSession.sessionState.analyzer.extendedResolutionRules
+    for (i <- extendedResolutionRules.indices) {
+      extendedResolutionRules(i) match {
+        case rule: TiAuthorizationRule =>
+          return Some(rule.getOrCreateTiContext(sparkSession))
+        case _ =>
+      }
     }
+    None
   }
 
   // call from pyspark only

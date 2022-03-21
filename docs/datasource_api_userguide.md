@@ -90,51 +90,6 @@ Fow how to use it with extensions enabled, see [code examples with extensions](h
       save()
     ```
 
-## Use Data Source API in SparkSQL
-
-1. Configure TiDB or PD addresses and enable write through SparkSQL in `conf/spark-defaults.conf` as follows:
-
-```
-spark.tispark.pd.addresses 127.0.0.1:2379
-spark.tispark.tidb.addr 127.0.0.1
-spark.tispark.tidb.port 4000
-spark.tispark.write.allow_spark_sql true
-```
-
-2. Create a new table using mysql-client:
-
-```
-CREATE TABLE tpch_test.TARGET_TABLE_CUSTOMER (
-  `C_CUSTKEY` int(11) NOT NULL,
-  `C_NAME` varchar(25) NOT NULL,
-  `C_ADDRESS` varchar(40) NOT NULL,
-  `C_NATIONKEY` int(11) NOT NULL,
-  `C_PHONE` char(15) NOT NULL,
-  `C_ACCTBAL` decimal(15,2) NOT NULL,
-  `C_MKTSEGMENT` char(10) NOT NULL,
-  `C_COMMENT` varchar(117) NOT NULL
-)
-```
-
-3. Register the TiDB table `tpch_test.TARGET_TABLE_CUSTOMER` to the Spark Catalog:
-
-```
-CREATE TABLE CUSTOMER_DST USING tidb OPTIONS (
-  tidb.user 'root',
-  tidb.password '',
-  database 'tpch_test',
-  table 'TARGET_TABLE_CUSTOMER'
-)
-```
-
-4. Write data to `tpch_test.TARGET_TABLE_CUSTOMER`:
-
-```
-INSERT INTO CUSTOMER_DST VALUES(1000, 'Customer#000001000', 'AnJ5lxtLjioClr2khl9pb8NLxG2', 9, '19-407-425-2584', 2209.81, 'AUTOMOBILE', '. even, express theodolites upo')
-
-INSERT INTO CUSTOMER_DST SELECT * FROM tpch_test.CUSTOMER
-```
-
 ## Writing to Multi-tables
 
 TiDB Connector supports writing data into multi-tables in one transaction using scala/java API.

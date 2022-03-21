@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -20,21 +21,7 @@ class MultipleSparkSessionTestSuite extends BaseTiSparkTest {
     val sparkSession1 = spark
     assert(sparkSession1.sql("select ti_version()").count() === 1)
     val sparkSession2 = sparkSession1.newSession()
+    sparkSession2.sql("use tidb_catalog")
     assert(sparkSession2.sql("select ti_version()").count() === 1)
-  }
-
-  test("Test multiple Spark Session with different catalog") {
-    if (catalogPluginMode) {
-      cancel
-    }
-
-    val sparkSession1 = spark
-    val sparkSession2 = sparkSession1.newSession()
-    val db1 = s"${dbPrefix}tispark_test"
-    val db2 = s"${dbPrefix}mysql"
-    sparkSession1.sql(s"use $db1")
-    sparkSession2.sql(s"use $db2")
-    assert(sparkSession1.sql("show tables").select("database").head().getString(0) === db1)
-    assert(sparkSession2.sql("show tables").select("database").head().getString(0) === db2)
   }
 }

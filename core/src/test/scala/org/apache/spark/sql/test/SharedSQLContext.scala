@@ -10,6 +10,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
@@ -221,7 +222,7 @@ trait SharedSQLContext
 
   protected def dbPrefix: String = SharedSQLContext.dbPrefix
 
-  protected def catalogPluginMode: Boolean = SharedSQLContext.catalogPluginMode
+  protected def validateCatalog: Boolean = SharedSQLContext.validateCatalog
 
   protected def pdAddresses: String = SharedSQLContext.pdAddresses
 
@@ -453,7 +454,7 @@ trait SharedSQLContext
       conf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
       conf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
       conf.set(DB_PREFIX, dbPrefix)
-      if (catalogPluginMode) {
+      if (validateCatalog) {
         conf.set("spark.sql.catalog.tidb_catalog", TiCatalog.className)
         conf.set("spark.sql.catalog.tidb_catalog.pd.addresses", pdAddresses)
       }
@@ -527,7 +528,7 @@ object SharedSQLContext extends Logging {
   protected var runTPCH: Boolean = true
   protected var runTPCDS: Boolean = false
   protected var dbPrefix: String = _
-  protected var catalogPluginMode: Boolean = _
+  protected var validateCatalog: Boolean = _
 
   readConf()
 
@@ -558,7 +559,7 @@ object SharedSQLContext extends Logging {
 
     pdAddresses = getOrElse(tidbConf, PD_ADDRESSES, "127.0.0.1:2379")
 
-    catalogPluginMode = !"".equals(getOrElse(tidbConf, "spark.sql.catalog.tidb_catalog", ""))
+    validateCatalog = !"".equals(getOrElse(tidbConf, "spark.sql.catalog.tidb_catalog", ""))
 
     dbPrefix = getOrElse(tidbConf, DB_PREFIX, "")
 
