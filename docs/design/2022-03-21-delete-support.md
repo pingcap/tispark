@@ -112,9 +112,9 @@ It is not acceptable to configure `spark.tispark.show_rowid` in the config file.
 
 It also does not work to modify the configuration at runtime for the catalog is cached. We can't change the `showRowId` without clearing the cache, which will affect the performance of TiSpark.
 
-Considering each SQL requires loadTable, we can manually call method copyTableWithRowId when loadTable. This won't affect other SQL and doesn't have problems with cache. Next, we need to distinguish when to call copyTableWithRowId
-- Spark SQL: The hint is a good choice for SQL, but Spark doesn't provide the extension of hint.
-- Read API: We can also add option `（"tidbRowId","true"）`in Read API.
+Considering each SQL requires loadTable, we can manually call method copyTableWithRowId when loadTable. This won't affect other SQL and needn't to clear the cache. Then, need to specify when to call copyTableWithRowId. Here are two ways
+- Use Spark SQL: The hint is a good choice for SQL, but Spark doesn't provide the extension of hint.
+- Use Read API: Add option `（"tidbRowId","true"）`in Read API.
 
 In conclusion, we will use Read API with `tidbRowId` option and then call the `copyTableWithRowId` when the table is loaded.
 ```
@@ -191,12 +191,12 @@ Since we can not pass options through the DELETE statement. The options required
 | 5.x          | Cluster index pk（not int）                | true            | false       | no           |
 | 5.x          | Non cluster index (int)                  | false           | false       | yes          |
 | 5.x          | Non cluster index（not int）               | false           | false       | yes          |
-| 5.x          | 无 pk                                     | false           | false       | yes          |
+| 5.x          | no pk                                    | false           | false       | yes          |
 | 4.x          | pk (int) + alter-primary-key = true      | false           | false       |              |
 | 4.x          | pk (int) + alter-primary-key = false     | false           | true        |              |
 | 4.x          | pk (not int) + alter-primary-key = true  | false           | false       |              |
 | 4.x          | pk (not int) + alter-primary-key = false | false           | false       |              |
-| 4.x          | 无 pk                                     | false           | false       |              |
+| 4.x          | no pk                                    | false           | false       |              |
 
 ### Benchmark Tests
 
