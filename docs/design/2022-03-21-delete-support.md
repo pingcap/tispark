@@ -104,7 +104,9 @@ We can get row and pk easily, so I will describe how to get the `_tidb_rowid`.
 
 TiSpark support config `spark.tispark.show_rowid` to get `_tidb_rowid`, and this configuration determines the `showRowId` in Catalog. The logic is as follows
 
-![image alt text](imgs/delete-support/rowid.png)
+<div align="center">
+<img src="imgs/delete-support/rowid.png" alt="rowid"/>
+</div>
 
 It is not acceptable to configure `spark.tispark.show_rowid` in the config file. Because the configuration is global, which will cause all SELECT statements to return with `_tidb_rowid`. 
 
