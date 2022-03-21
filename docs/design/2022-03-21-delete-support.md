@@ -36,7 +36,7 @@ Delete operations are becoming more and more important for many big-data workflo
 ## Goals
 **Must have**
 - Support delete bypass TiDB and provide friendly API with spark SQL
-- Compatible with TiDB 4. x and 5. x 
+- Compatible with TiDB 4.x and 5.x 
 
 **Nice to have**
 - Optimize the code in the write feature which can be reused. Because write and delete have similar logic. However, the code in the write is hard to reuse.
@@ -47,7 +47,7 @@ Delete operations are becoming more and more important for many big-data workflo
 - Don't support delete statement with subQuery
 
 ## API
-Use spark SQL to excute delete in TiSpark.
+Use spark SQL to execute delete in TiSpark.
 ```
 // delete with spark sql
 spark.sql("delete from tidb_catalog.db.table where xxx")
