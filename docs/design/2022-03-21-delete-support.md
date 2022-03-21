@@ -63,7 +63,9 @@ Here are the main steps:
 6. encode record & index to (encodeKey, encodeValue), notice that encodeValue is empty
 7. Execute 2PC
 
-![image alt text](imgs/delete-support/delete_step.png)
+<div align="center">
+<img src="imgs/delete-support/delete_step.png" width = 50% height = 50% alt="delete_step"/>
+</div>
 
 ### Parse filters to WHERE clause
 Spark provides the delete API with the filters parameter `void deleteWhere(Filter[] filters)`, so we need to parse it to SQL WHERE clause.
