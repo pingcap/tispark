@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -17,6 +18,7 @@ package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
 
 class ExceptionTestSuite extends BaseBatchWriteTest("test_datasource_exception_test") {
@@ -27,10 +29,11 @@ class ExceptionTestSuite extends BaseBatchWriteTest("test_datasource_exception_t
 
     val schema = StructType(List(StructField("i", LongType), StructField("s", StringType)))
 
-    val caught = intercept[TiBatchWriteException] {
+    val caught = intercept[NoSuchTableException] {
       tidbWrite(List(row1, row2), schema)
     }
-    assert(caught.getMessage.equals(s"table $dbtable does not exists!"))
+    assert(
+      caught.getMessage.contains(s"Table or view '$table' not found in database '$database'"))
   }
 
   test("Test column does not exist") {

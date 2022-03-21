@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -30,7 +31,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
 
   test("test new catalog") {
     setCurrentDatabase("default")
-    val qSparkDatabase = if (catalogPluginMode) {
+    val qSparkDatabase = if (validateCatalog) {
       "tidb_catalog.tispark_test"
     } else {
       s"${dbPrefix}tispark_test"
@@ -40,17 +41,6 @@ class CatalogTestSuite extends BaseTiSparkTest {
       qTiDB = s"select count(*) from tispark_test.full_data_type_table")
     setCurrentDatabase("tispark_test")
     runTest(s"select count(*) from full_data_type_table")
-  }
-
-  test("test db prefix") {
-    if (catalogPluginMode) {
-      cancel
-    }
-
-    setCurrentDatabase("default")
-    compSparkWithTiDB(
-      qSpark = s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table",
-      qTiDB = s"select count(*) from tispark_test.full_data_type_table")
   }
 
   test("test explain") {
@@ -104,14 +94,6 @@ class CatalogTestSuite extends BaseTiSparkTest {
     spark.sql("desc full_data_type_table").explain(true)
     spark.sql("desc extended full_data_type_table").explain()
 
-    if (!catalogPluginMode) {
-      explainAndRunTest("desc full_data_type_table", skipJDBC = true, rTiDB = tidbDescTable)
-
-      spark.sql("drop view if exists v")
-      spark.sql("create temporary view v as select * from full_data_type_table")
-      explainAndRunTest("desc v", skipJDBC = true, rTiDB = tidbDescTable)
-    }
-
     refreshConnections(true)
     setCurrentDatabase("default")
     spark.sql("drop table if exists t")
@@ -138,75 +120,6 @@ class CatalogTestSuite extends BaseTiSparkTest {
         List("date_of_sale=10-29-2017"))
     runTest("show partitions salesdata", skipJDBC = true, rTiDB = partitionsRes)
     spark.sql("drop table if exists salesdata")
-  }
-
-  test("test support show columns") {
-    if (catalogPluginMode) {
-      cancel("SHOW COLUMNS is only supported with temp views or v1 tables")
-    }
-
-    val columnNames = List(
-      List("id_dt"),
-      List("tp_varchar"),
-      List("tp_datetime"),
-      List("tp_blob"),
-      List("tp_binary"),
-      List("tp_date"),
-      List("tp_timestamp"),
-      List("tp_year"),
-      List("tp_bigint"),
-      List("tp_decimal"),
-      List("tp_double"),
-      List("tp_float"),
-      List("tp_int"),
-      List("tp_mediumint"),
-      List("tp_real"),
-      List("tp_smallint"),
-      List("tp_tinyint"),
-      List("tp_char"),
-      List("tp_nvarchar"),
-      List("tp_longtext"),
-      List("tp_mediumtext"),
-      List("tp_text"),
-      List("tp_tinytext"),
-      List("tp_bit"),
-      List("tp_time"),
-      List("tp_enum"),
-      List("tp_set"))
-
-    spark.sql("create database d1")
-    spark.sql("use d1")
-    spark.sql("create table m(m1 int)")
-    spark.sql("show columns from m").show(200, truncate = false)
-
-    spark
-      .sql("show columns from ${dbPrefix}tispark_test.full_data_type_table")
-      .show(200, truncate = false)
-    spark.sql("use ${dbPrefix}tispark_test")
-    spark.sql("show columns from full_data_type_table").show(200, truncate = false)
-
-    setCurrentDatabase("tispark_test")
-    explainAndRunTest(
-      "show columns from full_data_type_table",
-      skipJDBC = true,
-      rTiDB = columnNames)
-    runTest(
-      s"show columns from ${dbPrefix}tispark_test.full_data_type_table",
-      skipJDBC = true,
-      rTiDB = columnNames)
-  }
-
-  test("test support create table like") {
-    if (catalogPluginMode) {
-      cancel
-    }
-
-    setCurrentDatabase("default")
-    spark.sql("drop table if exists t")
-    spark.sql(s"create table t like ${dbPrefix}tpch_test.nation")
-    spark.sql("show tables").show
-    checkSparkResultContains("show tables", List("default", "t", "false"))
-    spark.sql("show create table t").show(false)
   }
 
   test("test create table as select") {
@@ -362,45 +275,6 @@ class CatalogTestSuite extends BaseTiSparkTest {
     spark.sql("drop table if exists testLogic1")
     spark.sql("drop table if exists testLogic2")
     spark.sql("drop table if exists testLogic3")
-  }
-
-  test("support desc table column") {
-    if (catalogPluginMode) {
-      cancel("Describing columns is not supported for v2 tables")
-    }
-
-    val expectedDescTableColumn =
-      List(List("col_name", "id"), List("data_type", "bigint"), List("comment", "NULL"))
-    val expectedDescExtendedTableColumn =
-      List(
-        List("col_name", "id"),
-        List("data_type", "bigint"),
-        List("comment", "NULL"),
-        List("min", "NULL"),
-        List("max", "NULL"),
-        List("num_nulls", "NULL"),
-        List("distinct_count", "NULL"),
-        List("avg_col_len", "NULL"),
-        List("max_col_len", "NULL"),
-        List("histogram", "NULL"))
-
-    tidbStmt.execute("DROP TABLE IF EXISTS `t`")
-    tidbStmt.execute("""CREATE TABLE `t` (
-        |  `id` bigint(20) DEFAULT NULL
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
-      """.stripMargin)
-
-    setCurrentDatabase("tispark_test")
-    // column does not exist
-    intercept[AnalysisException] {
-      spark.sql("desc t a").show()
-    }
-
-    explainAndRunTest("desc t id", skipJDBC = true, rTiDB = expectedDescTableColumn)
-    explainAndRunTest(
-      "desc extended t id",
-      skipJDBC = true,
-      rTiDB = expectedDescExtendedTableColumn)
   }
 
   test("test schema change") {

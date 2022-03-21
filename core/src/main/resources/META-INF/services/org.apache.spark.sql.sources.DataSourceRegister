@@ -1,1 +1,1 @@
-com.pingcap.tispark.TiDBDataSource
+com.pingcap.tispark.v2.TiDBTableProvider

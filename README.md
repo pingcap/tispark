@@ -96,30 +96,41 @@ TiSpark relies on the availability of TiKV clusters and PDs. You also need to se
 Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](https://github.com/pingcap/tispark/tree/master/tikv-client) library.
 
 ## Quick Start
+### Configuration
+Before everything starts, ensure that you have below configs in spark.
+```
+spark.sql.extensions  org.apache.spark.sql.TiExtensions
+spark.tispark.pd.addresses  ${your_pd_adress}
+```
 
-Before everything starts,
+For TiSpark version >= 2.5.0, please add the following additional configuration to enable `Catalog` provided by `spark-3.0`.
+```
+spark.sql.catalog.tidb_catalog  org.apache.spark.sql.catalyst.catalog.TiCatalog
+spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_adress}
+```
 
-+ add `spark.sql.extensions  org.apache.spark.sql.TiExtensions` in `spark-defaults.conf`.
-+ ensure that `spark.tispark.pd.addresses` is set correctly.
-
-From Spark-shell:
+### Start Spark
 
 ```
 ./bin/spark-shell --jars /wherever-it-is/tispark-${name_with_version}.jar
 ```
 
-For TiSpark version >= 2.0:
+### Use TiSpark
+For TiSpark version 2.4.x:
 
 ```
-spark.sql("use tpch_test")
-spark.sql("select count(*) from lineitem").show
+spark.sql("use ${database}")
+spark.sql("select count(*) from ${table}").show
 ```
 
-> **Note:**
->
-> If you use TiSpark 2.0+, for spark-submit on Pyspark, `tidbMapDatabase` is still required and `TiExtension` is not supported yet. PingCAP is working on this issue.
+For TiSpark version >= 2.5.0:
 
-## Current Version
+```
+spark.sql("use tidb_catalog.${database}")
+spark.sql("select count(*) from ${table}").show
+```
+
+##  Current Version
 
 ```
 spark.sql("select ti_version()").show
@@ -177,14 +188,6 @@ The configurations in the table below can be put together with `spark-defaults.c
 | `spark.tispark.request.isolation.level` |  `SI` | Isolation level means whether to resolve locks for the underlying TiDB clusters. When you use the "RC", you get the latest version of record smaller than your `tso` and ignore the locks. If you use "SI", you resolve the locks and get the records depending on whether the resolved lock is committed or aborted.  |
 | `spark.tispark.coprocessor.chunk_batch_size` | `1024` | How many rows fetched from Coprocessor |
 | `spark.tispark.isolation_read_engines` | `tikv,tiflash` | List of readable engines of TiSpark, comma separated, storage engines not listed will not be read |
-
-## Spark-3.0 Catalog
-Please use the following configurations to enable `Catalog` provided by `spark-3.0`.
-
-```
-spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
-spark.sql.catalog.tidb_catalog.pd.addresses 127.0.0.1:2379
-```
 
 ## `Log4j` Configuration
 
