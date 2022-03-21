@@ -102,7 +102,7 @@ We can get the handle in the following way, no matter which TiDB version is
 
 We can get row and pk easily, so I will describe how to get the `_tidb_rowid`.
 
-TiSpark support config `spark.tispark.show_rowid` to get `_tidb_rowid`, and this configuration determines the `showRowId` in Catalog. The logic is as follows
+TiSpark support config `spark.tispark.show_rowid` to get `_tidb_rowid`, then this configuration determines the `showRowId` in Catalog. The logic is as follows
 
 <div align="center">
 <img src="imgs/delete-support/rowid.png" alt="rowid"/>
@@ -112,7 +112,7 @@ It is not acceptable to configure `spark.tispark.show_rowid` in the config file.
 
 It also does not work to modify the configuration at runtime for the catalog is cached. We can't change the `showRowId` without clearing the cache, which will affect the performance of TiSpark.
 
-Considering each SQL requires loadTable, we can manually call method copyTableWithRowId when loadTable. This won't affect other SQL and needn't to clear the cache. Then, need to specify when to call copyTableWithRowId. Here are two ways
+Considering each SQL requires loadTable, we can manually call method copyTableWithRowId when loadTable. This won't affect other SQL and needn't clear the cache. Then, specify when to call copyTableWithRowId. Here are two ways
 - Use Spark SQL: The hint is a good choice for SQL, but Spark doesn't provide the extension of hint.
 - Use Read API: Add option `（"tidbRowId","true"）`in Read API.
 
@@ -185,22 +185,22 @@ Since we can not pass options through the DELETE statement. The options required
 
 ### Compatibility Tests
 
-| TiDB version | schema                                   | isCommonHandle  | pkishandle  | _tidb_rowid  |
-|--------------|------------------------------------------|-----------------|-------------|--------------|
-| 5.x          | Cluster index pk (int)                   | false           | true        | no           |
-| 5.x          | Cluster index pk（not int）                | true            | false       | no           |
-| 5.x          | Non cluster index (int)                  | false           | false       | yes          |
-| 5.x          | Non cluster index（not int）               | false           | false       | yes          |
-| 5.x          | no pk                                    | false           | false       | yes          |
-| 4.x          | pk (int) + alter-primary-key = true      | false           | false       |              |
-| 4.x          | pk (int) + alter-primary-key = false     | false           | true        |              |
-| 4.x          | pk (not int) + alter-primary-key = true  | false           | false       |              |
-| 4.x          | pk (not int) + alter-primary-key = false | false           | false       |              |
-| 4.x          | no pk                                    | false           | false       |              |
+| TiDB version | schema                                   | isCommonHandle  | pkishandle  | _tidb_rowid |
+|--------------|------------------------------------------|-----------------|-------------|-------------|
+| 5.x          | Cluster index pk (int)                   | false           | true        | no          |
+| 5.x          | Cluster index pk（not int）                | true            | false       | no          |
+| 5.x          | Non cluster index (int)                  | false           | false       | yes         |
+| 5.x          | Non cluster index（not int）               | false           | false       | yes         |
+| 5.x          | no pk                                    | false           | false       | yes         |
+| 4.x          | pk (int) + alter-primary-key = true      | false           | false       | yes         |
+| 4.x          | pk (int) + alter-primary-key = false     | false           | true        | no          |
+| 4.x          | pk (not int) + alter-primary-key = true  | false           | false       | yes         |
+| 4.x          | pk (not int) + alter-primary-key = false | false           | false       | yes         |
+| 4.x          | no pk                                    | false           | false       | yes         |
 
 ### Benchmark Tests
 
-TODO
+Use Sysbench to do benchmark for delete.
 
 ## References
 - [What's new in Apache Spark 3.0](https://www.waitingforcode.com/apache-spark-sql/what-new-apache-spark-3-delete-update-merge-api-support/read)
