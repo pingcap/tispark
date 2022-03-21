@@ -1,0 +1,24 @@
+@startuml
+
+start
+
+group deleteWhere
+: Parse filters to WHERE clause;
+: Query data from TiDB;
+endgroup
+group TiDBDelete
+: Check data and schema;
+group WriteUtil
+: Convert Spark row to TiKV row;
+: Extract handle;
+: Encode record & index;
+endgroup
+group TwoPhaseCommitUtil
+: Excute 2PC;
+endgroup
+endgroup
+
+
+
+stop
+@enduml
