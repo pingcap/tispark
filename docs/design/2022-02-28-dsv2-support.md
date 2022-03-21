@@ -26,11 +26,11 @@ TiSpark uses Datasource API V1 in writing API and catalyst, And spark 3.0 has in
 - support delete
 - support spark streaming
 
-Of course, there are lots of other benefits for V2. I think V2 is most likely going to be the key way to interact with datasource in the future for Spark, so I'd like to replace V1 API with V2.
+There are lots of other benefits for V2. I think V2 is most likely going to be the key way to interact with datasource in the future for Spark, so I'd like to replace V1 API to V2 API.
 
 ## Detailed Design
 
-DSV2 support is a big change to TiSpark framework. I think we need to do the following things:
+DSV2 support is a big change to TiSpark framework. We need to do the following things:
 
 | Task                                  | Influence                                     |
 |---------------------------------------|-----------------------------------------------|
@@ -67,18 +67,18 @@ TiSpark expanded spark with catalyst extension. However, it depends on `TiDBRela
    - It's schema information should not depend on v1
    - More information is needed: Tisession, table, TiTableReference, SqlContext
    - Extend more interface: SupportsRead interface
-3. remove `TiResolutionRuleV2`
+3. Remove `TiResolutionRuleV2`
 4. Replace the use of `TiDBRelation` in `TiAuthorizationRule` and `TiStrategy`
-5. move the `TiAuthorizationRule` from wrapper to core becauase it is compatible with spark 3.0 and 3.1 now
-6. move the  `TiStrategy` from core to wrapper becauase the logical plan `DataSourceV2ScanRelation` is different in spark 3.0 and 3.1
+5. Move the `TiAuthorizationRule` from wrapper to core becauase it is compatible with spark 3.0 and 3.1 now
+6. Move the  `TiStrategy` from core to wrapper becauase the logical plan `DataSourceV2ScanRelation` is different in spark 3.0 and 3.1
 
       
 ### Replace API v1 to v2
 API v2 has plenty of differences from v1
-- Provides job-level consistency in BatchWrite and patition-level consistency in DataWrite
+- Provides job-level consistency in BatchWrite and partition-level consistency in DataWrite
 - Supports Streaming
-- No longer depend on dataframe/dataset, SparkSession and saveMode
-- Data is processed by every record in DataWrite.write
+- No longer depend on RDD, SparkSession and saveMode
+- Data is processed by single record in DataWrite.write
 
 The main APIs are described in the picture:
 
@@ -91,10 +91,12 @@ We will extend SupportsRead and SupportsWrite.
 Because we replace API v1 with v2, `dataset.writeto` is available now. but it is experimental because it will involved with catalyst
 
 ### rewrite writing code
+> Not implemented yet
+
 Now, the main write step in TiSpark 
 1. Check
 2. Pre-calculate
-3. 2PCis 
+3. 2PC
 
 The detail is as follows:
 
@@ -102,24 +104,24 @@ The detail is as follows:
 
 
 Original write runs on spark driver, Ir relies heavily on RDD, and it needs TiConext which contains SparkSession and TiSession. 
-In DataSouce API V2, write runs in spark executor, It don't have concepts of RDD or SparkSession. Data will be processed in partition with every single record rather than the whole RDD.
+In DataSouce API V2, write runs in spark executor, it don't have concepts of RDD or SparkSession. Data will be processed with every single record rather than the whole RDD.
 
 So, writing codes needs to be changed a lot:
-1. processing based on global data, like deduplication，pre split region, etc.
-2. pre-write primary key
-3. processing based on partition data
-   - transform and process datadata
-   - Cache data to a batch in memory
-   - Once the data reaches the max batch number pre-write secondary key
-4. after all partition's data have been handled, commit premary key
+1. Processing the whole data, like deduplication，pre split region, etc.
+2. Pre-write primary key
+3. Processing the single data
+   - transform data
+   - cache data to a batch in memory
+   - Pre-write secondary key Once the data reaches the max batch number
+4. After all data have been pre-write, commit primary key
 
 ![image alt text](imgs/new_write.png)
 
-But now we don't do it for two reasons
+We don't implement it temporarily for two reasons
 - we need to change the api expose to user because we have to deal with the global data in advance
 - the optimization of the catalyst conflicts with the write logical. such as data type convert
 
-we will do this task after solving these two problems.
+We will do this task after solving these two problems.
 
 ## Compatibility
 
@@ -129,7 +131,7 @@ we will do this task after solving these two problems.
 spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
 spark.sql.catalog.tidb_catalog.pd.addresses $pdAdress
 ```
-- use catalog for tidb before sql `spark.sql("use tidb_catalog")`
+- Use catalog for tidb before sql `spark.sql("use tidb_catalog")`
 
 2.The following usage is no longer supported, because is a datasource v1 read/write path
 ```
