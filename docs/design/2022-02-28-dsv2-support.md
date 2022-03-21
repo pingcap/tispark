@@ -11,7 +11,7 @@
     * [Obsolete non catalog plugin mode](#obsolete-non-catalog-plugin-mode)
     * [Move the dependency of V1 in Catalyst](#move-the-dependency-of-v1-in-catalyst)
     * [Replace API v1 to v2](#replace-api-v1-to-v2)
-    * [rewrite writing code](#rewrite-writing-code)
+    * [Rewrite writing code](#rewrite-writing-code)
 * [Compatibility](#compatibility)
 * [Test Design](#test-design)
 * [Impacts & Risks](#impacts--risks)
