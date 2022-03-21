@@ -5,18 +5,23 @@
 
 ## Table of Contents
 
-* [Introduction](#introduction)
-* [Motivation or Background](#motivation-or-background)
-* [Detailed Design](#detailed-design)
-* [Compatibility](#compatibility)
-* [Test Design](#test-design)
-    * [Functional Tests](#functional-tests)
-    * [Scenario Tests](#scenario-tests)
-    * [Compatibility Tests](#compatibility-tests)
-    * [Benchmark Tests](#benchmark-tests)
-* [Impacts & Risks](#impacts--risks)
-* [Investigation & Alternatives](#investigation--alternatives)
-* [References](#references)
+- [Introduction](#introduction)
+- [Motivation or Background](#motivation-or-background)
+- [Goals](#goals)
+- [API](#api)
+- [Detailed Design](#detailed-design)
+  * [Parse filters to WHERE clause](#parse-filters-to-where-clause)
+  * [Query Data ByPass TiDB](#query-data-bypass-tidb)
+  * [Check data and schema](#check-data-and-schema)
+  * [Extract handle](#extract-handle)
+  * [Encode record & index](#encode-record---index)
+  * [2PC](#2pc)
+- [Compatibility](#compatibility)
+- [Test Design](#test-design)
+  * [Functional Tests](#functional-tests)
+  * [Compatibility Tests](#compatibility-tests)
+  * [Benchmark Tests](#benchmark-tests)
+- [References](#references)
 
 ## Introduction
 
@@ -104,20 +109,21 @@ It is not acceptable to configure `spark.tispark.show_rowid` in the config file.
 It also does not work to modify the configuration at runtime for the catalog is cached. We can't change the `showRowId` without clearing the cache, which will affect the performance of TiSpark.
 
 Considering each SQL requires loadTable, we can manually call method copyTableWithRowId when loadTable. This won't affect other SQL and doesn't have problems with cache. Next, we need to distinguish when to call copyTableWithRowId
-- Spark SQL: The hint is a good choice for SQL, but Spark doesn't provide the extent of hint.
-- Read API: We can also add option `（"_tidb_rowid","true"）`in Read API.
+- Spark SQL: The hint is a good choice for SQL, but Spark doesn't provide the extension of hint.
+- Read API: We can also add option `（"tidbRowId","true"）`in Read API.
 
-In addition, we need to remove the dependency of TiDBOption in Read API, which is needed by write rather than read. Then call read with the option and the WHERE clause to get the data we want.
-
+In conclusion, we will use Read API with `tidbRowId` option and then call the `copyTableWithRowId` when the table is loaded.
 ```
 sparkSession.read
   .format("tidb")
   .option("database", databaseName)
   .option("table", tableName)
-  .option("_tidb_rowid","true")
+  .option("tidbRowId","true")
   .load()
   .filter(filterWhereClause)
 ```  
+> The TiDBOption in Read API will block the read. It needs to be removed for is required by write rather than read. 
+
 
 ### Check data and schema
 Do the following checks
@@ -142,8 +148,8 @@ Encode record and index into `(key, value)`, so we can insert them into TiKV.
 
 |         | key                                | value           |
 |---------|------------------------------------|-----------------|
-| record  | tableId + handle                   | Array[Byte](0)  |
-| index   | tableId + indexId for every index  | Array[Byte](0)  |
+| record  | tableId + handle                   | Array[Byte] (0) |
+| index   | tableId + indexId for every index  | Array[Byte] (0) |
 
 Notice that when we encode the index, we need to exclude the primary key in isCommonHandle. Because we have encoded it when we encode the record.
 
