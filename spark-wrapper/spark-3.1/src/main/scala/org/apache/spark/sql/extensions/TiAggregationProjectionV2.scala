@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -24,6 +25,10 @@ import org.apache.spark.sql.execution.datasources.v2.{
   DataSourceV2ScanRelation
 }
 
+/**
+ * I'm afraid that the same name with the object under the spark-wrapper/spark3.0 will lead to some problems.
+ * Although the same name will pass the itegration test
+ */
 object TiAggregationProjectionV2 {
   type ReturnType = (Seq[Expression], LogicalPlan, TiDBTable, Seq[NamedExpression])
 

@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -20,7 +21,7 @@ import com.pingcap.tispark.TiDBRelation
 import com.pingcap.tispark.write.{TiDBOptions, TiDBWriter}
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession, TiExtensions}
-import org.apache.spark.sql.connector.catalog.{Table, TableProvider}
+import org.apache.spark.sql.connector.catalog.{Identifier, Table, TableProvider}
 import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.sources.{BaseRelation, CreatableRelationProvider, DataSourceRegister}
 import org.apache.spark.sql.types.StructType
@@ -62,7 +63,18 @@ class TiDBTableProvider
 
   override def shortName(): String = "tidb"
 
-  // TODO: replace v1 path in next pr
+  def extractIdentifier(options: CaseInsensitiveStringMap): Identifier = {
+    require(options.get("database") != null, "Option 'database' is required.")
+    require(options.get("table") != null, "Option 'table' is required.")
+    Identifier.of(Array(options.get("database")), options.get("table"))
+  }
+
+  def extractCatalog(options: CaseInsensitiveStringMap): String = {
+    "tidb_catalog"
+  }
+
+  // DF.write still go v1 path now
+  // Because v2 path will go through catalyst, which may block something like datatype convert.
   override def createRelation(
       sqlContext: SQLContext,
       mode: SaveMode,
@@ -70,24 +82,6 @@ class TiDBTableProvider
       data: DataFrame): BaseRelation = {
     val options = new TiDBOptions(parameters)
     TiDBWriter.write(data, sqlContext, mode, options)
-    createRelation(sqlContext, parameters)
-  }
-
-  def createRelation(sqlContext: SQLContext, parameters: Map[String, String]): BaseRelation = {
-
-    val options = new TiDBOptions(parameters)
-    val sparkSession = sqlContext.sparkSession
-
-    TiExtensions.getTiContext(sparkSession) match {
-      case Some(tiContext) =>
-        val ts = tiContext.tiSession.getTimestamp
-        TiDBRelation(
-          tiContext.tiSession,
-          options.getTiTableRef(tiContext.tiConf),
-          tiContext.meta,
-          ts,
-          Some(options))(sqlContext)
-      case None => throw new TiBatchWriteException("TiExtensions is disable!")
-    }
+    TiDBRelation(sqlContext)
   }
 }

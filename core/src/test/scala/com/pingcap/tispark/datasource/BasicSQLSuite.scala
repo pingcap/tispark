@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -20,6 +21,14 @@ import org.apache.spark.sql.Row
 
 import scala.util.Random
 
+/**
+ * Ignore the test in this suit, because we don't support them anymore.
+ * - as for select: use tidb_catalog to read
+ * - as for insert: use write api to write
+ * Insert statement in tidb_catalog is not able to support in two reasons:
+ * 1. options can't be passed by sql
+ * 2. insert statement will involve with catalyst，which may conflict with write logical. such as data type conversion
+ */
 class BasicSQLSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_sql") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
@@ -32,7 +41,6 @@ class BasicSQLSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_
     jdbcUpdate(s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')")
   }
 
-  // temporarily not supported
   ignore("Test Select") {
     testSelectSQL(Seq(row1, row2))
   }

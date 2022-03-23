@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -73,5 +74,16 @@ class BasicBatchWriteSuite extends BaseBatchWriteWithoutDropTableTest("test_data
     assert(
       caught.getMessage
         .equals("SaveMode: Overwrite is not supported. TiSpark only support SaveMode.Append."))
+  }
+
+  // Experimental
+  test("Test Datasource api v2 write") {
+    jdbcUpdate(s"drop table if exists $dbtable")
+    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
+    jdbcUpdate(s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')")
+    val data: RDD[Row] = sc.makeRDD(List(row3, row4))
+    val df = sqlContext.createDataFrame(data, schema)
+    df.writeTo(s"tidb_catalog.$database.$table").options(tidbOptions).append()
+    testTiDBSelect(Seq(row1, row2, row3, row4))
   }
 }
