@@ -36,15 +36,18 @@ Delete operations are becoming more and more important for many big-data workflo
 ## Goals
 **Must have**
 - Support delete bypass TiDB and provide friendly API with spark SQL
-- Compatible with TiDB 4.x and 5.x 
+- Compatible with TiDB 4.x and 5.x
 
 **Nice to have**
 - Optimize the code in the write feature which can be reused. Because write and delete have similar logic. However, the code in the write is hard to reuse.
+- Auth for delete
 - User doc
 
 **Not Support**
 - Delete without WHERE clause
-- Don't support delete statement with subQuery
+- Delete with subQuery
+- Delete from partition table
+- Delete with Pessimistic Transaction Mode
 
 ## API
 Use spark SQL to execute delete in TiSpark.
@@ -182,6 +185,7 @@ Since we can not pass options through the DELETE statement. The options required
 - WHERE clause test
 - Data type test
 - Can not affect other features. For example, SELECT statement after delete should not contain `_tidb_rowid`
+- Delete conflict test
 
 ### Compatibility Tests
 
