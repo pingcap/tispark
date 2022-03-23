@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -101,7 +102,7 @@ case class ColumnarCoprocessorRDD(
  * RegionTaskExec will downgrade a index scan plan to table scan plan if handles retrieved from one
  * region exceed spark.tispark.plan.downgrade.index_threshold in your spark config.
  *
- * Refer to code in [[com.pingcap.tispark.TiDBRelation]] and [[ColumnarCoprocessorRDD]] for further details.
+ * Refer to code in [[com.pingcap.tispark.v2.TiDBTable]] and [[ColumnarCoprocessorRDD]] for further details.
  *
  */
 case class ColumnarRegionTaskExec(

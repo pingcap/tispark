@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -20,6 +21,7 @@ class MultipleSparkSessionTestSuite extends BaseTiSparkTest {
     val sparkSession1 = spark
     assert(sparkSession1.sql("select ti_version()").count() === 1)
     val sparkSession2 = sparkSession1.newSession()
+    sparkSession2.sql("use tidb_catalog")
     assert(sparkSession2.sql("select ti_version()").count() === 1)
   }
 }

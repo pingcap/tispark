@@ -1,0 +1,20 @@
+@startuml
+
+start
+group saveToTiDB
+: processing based on global data;
+: call write api;
+endgroup
+group BatchWrite
+: pre-write primary key;
+endgroup
+group DataWriter
+: processing based on partition data;
+: pre-write secondary key;
+endgroup
+group BatchWrite
+: commit primary key;
+endgroup
+stop
+
+@enduml
