@@ -16,6 +16,7 @@
   * [Extract handle](#extract-handle)
   * [Encode record & index](#encode-record---index)
   * [2PC](#2pc)
+- [Auth Design](#auth-design)
 - [Compatibility](#compatibility)
 - [Test Design](#test-design)
   * [Functional Tests](#functional-tests)
@@ -48,6 +49,7 @@ Delete operations are becoming more and more important for many big-data workflo
 - Delete with subQuery
 - Delete from partition table
 - Delete with Pessimistic Transaction Mode
+- Update TableStatistics to TiDB
 
 ## API
 Use spark SQL to execute delete in TiSpark.
@@ -172,6 +174,14 @@ Since we can not pass options through the DELETE statement. The options required
 6. stop primary key TTL update
 7. executors secondary commit
 
+## Auth Design
+DELETE statement need to be authenticated in auth mode.
+
+Users need `SELECT` and `DELETE` privileges to execute the DELETE statement. TiSpark has checked `SELECT` privilege when load table and query from TiDB. So, we just need to check `DELETE` privilege
+1. match `DeleteFromTable` in `TiAuthorizationRule` and call auth
+2. add `authorizeForDelete` method to check privilege in `TiAuthorization`
+
+
 ## Compatibility
 
 - TiDB support: 4.x and 5.x
@@ -183,9 +193,9 @@ Since we can not pass options through the DELETE statement. The options required
 ### Functional Tests
 
 - WHERE clause test
-- Data type test
+- Not support test
 - Can not affect other features. For example, SELECT statement after delete should not contain `_tidb_rowid`
-- Delete conflict test
+- Auth test
 
 ### Compatibility Tests
 
