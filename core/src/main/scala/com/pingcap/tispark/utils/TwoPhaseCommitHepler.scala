@@ -64,20 +64,22 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
   private val lockTTLSeconds: Long = options.getLockTTLSeconds(tikvSupportUpdateTTL)
   @transient private var ttlManager: TTLManager = _
 
-  @transient private val ti2PCClient = new TwoPhaseCommitter(
-    tiConf,
-    startTs,
-    lockTTLSeconds * 1000 + TTLManager.calculateUptime(tiSession.createTxnClient(), startTs),
-    options.txnPrewriteBatchSize,
-    options.txnCommitBatchSize,
-    options.writeBufferSize,
-    options.writeThreadPerTask,
-    options.retryCommitSecondaryKey,
-    options.prewriteMaxRetryTimes)
+  @transient private var ti2PCClient: TwoPhaseCommitter = _
 
   // Driver primary pre-write
   def prewritePrimaryKeyByDriver(primaryKey: SerializableKey, primaryRow: Array[Byte]): Unit = {
     logger.info("start to prewritePrimaryKey")
+
+    ti2PCClient = new TwoPhaseCommitter(
+      tiConf,
+      startTs,
+      lockTTLSeconds * 1000 + TTLManager.calculateUptime(tiSession.createTxnClient(), startTs),
+      options.txnPrewriteBatchSize,
+      options.txnCommitBatchSize,
+      options.writeBufferSize,
+      options.writeThreadPerTask,
+      options.retryCommitSecondaryKey,
+      options.prewriteMaxRetryTimes)
 
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(options.prewriteBackOfferMS)
