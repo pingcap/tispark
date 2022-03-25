@@ -64,7 +64,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
   private val lockTTLSeconds: Long = options.getLockTTLSeconds(tikvSupportUpdateTTL)
   @transient private var ttlManager: TTLManager = _
 
-  private val ti2PCClient = new TwoPhaseCommitter(
+  @transient private val ti2PCClient = new TwoPhaseCommitter(
     tiConf,
     startTs,
     lockTTLSeconds * 1000 + TTLManager.calculateUptime(tiSession.createTxnClient(), startTs),

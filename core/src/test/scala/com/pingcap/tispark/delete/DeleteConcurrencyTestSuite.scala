@@ -183,4 +183,9 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
     new TiDBOptions(options)
   }
 
+  override def afterAll(): Unit = {
+    executor.shutdownNow()
+    super.afterAll()
+  }
+
 }
