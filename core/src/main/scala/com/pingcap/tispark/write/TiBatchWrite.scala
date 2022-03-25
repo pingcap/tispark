@@ -82,7 +82,7 @@ class TiBatchWrite(
   @transient private var tiBatchWriteTables: List[TiBatchWriteTable] = _
   @transient private var startMS: Long = _
   private var startTs: Long = _
-  private val twoPhaseCommitHepler: TwoPhaseCommitHepler = TwoPhaseCommitHepler(startTs, options)
+  private var twoPhaseCommitHepler: TwoPhaseCommitHepler = _
 
   private def write(): Unit = {
     try {
@@ -252,6 +252,8 @@ class TiBatchWrite(
       logger.info(s"sleep ${options.sleepBeforePrewritePrimaryKey} ms for test")
       Thread.sleep(options.sleepBeforePrewritePrimaryKey)
     }
+
+    twoPhaseCommitHepler = TwoPhaseCommitHepler(startTs, options)
 
     // driver primary pre-write
     twoPhaseCommitHepler.prewritePrimaryKeyByDriver(primaryKey, primaryRow)
