@@ -82,6 +82,7 @@ class TiBatchWrite(
   @transient private var tiBatchWriteTables: List[TiBatchWriteTable] = _
   @transient private var startMS: Long = _
   private var startTs: Long = _
+  private val twoPhaseCommitHepler: TwoPhaseCommitHepler = TwoPhaseCommitHepler(startTs, options)
 
   private def write(): Unit = {
     try {
@@ -109,9 +110,7 @@ class TiBatchWrite(
     }
 
     try {
-      if (ttlManager != null) {
-        ttlManager.close()
-      }
+      twoPhaseCommitHepler.close()
     } catch {
       case _: Throwable =>
     }
@@ -254,7 +253,6 @@ class TiBatchWrite(
       Thread.sleep(options.sleepBeforePrewritePrimaryKey)
     }
 
-    val twoPhaseCommitHepler: TwoPhaseCommitHepler = TwoPhaseCommitHepler(startTs, options)
     // driver primary pre-write
     twoPhaseCommitHepler.prewritePrimaryKeyByDriver(primaryKey, primaryRow)
 
@@ -269,10 +267,15 @@ class TiBatchWrite(
 
     // check connection lost if using lock table
     checkConnectionLost()
+    // checkschema if not useTableLock
+    val schemaUpdateTimes = if (useTableLock) {
+      Nil
+    } else {
+      tiBatchWriteTables.map(_.buildSchemaUpdateTime())
+    }
     // driver primary commit
-    val commitTs = twoPhaseCommitHepler.commitPrimaryKeyWithRetryByDriver(
-      primaryKey,
-      tiBatchWriteTables.map(_.buildSchemaUpdateTime()))
+    val commitTs =
+      twoPhaseCommitHepler.commitPrimaryKeyWithRetryByDriver(primaryKey, schemaUpdateTimes)
 
     // unlock table
     tiBatchWriteTables.foreach(_.unlockTable())

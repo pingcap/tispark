@@ -64,21 +64,21 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
   private val lockTTLSeconds: Long = options.getLockTTLSeconds(tikvSupportUpdateTTL)
   @transient private var ttlManager: TTLManager = _
 
+  private val ti2PCClient = new TwoPhaseCommitter(
+    tiConf,
+    startTs,
+    lockTTLSeconds * 1000 + TTLManager.calculateUptime(tiSession.createTxnClient(), startTs),
+    options.txnPrewriteBatchSize,
+    options.txnCommitBatchSize,
+    options.writeBufferSize,
+    options.writeThreadPerTask,
+    options.retryCommitSecondaryKey,
+    options.prewriteMaxRetryTimes)
+
   // Driver primary pre-write
   def prewritePrimaryKeyByDriver(primaryKey: SerializableKey, primaryRow: Array[Byte]): Unit = {
     logger.info("start to prewritePrimaryKey")
 
-    val ti2PCClient =
-      new TwoPhaseCommitter(
-        tiConf,
-        startTs,
-        lockTTLSeconds * 1000 + TTLManager.calculateUptime(tiSession.createTxnClient(), startTs),
-        options.txnPrewriteBatchSize,
-        options.txnCommitBatchSize,
-        options.writeBufferSize,
-        options.writeThreadPerTask,
-        options.retryCommitSecondaryKey,
-        options.prewriteMaxRetryTimes)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(options.prewriteBackOfferMS)
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
@@ -130,17 +130,6 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
   def commitPrimaryKeyWithRetryByDriver(
       primaryKey: SerializableKey,
       schemaUpdateTimes: List[SchemaUpdateTime]): Long = {
-    val ti2PCClient =
-      new TwoPhaseCommitter(
-        tiConf,
-        startTs,
-        lockTTLSeconds * 1000 + TTLManager.calculateUptime(tiSession.createTxnClient(), startTs),
-        options.txnPrewriteBatchSize,
-        options.txnCommitBatchSize,
-        options.writeBufferSize,
-        options.writeThreadPerTask,
-        options.retryCommitSecondaryKey,
-        options.prewriteMaxRetryTimes)
 
     var tryCount = 1
     var error: Throwable = null
@@ -148,7 +137,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
     while (!break && tryCount <= options.commitPrimaryKeyRetryNumber) {
       tryCount += 1
       try {
-        return commitPrimaryKey(startTs, primaryKey, ti2PCClient, schemaUpdateTimes)
+        return commitPrimaryKey(startTs, primaryKey, schemaUpdateTimes)
       } catch {
         case e: TiBatchWriteException =>
           error = e
@@ -165,7 +154,6 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
   private def commitPrimaryKey(
       startTs: Long,
       primaryKey: SerializableKey,
-      ti2PCClient: TwoPhaseCommitter,
       schemaUpdateTimes: List[SchemaUpdateTime]): Long = {
     val commitTsAttempt = tiSession.getTimestamp.getVersion
     // check commitTS

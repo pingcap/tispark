@@ -49,12 +49,12 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
     jdbcUpdate(s"create table $dbtable(i int, s int,PRIMARY KEY (i))")
     jdbcUpdate(s"insert into $dbtable values(0,0),(1,1),(2,2),(3,3)")
 
-    val tiDBOptions = getTiDBOptions(sleepTime * 2)
+    val tiDBOptions = getTiDBOptions(sleepTime * 5)
     val df = spark.sql(s"select * from $dbtable")
 
     // change schema during delete
     executor.execute(() => {
-      Thread.sleep(sleepTime)
+      Thread.sleep(sleepTime * 2)
       jdbcUpdate(s"alter table $dbtable ADD t varchar(255)")
     })
 
@@ -108,7 +108,7 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
         .options(tidbOptions)
         .option("database", database)
         .option("table", table)
-        .option("sleepAfterPrewriteSecondaryKey", sleepTime * 10)
+        .option("sleepAfterPrewriteSecondaryKey", sleepTime * 100)
         .mode("append")
         .save()
     })
