@@ -38,7 +38,7 @@ import java.util.concurrent.{ExecutorService, Executors}
  */
 class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurrency") {
 
-  private val sleepTime = 5000
+  private val sleepTime = 10000
   val executor: ExecutorService = Executors.newCachedThreadPool()
 
   // delete && DDL
@@ -87,7 +87,7 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
     assert(expected == actual)
   }
 
-  // delete && write without (success)
+  // delete && write without conflict(success)
   test("Delete & Write without conflict") {
     val table = s"delete_write_no_conflict"
     val dbtable = s"$database.$table"

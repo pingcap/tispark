@@ -28,15 +28,16 @@ import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tispark.write.TiBatchWrite.{SparkRow, TiRow}
 import com.pingcap.tispark.write.{SerializableKey, WrappedEncodedRow, WrappedRow}
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.DataFrame
 
 import scala.collection.JavaConverters._
 
 object WriteUtil {
 
   /**
-   * Convert sparkRow 2 TiKVRow
+   * Convert spark's row to tikv row. We do not allocate handle for no pk case.
+   * allocating handle id will be finished after we check conflict.
    * @param sparkRow
    * @param tiTableInfo
    * @param df
@@ -76,8 +77,11 @@ object WriteUtil {
    * @return
    */
   def extractHandle(row: TiRow, tiTableInfo: TiTableInfo): Handle = {
-    val handleCol = tiTableInfo.getPKIsHandleColumn
+    // If handle ID is changed when update, update will remove the old record first,
+    // and then call `AddRecord` to add a new record.
+    // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
 
+    val handleCol = tiTableInfo.getPKIsHandleColumn
     if (tiTableInfo.isCommonHandle) {
       var dataTypeList: List[DataType] = Nil
       var dataList: List[Object] = Nil
@@ -101,8 +105,8 @@ object WriteUtil {
         .asInstanceOf[java.lang.Long]
       new IntHandle(id)
     } else {
-      // TODO provide information
-      throw new TiBatchWriteException("Only support extractHandle isCommonHandle or isPkHandle")
+      throw new TiBatchWriteException(
+        "Cannot extract handle from non-isCommonHandle and non-isPkHandle")
     }
   }
 
@@ -150,6 +154,15 @@ object WriteUtil {
         Some((index.getId, generateIndexRDD(rdd, index, tiTableInfo, remove)))
       }
     }.toMap
+  }
+
+  def generateIndexKV(
+      sc: SparkContext,
+      rdd: RDD[WrappedRow],
+      tiTableInfo: TiTableInfo,
+      remove: Boolean): RDD[WrappedEncodedRow] = {
+    val rdds = generateIndexKVs(rdd, tiTableInfo, remove)
+    rdds.values.foldLeft(sc.emptyRDD[WrappedEncodedRow])(_ ++ _)
   }
 
   private def generateIndexRDD(

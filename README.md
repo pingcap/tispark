@@ -115,7 +115,7 @@ spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_adress}
 ./bin/spark-shell --jars /wherever-it-is/tispark-${name_with_version}.jar
 ```
 
-### Use TiSpark
+### Read with TiSpark
 For TiSpark version 2.4.x:
 
 ```

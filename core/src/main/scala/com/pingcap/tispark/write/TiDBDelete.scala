@@ -81,10 +81,11 @@ case class TiDBDelete(
     // encode record & index
     val tableId = tiTableInfo.getId
     val recordKV = WriteUtil.generateRecordKVToDelete(persistDeletionRDD, tableId)
-    val indexKVs = WriteUtil.generateIndexKVs(persistDeletionRDD, tiTableInfo, remove = true)
-    val indexKV =
-      indexKVs.values
-        .foldLeft(SparkSession.active.sparkContext.emptyRDD[WrappedEncodedRow])(_ ++ _)
+    val indexKV = WriteUtil.generateIndexKV(
+      SparkSession.active.sparkContext,
+      persistDeletionRDD,
+      tiTableInfo,
+      remove = true)
     val keyValueRDD = (recordKV ++ indexKV).map(obj => (obj.encodedKey, obj.encodedValue))
 
     //persist KeyValueRDD

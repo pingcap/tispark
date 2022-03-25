@@ -18,21 +18,14 @@ package com.pingcap.tispark.write
 
 import java.util
 import com.pingcap.tikv.allocator.RowIDAllocator
-import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
-import com.pingcap.tikv.exception.{
-  ConvertOverflowException,
-  TiBatchWriteException,
-  TiDBConvertException
-}
-import com.pingcap.tikv.key.{CommonHandle, Handle, IndexKey, IntHandle, RowKey}
+import com.pingcap.tikv.codec.TableCodec
+import com.pingcap.tikv.exception.TiBatchWriteException
+
+import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta._
-import com.pingcap.tikv.row.ObjectRowImpl
-import com.pingcap.tikv.types.DataType.{COLUMN_VERSION_FLAG, EncodeType}
-import com.pingcap.tikv.types.{DataType, IntegerType}
 import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient, TiSession}
 import com.pingcap.tispark.TiTableReference
-import com.pingcap.tispark.utils.TiUtil
-import org.apache.spark.SparkContext
+import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions._
@@ -108,12 +101,11 @@ class TiBatchWriteTable(
     }
   }
 
-  def checkSchemaChange(): Unit = {
-    val newTableInfo =
-      tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
-    if (tiTableInfo.getUpdateTimestamp < newTableInfo.getUpdateTimestamp) {
-      throw new TiBatchWriteException("schema has changed during prewrite!")
-    }
+  def buildSchemaUpdateTime(): SchemaUpdateTime = {
+    SchemaUpdateTime(
+      tiTableRef.databaseName,
+      tiTableRef.tableName,
+      tiTableInfo.getUpdateTimestamp)
   }
 
   def preCalculate(startTimeStamp: TiTimestamp): RDD[(SerializableKey, Array[Byte])] = {
@@ -218,7 +210,7 @@ class TiBatchWriteTable(
     }
 
     // spark row -> tikv row
-    val tiRowRdd = rdd.map(row => sparkRow2TiKVRow(row))
+    val tiRowRdd = rdd.map(row => WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf))
 
     // check value not null
     checkValueNotNull(tiRowRdd)
@@ -231,7 +223,7 @@ class TiBatchWriteTable(
     val keyValueRDD = if (constraintCheckIsNeeded) {
       val wrappedRowRdd = if (isCommonHandle || tiTableInfo.isPkHandle) {
         tiRowRdd.map { row =>
-          WrappedRow(row, extractHandle(row))
+          WrappedRow(row, WriteUtil.extractHandle(row, tiTableInfo))
         }
       } else {
         val rowIDAllocator = getRowIDAllocator(count)
@@ -271,7 +263,8 @@ class TiBatchWriteTable(
       }
 
       val wrappedEncodedRecordRdd = generateRecordKV(distinctWrappedRowRdd, remove = false)
-      val wrappedEncodedIndexRdds = generateIndexKVs(distinctWrappedRowRdd, remove = false)
+      val wrappedEncodedIndexRdds =
+        WriteUtil.generateIndexKVs(distinctWrappedRowRdd, tiTableInfo, remove = false)
       val wrappedEncodedIndexRdd: RDD[WrappedEncodedRow] = {
         val list = wrappedEncodedIndexRdds.values.toSeq
         if (list.isEmpty) {
@@ -292,7 +285,11 @@ class TiBatchWriteTable(
           if (r1.encodedValue.isEmpty) r2 else r1
         }
         .map(_._2)
-      val g2 = (wrappedEncodedIndexRdd ++ generateIndexKV(sc, deletion, remove = true))
+      val g2 = (wrappedEncodedIndexRdd ++ WriteUtil.generateIndexKV(
+        sc,
+        deletion,
+        tiTableInfo,
+        remove = true))
         .map(wrappedEncodedRow => (wrappedEncodedRow.encodedKey, wrappedEncodedRow))
         .reduceByKey { (r1, r2) =>
           if (r1.encodedValue.isEmpty) r2 else r1
@@ -309,7 +306,8 @@ class TiBatchWriteTable(
       }
 
       val wrappedEncodedRecordRdd = generateRecordKV(wrappedRowRdd, remove = false)
-      val wrappedEncodedIndexRdds = generateIndexKVs(wrappedRowRdd, remove = false)
+      val wrappedEncodedIndexRdds =
+        WriteUtil.generateIndexKVs(wrappedRowRdd, tiTableInfo, remove = false)
       val wrappedEncodedIndexRdd = sc.union(wrappedEncodedIndexRdds.values.toSeq)
 
       (wrappedEncodedRecordRdd ++ wrappedEncodedIndexRdd).map(obj =>
@@ -617,60 +615,6 @@ class TiBatchWriteTable(
     mutableRdd
   }
 
-  private def extractHandle(row: TiRow): Handle =
-    // If handle ID is changed when update, update will remove the old record first,
-    // and then call `AddRecord` to add a new record.
-    // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
-    if (tiTableInfo.isPkHandle) {
-      val id = row
-        .get(handleCol.getOffset, handleCol.getType)
-        .asInstanceOf[java.lang.Long]
-      new IntHandle(id)
-    } else if (isCommonHandle) {
-      var dataTypeList: List[DataType] = Nil
-      var dataList: List[Object] = Nil
-      var indexColumnList: List[TiIndexColumn] = Nil
-      tiTableInfo.getPrimaryKey.getIndexColumns.forEach { idx =>
-        val col = tiTableInfo.getColumn(idx.getName)
-        dataTypeList = col.getType :: dataTypeList
-        dataList = row.get(col.getOffset, col.getType) :: dataList
-        indexColumnList = idx :: indexColumnList
-      }
-      dataTypeList = dataTypeList.reverse
-      dataList = dataList.reverse
-      indexColumnList = indexColumnList.reverse
-      CommonHandle.newCommonHandle(
-        dataTypeList.toArray,
-        dataList.toArray,
-        indexColumnList.map(_.getLength).toArray)
-    } else {
-      throw new TiBatchWriteException("cannot extract handle non pk is handle table")
-    }
-
-  // convert spark's row to tikv row. We do not allocate handle for no pk case.
-  // allocating handle id will be finished after we check conflict.
-  private def sparkRow2TiKVRow(sparkRow: SparkRow): TiRow = {
-    val fieldCount = sparkRow.size
-    val tiRow = ObjectRowImpl.create(fieldCount)
-    for (i <- 0 until fieldCount) {
-      // TODO: add tiDataType back
-      try {
-        tiRow.set(
-          colsMapInTiDB(colsInDf(i)).getOffset,
-          null,
-          colsMapInTiDB(colsInDf(i)).getType.convertToTiDBType(sparkRow(i)))
-      } catch {
-        case e: ConvertOverflowException =>
-          throw new ConvertOverflowException(
-            e.getMessage,
-            new TiDBConvertException(colsMapInTiDB(colsInDf(i)).getName, e))
-        case e: Throwable =>
-          throw new TiDBConvertException(colsMapInTiDB(colsInDf(i)).getName, e)
-      }
-    }
-    tiRow
-  }
-
   @throws(classOf[TiBatchWriteException])
   private def encodeTiRow(tiRow: TiRow): Array[Byte] = {
     val colSize = tiRow.fieldCount()
@@ -696,62 +640,9 @@ class TiBatchWriteTable(
       enableNewRowFormat)
   }
 
-  // construct unique index and non-unique index and value to be inserted into TiKV
-  // NOTE:
-  //      pk is not handle case is equivalent to unique index.
-  //      for non-unique index, handle will be encoded as part of index key. In contrast, unique
-  //      index encoded handle to value.
-  private def generateUniqueIndexKey(
-      row: TiRow,
-      handle: Handle,
-      index: TiIndexInfo,
-      remove: Boolean): (SerializableKey, Array[Byte]) = {
-    val encodeResult = buildUniqueIndexKey(row, handle, index)
-    val indexKey = encodeResult._1
-    val value = if (remove) {
-      new Array[Byte](0)
-    } else {
-      if (encodeResult._2) {
-        val value = new Array[Byte](1)
-        value(0) = '0'
-        value
-      } else {
-        if (handle.isInt) {
-          val cdo = new CodecDataOutput()
-          cdo.writeLong(handle.intValue())
-          cdo.toBytes
-        } else {
-          TableCodec.genIndexValueForClusteredIndexVersion1(index, handle)
-        }
-      }
-    }
-
-    (indexKey, value)
-  }
-
-  private def generateSecondaryIndexKey(
-      row: TiRow,
-      handle: Handle,
-      index: TiIndexInfo,
-      remove: Boolean): (SerializableKey, Array[Byte]) = {
-    val keys =
-      IndexKey.encodeIndexDataValues(row, index.getIndexColumns, handle, false, tiTableInfo).keys
-    val cdo = new CodecDataOutput()
-    cdo.write(IndexKey.toIndexKey(locatePhysicalTable(row), index.getId, keys: _*).getBytes)
-    cdo.write(handle.encodedAsKey())
-
-    val value: Array[Byte] = if (remove) {
-      new Array[Byte](0)
-    } else {
-      val value = new Array[Byte](1)
-      value(0) = '0'
-      value
-    }
-    (new SerializableKey(cdo.toBytes), value)
-  }
-
   private def buildRowKey(row: TiRow, handle: Handle): SerializableKey = {
-    new SerializableKey(RowKey.toRowKey(locatePhysicalTable(row), handle).getBytes)
+    new SerializableKey(
+      RowKey.toRowKey(WriteUtil.locatePhysicalTable(row, tiTableInfo), handle).getBytes)
   }
 
   private def buildUniqueIndexKey(
@@ -767,7 +658,7 @@ class TiBatchWriteTable(
       tiTableInfo)
     val keys = encodeResult.keys
     val indexKey =
-      IndexKey.toIndexKey(locatePhysicalTable(row), index.getId, keys: _*)
+      IndexKey.toIndexKey(WriteUtil.locatePhysicalTable(row, tiTableInfo), index.getId, keys: _*)
     (new SerializableKey(indexKey.getBytes), encodeResult.appendHandle)
   }
 
@@ -779,7 +670,8 @@ class TiBatchWriteTable(
       (buildRowKey(row, handle), new Array[Byte](0))
     } else {
       (
-        new SerializableKey(RowKey.toRowKey(locatePhysicalTable(row), handle).getBytes),
+        new SerializableKey(
+          RowKey.toRowKey(WriteUtil.locatePhysicalTable(row, tiTableInfo), handle).getBytes),
         encodeTiRow(row))
     }
   }
@@ -799,69 +691,5 @@ class TiBatchWriteTable(
             remove)
         }
       }
-  }
-
-  private def generateIndexRDD(
-      rdd: RDD[WrappedRow],
-      index: TiIndexInfo,
-      remove: Boolean): RDD[WrappedEncodedRow] = {
-    if (index.isUnique) {
-      rdd.map { row =>
-        val (encodedKey, encodedValue) =
-          generateUniqueIndexKey(row.row, row.handle, index, remove)
-        WrappedEncodedRow(
-          row.row,
-          row.handle,
-          encodedKey,
-          encodedValue,
-          isIndex = true,
-          index.getId,
-          remove)
-      }
-    } else {
-      rdd.map { row =>
-        val (encodedKey, encodedValue) =
-          generateSecondaryIndexKey(row.row, row.handle, index, remove)
-        WrappedEncodedRow(
-          row.row,
-          row.handle,
-          encodedKey,
-          encodedValue,
-          isIndex = true,
-          index.getId,
-          remove)
-      }
-    }
-  }
-
-  private def generateIndexKVs(
-      rdd: RDD[WrappedRow],
-      remove: Boolean): Map[Long, RDD[WrappedEncodedRow]] = {
-    tiTableInfo.getIndices.asScala.flatMap { index =>
-      if (tiTableInfo.isCommonHandle && index.isPrimary) {
-        None
-      } else {
-        Some((index.getId, generateIndexRDD(rdd, index, remove)))
-      }
-    }.toMap
-  }
-
-  private def unionAll(
-      sc: SparkContext,
-      rdds: Map[Long, RDD[WrappedEncodedRow]]): RDD[WrappedEncodedRow] = {
-    rdds.values.foldLeft(sc.emptyRDD[WrappedEncodedRow])(_ ++ _)
-  }
-
-  private def generateIndexKV(
-      sc: SparkContext,
-      rdd: RDD[WrappedRow],
-      remove: Boolean): RDD[WrappedEncodedRow] = {
-    unionAll(sc, generateIndexKVs(rdd, remove))
-  }
-
-  // TODO: support physical table later. Need use partition info and row value to
-  // calculate the real physical table.
-  private def locatePhysicalTable(row: TiRow): Long = {
-    tiTableInfo.getId
   }
 }
