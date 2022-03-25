@@ -46,15 +46,16 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
     val table = "delete_ddl"
     val dbtable = s"$database.$table"
     jdbcUpdate(s"drop table if exists $dbtable")
-    jdbcUpdate(s"create table $dbtable(i int, s int,PRIMARY KEY (i))")
+    jdbcUpdate(
+      s"create table $dbtable(i int, s int,PRIMARY KEY (i)/*T![clustered_index] CLUSTERED */)")
     jdbcUpdate(s"insert into $dbtable values(0,0),(1,1),(2,2),(3,3)")
 
-    val tiDBOptions = getTiDBOptions(sleepTime * 5)
+    val tiDBOptions = getTiDBOptions(sleepTime * 2)
     val df = spark.sql(s"select * from $dbtable")
 
     // change schema during delete
     executor.execute(() => {
-      Thread.sleep(sleepTime * 2)
+      Thread.sleep(sleepTime)
       jdbcUpdate(s"alter table $dbtable ADD t varchar(255)")
     })
 
@@ -70,7 +71,8 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
     val table = "delete_read"
     val dbtable = s"$database.$table"
     jdbcUpdate(s"drop table if exists $dbtable")
-    jdbcUpdate(s"create table $dbtable(i int, s int,PRIMARY KEY (i))")
+    jdbcUpdate(
+      s"create table $dbtable(i int, s int,PRIMARY KEY (i)/*T![clustered_index] CLUSTERED */)")
     jdbcUpdate(s"insert into $dbtable values(0,0),(1,1),(2,2),(3,3)")
 
     val expected = spark.sql(s"select count(*) from $dbtable").head().get(0)
@@ -85,14 +87,20 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
     Thread.sleep(sleepTime)
     val actual = spark.sql(s"select count(*) from $dbtable").head().get(0)
     assert(expected == actual)
+
+    // read new value after delete commit
+    Thread.sleep(sleepTime * 2)
+    val actual2 = spark.sql(s"select count(*) from $dbtable").head().get(0)
+    assert(0 == actual2)
   }
 
-  // delete && write without conflict(success)
+  // delete && write without conflict should success
   test("Delete & Write without conflict") {
     val table = s"delete_write_no_conflict"
     val dbtable = s"$database.$table"
     jdbcUpdate(s"drop table if exists $dbtable")
-    jdbcUpdate(s"create table $dbtable(i int, s int,PRIMARY KEY (i))")
+    jdbcUpdate(
+      s"create table $dbtable(i int, s int,PRIMARY KEY (i)/*T![clustered_index] CLUSTERED */)")
     jdbcUpdate(s"insert into $dbtable values(3,3)")
 
     val schema: StructType =
@@ -108,21 +116,25 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
         .options(tidbOptions)
         .option("database", database)
         .option("table", table)
-        .option("sleepAfterPrewriteSecondaryKey", sleepTime * 100)
+        .option("sleepAfterPrewriteSecondaryKey", sleepTime * 3)
         .mode("append")
         .save()
     })
 
     executor.execute(() => {
-      Thread.sleep(sleepTime)
       val tiDBOptions = getTiDBOptions(0)
       TiDBDelete(deleteDf, database, table, Some(tiDBOptions)).delete()
     })
 
     // delete won't be blocked without conflict
-    Thread.sleep(sleepTime * 5)
+    Thread.sleep(sleepTime * 2)
     val actual = spark.sql(s"select count(*) from $dbtable").head().get(0)
     assert(0 == actual)
+
+    // write success too.
+    Thread.sleep(sleepTime * 2)
+    val actual2 = spark.sql(s"select count(*) from $dbtable").head().get(0)
+    assert(2 == actual2)
   }
 
   // delete & write with conflict

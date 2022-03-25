@@ -157,17 +157,19 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
       startTs: Long,
       primaryKey: SerializableKey,
       schemaUpdateTimes: List[SchemaUpdateTime]): Long = {
-    val commitTsAttempt = tiSession.getTimestamp.getVersion
-    // check commitTS
-    if (commitTsAttempt <= startTs) {
-      throw new TiBatchWriteException(
-        s"invalid transaction tso with startTs=$startTs, commitTsAttempt=$commitTsAttempt")
-    }
 
     // for test
     if (options.sleepAfterPrewriteSecondaryKey > 0) {
       logger.info(s"sleep ${options.sleepAfterPrewriteSecondaryKey} ms for test")
       Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
+    }
+
+    val commitTsAttempt = tiSession.getTimestamp.getVersion
+
+    // check commitTS
+    if (commitTsAttempt <= startTs) {
+      throw new TiBatchWriteException(
+        s"invalid transaction tso with startTs=$startTs, commitTsAttempt=$commitTsAttempt")
     }
 
     // check schema change
