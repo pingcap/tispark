@@ -17,6 +17,20 @@ spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_adress}
 ```
 spark.sql("delete from tidb_catalog.db.table where xxx")
 ```
+You can also customize some options 
+```
+spark.conf.set("writeThreadPerTask","3")
+spark.sql("delete from tidb_catalog.db.table where xxx")
+```
+
+
+## Configuration
+
+| Key                   | Default | Description                                             |
+| --------------------- | ------- | ------------------------------------------------------- |
+| writeThreadPerTask    | 2       | Thread number each spark task use to write data to TiKV |
+| prewriteMaxRetryTimes | 64      | Max retry times for prewrite                            |
+
 
 ## Limitation
 - Delete without WHERE clause is not supported.

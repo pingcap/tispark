@@ -61,7 +61,7 @@ import org.apache.spark.sql.sources.{
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
-import org.apache.spark.sql.{SQLContext, execution}
+import org.apache.spark.sql.{SQLContext, SparkSession, execution}
 import org.slf4j.LoggerFactory
 
 import java.sql.{Date, SQLException, Timestamp}
@@ -190,8 +190,19 @@ case class TiDBTable(
 
     df.show()
 
+    // just fake TiDB info to pass the check
+    val tidbOptions = new TiDBOptions(
+      Map(
+        TiDBOptions.TIDB_ADDRESS -> "",
+        TiDBOptions.TIDB_PORT -> "",
+        TiDBOptions.TIDB_USER -> "",
+        TiDBOptions.TIDB_PASSWORD -> "",
+        TiDBOptions.TIDB_DATABASE -> "",
+        TiDBOptions.TIDB_TABLE -> "")
+        ++ sqlContext.sparkSession.conf.getAll)
+
     // Execute delete
-    val tiDBDelete = TiDBDelete(df, databaseName, tableName)
+    val tiDBDelete = TiDBDelete(df, databaseName, tableName, Some(tidbOptions))
     try {
       tiDBDelete.delete()
     } finally {
