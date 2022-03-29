@@ -121,6 +121,18 @@ public class PDMockServer extends PDGrpc.PDImplBase {
     }
   }
 
+  @Override
+  public void getAllStores(
+      org.tikv.kvproto.Pdpb.GetAllStoresRequest request,
+      io.grpc.stub.StreamObserver<org.tikv.kvproto.Pdpb.GetAllStoresResponse> responseObserver) {
+    try {
+      responseObserver.onNext(null);
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      responseObserver.onError(Status.INTERNAL.asRuntimeException());
+    }
+  }
+
   public void start(long clusterId) throws IOException {
     try (ServerSocket s = new ServerSocket(0)) {
       port = s.getLocalPort();
