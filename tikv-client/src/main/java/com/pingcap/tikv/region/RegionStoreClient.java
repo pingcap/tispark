@@ -489,7 +489,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
    * @throws RegionException
    * @throws KeyException
    */
-  public boolean isPrewriteSuccess(BackOffer backOffer, PrewriteResponse resp, long startTs)
+  private boolean isPrewriteSuccess(BackOffer backOffer, PrewriteResponse resp, long startTs)
       throws TiClientInternalException, KeyException, RegionException {
     boolean forWrite = true;
     if (resp == null) {
