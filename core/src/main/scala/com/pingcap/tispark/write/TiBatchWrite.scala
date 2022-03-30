@@ -53,10 +53,10 @@ object TiBatchWrite {
       parameters: Map[String, String]): Unit = {
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
-        new TiBatchWrite(
-          dataToWrite,
-          tiContext,
-          new TiDBOptions(parameters ++ Map(TiDBOptions.TIDB_MULTI_TABLES -> "true"))).write()
+        val tiDBOptions = new TiDBOptions(
+          parameters ++ Map(TiDBOptions.TIDB_MULTI_TABLES -> "true"))
+        tiDBOptions.checkWriteRequired()
+        new TiBatchWrite(dataToWrite, tiContext, tiDBOptions).write()
       case None =>
         throw new TiBatchWriteException("TiExtensions is disable!")
     }

@@ -50,18 +50,15 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
       s"create table $dbtable(i int, s int,PRIMARY KEY (i)/*T![clustered_index] CLUSTERED */)")
     jdbcUpdate(s"insert into $dbtable values(0,0),(1,1),(2,2),(3,3)")
 
-    val tiDBOptions = getTiDBOptions(sleepTime * 2)
-    val df = spark.sql(s"select * from $dbtable")
-
     // change schema during delete
     executor.execute(() => {
       Thread.sleep(sleepTime)
       jdbcUpdate(s"alter table $dbtable ADD t varchar(255)")
     })
 
-    // throw exception when schema change
+    spark.conf.set("sleepAfterPrewriteSecondaryKey", sleepTime * 2)
     the[TiBatchWriteException] thrownBy {
-      TiDBDelete(df, database, table, Some(tiDBOptions)).delete()
+      spark.sql(s"delete from $dbtable where i = 0")
     } should have message "schema has changed during prewrite!"
 
   }
@@ -77,10 +74,9 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
 
     val expected = spark.sql(s"select count(*) from $dbtable").head().get(0)
 
-    val tiDBOptions = getTiDBOptions(sleepTime * 2)
-    val df = spark.sql(s"select * from $dbtable")
     executor.execute(() => {
-      TiDBDelete(df, database, table, Some(tiDBOptions)).delete()
+      spark.conf.set("sleepAfterPrewriteSecondaryKey", sleepTime * 2)
+      spark.sql(s"delete from $dbtable where i >= 0")
     })
 
     // read old value before delete commit
@@ -107,8 +103,6 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
       StructType(List(StructField("i", IntegerType), StructField("s", IntegerType)))
     val data: RDD[Row] = sc.makeRDD(List(Row(1, 1), Row(2, 2)))
     val writeDf = sqlContext.createDataFrame(data, schema)
-    val data2: RDD[Row] = sc.makeRDD(List(Row(3, 3)))
-    val deleteDf = sqlContext.createDataFrame(data2, schema)
 
     executor.execute(() => {
       writeDf.write
@@ -122,19 +116,20 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
     })
 
     executor.execute(() => {
-      val tiDBOptions = getTiDBOptions(0)
-      TiDBDelete(deleteDf, database, table, Some(tiDBOptions)).delete()
+      Thread.sleep(sleepTime)
+      spark.conf.set("sleepAfterPrewriteSecondaryKey", 0)
+      spark.sql(s"delete from $dbtable where i = 3")
     })
 
     // delete won't be blocked without conflict
     Thread.sleep(sleepTime * 2)
     val actual = spark.sql(s"select count(*) from $dbtable").head().get(0)
-    assert(0 == actual)
+    assert(actual == 0)
 
     // write success too.
     Thread.sleep(sleepTime * 2)
     val actual2 = spark.sql(s"select count(*) from $dbtable").head().get(0)
-    assert(2 == actual2)
+    assert(actual2 == 2)
   }
 
   // delete & write with conflict
@@ -150,8 +145,6 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
       StructType(List(StructField("i", IntegerType), StructField("s", IntegerType)))
     val data: RDD[Row] = sc.makeRDD(List(Row(1, 1), Row(2, 2)))
     val writeDf = sqlContext.createDataFrame(data, schema)
-    val data2: RDD[Row] = sc.makeRDD(List(Row(1, 1), Row(2, 2), Row(3, 3)))
-    val deleteDf = sqlContext.createDataFrame(data2, schema)
 
     executor.execute(() => {
       writeDf.write
@@ -166,11 +159,11 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
 
     executor.execute(() => {
       Thread.sleep(sleepTime)
-      val tiDBOptions = getTiDBOptions(0)
-      TiDBDelete(deleteDf, database, table, Some(tiDBOptions)).delete()
+      spark.conf.set("sleepAfterPrewriteSecondaryKey", 0)
+      spark.sql(s"delete from $dbtable where i >= 1")
     })
 
-    // delete during write: will be blocked by write (don't known why)
+    // delete during write: will be blocked by write locked
     Thread.sleep(sleepTime * 2)
     val actual = spark.sql(s"select count(*) from $dbtable").head().get(0)
     assert(1 == actual)
@@ -180,19 +173,6 @@ class DeleteConcurrencyTestSuite extends BaseBatchWriteTest("test_delete_concurr
     Thread.sleep(sleepTime * 5)
     val actual2 = spark.sql(s"select count(*) from $dbtable").head().get(0)
     assert(3 == actual2)
-  }
-
-  private def getTiDBOptions(sleepAfterPrewriteSecondaryKey: Long): TiDBOptions = {
-    val options = Map(
-      TiDB_ADDRESS -> tidbAddr,
-      TiDB_PASSWORD -> tidbPassword,
-      TiDB_PORT -> s"$tidbPort",
-      TiDB_USER -> tidbUser,
-      PD_ADDRESSES -> pdAddresses,
-      "database" -> "",
-      "table" -> "",
-      "sleepAfterPrewriteSecondaryKey" -> sleepAfterPrewriteSecondaryKey.toString)
-    new TiDBOptions(options)
   }
 
   override def afterAll(): Unit = {

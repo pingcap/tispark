@@ -114,10 +114,10 @@ spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_adress}
 ```
 ./bin/spark-shell --jars /wherever-it-is/tispark-${name_with_version}.jar
 ```
-### Get TiDB Version
+### Get TiSpark Version
 
 ```
-spark.sql("select ti_version()").show
+spark.sql("select ti_version()").collect
 ```
 ### Read with TiSpark
 For TiSpark version 2.4.x:
@@ -162,7 +162,7 @@ customer.write
 See [here](./docs/datasource_api_userguide.md) for more details.
 
 ### Delete with TiSpark
-Notice that WHERE clause is necessary.
+TiSpark >= 2.6.0 supports DELETE
 
 ```
 spark.sql("use tidb_catalog")

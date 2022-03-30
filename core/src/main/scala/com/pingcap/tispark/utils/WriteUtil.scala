@@ -27,7 +27,7 @@ import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tispark.write.TiBatchWrite.{SparkRow, TiRow}
-import com.pingcap.tispark.write.{SerializableKey, WrappedEncodedRow, WrappedRow}
+import com.pingcap.tispark.write.{SerializableKey, TiDBOptions, WrappedEncodedRow, WrappedRow}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 

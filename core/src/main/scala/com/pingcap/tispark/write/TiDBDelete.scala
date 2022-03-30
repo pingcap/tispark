@@ -29,6 +29,7 @@ case class TiDBDelete(
     df: DataFrame,
     database: String,
     table: String,
+    startTs: Long,
     tiDBOptions: Option[TiDBOptions] = None) {
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)
@@ -57,10 +58,6 @@ case class TiDBDelete(
       logger.info("DELETE with empty data")
       return
     }
-
-    // get start_ts
-    val startTs = tiSession.getTimestamp.getVersion
-    logger.info(s"startTS: $startTs")
 
     //Convert Spark row to TiKV row
     val colsInDf = persistDf.columns.toList.map(_.toLowerCase())
@@ -93,7 +90,7 @@ case class TiDBDelete(
       keyValueRDD.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
     persistedRDDList = persistKeyValueRDD :: persistedRDDList
 
-    //2PC
+    // 2PC
     val twoPhaseCommitHepler =
       if (tiDBOptions.isEmpty) new TwoPhaseCommitHepler(startTs)
       else new TwoPhaseCommitHepler(startTs, tiDBOptions.get)

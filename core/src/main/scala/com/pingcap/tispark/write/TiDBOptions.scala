@@ -24,6 +24,8 @@ import com.pingcap.tispark.TiTableReference
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 
+import scala.collection.mutable.ListBuffer
+
 /**
  * Options for the TiDB data source.
  */
@@ -33,23 +35,33 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
 
   private val optParamPrefix = "spark.tispark."
 
+  private val requiredWriteOptions = ListBuffer[String]()
+
   // ------------------------------------------------------------
   // Required parameters
   // ------------------------------------------------------------
-  val address: String = checkAndGet(TIDB_ADDRESS)
-  val port: String = checkAndGet(TIDB_PORT)
-  val user: String = checkAndGet(TIDB_USER)
-  val password: String = checkAndGet(TIDB_PASSWORD)
+  val address: String = getWriteRequiredOrNull(TIDB_ADDRESS)
+  val port: String = getWriteRequiredOrNull(TIDB_PORT)
+  val user: String = getWriteRequiredOrNull(TIDB_USER)
+  val password: String = getWriteRequiredOrNull(TIDB_PASSWORD)
   val multiTables: Boolean = getOrDefault(TIDB_MULTI_TABLES, "false").toBoolean
   val database: String = if (!multiTables) {
-    checkAndGet(TIDB_DATABASE)
+    getWriteRequiredOrNull(TIDB_DATABASE)
   } else {
     getOrDefault(TIDB_DATABASE, "")
   }
   val table: String = if (!multiTables) {
-    checkAndGet(TIDB_TABLE)
+    getWriteRequiredOrNull(TIDB_TABLE)
   } else {
     getOrDefault(TIDB_TABLE, "")
+  }
+
+  def checkWriteRequired(): Unit = {
+    requiredWriteOptions.foreach(
+      name =>
+        require(
+          parameters.isDefinedAt(name) || parameters.isDefinedAt(s"$optParamPrefix$name"),
+          s"Option '$name' is required."))
   }
   // ------------------------------------------------------------
   // Optional parameters only for writing
@@ -163,6 +175,10 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
     this(CaseInsensitiveMap(TiDBOptions.mergeWithSparkConf(parameters)))
   }
 
+  def this() = {
+    this(Map[String, String]())
+  }
+
   private def checkAndGet(name: String): String = {
     require(
       parameters.isDefinedAt(name) || parameters.isDefinedAt(s"$optParamPrefix$name"),
@@ -181,6 +197,17 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
       parameters(s"$optParamPrefix$name")
     } else {
       default
+    }
+  }
+
+  private def getWriteRequiredOrNull(name: String): String = {
+    requiredWriteOptions += name
+    if (parameters.isDefinedAt(name)) {
+      parameters(name)
+    } else if (parameters.isDefinedAt(s"$optParamPrefix$name")) {
+      parameters(s"$optParamPrefix$name")
+    } else {
+      null
     }
   }
 }

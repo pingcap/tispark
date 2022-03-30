@@ -34,20 +34,8 @@ import scala.collection.JavaConverters._
  */
 case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends AutoCloseable {
 
-  // 2PC relies too much on TiDBOptions. However, TiDBOptions requires db information which 2PC needn't.
-  // So we just fake db information temporarily,
-  // TODO change TIDBOptions to TwoPhaseCommitOption
   def this(startTs: Long) {
-    this(
-      startTs,
-      new TiDBOptions(
-        Map(
-          TiDBOptions.TIDB_ADDRESS -> "",
-          TiDBOptions.TIDB_PORT -> "",
-          TiDBOptions.TIDB_USER -> "",
-          TiDBOptions.TIDB_PASSWORD -> "",
-          TiDBOptions.TIDB_DATABASE -> "",
-          TiDBOptions.TIDB_TABLE -> "")))
+    this(startTs, new TiDBOptions())
   }
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)

@@ -179,6 +179,10 @@ case class TiDBTable(
       throw new SQLException("D fail: can't parse WHERE Clause")
     }
 
+    // get start_ts
+    val startTs = session.getTimestamp.getVersion
+    logger.info(s"startTS: $startTs")
+
     // Query data from TiKV (ByPass TiDB)
     val df = sqlContext.sparkSession.read
       .format("tidb")
@@ -188,21 +192,11 @@ case class TiDBTable(
       .load()
       .filter(filterWhereClause)
 
-    df.show()
-
-    // just fake TiDB info to pass the check
-    val tidbOptions = new TiDBOptions(
-      Map(
-        TiDBOptions.TIDB_ADDRESS -> "",
-        TiDBOptions.TIDB_PORT -> "",
-        TiDBOptions.TIDB_USER -> "",
-        TiDBOptions.TIDB_PASSWORD -> "",
-        TiDBOptions.TIDB_DATABASE -> "",
-        TiDBOptions.TIDB_TABLE -> "")
-        ++ sqlContext.sparkSession.conf.getAll)
+    // get TiDBOptions
+    val tidbOptions = new TiDBOptions(sqlContext.sparkSession.conf.getAll)
 
     // Execute delete
-    val tiDBDelete = TiDBDelete(df, databaseName, tableName, Some(tidbOptions))
+    val tiDBDelete = TiDBDelete(df, databaseName, tableName, startTs, Some(tidbOptions))
     try {
       tiDBDelete.delete()
     } finally {
