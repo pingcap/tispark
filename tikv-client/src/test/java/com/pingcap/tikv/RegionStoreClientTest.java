@@ -16,9 +16,7 @@
 
 package com.pingcap.tikv;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -73,31 +71,24 @@ public class RegionStoreClientTest extends MockServerTest {
   }
 
   @Test
-  public void preWriteRetryTest() {
-    doPreWriteRetryTest(createClientV2());
-    doPreWriteRetryTest(createClientV3());
-    doPreWriteRetryTest(createClientV4());
+  public void preWriteWithKeyExceptionTest() {
+    doPreWriteWithKeyExceptionTest(createClientV2());
+    doPreWriteWithKeyExceptionTest(createClientV3());
+    doPreWriteWithKeyExceptionTest(createClientV4());
   }
 
-  private void doPreWriteRetryTest(RegionStoreClient client) {
+  private void doPreWriteWithKeyExceptionTest(RegionStoreClient client) {
     ByteString key = ByteString.copyFromUtf8("key1");
     ByteString value = ByteString.copyFromUtf8("value1");
     Kvrpcpb.Mutation mutation =
-        Kvrpcpb.Mutation.newBuilder().setKey(key).setValue(value).setOp(Kvrpcpb.Op.Del).build();
+        Kvrpcpb.Mutation.newBuilder().setKey(key).setValue(value).setOp(Kvrpcpb.Op.Put).build();
     List<Kvrpcpb.Mutation> mutationList = Collections.singletonList(mutation);
     server.putError("error1", KVMockServer.WRITE_CONFLICT);
     try {
       client.prewrite(defaultBackOff(), ByteString.copyFromUtf8("error1"), mutationList, 0, 0);
-    } catch (Exception e) {
-      Kvrpcpb.KeyError ke = ((KeyException) e).getKeyError();
-      assertEquals(
-          (!ke.getAbort().isEmpty()
-              || ke.hasConflict()
-              || ke.hasAlreadyExist()
-              || ke.hasDeadlock()
-              || ke.hasCommitTsExpired()
-              || ke.hasTxnNotFound()),
-          true);
+    } catch (KeyException e) {
+      Kvrpcpb.KeyError ke = e.getKeyError();
+      assertNotNull(ke);
     }
   }
 
