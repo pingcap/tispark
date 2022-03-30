@@ -30,7 +30,7 @@ class IssueTestSuite extends BaseTiSparkTest {
       s"create table $dbTable(i varchar(64), s int,PRIMARY KEY (i)/*T![clustered_index] CLUSTERED */,unique key (s))")
     tidbStmt.execute(s"insert into $dbTable values('0', 0),('1',1)")
 
-    val df = spark.sql(s"select * from $dbTable")
+    val df = spark.sql("select * from testrowid")
 
     val row1 = Row("0", 0)
     val row2 = Row("1", 1)
