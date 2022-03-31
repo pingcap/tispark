@@ -21,6 +21,22 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  //https://github.com/pingcap/tispark/issues/2268
+  test("show rowid in commonhandle") {
+    spark.sqlContext.setConf(TiConfigConst.SHOW_ROWID, "true")
+    val dbTable = "tispark_test.testrowid"
+    tidbStmt.execute(s"drop table if exists $dbTable")
+    tidbStmt.execute(
+      s"create table $dbTable(i varchar(64), s int,PRIMARY KEY (i)/*T![clustered_index] CLUSTERED */,unique key (s))")
+    tidbStmt.execute(s"insert into $dbTable values('0', 0),('1',1)")
+
+    val df = spark.sql("select * from testrowid")
+
+    val row1 = Row("0", 0)
+    val row2 = Row("1", 1)
+    checkAnswer(df, Seq(row1, row2))
+  }
+
   test("test tiflash timestamp < 1970") {
     if (!enableTiFlashTest) {
       cancel("tiflash test not enabled")
