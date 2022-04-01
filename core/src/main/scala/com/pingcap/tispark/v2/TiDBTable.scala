@@ -179,7 +179,7 @@ case class TiDBTable(
       throw new SQLException("D fail: can't parse WHERE Clause")
     }
 
-    // get start_ts
+    // TODO It's better to use the start_ts of read. We can't get it now.
     val startTs = session.getTimestamp.getVersion
     logger.info(s"startTS: $startTs")
 
