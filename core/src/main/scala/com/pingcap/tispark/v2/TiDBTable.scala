@@ -9,28 +9,31 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
 package com.pingcap.tispark.v2
 
-import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tikv.exception.TiInternalException
+import com.pingcap.tikv.TiSession
+import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
+import com.pingcap.tispark.v2.sink.TiDBWriterBuilder
 import com.pingcap.tispark.write.TiDBOptions
 import com.pingcap.tispark.TiTableReference
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
-import org.apache.spark.sql.connector.catalog.{SupportsRead, TableCapability}
+import org.apache.spark.sql.connector.catalog.{SupportsRead, SupportsWrite, TableCapability}
 import org.apache.spark.sql.connector.read.ScanBuilder
+import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, SparkPlan}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
-import org.apache.spark.sql.{SQLContext, SparkSession, TiExtensions, execution}
+import org.apache.spark.sql.{SQLContext, execution}
 
 import java.util
 import java.util.Collections
@@ -43,7 +46,8 @@ case class TiDBTable(
     table: TiTableInfo,
     var ts: TiTimestamp = null,
     options: Option[TiDBOptions] = None)(@transient val sqlContext: SQLContext)
-    extends SupportsRead {
+    extends SupportsRead
+    with SupportsWrite {
 
   implicit class IdentifierHelper(identifier: TiTableReference) {
     def quoted: String = {
@@ -91,6 +95,7 @@ case class TiDBTable(
   override def capabilities(): util.Set[TableCapability] = {
     val capabilities = new util.HashSet[TableCapability]
     capabilities.add(TableCapability.BATCH_READ)
+    capabilities.add(TableCapability.V1_BATCH_WRITE)
     capabilities
   }
 
@@ -102,6 +107,25 @@ case class TiDBTable(
 
   def logicalPlanToRDD(dagRequest: TiDAGRequest, output: Seq[Attribute]): List[TiRowRDD] = {
     getLogicalPlanToRDD(dagRequest, output, session, sqlContext, tableRef)
+  }
+
+  override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = {
+    var scalaMap = info.options().asScala.toMap
+    // TODO https://github.com/pingcap/tispark/issues/2269 we need to move TiDB dependencies which will block insert SQL.
+    // if we don't support it before release, insert SQL should throw exception in catalyst
+    if (scalaMap.isEmpty) {
+      throw new TiBatchWriteException("tidbOption is neccessary.")
+    }
+    // Support df.writeto: need add db and table for write
+    if (!scalaMap.contains("database")) {
+      scalaMap += ("database" -> databaseName)
+    }
+    if (!scalaMap.contains("table")) {
+      scalaMap += ("table" -> tableName)
+    }
+    // Get TiDBOptions
+    val tiDBOptions = new TiDBOptions(scalaMap)
+    TiDBWriterBuilder(info, tiDBOptions, sqlContext)
   }
 }
 
@@ -175,5 +199,4 @@ object TiDBTable {
     })
     tiRDDs.toList
   }
-
 }

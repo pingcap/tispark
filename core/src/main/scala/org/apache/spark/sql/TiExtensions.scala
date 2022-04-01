@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -58,6 +59,10 @@ object TiExtensions {
 
   def enabled(sparkSession: SparkSession): Boolean = getTiContext(sparkSession).isDefined
 
+  /**
+   * Catalog for tidb is necessary now.
+   * @param sparkSession
+   */
   def validateCatalog(sparkSession: SparkSession): Unit = {
     sparkSession.sparkContext.conf
       .getAllWithPrefix("spark.sql.catalog.")
@@ -72,8 +77,8 @@ object TiExtensions {
   }
 
   /**
-   * use TiAuthorizationRule to judge if TiExtensions is enable.
-   * it needs to be changed if TiAuthorizationRule is deleted
+   * Use TiAuthorizationRule to judge if TiExtensions is enable.
+   * It needs to be changed when TiAuthorizationRule is not a must-have
    * @param sparkSession
    * @return
    */

@@ -130,10 +130,6 @@ spark.sql("use tidb_catalog.${database}")
 spark.sql("select count(*) from ${table}").show
 ```
 
-> **Note:**
->
-> If you use TiSpark 2.0+, for spark-submit on Pyspark, `tidbMapDatabase` is still required and `TiExtension` is not supported yet. PingCAP is working on this issue.
-
 ##  Current Version
 
 ```
