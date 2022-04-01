@@ -15,9 +15,7 @@
 
 package com.pingcap.tikv;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -27,14 +25,11 @@ import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.ExecType;
 import com.pingcap.tidb.tipb.Executor;
 import com.pingcap.tidb.tipb.SelectResponse;
+import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.junit.Test;
 import org.tikv.kvproto.Coprocessor;
@@ -72,6 +67,28 @@ public class RegionStoreClientTest extends MockServerTest {
     RegionStoreClient.RegionStoreClientBuilder builder = session.getRegionStoreClientBuilder();
 
     return builder.build(region, store);
+  }
+
+  @Test
+  public void preWriteWithKeyExceptionTest() {
+    doPreWriteWithKeyExceptionTest(createClientV2());
+    doPreWriteWithKeyExceptionTest(createClientV3());
+    doPreWriteWithKeyExceptionTest(createClientV4());
+  }
+
+  private void doPreWriteWithKeyExceptionTest(RegionStoreClient client) {
+    ByteString key = ByteString.copyFromUtf8("key1");
+    ByteString value = ByteString.copyFromUtf8("value1");
+    Kvrpcpb.Mutation mutation =
+        Kvrpcpb.Mutation.newBuilder().setKey(key).setValue(value).setOp(Kvrpcpb.Op.Put).build();
+    List<Kvrpcpb.Mutation> mutationList = Collections.singletonList(mutation);
+    server.putError("error1", KVMockServer.WRITE_CONFLICT);
+    try {
+      client.prewrite(defaultBackOff(), ByteString.copyFromUtf8("error1"), mutationList, 0, 0);
+    } catch (KeyException e) {
+      Kvrpcpb.KeyError ke = e.getKeyError();
+      assertNotNull(ke);
+    }
   }
 
   @Test
