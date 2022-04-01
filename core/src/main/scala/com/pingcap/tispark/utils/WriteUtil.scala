@@ -27,7 +27,7 @@ import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tispark.write.TiBatchWrite.{SparkRow, TiRow}
-import com.pingcap.tispark.write.{SerializableKey, TiDBOptions, WrappedEncodedRow, WrappedRow}
+import com.pingcap.tispark.write.{SerializableKey, WrappedEncodedRow, WrappedRow}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
@@ -77,10 +77,8 @@ object WriteUtil {
    * @return
    */
   def extractHandle(row: TiRow, tiTableInfo: TiTableInfo): Handle = {
-    // If handle ID is changed when update, update will remove the old record first,
-    // and then call `AddRecord` to add a new record.
+    // If handle ID is changed when update, update will remove the old record first, and then call `AddRecord` to add a new record.
     // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
-
     val handleCol = tiTableInfo.getPKIsHandleColumn
     if (tiTableInfo.isCommonHandle) {
       var dataTypeList: List[DataType] = Nil
@@ -111,7 +109,7 @@ object WriteUtil {
   }
 
   /**
-   * For delete only
+   * Generate Record that will be removed
    *
    * @param rdd
    * @param tableId
@@ -136,7 +134,7 @@ object WriteUtil {
   }
 
   /**
-   * generate encode index to Map[Long, RDD[WrappedEncodedRow].
+   * Generate encode index to Map[Long, RDD[WrappedEncodedRow].
    * The key of map is indexId
    * @param rdd
    * @param remove
@@ -199,11 +197,13 @@ object WriteUtil {
     }
   }
 
-  // construct unique index and non-unique index and value to be inserted into TiKV
-  // NOTE:
-  //      pk is not handle case is equivalent to unique index.
-  //      for non-unique index, handle will be encoded as part of index key. In contrast, unique
-  //      index encoded handle to value.
+  /**
+   * construct unique index and non-unique index and value to be inserted into TiKV
+   * NOTE:
+   *      pk is not handle case is equivalent to unique index.
+   *      for non-unique index, handle will be encoded as part of index key. In contrast, unique
+   *      index encoded handle to value.
+   */
   private def generateUniqueIndexKey(
       row: TiRow,
       handle: Handle,
@@ -266,8 +266,12 @@ object WriteUtil {
     (new SerializableKey(cdo.toBytes), value)
   }
 
-  // TODO: support physical table later. Need use partition info and row value to
-  // calculate the real physical table.
+  /**
+   * TODO: support physical table later. Need use partition info and row value to calculate the real physical table.
+   * @param row
+   * @param tiTableInfo
+   * @return
+   */
   def locatePhysicalTable(row: TiRow, tiTableInfo: TiTableInfo): Long = {
     tiTableInfo.getId
   }
