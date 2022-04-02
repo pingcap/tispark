@@ -111,4 +111,14 @@ case class SpecialSum(child: Expression, retType: DataType, initVal: Any)
 
   override def checkInputDataTypes(): TypeCheckResult =
     TypeUtils.checkForNumericExpr(child.dataType, "function sum")
+
+  /**
+   *  Don't use override to pass the compile for different spark version
+   *  The implement is same as the [[org.apache.spark.sql.catalyst.expressions.aggregate.Sum]]
+   * @param newChildren
+   */
+  protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    assert(newChildren.size == 1, "Incorrect number of children")
+    copy(child = newChildren.head)
+  }
 }

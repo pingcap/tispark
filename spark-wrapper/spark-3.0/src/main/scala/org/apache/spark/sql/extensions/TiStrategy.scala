@@ -48,7 +48,7 @@ import org.apache.spark.sql.catalyst.expressions.{
   SubqueryExpression,
   TiExprUtils
 }
-import org.apache.spark.sql.catalyst.planner.TiAggregation
+import org.apache.spark.sql.catalyst.planner.{TiAggregation, TiAggregationProjection}
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._

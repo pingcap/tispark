@@ -77,7 +77,7 @@ class BasicBatchWriteSuite extends BaseBatchWriteWithoutDropTableTest("test_data
   }
 
   // Experimental
-  test("Test Datasource api v2 write") {
+  ignore("Test Datasource api v2 write") {
     jdbcUpdate(s"drop table if exists $dbtable")
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')")
