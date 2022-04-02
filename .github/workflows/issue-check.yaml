@@ -13,12 +13,12 @@ jobs:
       - uses: actions/stale@v3
         with:
           days-before-issue-stale: 30
-          days-before-issue-close: 7
-          exempt-issue-labels: "lifecycle/frozen"
+          days-before-issue-close: 14
+          exempt-issue-labels: "type/feature-request,type/enhancement,lifecycle/frozen"
           stale-issue-label: "stale"
           close-issue-label: "close for stale"
           stale-issue-message: "This issue is stale because it has been open for 30 days with no activity."
-          close-issue-message: "This issue was closed because it has been inactive for 7 days since being marked as stale."
+          close-issue-message: "This issue was closed because it has been inactive for 14 days since being marked as stale."
           days-before-pr-stale: -1
           days-before-pr-close: -1
           repo-token: ${{ secrets.GITHUB_TOKEN }}
