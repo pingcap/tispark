@@ -72,6 +72,8 @@ object WriteUtil {
 
   /**
    * ExtractHandle from isCommonHandle or isPkHandle
+   * For isPkHandle: build IntHandle with pk
+   * For isCommonHandle: build CommonHandle with pk
    * @param row
    * @param tiTableInfo
    * @return
@@ -110,7 +112,8 @@ object WriteUtil {
 
   /**
    * Generate Record that will be removed
-   *
+   * key: tableId + handle
+   * value: empty
    * @param rdd
    * @param tableId
    * @return
@@ -134,12 +137,13 @@ object WriteUtil {
   }
 
   /**
-   * Generate encode index to Map[Long, RDD[WrappedEncodedRow].
-   * The key of map is indexId
+   * use all indices to generate Index kv.
+   * For isCommonHandle, we exclude primary key for it has been built by record
+   * For isPkHandle, we don't do this because primary key is not included in indices
    * @param rdd
    * @param remove
    * @param tiTableInfo
-   * @return
+   * @return  Map[Long, RDD[WrappedEncodedRow], The key of map is indexId
    */
   def generateIndexKVs(
       rdd: RDD[WrappedRow],
@@ -154,6 +158,14 @@ object WriteUtil {
     }.toMap
   }
 
+  /**
+   * mix the results that are produced by method generateIndexKVs
+   * @param sc
+   * @param rdd
+   * @param tiTableInfo
+   * @param remove
+   * @return
+   */
   def generateIndexKV(
       sc: SparkContext,
       rdd: RDD[WrappedRow],
@@ -163,6 +175,9 @@ object WriteUtil {
     rdds.values.foldLeft(sc.emptyRDD[WrappedEncodedRow])(_ ++ _)
   }
 
+  /**
+   * generateIndexRDD for UniqueIndexKey and SecondaryIndexKey
+   */
   private def generateIndexRDD(
       rdd: RDD[WrappedRow],
       index: TiIndexInfo,
