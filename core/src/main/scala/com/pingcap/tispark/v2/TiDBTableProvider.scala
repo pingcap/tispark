@@ -17,7 +17,7 @@
 package com.pingcap.tispark.v2
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tispark.TiDBRelation
+import com.pingcap.tispark.{TiDBRelation, TiTableReference}
 import com.pingcap.tispark.write.{TiDBOptions, TiDBWriter}
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession, TiExtensions}
@@ -43,19 +43,29 @@ class TiDBTableProvider
       partitioning: Array[Transform],
       properties: util.Map[String, String]): Table = {
 
+    // database and table are necessary
+    require(properties.get(TiDBOptions.TIDB_DATABASE) != null, "Option 'database' is required.")
+    require(properties.get(TiDBOptions.TIDB_TABLE) != null, "Option 'table' is required.")
+
     val scalaMap = properties.asScala.toMap
-    val mergeOptions = new TiDBOptions(scalaMap)
     val sparkSession = SparkSession.active
 
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
         val ts = tiContext.tiSession.getTimestamp
-        val tiTableRef = mergeOptions.getTiTableRef(tiContext.tiConf)
+        val tiTableRef = TiTableReference(
+          properties.get(TiDBOptions.TIDB_DATABASE),
+          properties.get(TiDBOptions.TIDB_TABLE))
         val table = tiContext.meta
           .getTable(tiTableRef.databaseName, tiTableRef.tableName)
           .getOrElse(
             throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName))
-        TiDBTable(tiContext.tiSession, tiTableRef, table, ts, Some(mergeOptions))(
+        val copyTable = if (scalaMap.getOrElse(TiDBOptions.TIDB_ROWID, "false").toBoolean) {
+          table.copyTableWithRowId();
+        } else {
+          table
+        }
+        TiDBTable(tiContext.tiSession, tiTableRef, copyTable, ts, Some(scalaMap))(
           sparkSession.sqlContext)
       case None => throw new TiBatchWriteException("TiExtensions is disable!")
     }
