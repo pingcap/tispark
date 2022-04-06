@@ -19,6 +19,7 @@ package org.apache.spark.sql.catalyst.analyzer
 import com.pingcap.tispark.MetaManager
 import com.pingcap.tispark.auth.TiAuthorization
 import org.apache.spark.sql.catalyst.plans.logical.{
+  DeleteFromTable,
   LogicalPlan,
   SetCatalogAndNamespace,
   SubqueryAlias
@@ -40,6 +41,14 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
   protected def checkForAuth: PartialFunction[LogicalPlan, LogicalPlan] = {
+    case dt @ DeleteFromTable(SubqueryAlias(identifier, _), _) =>
+      if (identifier.qualifier.nonEmpty) {
+        TiAuthorization.authorizeForDelete(
+          identifier.name,
+          identifier.qualifier.last,
+          tiAuthorization)
+      }
+      dt
     case sa @ SubqueryAlias(identifier, child) =>
       if (identifier.qualifier.nonEmpty) {
         TiAuthorization.authorizeForSelect(

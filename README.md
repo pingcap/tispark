@@ -96,14 +96,14 @@ TiSpark relies on the availability of TiKV clusters and PDs. You also need to se
 Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](https://github.com/pingcap/tispark/tree/master/tikv-client) library.
 
 ## Quick Start
-### Configuration
-Before everything starts, ensure that you have below configs in spark.
+### Setup
+Ensure that you have below configs in `spark-defaults.conf` .
 ```
 spark.sql.extensions  org.apache.spark.sql.TiExtensions
 spark.tispark.pd.addresses  ${your_pd_adress}
 ```
 
-For TiSpark version >= 2.5.0, please add the following additional configuration to enable `Catalog` provided by `spark-3.0`.
+For TiSpark version >= 2.5.0, please add the following additional configuration to enable `Catalog` provided by Spark 3
 ```
 spark.sql.catalog.tidb_catalog  org.apache.spark.sql.catalyst.catalog.TiCatalog
 spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_adress}
@@ -114,29 +114,26 @@ spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_adress}
 ```
 ./bin/spark-shell --jars /wherever-it-is/tispark-${name_with_version}.jar
 ```
+### Get TiSpark Version
 
-### Use TiSpark
+```
+spark.sql("select ti_version()").collect
+```
+### Read with TiSpark
 For TiSpark version 2.4.x:
 
 ```
-spark.sql("use ${database}")
-spark.sql("select count(*) from ${table}").show
+spark.sql("select count(*) from ${database}.${table}").show
 ```
 
 For TiSpark version >= 2.5.0:
 
 ```
-spark.sql("use tidb_catalog.${database}")
-spark.sql("select count(*) from ${table}").show
+spark.sql("use tidb_catalog")
+spark.sql("select count(*) from ${database}.${table}").show
 ```
 
-##  Current Version
-
-```
-spark.sql("select ti_version()").show
-```
-
-## Write Data To TiDB using TiDB Connector
+### Write with TiSpark
 TiSpark natively supports writing data to TiKV via Spark Data Source API and guarantees ACID.
 
 For example:
@@ -163,6 +160,16 @@ customer.write
 ```
 
 See [here](./docs/datasource_api_userguide.md) for more details.
+
+### Delete with TiSpark
+TiSpark >= 2.6.0 supports DELETE
+
+```
+spark.sql("use tidb_catalog")
+spark.sql("delete from ${database}.${table} where xxx").show
+```
+ See [here](./docs/delete_userguide.md) for more details..
+
 
 ## Configuration
 
@@ -244,11 +251,6 @@ In most cases, TiSpark use a full table scan on partition tables. Only in certai
 
 TiSpark currently supports retrieving data from table with `Expression Index`, but the `Expression Index` will not be used by the planner of TiSpark.
 
-## Upgrade from TiDB-2.x to TiDB-3.x
-When upgrading from TiDB-2.x to TiDB-3.x,
-1. make sure that you are using at least TiSpark-2.1.2 (TiSpark-2.1.9 is highly recommended).
-2. `tidbMapDatabase` is deprecated after TiSpark-2.x, make sure that you are not using it.
-
 ## Example Programs
 There are some [sample programs](https://github.com/pingcap/tispark-test/tree/master/tispark-examples) for TiSpark. You can run them locally or on a cluster following the document.
 
@@ -274,7 +276,9 @@ For more details about the test, see [here](./core/src/test/Readme.md).
 
 5. The dependency `tispark-assembly` should not be packaged into `JAR of JARS` file (for example, build with spring-boot-maven-plugin), or you will get `ClassNotFoundException`. You can solve it by adding `spark-wrapper-spark-version` in your dependency or constructing another forms of jar file.
 
-6. Tispark don't support collations now. `new_collations_enabled_on_first_bootstrap` should not be set to `true`.
+6. TiSpark doesn't support collations now. `new_collations_enabled_on_first_bootstrap` should not be set to `true`.
+
+7. TiSpark doesn't support TLS now. You can't connect TiDB with TLS.
 
 
 ## Follow us

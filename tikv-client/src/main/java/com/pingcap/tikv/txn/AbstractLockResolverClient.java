@@ -47,6 +47,7 @@ public interface AbstractLockResolverClient {
     if (keyError.hasConflict()) {
       Kvrpcpb.WriteConflict conflict = keyError.getConflict();
       throw new KeyException(
+          keyError,
           String.format(
               "scan meet key conflict on primary key %s at commit ts %s",
               conflict.getPrimary(), conflict.getConflictTs()));
@@ -54,16 +55,17 @@ public interface AbstractLockResolverClient {
 
     if (!keyError.getRetryable().isEmpty()) {
       throw new KeyException(
+          keyError,
           String.format("tikv restart txn %s", keyError.getRetryableBytes().toStringUtf8()));
     }
 
     if (!keyError.getAbort().isEmpty()) {
       throw new KeyException(
-          String.format("tikv abort txn %s", keyError.getAbortBytes().toStringUtf8()));
+          keyError, String.format("tikv abort txn %s", keyError.getAbortBytes().toStringUtf8()));
     }
 
     throw new KeyException(
-        String.format("unexpected key error meets and it is %s", keyError.toString()));
+        keyError, String.format("unexpected key error meets and it is %s", keyError.toString()));
   }
 
   static AbstractLockResolverClient getInstance(

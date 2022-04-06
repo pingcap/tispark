@@ -24,6 +24,8 @@ import com.pingcap.tispark.TiTableReference
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 
+import scala.collection.mutable.ListBuffer
+
 /**
  * Options for the TiDB data source.
  */
@@ -33,38 +35,51 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
 
   private val optParamPrefix = "spark.tispark."
 
+  private val requiredWriteOptions = ListBuffer[String]()
+
   // ------------------------------------------------------------
-  // Required parameters
+  // Required parameters for Write
   // ------------------------------------------------------------
-  val address: String = checkAndGet(TIDB_ADDRESS)
-  val port: String = checkAndGet(TIDB_PORT)
-  val user: String = checkAndGet(TIDB_USER)
-  val password: String = checkAndGet(TIDB_PASSWORD)
+  val address: String = getWriteRequiredOrNull(TIDB_ADDRESS)
+  val port: String = getWriteRequiredOrNull(TIDB_PORT)
+  val user: String = getWriteRequiredOrNull(TIDB_USER)
+  val password: String = getWriteRequiredOrNull(TIDB_PASSWORD)
   val multiTables: Boolean = getOrDefault(TIDB_MULTI_TABLES, "false").toBoolean
   val database: String = if (!multiTables) {
-    checkAndGet(TIDB_DATABASE)
+    getWriteRequiredOrNull(TIDB_DATABASE)
   } else {
     getOrDefault(TIDB_DATABASE, "")
   }
   val table: String = if (!multiTables) {
-    checkAndGet(TIDB_TABLE)
+    getWriteRequiredOrNull(TIDB_TABLE)
   } else {
     getOrDefault(TIDB_TABLE, "")
   }
+
+  def checkWriteRequired(): Unit = {
+    requiredWriteOptions.foreach(
+      name =>
+        require(
+          parameters.isDefinedAt(name) || parameters.isDefinedAt(s"$optParamPrefix$name"),
+          s"Option '$name' is required."))
+  }
   // ------------------------------------------------------------
-  // Optional parameters only for writing
+  // Optional parameters for writing
   // ------------------------------------------------------------
   val replace: Boolean = getOrDefault(TIDB_REPLACE, "false").toBoolean
-  // It is an optimize by the nature of 2pc protocol
-  // We leave other txn, gc or read to resolve locks.
-  val skipCommitSecondaryKey: Boolean =
-    getOrDefault(TIDB_SKIP_COMMIT_SECONDARY_KEY, "false").toBoolean
   // ttlMode = { "FIXED", "UPDATE", "DEFAULT" }
   val ttlMode: String = getOrDefault(TIDB_TTL_MODE, "DEFAULT").toUpperCase()
   val useSnapshotBatchGet: Boolean = getOrDefault(TIDB_USE_SNAPSHOT_BATCH_GET, "true").toBoolean
   //20k
   val snapshotBatchGetSize: Int = getOrDefault(TIDB_SNAPSHOT_BATCH_GET_SIZE, "20480").toInt
   val batchGetBackOfferMS: Int = getOrDefault(TIDB_BATCH_GET_BACKOFFER_MS, "60000").toInt
+  val enableUpdateTableStatistics: Boolean =
+    getOrDefault(TIDB_ENABLE_UPDATE_TABLE_STATISTICS, "false").toBoolean
+  val deduplicate: Boolean = getOrDefault(TIDB_DEDUPLICATE, "true").toBoolean
+
+  // ------------------------------------------------------------
+  // Optional parameters for Test
+  // ------------------------------------------------------------
   val sleepBeforePrewritePrimaryKey: Long =
     getOrDefault(TIDB_SLEEP_BEFORE_PREWRITE_PRIMARY_KEY, "0").toLong
   val sleepAfterPrewritePrimaryKey: Long =
@@ -73,8 +88,13 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
     getOrDefault(TIDB_SLEEP_AFTER_PREWRITE_SECONDARY_KEY, "0").toLong
   val sleepAfterGetCommitTS: Long = getOrDefault(TIDB_SLEEP_AFTER_GET_COMMIT_TS, "0").toLong
   val isTest: Boolean = getOrDefault(TIDB_IS_TEST, "false").toBoolean
+
+  // ------------------------------------------------------------
+  // Optional parameters for 2PC
+  // ------------------------------------------------------------
   val prewriteBackOfferMS: Int = getOrDefault(TIDB_PREWRITE_BACKOFFER_MS, "240000").toInt
   val commitBackOfferMS: Int = getOrDefault(TIDB_COMMIT_BACKOFFER_MS, "20000").toInt
+  //https://github.com/pingcap/tispark/pull/1599
   // 16 * 1024 = 16K
   val txnPrewriteBatchSize: Long = getOrDefault(TIDB_TXN_PREWITE_BATCH_SIZE, "16384").toLong
   // 16 * 1024 = 16K
@@ -87,11 +107,14 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val prewriteMaxRetryTimes: Int = getOrDefault(TIDB_PREWRITE_MAX_RETRY_TIMES, "64").toInt
   val commitPrimaryKeyRetryNumber: Int =
     getOrDefault(TIDB_COMMIT_PRIMARY_KEY_RETRY_NUMBER, "4").toInt
-  val enableUpdateTableStatistics: Boolean =
-    getOrDefault(TIDB_ENABLE_UPDATE_TABLE_STATISTICS, "false").toBoolean
-  val deduplicate: Boolean = getOrDefault(TIDB_DEDUPLICATE, "true").toBoolean
+  // It is an optimize by the nature of 2pc protocol
+  // We leave other txn, gc or read to resolve locks.
+  val skipCommitSecondaryKey: Boolean =
+    getOrDefault(TIDB_SKIP_COMMIT_SECONDARY_KEY, "false").toBoolean
 
-  // region split
+  // ------------------------------------------------------------
+  // Optional parameters for region split
+  // ------------------------------------------------------------
   val enableRegionSplit: Boolean = getOrDefault(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
   val regionSplitNum: Int = getOrDefault(TIDB_REGION_SPLIT_NUM, "0").toInt
   val sampleSplitFrac: Int = getOrDefault(TIDB_SAMPLE_SPLIT_FRAC, "1000").toInt
@@ -107,6 +130,11 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   //96M
   val bytesPerRegion: Int = getOrDefault(TIDB_BYTES_PER_REGION, "100663296").toInt
   val maxWriteTaskNumber: Int = getOrDefault(TIDB_MAX_WRITE_TASK_NUMBER, "0").toInt
+
+  // ------------------------------------------------------------
+  // Optional parameters for read
+  // ------------------------------------------------------------
+  val tidbRowId: Boolean = getOrDefault(TIDB_ROWID, "false").toBoolean
 
   // ------------------------------------------------------------
   // Calculated parameters
@@ -161,6 +189,10 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
     this(CaseInsensitiveMap(TiDBOptions.mergeWithSparkConf(parameters)))
   }
 
+  def this() = {
+    this(Map[String, String]())
+  }
+
   private def checkAndGet(name: String): String = {
     require(
       parameters.isDefinedAt(name) || parameters.isDefinedAt(s"$optParamPrefix$name"),
@@ -179,6 +211,17 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
       parameters(s"$optParamPrefix$name")
     } else {
       default
+    }
+  }
+
+  private def getWriteRequiredOrNull(name: String): String = {
+    requiredWriteOptions += name
+    if (parameters.isDefinedAt(name)) {
+      parameters(name)
+    } else if (parameters.isDefinedAt(s"$optParamPrefix$name")) {
+      parameters(s"$optParamPrefix$name")
+    } else {
+      null
     }
   }
 }
@@ -209,6 +252,7 @@ object TiDBOptions {
   val TIDB_COMMIT_PRIMARY_KEY_RETRY_NUMBER: String = newOption("commitPrimaryKeyRetryNumber")
   val TIDB_ENABLE_UPDATE_TABLE_STATISTICS: String = newOption("enableUpdateTableStatistics")
   val TIDB_DEDUPLICATE: String = newOption("deduplicate")
+  val TIDB_ROWID: String = newOption("tidbRowId")
 
   // region split
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")

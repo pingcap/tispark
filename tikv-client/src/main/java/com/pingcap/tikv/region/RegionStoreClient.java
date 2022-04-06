@@ -508,7 +508,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
         Lock lock = new Lock(err.getLocked());
         locks.add(lock);
       } else {
-        throw new KeyException(err.toString());
+        // KeyError will be used in [[com.pingcap.tikv.txn.TxnKVClient#retryableException]]
+        throw new KeyException(err, err.toString());
       }
     }
     if (isSuccess) {

@@ -378,6 +378,15 @@ object TiAuthorization {
         f"SELECT command denied to user ${tiAuth.get.user} for table $database.$table")
   }
 
+  def authorizeForDelete(
+      table: String,
+      database: String,
+      tiAuth: Option[TiAuthorization]): Unit = {
+    if (enableAuth) {
+      tiAuth.get.checkPrivs(database, table, MySQLPriv.DeletePriv, "DELETE")
+    }
+  }
+
   def checkVisible(db: String, table: String, tiAuth: Option[TiAuthorization]): Boolean = {
     !enableAuth || tiAuth.get.visible(db, table)
   }
