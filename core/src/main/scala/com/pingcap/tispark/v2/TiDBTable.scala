@@ -129,7 +129,6 @@ case class TiDBTable(
   override def capabilities(): util.Set[TableCapability] = {
     val capabilities = new util.HashSet[TableCapability]
     capabilities.add(TableCapability.BATCH_READ)
-    capabilities.add(TableCapability.BATCH_WRITE)
     capabilities
   }
 
