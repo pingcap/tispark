@@ -37,8 +37,8 @@ object TiAggregationProjection {
         // Compatible with spark 3.0 and spark >=3.0
         source match {
           case t: TiDBTable => Some((filters, rel, t, projects))
-          case DataSourceV2Relation(source: TiDBTable, _, _, _, _) =>
-            Some((filters, rel, source, projects))
+          case d: DataSourceV2Relation if d.table.isInstanceOf[TiDBTable] =>
+            Some((filters, rel, d.table.asInstanceOf[TiDBTable], projects))
           case _ => Option.empty[ReturnType]
         }
 
