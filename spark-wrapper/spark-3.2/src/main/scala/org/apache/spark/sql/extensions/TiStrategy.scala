@@ -48,7 +48,7 @@ import org.apache.spark.sql.catalyst.expressions.{
   SubqueryExpression,
   TiExprUtils
 }
-import org.apache.spark.sql.catalyst.planner.{TiAggregation, TiAggregationProjection}
+import org.apache.spark.sql.catalyst.planner.TiAggregation
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -620,7 +620,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
             groupingExpressions,
             aggregateExpressions,
             resultExpressions,
-            TiAggregationProjection(filters, _, `source`, projects))
+            TiAggregationProjectionV2(filters, _, `source`, projects))
           if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
         val projectSet = AttributeSet((projects ++ filters).flatMap {
           _.references

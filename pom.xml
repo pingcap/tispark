@@ -178,8 +178,8 @@
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <spark.version.compile>3.1.1</spark.version.compile>
-                <spark.version.test>3.1.1</spark.version.test>
+                <spark.version.compile>3.1.2</spark.version.compile>
+                <spark.version.test>3.1.2</spark.version.test>
             </properties>
         </profile>
         <profile>
