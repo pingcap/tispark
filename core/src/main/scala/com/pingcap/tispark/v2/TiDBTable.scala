@@ -23,18 +23,49 @@ import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
 import com.pingcap.tispark.v2.sink.TiDBWriterBuilder
-import com.pingcap.tispark.write.TiDBOptions
+import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions}
 import com.pingcap.tispark.TiTableReference
+import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
-import org.apache.spark.sql.connector.catalog.{SupportsRead, SupportsWrite, TableCapability}
+import org.apache.spark.sql.catalyst.util.{DateFormatter, DateTimeUtils, TimestampFormatter}
+import org.apache.spark.sql.connector.catalog.{
+  SupportsDelete,
+  SupportsRead,
+  SupportsWrite,
+  TableCapability
+}
 import org.apache.spark.sql.connector.read.ScanBuilder
 import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, SparkPlan}
+import org.apache.spark.sql.internal.SQLConf
+import org.apache.spark.sql.sources.{
+  AlwaysFalse,
+  AlwaysTrue,
+  And,
+  EqualNullSafe,
+  EqualTo,
+  Filter,
+  GreaterThan,
+  GreaterThanOrEqual,
+  In,
+  IsNotNull,
+  IsNull,
+  LessThan,
+  LessThanOrEqual,
+  Not,
+  Or,
+  StringContains,
+  StringEndsWith,
+  StringStartsWith
+}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
-import org.apache.spark.sql.{SQLContext, execution}
+import org.apache.spark.sql.{SQLContext, SparkSession, execution}
+import org.slf4j.LoggerFactory
 
+import java.sql.{Date, SQLException, Timestamp}
+import java.time.{Instant, LocalDate}
 import java.util
 import java.util.Collections
 import scala.collection.mutable.ListBuffer
@@ -45,9 +76,12 @@ case class TiDBTable(
     tableRef: TiTableReference,
     table: TiTableInfo,
     var ts: TiTimestamp = null,
-    options: Option[TiDBOptions] = None)(@transient val sqlContext: SQLContext)
+    options: Option[Map[String, String]] = None)(@transient val sqlContext: SQLContext)
     extends SupportsRead
-    with SupportsWrite {
+    with SupportsWrite
+    with SupportsDelete {
+
+  private final val logger = LoggerFactory.getLogger(getClass.getName)
 
   implicit class IdentifierHelper(identifier: TiTableReference) {
     def quoted: String = {
@@ -68,7 +102,7 @@ case class TiDBTable(
     if (options.isEmpty) {
       Collections.emptyMap()
     } else {
-      options.get.parameters.toMap.asJava
+      options.get.asJava
     }
   }
 
@@ -126,6 +160,48 @@ case class TiDBTable(
     // Get TiDBOptions
     val tiDBOptions = new TiDBOptions(scalaMap)
     TiDBWriterBuilder(info, tiDBOptions, sqlContext)
+  }
+
+  override def deleteWhere(filters: Array[Filter]): Unit = {
+    //Check filters
+    require(filters.length > 0, "Delete without WHERE clause is not supported")
+    require(
+      !(filters.length == 1 && filters(0).isInstanceOf[AlwaysTrue]),
+      "Delete with alwaysTrue WHERE clause is not supported")
+
+    // Parse filters to WHERE clause
+    val filterWhereClause: String =
+      filters
+        .flatMap(TiDBTable.compileFilter)
+        .map(p => s"($p)")
+        .mkString(" AND ")
+    if (StringUtils.isEmpty(filterWhereClause)) {
+      throw new SQLException("D fail: can't parse WHERE Clause")
+    }
+
+    // TODO It's better to use the start_ts of read. We can't get it now.
+    val startTs = session.getTimestamp.getVersion
+    logger.info(s"startTS: $startTs")
+
+    // Query data from TiKV (ByPass TiDB)
+    val df = sqlContext.sparkSession.read
+      .format("tidb")
+      .option(TiDBOptions.TIDB_DATABASE, tableRef.databaseName)
+      .option(TiDBOptions.TIDB_TABLE, tableRef.tableName)
+      .option(TiDBOptions.TIDB_ROWID, "true")
+      .load()
+      .filter(filterWhereClause)
+
+    // get TiDBOptions
+    val tidbOptions = new TiDBOptions(sqlContext.sparkSession.conf.getAll)
+
+    // Execute delete
+    val tiDBDelete = TiDBDelete(df, databaseName, tableName, startTs, Some(tidbOptions))
+    try {
+      tiDBDelete.delete()
+    } finally {
+      tiDBDelete.unpersistAll()
+    }
   }
 }
 
@@ -199,4 +275,77 @@ object TiDBTable {
     })
     tiRDDs.toList
   }
+
+  /**
+   * convert Filter to WHERE clause
+   * update it when spark has new filters in [[org.apache.spark.sql.sources.Filter]]
+   */
+  def compileFilter(f: Filter): Option[String] = {
+    // in case colName is a reserved keyword
+    def quote(colName: String): String = s"`$colName`"
+
+    // This behavior is different from TiDB. TiDB use '' to escaple ' , Spark use \\' to escape '
+    def escapeSql(value: String): String =
+      if (value == null) null else StringUtils.replace(value, "'", "\\'")
+
+    // compile value to correct data type
+    def compileValue(value: Any): Any =
+      value match {
+        case stringValue: String => s"'${escapeSql(stringValue)}'"
+        case timestampValue: Timestamp => "'" + timestampValue + "'"
+        case timestampValue: Instant =>
+          val timestampFormatter = TimestampFormatter.getFractionFormatter(
+            DateTimeUtils.getZoneId(SQLConf.get.sessionLocalTimeZone))
+          s"'${timestampFormatter.format(timestampValue)}'"
+        case dateValue: Date => "'" + dateValue + "'"
+        case dateValue: LocalDate =>
+          val dateFormatter = DateFormatter(
+            DateTimeUtils.getZoneId(SQLConf.get.sessionLocalTimeZone))
+          s"'${dateFormatter.format(dateValue)}'"
+        case arrayValue: Array[Any] => arrayValue.map(compileValue).mkString(", ")
+        case _ => value
+      }
+
+    Option(f match {
+      case AlwaysFalse => "false"
+      case EqualTo(attr, value) => s"${quote(attr)} = ${compileValue(value)}"
+      case EqualNullSafe(attr, value) =>
+        val col = quote(attr)
+        s"(NOT ($col != ${compileValue(value)} OR $col IS NULL OR " +
+          s"${compileValue(value)} IS NULL) OR " +
+          s"($col IS NULL AND ${compileValue(value)} IS NULL))"
+      case LessThan(attr, value) => s"${quote(attr)} < ${compileValue(value)}"
+      case GreaterThan(attr, value) => s"${quote(attr)} > ${compileValue(value)}"
+      case LessThanOrEqual(attr, value) => s"${quote(attr)} <= ${compileValue(value)}"
+      case GreaterThanOrEqual(attr, value) => s"${quote(attr)} >= ${compileValue(value)}"
+      case IsNull(attr) => s"${quote(attr)} IS NULL"
+      case IsNotNull(attr) => s"${quote(attr)} IS NOT NULL"
+      case StringStartsWith(attr, value) => s"${quote(attr)} LIKE '${value}%'"
+      case StringEndsWith(attr, value) => s"${quote(attr)} LIKE '%${value}'"
+      case StringContains(attr, value) => s"${quote(attr)} LIKE '%${value}%'"
+      case In(attr, value) if value.isEmpty =>
+        s"CASE WHEN ${quote(attr)} IS NULL THEN NULL ELSE FALSE END"
+      case In(attr, value) => s"${quote(attr)} IN (${compileValue(value)})"
+      case Not(f) => compileFilter(f).map(p => s"(NOT ($p))").orNull
+      case Or(f1, f2) =>
+        // We can't compile Or filter unless both sub-filters are compiled successfully.
+        // It applies too for the following And filter.
+        // If we can make sure compileFilter supports all filters, we can remove this check.
+        val or = Seq(f1, f2).flatMap(compileFilter)
+        if (or.size == 2) {
+          or.map(p => s"($p)").mkString(" OR ")
+        } else {
+          null
+        }
+      case And(f1, f2) =>
+        val and = Seq(f1, f2).flatMap(compileFilter)
+        if (and.size == 2) {
+          and.map(p => s"($p)").mkString(" AND ")
+        } else {
+          null
+        }
+      case _ => null
+    })
+  }
+
 }

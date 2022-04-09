@@ -86,6 +86,22 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     spark.sql(s"use $dbPrefix$dummyDatabase")
   }
 
+  test("Delete without DELETE & SELECT privilege should not be passed") {
+    the[SQLException] thrownBy {
+      spark.sql(s"delete from $dbtable where i = 3")
+    } should have message s"SELECT command denied to user $user@% for table $dbtable"
+  }
+
+  test("Delete without SELECT privilege should not be passed") {
+    tidbStmt.execute(f"GRANT DELETE on `$database`.`$table` TO '$user'@'%%';")
+    Thread.sleep((TiAuthorization.refreshIntervalSecond + 2) * 1000)
+    the[SQLException] thrownBy {
+      spark.sql(s"delete from $dbtable where i = 3")
+    } should have message s"SELECT command denied to user $user@% for table $dbtable"
+    tidbStmt.execute(f"REVOKE DELETE ON `$database`.`$table` FROM '$user'@'%%';")
+    Thread.sleep((TiAuthorization.refreshIntervalSecond + 2) * 1000)
+  }
+
   test("Select without privilege should not be passed") {
     the[SQLException] thrownBy {
       spark.sql(s"select * from `$databaseWithPrefix`.`$table`")
@@ -163,5 +179,17 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     noException should be thrownBy spark.sql(s"DESCRIBE TABLE `$databaseWithPrefix`.`$table`")
     the[SQLException] thrownBy spark.sql(
       s"DESCRIBE `$databaseWithPrefix`.`$invisibleTable`") should have message s"SELECT command denied to user $user@% for table $databaseWithPrefix.$invisibleTable"
+  }
+
+  test("Delete without DELETE privilege should not be passed") {
+    the[SQLException] thrownBy {
+      spark.sql(s"delete from $dbtable where i = 3")
+    } should have message s"DELETE command denied to user $user@% for table $dbtable"
+  }
+
+  test("Delete with DELETE & SELECT privilege should be passed") {
+    tidbStmt.execute(f"GRANT DELETE on `$database`.`$table` TO '$user'@'%%';")
+    Thread.sleep((TiAuthorization.refreshIntervalSecond + 2) * 1000)
+    noException should be thrownBy spark.sql(s"delete from $dbtable where i = 3")
   }
 }
