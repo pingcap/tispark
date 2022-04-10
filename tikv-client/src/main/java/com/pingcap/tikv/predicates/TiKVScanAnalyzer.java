@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.PartitionPruner;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
@@ -318,8 +319,12 @@ public class TiKVScanAnalyzer {
         // -INF
         startKey = RowKey.createMin(id);
       } else {
-        // Comparison with null should be filtered since it yields unknown always
-        startKey = RowKey.toRowKey(id, r.lowerEndpoint());
+        try {
+          // Comparison with null should be filtered since it yields unknown always
+          startKey = RowKey.toRowKey(id, r.lowerEndpoint());
+        }catch (TiExpressionException e){
+          startKey = RowKey.createMin(id);
+        }
         if (r.lowerBoundType().equals(BoundType.OPEN)) {
           startKey = startKey.next();
         }
@@ -329,7 +334,11 @@ public class TiKVScanAnalyzer {
         // INF
         endKey = RowKey.createBeyondMax(id);
       } else {
-        endKey = RowKey.toRowKey(id, r.upperEndpoint());
+        try {
+          endKey = RowKey.toRowKey(id, r.upperEndpoint());
+        }catch (TiExpressionException e){
+          endKey = RowKey.createBeyondMax(id);
+        }
         if (r.upperBoundType().equals(BoundType.CLOSED)) {
           endKey = endKey.next();
         }
