@@ -21,7 +21,7 @@ import static com.pingcap.tikv.util.ClientUtils.groupKeysByRegion;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.Catalog;
-import com.pingcap.tikv.event.CacheInvalidateEvent;
+import org.tikv.common.event.CacheInvalidateEvent;
 import org.tikv.common.exception.TiKVException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiTimestamp;

@@ -18,11 +18,11 @@
 
 package com.pingcap.tispark.handler
 
-import com.pingcap.tikv.event.CacheInvalidateEvent
-import com.pingcap.tikv.event.CacheInvalidateEvent.CacheType
+import org.tikv.common.event.CacheInvalidateEvent.CacheType
 import com.pingcap.tikv.region.RegionManager
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import org.slf4j.LoggerFactory
+import org.tikv.common.event.CacheInvalidateEvent
 
 /**
  * A CacheInvalidateEventHandler as it's name indicates what this class will do.

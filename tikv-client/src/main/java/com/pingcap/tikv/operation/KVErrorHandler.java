@@ -22,7 +22,7 @@ import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFas
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
-import com.pingcap.tikv.event.CacheInvalidateEvent;
+import org.tikv.common.event.CacheInvalidateEvent;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.KeyException;
 import com.pingcap.tikv.region.RegionErrorReceiver;

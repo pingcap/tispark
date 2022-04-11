@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.event;
+package org.tikv.common.event;
 
 import com.pingcap.tikv.region.TiRegion;
 import java.io.Serializable;
