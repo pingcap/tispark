@@ -20,6 +20,7 @@ import com.pingcap.tikv._
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.util.ConcreteBackOffer
 import com.pingcap.tispark.write.{SerializableKey, TiDBOptions}
+import org.tikv.common.TiSession
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.slf4j.LoggerFactory

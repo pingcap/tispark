@@ -19,7 +19,8 @@ package org.apache.spark.sql.tispark
 import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.util.RangeSplitter
-import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tikv.TiConfiguration
+import org.tikv.common.TiSession;
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.sql.catalyst.expressions.Attribute

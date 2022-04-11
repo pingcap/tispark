@@ -23,6 +23,7 @@ import com.pingcap.tikv.types.Converter
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.{TiPartition, TiTableReference}
+import org.tikv.common.TiSession;
 import org.apache.spark.Partition
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession

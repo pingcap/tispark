@@ -24,7 +24,8 @@ import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.iterator.CoprocessorIterator
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
-import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tikv.TiConfiguration
+import org.tikv.common.TiSession
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.rdd.RDD

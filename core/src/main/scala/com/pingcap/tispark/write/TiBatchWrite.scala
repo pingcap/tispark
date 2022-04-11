@@ -20,6 +20,7 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv._
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler}
+import org.tikv.common.TiSession;
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException

@@ -16,7 +16,8 @@
 
 package org.apache.spark.sql.catalyst.catalog
 
-import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tikv.TiConfiguration
+import org.tikv.common.TiSession;
 import com.pingcap.tispark.{MetaManager, TiTableReference}
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.v2.TiDBTable
@@ -27,6 +28,7 @@ import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.slf4j.LoggerFactory
+import org.tikv.common.TiSession
 
 import java.util
 

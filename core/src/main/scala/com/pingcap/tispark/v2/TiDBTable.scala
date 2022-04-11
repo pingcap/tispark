@@ -16,7 +16,7 @@
 
 package com.pingcap.tispark.v2
 
-import com.pingcap.tikv.TiSession
+import org.tikv.common.TiSession;
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}

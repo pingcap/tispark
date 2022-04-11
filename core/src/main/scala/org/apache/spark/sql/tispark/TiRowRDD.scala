@@ -21,6 +21,7 @@ import com.pingcap.tikv.columnar.TiColumnarBatchHelper
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.{TiPartition, TiTableReference}
+import org.tikv.common.TiSession;
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute

@@ -23,7 +23,8 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 
 import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta._
-import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient, TiSession}
+import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient}
+import org.tikv.common.TiSession;
 import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
 import org.apache.spark.rdd.RDD
