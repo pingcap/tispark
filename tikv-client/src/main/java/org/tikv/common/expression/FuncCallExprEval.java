@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.expression;
+package org.tikv.common.expression;
 
-import com.pingcap.tikv.expression.FuncCallExpr.Type;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.DateTimeType;
 import org.tikv.common.types.DateType;
@@ -29,12 +28,12 @@ import org.joda.time.DateTime;
 
 public class FuncCallExprEval {
 
-  private static final Map<Type, Function<Constant, Constant>> evalMap = new HashMap<>();
+  private static final Map<FuncCallExpr.Type, Function<Constant, Constant>> evalMap = new HashMap<>();
 
   static {
     // adding year eval logic here
     evalMap.put(
-        Type.YEAR,
+            FuncCallExpr.Type.YEAR,
         literal -> {
           DataType type = literal.getDataType();
           if (type instanceof StringType) {
@@ -54,7 +53,7 @@ public class FuncCallExprEval {
     // for newly adding type, please also adds the corresponding logic here.
   }
 
-  static Function<Constant, Constant> getEvalFn(Type tp) {
+  static Function<Constant, Constant> getEvalFn(FuncCallExpr.Type tp) {
     if (evalMap.containsKey(tp)) {
       return evalMap.get(tp);
     }

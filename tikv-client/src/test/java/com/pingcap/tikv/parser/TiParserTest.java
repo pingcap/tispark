@@ -17,10 +17,10 @@
 package com.pingcap.tikv.parser;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
+import org.tikv.common.expression.ArithmeticBinaryExpression;
+import org.tikv.common.expression.ColumnRef;
+import org.tikv.common.expression.Constant;
+import org.tikv.common.expression.Expression;
 import com.pingcap.tikv.meta.CIStr;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiPartitionDef;

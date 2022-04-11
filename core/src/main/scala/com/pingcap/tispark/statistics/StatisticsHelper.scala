@@ -19,7 +19,7 @@
 package com.pingcap.tispark.statistics
 
 import com.google.common.primitives.UnsignedLong
-import com.pingcap.tikv.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
+import com.pingcap.tikv.expression.Constant
 import com.pingcap.tikv.key.Key
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.meta._
@@ -27,6 +27,7 @@ import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
 import com.pingcap.tikv.types.IntegerType
 import org.slf4j.LoggerFactory
+import org.tikv.common.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
 import org.tikv.common.types.{BytesType, IntegerType}
 import org.tikv.types.IntegerType
 

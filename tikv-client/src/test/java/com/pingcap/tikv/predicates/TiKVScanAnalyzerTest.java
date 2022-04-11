@@ -16,9 +16,9 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessThan;
+import static org.tikv.common.expression.ComparisonBinaryExpression.equal;
+import static org.tikv.common.expression.ComparisonBinaryExpression.lessEqual;
+import static org.tikv.common.expression.ComparisonBinaryExpression.lessThan;
 import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
 import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.assertEquals;
@@ -28,9 +28,9 @@ import static org.junit.Assert.assertTrue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
+import org.tikv.common.expression.ColumnRef;
+import org.tikv.common.expression.Constant;
+import org.tikv.common.expression.Expression;
 import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.meta.CIStr;

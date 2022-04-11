@@ -16,15 +16,15 @@
 
 package com.pingcap.tikv.expression;
 
-import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.divide;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.greaterEqual;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.greaterThan;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessThan;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.notEqual;
+import static org.tikv.common.expression.ArithmeticBinaryExpression.divide;
+import static org.tikv.common.expression.ComparisonBinaryExpression.NormalizedPredicate;
+import static org.tikv.common.expression.ComparisonBinaryExpression.Operator;
+import static org.tikv.common.expression.ComparisonBinaryExpression.equal;
+import static org.tikv.common.expression.ComparisonBinaryExpression.greaterEqual;
+import static org.tikv.common.expression.ComparisonBinaryExpression.greaterThan;
+import static org.tikv.common.expression.ComparisonBinaryExpression.lessEqual;
+import static org.tikv.common.expression.ComparisonBinaryExpression.lessThan;
+import static org.tikv.common.expression.ComparisonBinaryExpression.notEqual;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -32,6 +32,9 @@ import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiTableInfo;
+import org.tikv.common.expression.ColumnRef;
+import org.tikv.common.expression.ComparisonBinaryExpression;
+import org.tikv.common.expression.Constant;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.IntegerType;
 import org.tikv.common.types.StringType;

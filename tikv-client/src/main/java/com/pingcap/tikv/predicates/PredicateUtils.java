@@ -16,17 +16,17 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
+import static org.tikv.common.expression.LogicalBinaryExpression.and;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiExpressionException;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.Visitor;
-import com.pingcap.tikv.expression.visitor.DefaultVisitor;
-import com.pingcap.tikv.expression.visitor.IndexRangeSetBuilder;
+import org.tikv.common.expression.ColumnRef;
+import org.tikv.common.expression.Expression;
+import org.tikv.common.expression.Visitor;
+import org.tikv.common.expression.visitor.DefaultVisitor;
+import org.tikv.common.expression.visitor.IndexRangeSetBuilder;
 import com.pingcap.tikv.key.CompoundKey;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.TypedKey;

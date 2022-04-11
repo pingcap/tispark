@@ -17,14 +17,15 @@
 package org.apache.spark.sql.catalyst.plans.statistics
 
 import com.google.common.collect.ImmutableList
-import com.pingcap.tikv.expression.ComparisonBinaryExpression.{equal, greaterThan, lessEqual, lessThan}
-import com.pingcap.tikv.expression.{ColumnRef, Constant, Expression, LogicalBinaryExpression}
+import org.tikv.common.expression.ComparisonBinaryExpression.{equal, greaterThan, lessEqual, lessThan}
+import com.pingcap.tikv.expression.Expression
 import com.pingcap.tikv.meta.{TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges
 import com.pingcap.tikv.predicates.TiKVScanAnalyzer
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 import org.scalatest.exceptions.TestFailedException
+import org.tikv.common.expression.{ColumnRef, Constant, Expression, LogicalBinaryExpression}
 import org.tikv.common.types.IntegerType
 
 import scala.collection.JavaConverters._

@@ -27,7 +27,7 @@ import com.pingcap.tikv.Version;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.expression.ColumnRef;
+import org.tikv.common.expression.ColumnRef;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;

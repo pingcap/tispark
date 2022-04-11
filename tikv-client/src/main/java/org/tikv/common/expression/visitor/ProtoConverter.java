@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.expression.visitor;
+package org.tikv.common.expression.visitor;
 
 import static java.util.Objects.requireNonNull;
 
@@ -26,20 +26,20 @@ import com.pingcap.tidb.tipb.ScalarFuncSig;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiExpressionException;
-import com.pingcap.tikv.expression.AggregateFunction;
-import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
-import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.ComparisonBinaryExpression;
-import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.FuncCallExpr;
-import com.pingcap.tikv.expression.IsNull;
-import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.Not;
-import com.pingcap.tikv.expression.StringRegExpression;
-import com.pingcap.tikv.expression.Visitor;
+import org.tikv.common.expression.AggregateFunction;
+import org.tikv.common.expression.AggregateFunction.FunctionType;
+import org.tikv.common.expression.ArithmeticBinaryExpression;
+import org.tikv.common.expression.ColumnRef;
+import org.tikv.common.expression.ComparisonBinaryExpression;
+import org.tikv.common.expression.ComparisonBinaryExpression.NormalizedPredicate;
+import org.tikv.common.expression.Constant;
+import org.tikv.common.expression.Expression;
+import org.tikv.common.expression.FuncCallExpr;
+import org.tikv.common.expression.IsNull;
+import org.tikv.common.expression.LogicalBinaryExpression;
+import org.tikv.common.expression.Not;
+import org.tikv.common.expression.StringRegExpression;
+import org.tikv.common.expression.Visitor;
 import org.tikv.common.types.BitType;
 import org.tikv.common.types.BytesType;
 import org.tikv.common.types.DataType;

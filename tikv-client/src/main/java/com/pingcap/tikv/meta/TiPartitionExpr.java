@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.meta;
 
-import com.pingcap.tikv.expression.Expression;
+import org.tikv.common.expression.Expression;
 import java.io.Serializable;
 import java.util.List;
 

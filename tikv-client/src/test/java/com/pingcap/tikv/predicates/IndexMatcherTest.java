@@ -16,20 +16,20 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.greaterEqual;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessThan;
-import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
-import static com.pingcap.tikv.expression.LogicalBinaryExpression.or;
+import static org.tikv.common.expression.ComparisonBinaryExpression.equal;
+import static org.tikv.common.expression.ComparisonBinaryExpression.greaterEqual;
+import static org.tikv.common.expression.ComparisonBinaryExpression.lessEqual;
+import static org.tikv.common.expression.ComparisonBinaryExpression.lessThan;
+import static org.tikv.common.expression.LogicalBinaryExpression.and;
+import static org.tikv.common.expression.LogicalBinaryExpression.or;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.visitor.IndexMatcher;
+import org.tikv.common.expression.ColumnRef;
+import org.tikv.common.expression.Constant;
+import org.tikv.common.expression.Expression;
+import org.tikv.common.expression.visitor.IndexMatcher;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;

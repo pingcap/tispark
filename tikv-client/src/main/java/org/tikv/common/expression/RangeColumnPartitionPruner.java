@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.expression;
-
-import static com.pingcap.tikv.expression.PartitionPruner.extractLogicalOrComparisonExpr;
+package org.tikv.common.expression;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
-import com.pingcap.tikv.expression.visitor.DefaultVisitor;
-import com.pingcap.tikv.expression.visitor.PrunedPartitionBuilder;
+import org.tikv.common.expression.visitor.DefaultVisitor;
+import org.tikv.common.expression.visitor.PrunedPartitionBuilder;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiPartitionDef;
 import com.pingcap.tikv.meta.TiPartitionInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.parser.TiParser;
 import com.pingcap.tikv.predicates.PredicateUtils;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,7 +38,7 @@ import java.util.Set;
 
 @SuppressWarnings("UnstableApiUsage")
 public class RangeColumnPartitionPruner
-    extends DefaultVisitor<Set<Integer>, LogicalBinaryExpression> {
+        extends DefaultVisitor<Set<Integer>, LogicalBinaryExpression> {
   private final int partsSize;
   private final TiPartitionInfo partInfo;
   private final Map<String, List<Expression>> partExprsPerColumnRef;
@@ -83,7 +81,7 @@ public class RangeColumnPartitionPruner
 
   @Override
   protected Set<Integer> visit(ComparisonBinaryExpression node, LogicalBinaryExpression parent) {
-    NormalizedPredicate predicate = node.normalize();
+    ComparisonBinaryExpression.NormalizedPredicate predicate = node.normalize();
     if (predicate == null) {
       throw new UnsupportedOperationException(
           String.format("ComparisonBinaryExpression %s cannot be normalized", node.toString()));
@@ -119,7 +117,7 @@ public class RangeColumnPartitionPruner
   }
 
   public List<TiPartitionDef> prune(List<Expression> filters) {
-    filters = extractLogicalOrComparisonExpr(filters);
+    filters = PartitionPruner.extractLogicalOrComparisonExpr(filters);
     Expression cnfExpr = PredicateUtils.mergeCNFExpressions(filters);
     if (cnfExpr == null) {
       return partInfo.getDefs();

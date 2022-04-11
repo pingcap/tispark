@@ -16,9 +16,9 @@
 
 package com.pingcap.tikv.predicates;
 
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.visitor.DefaultVisitor;
-import com.pingcap.tikv.expression.visitor.PseudoCostCalculator;
+import org.tikv.common.expression.Expression;
+import org.tikv.common.expression.visitor.DefaultVisitor;
+import org.tikv.common.expression.visitor.PseudoCostCalculator;
 import java.util.Optional;
 
 public class SelectivityCalculator extends DefaultVisitor<Double, Void> {

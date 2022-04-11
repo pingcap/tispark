@@ -16,8 +16,8 @@
 
 package com.pingcap.tikv.meta;
 
-import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
+import static org.tikv.common.expression.ArithmeticBinaryExpression.plus;
+import static org.tikv.common.expression.ComparisonBinaryExpression.lessEqual;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -25,13 +25,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Expr;
-import com.pingcap.tikv.expression.AggregateFunction;
-import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
-import com.pingcap.tikv.expression.ByItem;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.visitor.ProtoConverter;
+import org.tikv.common.expression.AggregateFunction;
+import org.tikv.common.expression.AggregateFunction.FunctionType;
+import org.tikv.common.expression.ByItem;
+import org.tikv.common.expression.ColumnRef;
+import org.tikv.common.expression.Constant;
+import org.tikv.common.expression.Expression;
+import org.tikv.common.expression.visitor.ProtoConverter;
 import org.tikv.common.types.IntegerType;
 import org.tikv.common.types.StringType;
 import java.io.ByteArrayInputStream;
