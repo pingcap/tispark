@@ -22,7 +22,7 @@ import com.pingcap.tikv.TiSession;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.key.Handle;
 import org.tikv.common.meta.TiDAGRequest;
-import com.pingcap.tikv.row.Row;
+import org.tikv.common.row.Row;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.ArrayList;

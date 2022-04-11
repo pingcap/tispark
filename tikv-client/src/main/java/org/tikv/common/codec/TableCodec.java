@@ -23,7 +23,7 @@ import org.tikv.common.key.IntHandle;
 import org.tikv.common.meta.TiColumnInfo;
 import org.tikv.common.meta.TiIndexInfo;
 import org.tikv.common.meta.TiTableInfo;
-import com.pingcap.tikv.row.Row;
+import org.tikv.common.row.Row;
 import java.util.List;
 
 public class TableCodec {

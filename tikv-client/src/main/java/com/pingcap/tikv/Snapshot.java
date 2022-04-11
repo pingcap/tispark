@@ -28,7 +28,7 @@ import org.tikv.common.meta.TiDAGRequest;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.operation.iterator.ConcreteScanIterator;
 import org.tikv.common.operation.iterator.IndexScanIterator;
-import com.pingcap.tikv.row.Row;
+import org.tikv.common.row.Row;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;

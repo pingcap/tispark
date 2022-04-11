@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv.row;
+package org.tikv.common.row;
 
 import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.types.Converter;

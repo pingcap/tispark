@@ -26,13 +26,14 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{DataFrame, SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
 import org.tikv.common.exception.TiBatchWriteException
+import org.tikv.common.row.Row
 import org.tikv.common.types.DataType
 
 import scala.collection.JavaConverters._
 
 object TiBatchWrite {
   type SparkRow = org.apache.spark.sql.Row
-  type TiRow = com.pingcap.tikv.row.Row
+  type TiRow = Row
   type TiDataType = DataType
   // Milliseconds
   private val MIN_DELAY_CLEAN_TABLE_LOCK = 60000

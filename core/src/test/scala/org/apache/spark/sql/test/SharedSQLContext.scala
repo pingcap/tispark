@@ -34,6 +34,7 @@ import org.apache.spark.{SharedSparkContext, SparkConf, SparkFunSuite}
 import org.joda.time.DateTimeZone
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
+import org.tikv.common.row
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -48,7 +49,7 @@ trait SharedSQLContext
     with Eventually
     with Logging
     with SharedSparkContext {
-  type TiRow = com.pingcap.tikv.row.Row
+  type TiRow = row.Row
 
   override protected val logger: Logger = SharedSQLContext.logger
   private val tiContextCache = new TiContextCache

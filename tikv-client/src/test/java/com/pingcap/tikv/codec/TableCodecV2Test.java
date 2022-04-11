@@ -24,7 +24,7 @@ import org.tikv.common.key.IntHandle;
 import com.pingcap.tikv.meta.MetaUtils;
 import org.tikv.common.meta.TiColumnInfo;
 import org.tikv.common.meta.TiTableInfo;
-import com.pingcap.tikv.row.Row;
+import org.tikv.common.row.Row;
 import org.tikv.common.codec.TableCodecV2;
 import org.tikv.common.types.BytesType;
 import org.tikv.common.types.DataType;

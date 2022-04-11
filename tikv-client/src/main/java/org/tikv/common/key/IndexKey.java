@@ -22,7 +22,7 @@ import org.tikv.common.codec.CodecDataOutput;
 import org.tikv.common.exception.TypeException;
 import org.tikv.common.meta.TiIndexColumn;
 import org.tikv.common.meta.TiTableInfo;
-import com.pingcap.tikv.row.Row;
+import org.tikv.common.row.Row;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.IntegerType;
 import java.util.List;

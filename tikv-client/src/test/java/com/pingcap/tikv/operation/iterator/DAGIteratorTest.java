@@ -34,7 +34,7 @@ import org.tikv.common.meta.TiDAGRequest.PushDownType;
 import org.tikv.common.meta.TiTableInfo;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.operation.SchemaInfer;
-import com.pingcap.tikv.row.Row;
+import org.tikv.common.row.Row;
 import org.tikv.common.operation.iterator.CoprocessorIterator;
 import org.tikv.common.types.IntegerType;
 import org.tikv.common.types.StringType;
