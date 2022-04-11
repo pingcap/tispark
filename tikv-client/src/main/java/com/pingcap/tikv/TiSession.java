@@ -23,7 +23,7 @@ import com.google.protobuf.ByteString;
 import org.tikv.common.catalog.Catalog;
 import org.tikv.common.event.CacheInvalidateEvent;
 import org.tikv.common.exception.TiKVException;
-import com.pingcap.tikv.key.Key;
+import org.tikv.common.key.Key;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;

@@ -44,7 +44,7 @@ import org.tikv.common.expression.ByItem;
 import org.tikv.common.expression.ColumnRef;
 import org.tikv.common.expression.Expression;
 import org.tikv.common.expression.visitor.ProtoConverter;
-import com.pingcap.tikv.key.RowKey;
+import org.tikv.common.key.RowKey;
 import com.pingcap.tikv.predicates.PredicateUtils;
 import com.pingcap.tikv.region.TiStoreType;
 import org.tikv.common.types.DataType;

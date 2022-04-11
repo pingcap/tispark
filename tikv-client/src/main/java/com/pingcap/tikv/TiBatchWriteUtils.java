@@ -16,9 +16,9 @@
 
 package com.pingcap.tikv;
 
-import com.pingcap.tikv.key.IndexKey;
-import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.key.RowKey;
+import org.tikv.common.key.IndexKey;
+import org.tikv.common.key.Key;
+import org.tikv.common.key.RowKey;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.region.TiRegion;

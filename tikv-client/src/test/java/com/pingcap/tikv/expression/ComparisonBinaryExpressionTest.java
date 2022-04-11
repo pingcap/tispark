@@ -29,7 +29,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.key.TypedKey;
+import org.tikv.common.key.TypedKey;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiTableInfo;
 import org.tikv.common.expression.ColumnRef;

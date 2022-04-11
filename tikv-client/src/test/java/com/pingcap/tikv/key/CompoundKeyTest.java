@@ -22,6 +22,8 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
+import org.tikv.common.key.CompoundKey;
+import org.tikv.common.key.Key;
 
 public class CompoundKeyTest {
 

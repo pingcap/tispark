@@ -16,17 +16,17 @@
 
 package org.apache.spark.sql.tispark
 
-import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.TiConfiguration
-import org.tikv.common.TiSession;
+import org.tikv.common.TiSession
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
+import org.tikv.common.key.Handle
 
 import java.util
 import scala.collection.JavaConversions._

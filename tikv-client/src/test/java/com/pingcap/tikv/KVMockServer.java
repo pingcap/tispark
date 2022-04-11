@@ -16,14 +16,14 @@
 
 package com.pingcap.tikv;
 
-import static com.pingcap.tikv.key.Key.toRawKey;
+import static org.tikv.common.key.Key.toRawKey;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
-import com.pingcap.tikv.key.Key;
+import org.tikv.common.key.Key;
 import com.pingcap.tikv.region.TiRegion;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;

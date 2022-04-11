@@ -17,9 +17,9 @@
 package org.tikv.common.codec;
 
 import org.tikv.common.exception.CodecException;
-import com.pingcap.tikv.key.CommonHandle;
-import com.pingcap.tikv.key.Handle;
-import com.pingcap.tikv.key.IntHandle;
+import org.tikv.common.key.CommonHandle;
+import org.tikv.common.key.Handle;
+import org.tikv.common.key.IntHandle;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;

@@ -29,7 +29,7 @@ import com.pingcap.tikv.ReadOnlyPDClient;
 import org.tikv.common.event.CacheInvalidateEvent;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.TiClientInternalException;
-import com.pingcap.tikv.key.Key;
+import org.tikv.common.key.Key;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;

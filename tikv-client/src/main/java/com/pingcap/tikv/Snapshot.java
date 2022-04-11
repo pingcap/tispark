@@ -22,8 +22,8 @@ import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getTiChunk
 
 import com.google.protobuf.ByteString;
 import org.tikv.common.columnar.TiChunk;
-import com.pingcap.tikv.key.Handle;
-import com.pingcap.tikv.key.Key;
+import org.tikv.common.key.Handle;
+import org.tikv.common.key.Key;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;

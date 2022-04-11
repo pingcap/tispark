@@ -19,8 +19,8 @@ package com.pingcap.tikv.codec;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.key.Handle;
-import com.pingcap.tikv.key.IntHandle;
+import org.tikv.common.key.Handle;
+import org.tikv.common.key.IntHandle;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;

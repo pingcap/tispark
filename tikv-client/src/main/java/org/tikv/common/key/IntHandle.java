@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.key;
+package org.tikv.common.key;
 
 import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.codec.CodecDataOutput;

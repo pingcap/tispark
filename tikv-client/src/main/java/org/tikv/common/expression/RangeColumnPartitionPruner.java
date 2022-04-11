@@ -21,7 +21,7 @@ import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.tikv.common.expression.visitor.DefaultVisitor;
 import org.tikv.common.expression.visitor.PrunedPartitionBuilder;
-import com.pingcap.tikv.key.TypedKey;
+import org.tikv.common.key.TypedKey;
 import com.pingcap.tikv.meta.TiPartitionDef;
 import com.pingcap.tikv.meta.TiPartitionInfo;
 import com.pingcap.tikv.meta.TiTableInfo;

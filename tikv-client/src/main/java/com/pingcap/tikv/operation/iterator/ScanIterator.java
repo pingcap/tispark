@@ -22,7 +22,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiConfiguration;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.TiClientInternalException;
-import com.pingcap.tikv.key.Key;
+import org.tikv.common.key.Key;
 import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder;
 import com.pingcap.tikv.region.TiRegion;
 import java.util.Iterator;

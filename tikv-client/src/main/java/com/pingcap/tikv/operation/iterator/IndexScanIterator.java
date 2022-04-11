@@ -20,7 +20,7 @@ import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
 import org.tikv.common.exception.TiClientInternalException;
-import com.pingcap.tikv.key.Handle;
+import org.tikv.common.key.Handle;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.util.RangeSplitter;

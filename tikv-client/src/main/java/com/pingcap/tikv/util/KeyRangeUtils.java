@@ -16,14 +16,14 @@
 
 package com.pingcap.tikv.util;
 
-import static com.pingcap.tikv.key.Key.toRawKey;
+import static org.tikv.common.key.Key.toRawKey;
 
 import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.protobuf.ByteString;
 import org.tikv.common.exception.TiClientInternalException;
-import com.pingcap.tikv.key.Key;
+import org.tikv.common.key.Key;
 import java.util.List;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 

@@ -16,14 +16,14 @@
 
 package com.pingcap.tikv.util;
 
-import static com.pingcap.tikv.key.Key.toRawKey;
+import static org.tikv.common.key.Key.toRawKey;
 import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
 import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.key.Handle;
-import com.pingcap.tikv.key.RowKey;
+import org.tikv.common.key.Handle;
+import org.tikv.common.key.RowKey;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;

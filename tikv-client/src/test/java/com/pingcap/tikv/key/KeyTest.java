@@ -16,13 +16,15 @@
 
 package com.pingcap.tikv.key;
 
-import static com.pingcap.tikv.key.Key.toRawKey;
+import static org.tikv.common.key.Key.toRawKey;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.primitives.UnsignedBytes;
 import com.google.protobuf.ByteString;
+import org.tikv.common.key.Key;
+import org.tikv.common.key.TypedKey;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.IntegerType;
 import java.util.Arrays;

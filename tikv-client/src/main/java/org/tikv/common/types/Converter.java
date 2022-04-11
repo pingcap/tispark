@@ -29,7 +29,7 @@ import com.pingcap.tikv.ExtendedDateTime;
 import org.tikv.common.exception.ConvertNotSupportException;
 import org.tikv.common.exception.ConvertOverflowException;
 import org.tikv.common.exception.TypeException;
-import com.pingcap.tikv.key.Handle;
+import org.tikv.common.key.Handle;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;

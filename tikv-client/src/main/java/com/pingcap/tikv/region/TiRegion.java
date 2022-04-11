@@ -23,7 +23,7 @@ import org.tikv.common.codec.Codec.BytesCodec;
 import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.exception.TiClientInternalException;
-import com.pingcap.tikv.key.Key;
+import org.tikv.common.key.Key;
 import com.pingcap.tikv.util.FastByteComparisons;
 import com.pingcap.tikv.util.KeyRangeUtils;
 import java.io.Serializable;

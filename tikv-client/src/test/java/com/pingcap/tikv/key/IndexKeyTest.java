@@ -21,6 +21,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import org.tikv.common.key.IndexKey;
+import org.tikv.common.key.Key;
+import org.tikv.common.key.TypedKey;
 import org.tikv.common.types.IntegerType;
 import org.junit.Test;
 

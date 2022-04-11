@@ -17,7 +17,7 @@
 
 package com.pingcap.tikv.statistics;
 
-import com.pingcap.tikv.key.Key;
+import org.tikv.common.key.Key;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
