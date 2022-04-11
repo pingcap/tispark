@@ -22,8 +22,8 @@ import static com.pingcap.tikv.util.ClientUtils.getBatches;
 import static com.pingcap.tikv.util.ClientUtils.getTasksWithOutput;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.exception.GrpcException;
-import com.pingcap.tikv.exception.TiKVException;
+import org.tikv.common.exception.GrpcException;
+import org.tikv.common.exception.TiKVException;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder;
 import com.pingcap.tikv.region.TiRegion;

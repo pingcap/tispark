@@ -17,13 +17,13 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tikv._
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.util.ConcreteBackOffer
 import com.pingcap.tispark.write.{SerializableKey, TiDBOptions}
-import org.tikv.common.TiSession
+import org.tikv.common.{TiSession, exception}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.slf4j.LoggerFactory
+import org.tikv.common.exception.TiBatchWriteException
 
 import scala.collection.JavaConverters._
 
@@ -156,7 +156,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
 
     // check commitTS
     if (commitTsAttempt <= startTs) {
-      throw new TiBatchWriteException(
+      throw new exception.TiBatchWriteException(
         s"invalid transaction tso with startTs=$startTs, commitTsAttempt=$commitTsAttempt")
     }
 
@@ -165,7 +165,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
       val newTableInfo =
         tiSession.getCatalog.getTable(schemaUpdateTime.databaseName, schemaUpdateTime.tableName)
       if (schemaUpdateTime.updateTime < newTableInfo.getUpdateTimestamp) {
-        throw new TiBatchWriteException("schema has changed during prewrite!")
+        throw new exception.TiBatchWriteException("schema has changed during prewrite!")
       }
     }
 

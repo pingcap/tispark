@@ -16,9 +16,10 @@
 
 package com.pingcap.tispark.write
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.TiDBUtils
 import org.apache.spark.sql._
+import org.tikv.common.exception
+import org.tikv.common.exception.TiBatchWriteException
 
 object TiDBWriter {
 
@@ -42,11 +43,11 @@ object TiDBWriter {
                 TiBatchWrite.write(df, tiContext, options)
 
               case _ =>
-                throw new TiBatchWriteException(
+                throw new exception.TiBatchWriteException(
                   s"SaveMode: $saveMode is not supported. TiSpark only support SaveMode.Append.")
             }
           } else {
-            throw new TiBatchWriteException(
+            throw new exception.TiBatchWriteException(
               s"table `${options.database}`.`${options.table}` does not exists!")
             // TiDBUtils.createTable(conn, df, options, tiContext)
             // TiDBUtils.saveTable(tiContext, df, Some(df.schema), options)
@@ -54,7 +55,7 @@ object TiDBWriter {
         } finally {
           conn.close()
         }
-      case None => throw new TiBatchWriteException("TiExtensions is disable!")
+      case None => throw new exception.TiBatchWriteException("TiExtensions is disable!")
     }
 
   }

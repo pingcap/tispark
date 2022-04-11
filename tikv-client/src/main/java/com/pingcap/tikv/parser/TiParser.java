@@ -18,7 +18,7 @@
 
 package com.pingcap.tikv.parser;
 
-import com.pingcap.tikv.exception.UnsupportedSyntaxException;
+import org.tikv.common.exception.UnsupportedSyntaxException;
 import org.tikv.common.expression.Expression;
 import com.pingcap.tikv.meta.TiTableInfo;
 import org.antlr.v4.runtime.CharStreams;

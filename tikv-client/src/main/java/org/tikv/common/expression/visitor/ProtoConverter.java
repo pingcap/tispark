@@ -25,7 +25,7 @@ import com.pingcap.tidb.tipb.FieldType;
 import com.pingcap.tidb.tipb.ScalarFuncSig;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.TiExpressionException;
+import org.tikv.common.exception.TiExpressionException;
 import org.tikv.common.expression.AggregateFunction;
 import org.tikv.common.expression.AggregateFunction.FunctionType;
 import org.tikv.common.expression.ArithmeticBinaryExpression;

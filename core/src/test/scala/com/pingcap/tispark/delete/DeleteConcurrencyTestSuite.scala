@@ -16,7 +16,6 @@
 
 package com.pingcap.tispark.delete
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.TiConfigConst.PD_ADDRESSES
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions}
@@ -26,6 +25,7 @@ import org.apache.spark.sql.test.TestConstants.{TiDB_ADDRESS, TiDB_PASSWORD, TiD
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 import org.scalatest.Matchers.the
 import org.scalatest.Matchers.{convertToAnyShouldWrapper, have}
+import org.tikv.common.exception.TiBatchWriteException
 
 import java.util.concurrent.{ExecutorService, Executors}
 

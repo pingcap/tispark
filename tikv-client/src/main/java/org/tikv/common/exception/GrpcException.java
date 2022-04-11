@@ -14,10 +14,18 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.exception;
+package org.tikv.common.exception;
 
-public class DAGRequestException extends RuntimeException {
-  public DAGRequestException(String msg) {
+public class GrpcException extends RuntimeException {
+  public GrpcException(Exception e) {
+    super(e);
+  }
+
+  public GrpcException(String msg) {
     super(msg);
+  }
+
+  public GrpcException(String msg, Exception e) {
+    super(msg, e);
   }
 }

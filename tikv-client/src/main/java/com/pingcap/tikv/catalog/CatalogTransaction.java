@@ -27,7 +27,7 @@ import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.codec.MetaCodec;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import org.tikv.common.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.util.Pair;

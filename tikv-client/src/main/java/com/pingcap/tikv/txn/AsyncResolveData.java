@@ -19,7 +19,7 @@
 package com.pingcap.tikv.txn;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.exception.ResolveLockException;
+import org.tikv.common.exception.ResolveLockException;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;

@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.KeyUtils;
-import com.pingcap.tikv.exception.TypeException;
+import org.tikv.common.exception.TypeException;
 import org.tikv.common.types.BytesType;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.IntegerType;

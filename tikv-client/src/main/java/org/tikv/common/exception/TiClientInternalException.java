@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 PingCAP, Inc.
+ * Copyright 2017 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.pingcap.tikv.exception;
 
-public class TxnNotFoundException extends RuntimeException {}
+package org.tikv.common.exception;
+
+public class TiClientInternalException extends RuntimeException {
+  public TiClientInternalException(String msg) {
+    super(msg);
+  }
+
+  public TiClientInternalException(String msg, Throwable t) {
+    super(msg, t);
+  }
+}

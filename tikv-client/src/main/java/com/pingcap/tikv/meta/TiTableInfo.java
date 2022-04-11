@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.TableInfo;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import org.tikv.common.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.DataTypeFactory;

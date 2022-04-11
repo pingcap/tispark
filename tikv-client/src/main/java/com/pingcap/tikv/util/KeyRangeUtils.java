@@ -22,7 +22,7 @@ import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import org.tikv.common.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
 import java.util.List;
 import org.tikv.kvproto.Coprocessor.KeyRange;

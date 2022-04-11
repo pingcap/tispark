@@ -20,7 +20,7 @@ import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.exception.TiExpressionException;
+import org.tikv.common.exception.TiExpressionException;
 import org.tikv.common.expression.Expression;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;

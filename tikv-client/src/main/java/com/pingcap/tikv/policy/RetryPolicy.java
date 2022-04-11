@@ -17,7 +17,7 @@
 package com.pingcap.tikv.policy;
 
 import com.google.common.collect.ImmutableSet;
-import com.pingcap.tikv.exception.GrpcException;
+import org.tikv.common.exception.GrpcException;
 import com.pingcap.tikv.operation.ErrorHandler;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;

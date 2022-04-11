@@ -21,7 +21,7 @@ import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.Codec.DecimalCodec;
 import com.pingcap.tikv.codec.Codec.EnumCodec;
 import com.pingcap.tikv.codec.Codec.SetCodec;
-import com.pingcap.tikv.exception.CodecException;
+import org.tikv.common.exception.CodecException;
 import org.tikv.common.types.Converter;
 import org.tikv.common.types.DataType;
 import com.pingcap.tikv.util.JsonUtils;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2020 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,16 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.exception;
+package org.tikv.txn.exception;
 
-public class GrpcException extends RuntimeException {
-  public GrpcException(Exception e) {
-    super(e);
-  }
+import com.pingcap.tikv.codec.KeyUtils;
+import com.pingcap.tikv.util.LogDesensitization;
 
-  public GrpcException(String msg) {
-    super(msg);
-  }
-
-  public GrpcException(String msg, Exception e) {
-    super(msg, e);
+public class WriteConflictException extends RuntimeException {
+  public WriteConflictException(long callerStartTS, long txnID, long commitTS, byte[] key) {
+    super(
+        String.format(
+            "callerStartTS=%d txnID=%d commitTS=%d key=%s",
+            callerStartTS, txnID, commitTS, LogDesensitization.hide(KeyUtils.formatBytes(key))));
   }
 }

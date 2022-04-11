@@ -20,7 +20,7 @@ import static junit.framework.Assert.assertTrue;
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.fail;
 
-import com.pingcap.tikv.exception.KeyException;
+import org.tikv.common.exception.KeyException;
 import java.util.Collections;
 import junit.framework.TestCase;
 import org.junit.Test;

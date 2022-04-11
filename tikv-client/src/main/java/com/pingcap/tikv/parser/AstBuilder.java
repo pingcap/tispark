@@ -19,7 +19,7 @@ package com.pingcap.tikv.parser;
 import static org.tikv.common.types.IntegerType.BOOLEAN;
 
 import com.google.common.primitives.Doubles;
-import com.pingcap.tikv.exception.UnsupportedSyntaxException;
+import org.tikv.common.exception.UnsupportedSyntaxException;
 import org.tikv.common.expression.ArithmeticBinaryExpression;
 import org.tikv.common.expression.ColumnRef;
 import org.tikv.common.expression.ComparisonBinaryExpression;

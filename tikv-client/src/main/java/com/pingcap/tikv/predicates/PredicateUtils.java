@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
-import com.pingcap.tikv.exception.TiExpressionException;
+import org.tikv.common.exception.TiExpressionException;
 import org.tikv.common.expression.ColumnRef;
 import org.tikv.common.expression.Expression;
 import org.tikv.common.expression.Visitor;

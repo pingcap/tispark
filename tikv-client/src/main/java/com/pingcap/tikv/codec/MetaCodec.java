@@ -22,7 +22,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import org.tikv.common.exception.TiClientInternalException;
 import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.Iterator;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 PingCAP, Inc.
+ * Copyright 2020 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,18 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.exception;
+package org.tikv.common.exception;
 
-public class TiKVException extends RuntimeException {
-
-  private static final long serialVersionUID = -5162704963942276016L;
-
-  public TiKVException(Throwable e) {
+public class ResolveLockException extends RuntimeException {
+  public ResolveLockException(Exception e) {
     super(e);
   }
 
-  public TiKVException(String msg) {
+  public ResolveLockException(String msg) {
     super(msg);
   }
 
-  public TiKVException(String msg, Throwable e) {
+  public ResolveLockException(String msg, Exception e) {
     super(msg, e);
   }
 }

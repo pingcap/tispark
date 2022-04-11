@@ -19,10 +19,10 @@ package com.pingcap.tikv.codec;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.pingcap.tikv.ExtendedDateTime;
-import com.pingcap.tikv.exception.CodecException;
-import com.pingcap.tikv.exception.ConvertOverflowException;
-import com.pingcap.tikv.exception.InvalidCodecFormatException;
-import com.pingcap.tikv.exception.TypeException;
+import org.tikv.common.exception.CodecException;
+import org.tikv.common.exception.ConvertOverflowException;
+import org.tikv.common.exception.InvalidCodecFormatException;
+import org.tikv.common.exception.TypeException;
 import org.tikv.common.types.BytesType;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.DecimalType;

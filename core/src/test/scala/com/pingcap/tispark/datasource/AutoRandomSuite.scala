@@ -16,9 +16,10 @@
 
 package com.pingcap.tispark.datasource
 
-import com.pingcap.tikv.exception.{ConvertOverflowException, TiBatchWriteException}
+import com.pingcap.tikv.exception.ConvertOverflowException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
+import org.tikv.common.exception.TiBatchWriteException
 
 class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") {
   test("auto random column insert null") {

@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.codec;
 
-import com.pingcap.tikv.exception.InvalidCodecFormatException;
+import org.tikv.common.exception.InvalidCodecFormatException;
 import java.util.Arrays;
 
 public class RowV2 {

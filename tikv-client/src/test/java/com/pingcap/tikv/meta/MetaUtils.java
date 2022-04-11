@@ -24,7 +24,7 @@ import com.pingcap.tikv.PDMockServer;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import org.tikv.common.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType;
 import org.tikv.common.types.DataType;
 import java.util.ArrayList;

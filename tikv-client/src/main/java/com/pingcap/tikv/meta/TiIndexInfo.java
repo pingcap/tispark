@@ -26,7 +26,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.ColumnInfo;
 import com.pingcap.tidb.tipb.IndexInfo;
-import com.pingcap.tikv.exception.TiKVException;
+import org.tikv.common.exception.TiKVException;
 import java.io.Serializable;
 import java.util.List;
 import java.util.stream.Collectors;

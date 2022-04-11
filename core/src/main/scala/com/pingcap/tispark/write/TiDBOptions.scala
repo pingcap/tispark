@@ -17,12 +17,12 @@
 package com.pingcap.tispark.write
 
 import java.util.Locale
-
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.{TTLManager, TiConfiguration}
 import com.pingcap.tispark.TiTableReference
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
+import org.tikv.common.exception
+import org.tikv.common.exception.TiBatchWriteException
 
 import scala.collection.mutable.ListBuffer
 
@@ -171,7 +171,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
       !ttlMode.equals("FIXED")
     } else {
       if (ttlMode.equals("UPDATE")) {
-        throw new TiBatchWriteException("current tikv does not support ttl update!")
+        throw new exception.TiBatchWriteException("current tikv does not support ttl update!")
       }
       false
     }
@@ -300,7 +300,7 @@ object TiDBOptions {
     conf.foreach {
       case (k, _) =>
         if ("tidb.password".equals(k) || "spark.tispark.tidb.password".equals(k)) {
-          throw new TiBatchWriteException(
+          throw new exception.TiBatchWriteException(
             "!Security! Please DO NOT add TiDB password to SparkConf which will be shown on Spark WebUI!")
         }
     }

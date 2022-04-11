@@ -18,8 +18,8 @@ package com.pingcap.tikv;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
-import com.pingcap.tikv.exception.GrpcException;
-import com.pingcap.tikv.exception.TiBatchWriteException;
+import org.tikv.common.exception.GrpcException;
+import org.tikv.common.exception.TiBatchWriteException;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;

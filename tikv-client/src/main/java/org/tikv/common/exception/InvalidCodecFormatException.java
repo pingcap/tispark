@@ -14,14 +14,10 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.exception;
+package org.tikv.common.exception;
 
-public class TiClientInternalException extends RuntimeException {
-  public TiClientInternalException(String msg) {
+public class InvalidCodecFormatException extends RuntimeException {
+  public InvalidCodecFormatException(String msg) {
     super(msg);
-  }
-
-  public TiClientInternalException(String msg, Throwable t) {
-    super(msg, t);
   }
 }

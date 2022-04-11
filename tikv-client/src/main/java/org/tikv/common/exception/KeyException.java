@@ -14,13 +14,30 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.exception;
+package org.tikv.common.exception;
 
-public class CodecException extends TiKVException {
+import org.tikv.kvproto.Kvrpcpb;
 
-  private static final long serialVersionUID = 0L;
+public class KeyException extends TiKVException {
 
-  public CodecException(String errMsg) {
+  private static final long serialVersionUID = 6649195220216182286L;
+  private Kvrpcpb.KeyError keyError;
+
+  public KeyException(String errMsg) {
     super(errMsg);
+  }
+
+  public KeyException(Kvrpcpb.KeyError keyErr) {
+    super(String.format("Key exception occurred and the reason is %s", keyErr.toString()));
+    this.keyError = keyErr;
+  }
+
+  public KeyException(Kvrpcpb.KeyError keyErr, String errMsg) {
+    super(errMsg);
+    this.keyError = keyErr;
+  }
+
+  public Kvrpcpb.KeyError getKeyError() {
+    return keyError;
   }
 }

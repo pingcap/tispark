@@ -16,10 +16,10 @@
 
 package com.pingcap.tispark.datasource
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+import org.tikv.common.exception.TiBatchWriteException
 
 class BasicBatchWriteSuite extends BaseBatchWriteWithoutDropTableTest("test_datasource_basic") {
   private val row1 = Row(null, "Hello")

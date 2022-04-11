@@ -21,8 +21,8 @@ package com.pingcap.tikv.operation;
 import static com.pingcap.tikv.pd.PDError.buildFromPdpbError;
 
 import com.pingcap.tikv.PDClient;
-import com.pingcap.tikv.exception.GrpcException;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import org.tikv.common.exception.GrpcException;
+import org.tikv.common.exception.TiClientInternalException;
 import com.pingcap.tikv.pd.PDError;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;

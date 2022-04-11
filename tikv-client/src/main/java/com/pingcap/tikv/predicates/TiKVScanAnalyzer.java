@@ -26,7 +26,7 @@ import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tidb.tipb.EncodeType;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.expression.Expression;
 import org.tikv.common.expression.PartitionPruner;
 import org.tikv.common.expression.visitor.IndexMatcher;

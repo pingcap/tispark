@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.meta;
 
-import com.pingcap.tikv.exception.TiClientInternalException;
+import org.tikv.common.exception.TiClientInternalException;
 
 public enum SchemaState {
   StateNone(0),

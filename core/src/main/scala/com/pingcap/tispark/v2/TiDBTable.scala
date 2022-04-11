@@ -16,8 +16,7 @@
 
 package com.pingcap.tispark.v2
 
-import org.tikv.common.TiSession;
-import com.pingcap.tikv.exception.TiBatchWriteException
+import org.tikv.common.{TiSession, exception}
 import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tispark.utils.TiUtil
@@ -28,41 +27,18 @@ import com.pingcap.tispark.TiTableReference
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.catalyst.util.{DateFormatter, DateTimeUtils, TimestampFormatter}
-import org.apache.spark.sql.connector.catalog.{
-  SupportsDelete,
-  SupportsRead,
-  SupportsWrite,
-  TableCapability
-}
+import org.apache.spark.sql.connector.catalog.{SupportsDelete, SupportsRead, SupportsWrite, TableCapability}
 import org.apache.spark.sql.connector.read.ScanBuilder
 import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, SparkPlan}
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.sources.{
-  AlwaysFalse,
-  AlwaysTrue,
-  And,
-  EqualNullSafe,
-  EqualTo,
-  Filter,
-  GreaterThan,
-  GreaterThanOrEqual,
-  In,
-  IsNotNull,
-  IsNull,
-  LessThan,
-  LessThanOrEqual,
-  Not,
-  Or,
-  StringContains,
-  StringEndsWith,
-  StringStartsWith
-}
+import org.apache.spark.sql.sources.{AlwaysFalse, AlwaysTrue, And, EqualNullSafe, EqualTo, Filter, GreaterThan, GreaterThanOrEqual, In, IsNotNull, IsNull, LessThan, LessThanOrEqual, Not, Or, StringContains, StringEndsWith, StringStartsWith}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.sql.{SQLContext, SparkSession, execution}
 import org.slf4j.LoggerFactory
+import org.tikv.common.exception.TiBatchWriteException
 
 import java.sql.{Date, SQLException, Timestamp}
 import java.time.{Instant, LocalDate}
@@ -148,7 +124,7 @@ case class TiDBTable(
     // TODO https://github.com/pingcap/tispark/issues/2269 we need to move TiDB dependencies which will block insert SQL.
     // if we don't support it before release, insert SQL should throw exception in catalyst
     if (scalaMap.isEmpty) {
-      throw new TiBatchWriteException("tidbOption is neccessary.")
+      throw new exception.TiBatchWriteException("tidbOption is neccessary.")
     }
     // Support df.writeto: need add db and table for write
     if (!scalaMap.contains("database")) {

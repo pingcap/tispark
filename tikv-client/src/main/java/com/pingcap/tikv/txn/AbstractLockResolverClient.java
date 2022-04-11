@@ -22,7 +22,7 @@ import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.StoreVersion;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.Version;
-import com.pingcap.tikv.exception.KeyException;
+import org.tikv.common.exception.KeyException;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;

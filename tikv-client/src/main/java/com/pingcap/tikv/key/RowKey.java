@@ -21,8 +21,8 @@ import static com.pingcap.tikv.codec.Codec.IntegerCodec.writeLong;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.exception.TiExpressionException;
+import org.tikv.common.exception.TiClientInternalException;
+import org.tikv.common.exception.TiExpressionException;
 import java.io.Serializable;
 
 public class RowKey extends Key implements Serializable {

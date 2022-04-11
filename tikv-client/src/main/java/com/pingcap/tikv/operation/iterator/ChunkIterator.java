@@ -20,7 +20,7 @@ package com.pingcap.tikv.operation.iterator;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Chunk;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import org.tikv.common.exception.TiClientInternalException;
 import java.util.Iterator;
 import java.util.List;
 

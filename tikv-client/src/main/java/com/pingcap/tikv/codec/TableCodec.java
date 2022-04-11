@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.codec;
 
-import com.pingcap.tikv.exception.CodecException;
+import org.tikv.common.exception.CodecException;
 import com.pingcap.tikv.key.CommonHandle;
 import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.IntHandle;

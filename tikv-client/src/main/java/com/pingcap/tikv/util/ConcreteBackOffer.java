@@ -19,7 +19,7 @@
 package com.pingcap.tikv.util;
 
 import com.google.common.base.Preconditions;
-import com.pingcap.tikv.exception.GrpcException;
+import org.tikv.common.exception.GrpcException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

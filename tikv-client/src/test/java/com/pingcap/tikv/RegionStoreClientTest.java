@@ -26,7 +26,7 @@ import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.ExecType;
 import com.pingcap.tidb.tipb.Executor;
 import com.pingcap.tidb.tipb.SelectResponse;
-import com.pingcap.tikv.exception.KeyException;
+import org.tikv.common.exception.KeyException;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;

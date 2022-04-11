@@ -19,7 +19,7 @@ package com.pingcap.tikv.key;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.CodecException;
+import org.tikv.common.exception.CodecException;
 import org.tikv.common.types.Converter;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.MySQLType;

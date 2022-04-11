@@ -19,7 +19,7 @@ package com.pingcap.tikv.codec;
 import static com.pingcap.tikv.codec.Codec.*;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.exception.CodecException;
+import org.tikv.common.exception.CodecException;
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;

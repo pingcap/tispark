@@ -19,12 +19,10 @@ package com.pingcap.tispark.write
 import java.util
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.TableCodec
-import com.pingcap.tikv.exception.TiBatchWriteException
-
 import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta._
 import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient}
-import org.tikv.common.TiSession;
+import org.tikv.common.{TiSession, exception}
 import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
 import org.apache.spark.rdd.RDD
@@ -32,6 +30,7 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{TiContext, _}
 import org.slf4j.LoggerFactory
+import org.tikv.common.exception.TiBatchWriteException
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -151,7 +150,7 @@ class TiBatchWriteTable(
         if (!options.replace) {
 
           val colNames = tiTableInfo.getColumns.asScala.map(col => col.getName).mkString(", ")
-          throw new TiBatchWriteException(
+          throw new exception.TiBatchWriteException(
             s"""currently user provided auto increment value is only supported in update mode!
               |please set parameter replace to true!
               |
@@ -168,7 +167,7 @@ class TiBatchWriteTable(
         }
 
         if (!colsInDf.contains(autoIncrementColName)) {
-          throw new TiBatchWriteException(
+          throw new exception.TiBatchWriteException(
             "Column size is matched but cannot find auto increment column by name")
         }
 
@@ -178,7 +177,7 @@ class TiBatchWriteTable(
           .filter { row => row.get(0) == null }
           .isEmpty()
         if (hasNullValue) {
-          throw new TiBatchWriteException(
+          throw new exception.TiBatchWriteException(
             "cannot allocate id on the condition of having null value and valid value on auto increment column")
         }
         df.rdd
@@ -241,7 +240,7 @@ class TiBatchWriteTable(
         val c1 = wrappedRowRdd.count()
         val c2 = distinctWrappedRowRdd.count()
         if (c1 != c2) {
-          throw new TiBatchWriteException("duplicate unique key or primary key")
+          throw new exception.TiBatchWriteException("duplicate unique key or primary key")
         }
       }
 
@@ -253,12 +252,12 @@ class TiBatchWriteTable(
       persistedRDDList = deletion :: persistedRDDList
 
       if (!options.replace && !deletion.isEmpty()) {
-        throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
+        throw new exception.TiBatchWriteException("data to be inserted has conflicts with TiKV data")
       }
 
       if (autoIncProvidedID) {
         if (deletion.count() != count) {
-          throw new TiBatchWriteException(
+          throw new exception.TiBatchWriteException(
             "currently user provided auto increment value is only supported in update mode!")
         }
       }
@@ -341,32 +340,32 @@ class TiBatchWriteTable(
   def checkUnsupported(): Unit = {
     // write to table with auto random column
     if (tiTableInfo.hasAutoRandomColumn) {
-      throw new TiBatchWriteException(
+      throw new exception.TiBatchWriteException(
         "tispark currently does not support write data to table with auto random column!")
     }
 
     // write to partition table
     if (tiTableInfo.isPartitionEnabled) {
-      throw new TiBatchWriteException(
+      throw new exception.TiBatchWriteException(
         "tispark currently does not support write data to partition table!")
     }
 
     // write to table with generated column
     if (tiTableInfo.hasGeneratedColumn) {
-      throw new TiBatchWriteException(
+      throw new exception.TiBatchWriteException(
         "tispark currently does not support write data to table with generated column!")
     }
   }
 
   def checkColumnNumbers(): Unit = {
     if (!tiTableInfo.hasAutoIncrementColumn && colsInDf.lengthCompare(tableColSize) != 0) {
-      throw new TiBatchWriteException(
+      throw new exception.TiBatchWriteException(
         s"table without auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize")
     }
 
     if (tiTableInfo.hasAutoIncrementColumn && colsInDf.lengthCompare(
         tableColSize) != 0 && colsInDf.lengthCompare(tableColSize - 1) != 0) {
-      throw new TiBatchWriteException(
+      throw new exception.TiBatchWriteException(
         s"table with auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize and table column size - 1 ${tableColSize - 1} ")
     }
   }
@@ -584,7 +583,7 @@ class TiBatchWriteTable(
       .isEmpty()
 
     if (nullRows) {
-      throw new TiBatchWriteException(
+      throw new exception.TiBatchWriteException(
         s"Insert null value to not null column! rows contain illegal null values!")
     }
   }
@@ -621,7 +620,7 @@ class TiBatchWriteTable(
     val colSize = tiRow.fieldCount()
 
     if (colSize > tableColSize) {
-      throw new TiBatchWriteException(s"data col size $colSize > table column size $tableColSize")
+      throw new exception.TiBatchWriteException(s"data col size $colSize > table column size $tableColSize")
     }
 
     // TODO: ddl state change

@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.util;
 
-import com.pingcap.tikv.exception.GrpcException;
+import org.tikv.common.exception.GrpcException;
 import com.pingcap.tikv.util.BackOffFunction.BackOffFuncType;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;

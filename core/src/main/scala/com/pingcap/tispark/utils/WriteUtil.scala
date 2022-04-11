@@ -17,7 +17,7 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
-import com.pingcap.tikv.exception.{ConvertOverflowException, TiBatchWriteException, TiDBConvertException}
+import com.pingcap.tikv.exception.TiDBConvertException
 import com.pingcap.tikv.key.{CommonHandle, Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.ObjectRowImpl
@@ -25,6 +25,8 @@ import com.pingcap.tispark.write.TiBatchWrite.{SparkRow, TiRow}
 import com.pingcap.tispark.write.{SerializableKey, WrappedEncodedRow, WrappedRow}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.tikv.common.exception
+import org.tikv.common.exception.{ConvertOverflowException, TiBatchWriteException, TiDBConvertException}
 import org.tikv.common.types.DataType
 
 import scala.collection.JavaConverters._
@@ -56,11 +58,11 @@ object WriteUtil {
           colsMapInTiDB(colsInDf(i)).getType.convertToTiDBType(sparkRow(i)))
       } catch {
         case e: ConvertOverflowException =>
-          throw new ConvertOverflowException(
+          throw new exception.ConvertOverflowException(
             e.getMessage,
             new TiDBConvertException(colsMapInTiDB(colsInDf(i)).getName, e))
         case e: Throwable =>
-          throw new TiDBConvertException(colsMapInTiDB(colsInDf(i)).getName, e)
+          throw new exception.TiDBConvertException(colsMapInTiDB(colsInDf(i)).getName, e)
       }
     }
     tiRow
