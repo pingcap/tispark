@@ -18,24 +18,21 @@
 
 package org.apache.spark.sql.catalyst.expressions
 
-import com.pingcap.tikv.expression.visitor.{
-  ColumnMatcher,
-  MetaResolver,
-  SupportedExpressionValidator
-}
+import com.pingcap.tikv.expression.visitor.{ColumnMatcher, MetaResolver, SupportedExpressionValidator}
 import com.pingcap.tikv.expression.{AggregateFunction, ByItem, ColumnRef, ExpressionBlocklist}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tispark.v2.TiDBTable
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.execution.TiConverter.fromSparkType
+import org.tikv.common.types.DataType
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 object TiExprUtils {
-  type TiDataType = com.pingcap.tikv.types.DataType
+  type TiDataType = DataType
   type TiExpression = com.pingcap.tikv.expression.Expression
 
   def transformGroupingToTiGrouping(
@@ -201,7 +198,7 @@ object TiExprUtils {
    * @return whether expression can be pushed down
    */
   def isPushDownSupported(expr: Expression, source: TiDBTable): Boolean = {
-    val nameTypeMap = mutable.HashMap[String, com.pingcap.tikv.types.DataType]()
+    val nameTypeMap = mutable.HashMap[String, DataType]()
     source.table.getColumns
       .foreach((info: TiColumnInfo) => nameTypeMap(info.getName) = info.getType)
 

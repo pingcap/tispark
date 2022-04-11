@@ -19,7 +19,7 @@ package com.pingcap.tikv.meta;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.pingcap.tikv.types.DataType;
+import org.tikv.common.types.DataType;
 import java.io.Serializable;
 
 @JsonIgnoreProperties(ignoreUnknown = true)

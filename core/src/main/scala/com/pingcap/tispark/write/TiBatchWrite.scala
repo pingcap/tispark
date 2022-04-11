@@ -20,19 +20,20 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv._
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler}
-import org.tikv.common.TiSession;
+import org.tikv.common.TiSession
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{DataFrame, SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
+import org.tikv.common.types.DataType
 
 import scala.collection.JavaConverters._
 
 object TiBatchWrite {
   type SparkRow = org.apache.spark.sql.Row
   type TiRow = com.pingcap.tikv.row.Row
-  type TiDataType = com.pingcap.tikv.types.DataType
+  type TiDataType = DataType
   // Milliseconds
   private val MIN_DELAY_CLEAN_TABLE_LOCK = 60000
   private val DELAY_CLEAN_TABLE_LOCK_AND_COMMIT_BACKOFF_DELTA = 30000

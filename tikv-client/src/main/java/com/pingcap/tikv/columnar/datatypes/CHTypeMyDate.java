@@ -16,8 +16,8 @@
 
 package com.pingcap.tikv.columnar.datatypes;
 
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DateType;
+import org.tikv.common.types.DataType;
+import org.tikv.common.types.DateType;
 
 public class CHTypeMyDate extends CHType {
   public CHTypeMyDate() {

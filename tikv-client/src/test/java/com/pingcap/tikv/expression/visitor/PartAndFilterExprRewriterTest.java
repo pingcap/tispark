@@ -28,8 +28,8 @@ import com.pingcap.tikv.expression.FuncCallExpr;
 import com.pingcap.tikv.expression.FuncCallExpr.Type;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.expression.Not;
-import com.pingcap.tikv.types.DateType;
-import com.pingcap.tikv.types.IntegerType;
+import org.tikv.common.types.DateType;
+import org.tikv.common.types.IntegerType;
 import org.joda.time.DateTime;
 import org.junit.Test;
 

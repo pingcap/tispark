@@ -17,11 +17,11 @@
 package com.pingcap.tikv.expression;
 
 import com.pingcap.tikv.expression.FuncCallExpr.Type;
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DateTimeType;
-import com.pingcap.tikv.types.DateType;
-import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.StringType;
+import org.tikv.common.types.DataType;
+import org.tikv.common.types.DateTimeType;
+import org.tikv.common.types.DateType;
+import org.tikv.common.types.IntegerType;
+import org.tikv.common.types.StringType;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;

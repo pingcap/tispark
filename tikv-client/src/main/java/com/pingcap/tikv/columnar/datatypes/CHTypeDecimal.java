@@ -16,8 +16,8 @@
 
 package com.pingcap.tikv.columnar.datatypes;
 
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DecimalType;
+import org.tikv.common.types.DataType;
+import org.tikv.common.types.DecimalType;
 
 public class CHTypeDecimal extends CHType {
   public int precision, scale;

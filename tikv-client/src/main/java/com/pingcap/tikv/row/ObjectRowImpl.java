@@ -19,8 +19,8 @@
 package com.pingcap.tikv.row;
 
 import com.pingcap.tikv.codec.KeyUtils;
-import com.pingcap.tikv.types.Converter;
-import com.pingcap.tikv.types.DataType;
+import org.tikv.common.types.Converter;
+import org.tikv.common.types.DataType;
 import com.pingcap.tikv.util.LogDesensitization;
 import java.math.BigDecimal;
 import java.sql.Date;

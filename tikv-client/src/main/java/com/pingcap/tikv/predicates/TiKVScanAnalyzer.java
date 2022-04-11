@@ -45,7 +45,7 @@ import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
-import com.pingcap.tikv.types.MySQLType;
+import org.tikv.common.types.MySQLType;
 import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.HashMap;

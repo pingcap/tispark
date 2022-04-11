@@ -32,9 +32,9 @@ import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.StringType;
+import org.tikv.common.types.DataType;
+import org.tikv.common.types.IntegerType;
+import org.tikv.common.types.StringType;
 import org.junit.Test;
 
 public class ComparisonBinaryExpressionTest {

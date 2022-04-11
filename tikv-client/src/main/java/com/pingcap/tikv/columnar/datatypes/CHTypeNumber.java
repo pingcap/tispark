@@ -16,10 +16,10 @@
 
 package com.pingcap.tikv.columnar.datatypes;
 
-import static com.pingcap.tikv.types.DecimalType.BIG_INT_DECIMAL;
+import static org.tikv.common.types.DecimalType.BIG_INT_DECIMAL;
 
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.IntegerType;
+import org.tikv.common.types.DataType;
+import org.tikv.common.types.IntegerType;
 
 public abstract class CHTypeNumber extends CHType {
   @Override

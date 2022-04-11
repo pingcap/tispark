@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.parser;
 
-import static com.pingcap.tikv.types.IntegerType.BOOLEAN;
+import static org.tikv.common.types.IntegerType.BOOLEAN;
 
 import com.google.common.primitives.Doubles;
 import com.pingcap.tikv.exception.UnsupportedSyntaxException;
@@ -31,8 +31,8 @@ import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.parser.MySqlParser.ExpressionContext;
 import com.pingcap.tikv.parser.MySqlParser.FunctionNameBaseContext;
-import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.RealType;
+import org.tikv.common.types.IntegerType;
+import org.tikv.common.types.RealType;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 // AstBuilder will convert ParseTree into Ast Node.

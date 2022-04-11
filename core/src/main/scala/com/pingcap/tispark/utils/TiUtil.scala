@@ -27,6 +27,7 @@ import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{SparkConf, sql}
+import org.tikv.common.types.Converter
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import java.time.{Instant, LocalDate, ZoneId}

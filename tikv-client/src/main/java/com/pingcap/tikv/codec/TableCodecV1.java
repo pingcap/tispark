@@ -22,8 +22,8 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.ObjectRowImpl;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.types.DataType.EncodeType;
-import com.pingcap.tikv.types.IntegerType;
+import org.tikv.common.types.DataType.EncodeType;
+import org.tikv.common.types.IntegerType;
 import java.util.HashMap;
 import java.util.List;
 

@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.nio.charset.StandardCharsets;
 import org.junit.Test;
+import org.tikv.common.types.Converter;
 
 public class ConverterTest {
 

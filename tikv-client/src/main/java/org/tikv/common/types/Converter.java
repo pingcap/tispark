@@ -16,12 +16,12 @@
  *
  */
 
-package com.pingcap.tikv.types;
+package org.tikv.common.types;
 
-import static com.pingcap.tikv.types.TimeType.HOUR;
-import static com.pingcap.tikv.types.TimeType.MICROSECOND;
-import static com.pingcap.tikv.types.TimeType.MINUTE;
-import static com.pingcap.tikv.types.TimeType.SECOND;
+import static org.tikv.common.types.TimeType.HOUR;
+import static org.tikv.common.types.TimeType.MICROSECOND;
+import static org.tikv.common.types.TimeType.MINUTE;
+import static org.tikv.common.types.TimeType.SECOND;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.primitives.UnsignedLong;

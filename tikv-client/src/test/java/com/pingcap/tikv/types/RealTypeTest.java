@@ -22,8 +22,10 @@ import static org.junit.Assert.assertEquals;
 
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.types.DataType.EncodeType;
+import org.tikv.common.types.DataType;
+import org.tikv.common.types.DataType.EncodeType;
 import org.junit.Test;
+import org.tikv.common.types.RealType;
 
 public class RealTypeTest {
   private static byte[] encode(Object val, EncodeType encodeType, DataType type) {

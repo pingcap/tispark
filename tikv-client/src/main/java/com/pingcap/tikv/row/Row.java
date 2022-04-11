@@ -18,7 +18,7 @@
 
 package com.pingcap.tikv.row;
 
-import com.pingcap.tikv.types.DataType;
+import org.tikv.common.types.DataType;
 import java.io.Serializable;
 import java.sql.Date;
 import java.sql.Time;

@@ -22,7 +22,7 @@ package com.pingcap.tikv.expression;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.types.IntegerType;
+import org.tikv.common.types.IntegerType;
 import java.util.List;
 import java.util.Objects;
 

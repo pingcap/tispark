@@ -25,8 +25,10 @@ import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.meta._
 import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
-import com.pingcap.tikv.types.{BytesType, IntegerType}
+import com.pingcap.tikv.types.IntegerType
 import org.slf4j.LoggerFactory
+import org.tikv.common.types.{BytesType, IntegerType}
+import org.tikv.types.IntegerType
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

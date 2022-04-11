@@ -34,8 +34,8 @@ import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.StringType;
+import org.tikv.common.types.IntegerType;
+import org.tikv.common.types.StringType;
 import org.junit.Test;
 
 public class IndexMatcherTest {

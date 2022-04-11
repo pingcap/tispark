@@ -23,8 +23,8 @@ import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.IntegerType;
+import org.tikv.common.types.DataType;
+import org.tikv.common.types.IntegerType;
 import java.util.List;
 
 public class IndexKey extends Key {

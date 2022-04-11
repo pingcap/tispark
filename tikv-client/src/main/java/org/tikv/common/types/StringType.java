@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv.types;
+package org.tikv.common.types;
 
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.exception.ConvertNotSupportException;

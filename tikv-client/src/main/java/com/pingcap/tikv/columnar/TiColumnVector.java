@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.columnar;
 
-import com.pingcap.tikv.types.DataType;
+import org.tikv.common.types.DataType;
 import java.math.BigDecimal;
 
 /**

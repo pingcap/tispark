@@ -19,7 +19,7 @@
 package com.pingcap.tikv.row;
 
 import com.pingcap.tikv.codec.CodecDataInput;
-import com.pingcap.tikv.types.DataType;
+import org.tikv.common.types.DataType;
 
 public class DefaultRowReader implements RowReader {
   private final CodecDataInput cdi;

@@ -19,7 +19,7 @@ package com.pingcap.tikv;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiStoreType;
-import com.pingcap.tikv.types.Converter;
+import org.tikv.common.types.Converter;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;

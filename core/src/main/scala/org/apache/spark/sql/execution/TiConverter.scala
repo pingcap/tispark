@@ -19,9 +19,11 @@ package org.apache.spark.sql.execution
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.types._
 import org.apache.spark.sql
+import org.tikv.common.types.{BitType, BytesType, DataType, DateType, DecimalType, IntegerType, RealType, StringType, TimestampType}
+import org.tikv.types.DataType
 
 object TiConverter {
-  type TiDataType = com.pingcap.tikv.types.DataType
+  type TiDataType = DataType
   type SparkSQLDataType = org.apache.spark.sql.types.DataType
 
   def fromSparkType(tp: SparkSQLDataType): TiDataType =

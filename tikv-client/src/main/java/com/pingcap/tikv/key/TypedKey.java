@@ -22,10 +22,10 @@ import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.TypeException;
-import com.pingcap.tikv.types.BytesType;
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.StringType;
+import org.tikv.common.types.BytesType;
+import org.tikv.common.types.DataType;
+import org.tikv.common.types.IntegerType;
+import org.tikv.common.types.StringType;
 import com.pingcap.tikv.util.LogDesensitization;
 
 public class TypedKey extends Key {

@@ -18,7 +18,7 @@ package com.pingcap.tikv.codec;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.meta.TiColumnInfo;
-import com.pingcap.tikv.types.IntegerType;
+import org.tikv.common.types.IntegerType;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;

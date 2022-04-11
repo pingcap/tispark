@@ -16,8 +16,8 @@
 
 package com.pingcap.tikv.columnar.datatypes;
 
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.StringType;
+import org.tikv.common.types.DataType;
+import org.tikv.common.types.StringType;
 
 public class CHTypeFixedString extends CHType {
   private final int length;

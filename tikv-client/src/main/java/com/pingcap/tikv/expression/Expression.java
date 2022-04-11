@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.expression;
 
-import com.pingcap.tikv.types.DataType;
+import org.tikv.common.types.DataType;
 import java.io.Serializable;
 import java.util.List;
 

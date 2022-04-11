@@ -23,9 +23,11 @@ import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
+import org.tikv.common.types
+import org.tikv.types
 
 object BasicExpression {
-  type TiDataType = com.pingcap.tikv.types.DataType
+  type TiDataType = types.DataType
   type TiExpression = com.pingcap.tikv.expression.Expression
   type TiNot = com.pingcap.tikv.expression.Not
   type TiIsNull = com.pingcap.tikv.expression.IsNull

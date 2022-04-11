@@ -18,7 +18,7 @@
 
 package com.pingcap.tikv.row;
 
-import com.pingcap.tikv.types.DataType;
+import org.tikv.common.types.DataType;
 
 public interface RowReader {
   Row readRow(DataType[] dataTypes);

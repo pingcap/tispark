@@ -23,12 +23,12 @@ import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
-import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.Snapshot
 import org.tikv.common.TiSession
 import com.pingcap.tispark.statistics.StatisticsHelper.shouldUpdateHistogram
 import com.pingcap.tispark.statistics.estimate.{DefaultTableSizeEstimator, TableSizeEstimator}
 import org.slf4j.LoggerFactory
+import org.tikv.common.types.DataType
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

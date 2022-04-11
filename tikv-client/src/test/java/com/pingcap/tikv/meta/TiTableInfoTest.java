@@ -20,8 +20,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.StringType;
+import org.tikv.common.types.IntegerType;
+import org.tikv.common.types.StringType;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;

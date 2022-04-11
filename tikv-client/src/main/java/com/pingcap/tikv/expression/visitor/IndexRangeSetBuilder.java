@@ -27,7 +27,7 @@ import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.types.DataType;
+import org.tikv.common.types.DataType;
 import java.util.HashMap;
 import java.util.Map;
 

@@ -23,8 +23,8 @@ import com.google.common.base.Preconditions;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.columnar.TiBlockColumnVector;
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.StringType;
+import org.tikv.common.types.DataType;
+import org.tikv.common.types.StringType;
 import com.pingcap.tikv.util.MemoryUtil;
 import java.nio.ByteBuffer;
 
