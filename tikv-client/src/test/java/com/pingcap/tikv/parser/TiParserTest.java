@@ -26,6 +26,7 @@ import com.pingcap.tikv.meta.MetaUtils;
 import org.tikv.common.meta.TiPartitionDef;
 import org.tikv.common.meta.TiPartitionInfo.PartitionType;
 import org.tikv.common.meta.TiTableInfo;
+import org.tikv.common.parser.TiParser;
 import org.tikv.common.types.IntegerType;
 import org.tikv.common.types.RealType;
 import org.tikv.common.types.StringType;

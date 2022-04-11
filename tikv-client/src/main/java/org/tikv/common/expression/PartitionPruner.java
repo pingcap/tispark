@@ -20,7 +20,7 @@ import org.tikv.common.meta.TiPartitionDef;
 import org.tikv.common.meta.TiPartitionInfo;
 import org.tikv.common.meta.TiPartitionInfo.PartitionType;
 import org.tikv.common.meta.TiTableInfo;
-import com.pingcap.tikv.parser.TiParser;
+import org.tikv.common.parser.TiParser;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

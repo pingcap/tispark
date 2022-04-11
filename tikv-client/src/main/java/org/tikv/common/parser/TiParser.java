@@ -16,8 +16,11 @@
  *
  */
 
-package com.pingcap.tikv.parser;
+package org.tikv.common.parser;
 
+import com.pingcap.tikv.parser.MySqlLexer;
+import com.pingcap.tikv.parser.MySqlParser;
+import com.pingcap.tikv.parser.MySqlParserBaseVisitor;
 import org.tikv.common.exception.UnsupportedSyntaxException;
 import org.tikv.common.expression.Expression;
 import org.tikv.common.meta.TiTableInfo;
@@ -41,10 +44,10 @@ public class TiParser extends MySqlParserBaseVisitor {
 
   public Expression parseExpression(String command) {
     if (command.equals("")) throw new UnsupportedSyntaxException("cannot parse empty command");
-    MySqlLexer lexer =
+    com.pingcap.tikv.parser.MySqlLexer lexer =
         new MySqlLexer(new CaseChangingCharStream(CharStreams.fromString(command), true));
     CommonTokenStream cmnTokStrm = new CommonTokenStream(lexer);
-    MySqlParser parser = new MySqlParser(cmnTokStrm);
+    com.pingcap.tikv.parser.MySqlParser parser = new MySqlParser(cmnTokStrm);
 
     try {
       // first, try parsing with potentially faster SLL mode

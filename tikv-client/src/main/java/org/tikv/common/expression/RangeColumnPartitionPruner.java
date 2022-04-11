@@ -25,7 +25,7 @@ import org.tikv.common.key.TypedKey;
 import org.tikv.common.meta.TiPartitionDef;
 import org.tikv.common.meta.TiPartitionInfo;
 import org.tikv.common.meta.TiTableInfo;
-import com.pingcap.tikv.parser.TiParser;
+import org.tikv.common.parser.TiParser;
 import com.pingcap.tikv.predicates.PredicateUtils;
 
 import java.util.ArrayList;

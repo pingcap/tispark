@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.parser;
+package org.tikv.common.parser;
 
 import static org.tikv.common.types.IntegerType.BOOLEAN;
 
 import com.google.common.primitives.Doubles;
+import com.pingcap.tikv.parser.MySqlParser;
+import com.pingcap.tikv.parser.MySqlParserBaseVisitor;
 import org.tikv.common.exception.UnsupportedSyntaxException;
 import org.tikv.common.expression.ArithmeticBinaryExpression;
 import org.tikv.common.expression.ColumnRef;
@@ -47,7 +49,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
     this.tableInfo = tableInfo;
   }
 
-  public Expression visitSimpleId(MySqlParser.SimpleIdContext ctx) {
+  public Expression visitSimpleId(com.pingcap.tikv.parser.MySqlParser.SimpleIdContext ctx) {
     if (ctx.ID() != null) {
       return createColRef(ctx.ID().getSymbol().getText());
     }
@@ -68,7 +70,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   }
 
   @Override
-  public Expression visitUid(MySqlParser.UidContext ctx) {
+  public Expression visitUid(com.pingcap.tikv.parser.MySqlParser.UidContext ctx) {
     if (ctx.REVERSE_QUOTE_ID() != null) {
       return createColRef(ctx.REVERSE_QUOTE_ID().getSymbol().getText());
     }
@@ -76,7 +78,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   }
 
   @Override
-  public Expression visitScalarFunctionCall(MySqlParser.ScalarFunctionCallContext ctx) {
+  public Expression visitScalarFunctionCall(com.pingcap.tikv.parser.MySqlParser.ScalarFunctionCallContext ctx) {
     FunctionNameBaseContext fnNameCtx = ctx.scalarFunctionName().functionNameBase();
     if (fnNameCtx != null) {
       if (fnNameCtx.YEAR() != null) {
@@ -88,7 +90,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   }
 
   @Override
-  public Expression visitFullColumnName(MySqlParser.FullColumnNameContext ctx) {
+  public Expression visitFullColumnName(com.pingcap.tikv.parser.MySqlParser.FullColumnNameContext ctx) {
     return visitUid(ctx.uid());
   }
 
@@ -105,7 +107,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   }
 
   @Override
-  public Expression visitDecimalLiteral(MySqlParser.DecimalLiteralContext ctx) {
+  public Expression visitDecimalLiteral(com.pingcap.tikv.parser.MySqlParser.DecimalLiteralContext ctx) {
     if (ctx.ONE_DECIMAL() != null) {
       String val = ctx.ONE_DECIMAL().getSymbol().getText();
       return parseIntOrLongOrDec(val);
@@ -128,13 +130,13 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   }
 
   @Override
-  public Expression visitBooleanLiteral(MySqlParser.BooleanLiteralContext ctx) {
+  public Expression visitBooleanLiteral(com.pingcap.tikv.parser.MySqlParser.BooleanLiteralContext ctx) {
     if (ctx.FALSE() != null) return Constant.create(0);
     return Constant.create(1, BOOLEAN);
   }
 
   @Override
-  public Expression visitStringLiteral(MySqlParser.StringLiteralContext ctx) {
+  public Expression visitStringLiteral(com.pingcap.tikv.parser.MySqlParser.StringLiteralContext ctx) {
     if (ctx.STRING_LITERAL() != null) {
       StringBuilder sb = new StringBuilder();
       for (TerminalNode str : ctx.STRING_LITERAL()) {
@@ -146,7 +148,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   }
 
   @Override
-  public Expression visitConstant(MySqlParser.ConstantContext ctx) {
+  public Expression visitConstant(com.pingcap.tikv.parser.MySqlParser.ConstantContext ctx) {
     if (ctx.nullLiteral != null) {
       return Constant.create(null);
     }
@@ -172,13 +174,13 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   }
 
   @Override
-  public Expression visitConstantExpressionAtom(MySqlParser.ConstantExpressionAtomContext ctx) {
+  public Expression visitConstantExpressionAtom(com.pingcap.tikv.parser.MySqlParser.ConstantExpressionAtomContext ctx) {
     return visitChildren(ctx);
   }
 
   @Override
   public Expression visitBinaryComparisonPredicate(
-      MySqlParser.BinaryComparisonPredicateContext ctx) {
+      com.pingcap.tikv.parser.MySqlParser.BinaryComparisonPredicateContext ctx) {
     Expression left = visitChildren(ctx.left);
     Expression right = visitChildren(ctx.right);
     switch (ctx.comparisonOperator().getText()) {
@@ -198,7 +200,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
         ctx.toString() + ": it is not possible reach to this line of code");
   }
 
-  public Expression visitLogicalExpression(MySqlParser.LogicalExpressionContext ctx) {
+  public Expression visitLogicalExpression(com.pingcap.tikv.parser.MySqlParser.LogicalExpressionContext ctx) {
     ExpressionContext left = ctx.expression(0);
     ExpressionContext right = ctx.expression(1);
     switch (ctx.logicalOperator().getText()) {
