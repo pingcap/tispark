@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.codec;
+package org.tikv.common.codec;
 
-import static com.pingcap.tikv.codec.Codec.*;
+import static org.tikv.common.codec.Codec.*;
 
 import com.google.protobuf.ByteString;
 import org.tikv.common.exception.CodecException;

@@ -20,8 +20,8 @@ import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
 import static com.pingcap.tikv.util.MemoryUtil.allocateDirect;
 
 import com.google.common.base.Preconditions;
-import com.pingcap.tikv.codec.Codec.IntegerCodec;
-import com.pingcap.tikv.codec.CodecDataInput;
+import org.tikv.common.codec.Codec.IntegerCodec;
+import org.tikv.common.codec.CodecDataInput;
 import com.pingcap.tikv.columnar.TiBlockColumnVector;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.StringType;

@@ -18,7 +18,6 @@ package com.pingcap.tispark.write
 
 import java.util
 import com.pingcap.tikv.allocator.RowIDAllocator
-import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta._
 import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient}
@@ -30,6 +29,7 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{TiContext, _}
 import org.slf4j.LoggerFactory
+import org.tikv.common.codec.TableCodec
 import org.tikv.common.exception.TiBatchWriteException
 
 import scala.collection.JavaConverters._

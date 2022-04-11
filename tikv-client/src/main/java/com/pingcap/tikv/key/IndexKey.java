@@ -17,8 +17,8 @@
 package com.pingcap.tikv.key;
 
 import com.google.common.base.Joiner;
-import com.pingcap.tikv.codec.Codec.IntegerCodec;
-import com.pingcap.tikv.codec.CodecDataOutput;
+import org.tikv.common.codec.Codec.IntegerCodec;
+import org.tikv.common.codec.CodecDataOutput;
 import org.tikv.common.exception.TypeException;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiTableInfo;

@@ -21,7 +21,7 @@ package com.pingcap.tikv.operation;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.codec.KeyUtils;
+import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.event.CacheInvalidateEvent;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.KeyException;

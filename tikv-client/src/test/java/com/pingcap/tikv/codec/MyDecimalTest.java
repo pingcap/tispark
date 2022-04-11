@@ -25,6 +25,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
+import org.tikv.common.codec.MyDecimal;
 
 public class MyDecimalTest {
   @Test

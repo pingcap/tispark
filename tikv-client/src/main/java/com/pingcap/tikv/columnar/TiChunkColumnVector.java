@@ -17,8 +17,8 @@
 package com.pingcap.tikv.columnar;
 
 import com.google.common.primitives.UnsignedLong;
-import com.pingcap.tikv.codec.CodecDataInput;
-import com.pingcap.tikv.codec.MyDecimal;
+import org.tikv.common.codec.CodecDataInput;
+import org.tikv.common.codec.MyDecimal;
 import org.tikv.common.types.AbstractDateTimeType;
 import org.tikv.common.types.BitType;
 import org.tikv.common.types.DataType;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.codec;
+package org.tikv.common.codec;
 
 import org.tikv.common.exception.InvalidCodecFormatException;
 import java.util.Arrays;

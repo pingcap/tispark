@@ -18,7 +18,7 @@
 
 package org.tikv.common.types;
 
-import com.pingcap.tikv.codec.CodecDataInput;
+import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.exception.ConvertNotSupportException;
 import org.tikv.common.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;

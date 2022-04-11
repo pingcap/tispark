@@ -21,8 +21,8 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.codec.Codec.IntegerCodec;
-import com.pingcap.tikv.codec.CodecDataOutput;
+import org.tikv.common.codec.Codec.IntegerCodec;
+import org.tikv.common.codec.CodecDataOutput;
 import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.key.Key;

@@ -17,7 +17,7 @@
 package com.pingcap.tikv;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.codec.KeyUtils;
+import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.TiBatchWriteException;
 import com.pingcap.tikv.meta.TiTimestamp;

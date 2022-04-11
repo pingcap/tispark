@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.codec;
+package org.tikv.common.codec;
 
-import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
@@ -39,7 +38,7 @@ public class TableCodecV1 {
       if (col.isPrimaryKey() && isPkHandle) {
         continue;
       }
-      IntegerCodec.writeLongFully(cdo, col.getId(), false);
+      Codec.IntegerCodec.writeLongFully(cdo, col.getId(), false);
       col.getType().encode(cdo, EncodeType.VALUE, values[i]);
     }
 

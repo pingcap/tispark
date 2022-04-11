@@ -18,7 +18,7 @@ package com.pingcap.tikv.columnar.datatypes;
 
 import static com.pingcap.tikv.util.MemoryUtil.allocateDirect;
 
-import com.pingcap.tikv.codec.CodecDataInput;
+import org.tikv.common.codec.CodecDataInput;
 import com.pingcap.tikv.columnar.TiBlockColumnVector;
 import org.tikv.common.types.DataType;
 import com.pingcap.tikv.util.MemoryUtil;

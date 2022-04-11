@@ -20,7 +20,7 @@ import static com.pingcap.tikv.util.ClientUtils.groupKeysByRegion;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.codec.KeyUtils;
+import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.TiBatchWriteException;
 import com.pingcap.tikv.region.RegionManager;

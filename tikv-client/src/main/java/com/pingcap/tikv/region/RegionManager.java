@@ -18,8 +18,8 @@
 
 package com.pingcap.tikv.region;
 
-import static com.pingcap.tikv.codec.KeyUtils.formatBytesUTF8;
-import static com.pingcap.tikv.codec.KeyUtils.getEncodedKey;
+import static org.tikv.common.codec.KeyUtils.formatBytesUTF8;
+import static org.tikv.common.codec.KeyUtils.getEncodedKey;
 import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
 
 import com.google.common.collect.RangeMap;

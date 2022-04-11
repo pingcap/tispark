@@ -16,8 +16,8 @@
 
 package com.pingcap.tikv.key;
 
-import com.pingcap.tikv.codec.Codec.IntegerCodec;
-import com.pingcap.tikv.codec.CodecDataOutput;
+import org.tikv.common.codec.Codec.IntegerCodec;
+import org.tikv.common.codec.CodecDataOutput;
 import org.tikv.common.exception.CodecException;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.IntegerType;

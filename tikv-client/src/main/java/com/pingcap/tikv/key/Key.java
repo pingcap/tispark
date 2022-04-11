@@ -16,12 +16,12 @@
 
 package com.pingcap.tikv.key;
 
-import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
+import static org.tikv.common.codec.KeyUtils.formatBytes;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.primitives.Bytes;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.codec.CodecDataOutput;
+import org.tikv.common.codec.CodecDataOutput;
 import org.tikv.common.types.DataType;
 import com.pingcap.tikv.util.FastByteComparisons;
 import com.pingcap.tikv.util.LogDesensitization;

@@ -18,7 +18,7 @@
 
 package com.pingcap.tikv.row;
 
-import com.pingcap.tikv.codec.CodecDataInput;
+import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.types.DataType;
 
 public class DefaultRowReader implements RowReader {

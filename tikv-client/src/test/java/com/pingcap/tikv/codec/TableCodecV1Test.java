@@ -24,6 +24,8 @@ import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
+import org.tikv.common.codec.Codec;
+import org.tikv.common.codec.TableCodecV1;
 import org.tikv.common.types.IntegerType;
 import org.tikv.common.types.MySQLType;
 import org.tikv.common.types.StringType;

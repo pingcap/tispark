@@ -21,8 +21,8 @@ package com.pingcap.tikv.types;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-import com.pingcap.tikv.codec.CodecDataInput;
-import com.pingcap.tikv.codec.CodecDataOutput;
+import org.tikv.common.codec.CodecDataInput;
+import org.tikv.common.codec.CodecDataOutput;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.DataType.EncodeType;
 import org.junit.Test;

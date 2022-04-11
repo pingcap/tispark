@@ -19,9 +19,9 @@
 package com.pingcap.tikv.region;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.codec.Codec.BytesCodec;
-import com.pingcap.tikv.codec.CodecDataInput;
-import com.pingcap.tikv.codec.KeyUtils;
+import org.tikv.common.codec.Codec.BytesCodec;
+import org.tikv.common.codec.CodecDataInput;
+import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.util.FastByteComparisons;

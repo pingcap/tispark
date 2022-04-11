@@ -18,9 +18,9 @@ package com.pingcap.tikv.key;
 
 import static java.util.Objects.requireNonNull;
 
-import com.pingcap.tikv.codec.CodecDataInput;
-import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.codec.KeyUtils;
+import org.tikv.common.codec.CodecDataInput;
+import org.tikv.common.codec.CodecDataOutput;
+import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.exception.TypeException;
 import org.tikv.common.types.BytesType;
 import org.tikv.common.types.DataType;

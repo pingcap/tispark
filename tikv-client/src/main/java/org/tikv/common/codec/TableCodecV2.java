@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.codec;
+package org.tikv.common.codec;
 
 import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.meta.TiColumnInfo;

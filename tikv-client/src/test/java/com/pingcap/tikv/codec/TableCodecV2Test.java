@@ -25,6 +25,7 @@ import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
+import org.tikv.common.codec.TableCodecV2;
 import org.tikv.common.types.BytesType;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.DataTypeFactory;

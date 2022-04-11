@@ -16,10 +16,10 @@
 
 package com.pingcap.tikv.codec;
 
-import static com.pingcap.tikv.codec.Codec.INT_FLAG;
-import static com.pingcap.tikv.codec.Codec.UINT_FLAG;
-import static com.pingcap.tikv.codec.Codec.UVARINT_FLAG;
-import static com.pingcap.tikv.codec.Codec.VARINT_FLAG;
+import static org.tikv.common.codec.Codec.INT_FLAG;
+import static org.tikv.common.codec.Codec.UINT_FLAG;
+import static org.tikv.common.codec.Codec.UVARINT_FLAG;
+import static org.tikv.common.codec.Codec.VARINT_FLAG;
 import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -29,12 +29,12 @@ import static org.junit.Assert.fail;
 
 import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tikv.ExtendedDateTime;
-import com.pingcap.tikv.codec.Codec.BytesCodec;
-import com.pingcap.tikv.codec.Codec.DateCodec;
-import com.pingcap.tikv.codec.Codec.DateTimeCodec;
-import com.pingcap.tikv.codec.Codec.DecimalCodec;
-import com.pingcap.tikv.codec.Codec.IntegerCodec;
-import com.pingcap.tikv.codec.Codec.RealCodec;
+import org.tikv.common.codec.Codec.BytesCodec;
+import org.tikv.common.codec.Codec.DateCodec;
+import org.tikv.common.codec.Codec.DateTimeCodec;
+import org.tikv.common.codec.Codec.DecimalCodec;
+import org.tikv.common.codec.Codec.IntegerCodec;
+import org.tikv.common.codec.Codec.RealCodec;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.util.Calendar;
@@ -45,6 +45,8 @@ import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.junit.Test;
+import org.tikv.common.codec.CodecDataInput;
+import org.tikv.common.codec.CodecDataOutput;
 
 public class CodecTest {
   private static byte[] toBytes(int[] arr) {

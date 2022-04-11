@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.codec;
+package org.tikv.common.codec;
 
 import com.pingcap.tikv.ExtendedDateTime;
-import com.pingcap.tikv.codec.Codec.DateTimeCodec;
-import com.pingcap.tikv.codec.Codec.DecimalCodec;
-import com.pingcap.tikv.codec.Codec.EnumCodec;
 import org.tikv.common.exception.CodecException;
 import org.tikv.common.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
@@ -310,11 +307,11 @@ public class RowEncoderV2 {
   private void encodeTimestamp(CodecDataOutput cdo, Object value, DateTimeZone tz) {
     if (value instanceof Timestamp) {
       ExtendedDateTime extendedDateTime = Converter.convertToDateTime(value);
-      long t = DateTimeCodec.toPackedLong(extendedDateTime, tz);
+      long t = Codec.DateTimeCodec.toPackedLong(extendedDateTime, tz);
       encodeInt(cdo, t);
     } else if (value instanceof Date) {
       ExtendedDateTime extendedDateTime = Converter.convertToDateTime(value);
-      long t = DateTimeCodec.toPackedLong(extendedDateTime, tz);
+      long t = Codec.DateTimeCodec.toPackedLong(extendedDateTime, tz);
       encodeInt(cdo, t);
     } else {
       throw new CodecException("invalid timestamp type " + value.getClass());
@@ -334,11 +331,11 @@ public class RowEncoderV2 {
   private void encodeDecimal(CodecDataOutput cdo, Object value, int precision, int frac) {
     if (value instanceof MyDecimal) {
       MyDecimal dec = (MyDecimal) value;
-      DecimalCodec.writeDecimal(cdo, dec, precision, frac);
+      Codec.DecimalCodec.writeDecimal(cdo, dec, precision, frac);
     } else if (value instanceof BigDecimal) {
       MyDecimal dec = new MyDecimal();
       dec.fromString(((BigDecimal) value).toPlainString());
-      DecimalCodec.writeDecimal(cdo, dec, precision, frac);
+      Codec.DecimalCodec.writeDecimal(cdo, dec, precision, frac);
     } else {
       throw new CodecException("invalid decimal type " + value.getClass());
     }
@@ -348,7 +345,7 @@ public class RowEncoderV2 {
     if (value instanceof Integer) {
       encodeInt(cdo, (int) value);
     } else if (value instanceof String) {
-      int val = EnumCodec.parseEnumName((String) value, elems);
+      int val = Codec.EnumCodec.parseEnumName((String) value, elems);
       encodeInt(cdo, val);
     } else {
       throw new CodecException("invalid enum type " + value.getClass());

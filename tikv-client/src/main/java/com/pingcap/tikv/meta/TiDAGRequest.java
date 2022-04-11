@@ -36,7 +36,7 @@ import com.pingcap.tidb.tipb.Limit;
 import com.pingcap.tidb.tipb.Selection;
 import com.pingcap.tidb.tipb.TableScan;
 import com.pingcap.tidb.tipb.TopN;
-import com.pingcap.tikv.codec.KeyUtils;
+import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.exception.DAGRequestException;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.expression.AggregateFunction;

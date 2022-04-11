@@ -19,7 +19,7 @@
 package com.pingcap.tikv.txn;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.codec.KeyUtils;
+import org.tikv.common.codec.KeyUtils;
 import org.tikv.kvproto.Kvrpcpb;
 
 public class Lock {

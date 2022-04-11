@@ -18,7 +18,7 @@
 
 package com.pingcap.tikv.row;
 
-import com.pingcap.tikv.codec.KeyUtils;
+import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.types.Converter;
 import org.tikv.common.types.DataType;
 import com.pingcap.tikv.util.LogDesensitization;

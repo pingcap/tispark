@@ -17,7 +17,7 @@
 package com.pingcap.tikv.key;
 
 import com.google.common.base.Joiner;
-import com.pingcap.tikv.codec.CodecDataOutput;
+import org.tikv.common.codec.CodecDataOutput;
 import java.util.ArrayList;
 import java.util.List;
 

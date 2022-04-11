@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.codec;
+package org.tikv.common.codec;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.Snapshot;
-import com.pingcap.tikv.codec.Codec.BytesCodec;
-import com.pingcap.tikv.codec.Codec.IntegerCodec;
+import org.tikv.common.codec.Codec.BytesCodec;
+import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.exception.TiClientInternalException;
 import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;

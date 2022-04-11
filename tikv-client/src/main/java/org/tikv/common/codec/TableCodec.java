@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.codec;
+package org.tikv.common.codec;
 
 import org.tikv.common.exception.CodecException;
 import com.pingcap.tikv.key.CommonHandle;

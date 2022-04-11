@@ -16,7 +16,7 @@
 
 package org.tikv.common.catalog;
 
-import static com.pingcap.tikv.codec.MetaCodec.KEY_DBs;
+import static org.tikv.common.codec.MetaCodec.KEY_DBs;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -24,9 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.Snapshot;
-import com.pingcap.tikv.codec.CodecDataInput;
-import com.pingcap.tikv.codec.KeyUtils;
-import com.pingcap.tikv.codec.MetaCodec;
+import org.tikv.common.codec.CodecDataInput;
+import org.tikv.common.codec.KeyUtils;
+import org.tikv.common.codec.MetaCodec;
 import org.tikv.common.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;

@@ -16,8 +16,8 @@
 
 package com.pingcap.tikv.codec;
 
-import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
-import static com.pingcap.tikv.codec.KeyUtils.hasPrefix;
+import static org.tikv.common.codec.KeyUtils.formatBytes;
+import static org.tikv.common.codec.KeyUtils.hasPrefix;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;

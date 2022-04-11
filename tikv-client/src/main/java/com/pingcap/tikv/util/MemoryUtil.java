@@ -17,7 +17,7 @@
 package com.pingcap.tikv.util;
 
 import com.google.common.primitives.UnsignedLong;
-import com.pingcap.tikv.codec.CodecDataInput;
+import org.tikv.common.codec.CodecDataInput;
 import com.sun.management.OperatingSystemMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;

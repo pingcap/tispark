@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.columnar.datatypes;
 
-import com.pingcap.tikv.codec.CodecDataInput;
+import org.tikv.common.codec.CodecDataInput;
 import com.pingcap.tikv.util.MemoryUtil;
 import java.nio.ByteBuffer;
 
