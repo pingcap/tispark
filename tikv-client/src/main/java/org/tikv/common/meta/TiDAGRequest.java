@@ -18,7 +18,7 @@ package org.tikv.common.meta;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
+import static org.tikv.common.predicates.PredicateUtils.mergeCNFExpressions;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -45,7 +45,7 @@ import org.tikv.common.expression.ColumnRef;
 import org.tikv.common.expression.Expression;
 import org.tikv.common.expression.visitor.ProtoConverter;
 import org.tikv.common.key.RowKey;
-import com.pingcap.tikv.predicates.PredicateUtils;
+import org.tikv.common.predicates.PredicateUtils;
 import org.tikv.common.region.TiStoreType;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.IntegerType;

@@ -26,7 +26,7 @@ import org.tikv.common.meta.TiPartitionDef;
 import org.tikv.common.meta.TiPartitionInfo;
 import org.tikv.common.meta.TiTableInfo;
 import org.tikv.common.parser.TiParser;
-import com.pingcap.tikv.predicates.PredicateUtils;
+import org.tikv.common.predicates.PredicateUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;

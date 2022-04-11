@@ -20,7 +20,7 @@ package com.pingcap.tikv.statistics;
 import org.tikv.common.key.Key;
 import org.tikv.common.key.StatisticsKeyRangeBuilder;
 import org.tikv.common.meta.TiIndexInfo;
-import com.pingcap.tikv.predicates.IndexRange;
+import org.tikv.common.predicates.IndexRange;
 import com.pingcap.tikv.util.Pair;
 import java.util.List;
 

@@ -27,7 +27,7 @@ import static org.tikv.common.expression.ComparisonBinaryExpression.notEqual;
 import static org.tikv.common.expression.LogicalBinaryExpression.and;
 import static org.tikv.common.expression.LogicalBinaryExpression.or;
 import static org.tikv.common.expression.LogicalBinaryExpression.xor;
-import static com.pingcap.tikv.predicates.TiKVScanAnalyzer.extractConditions;
+import static org.tikv.common.predicates.TiKVScanAnalyzer.extractConditions;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -43,6 +43,9 @@ import org.tikv.common.key.TypedKey;
 import com.pingcap.tikv.meta.MetaUtils;
 import org.tikv.common.meta.TiIndexInfo;
 import org.tikv.common.meta.TiTableInfo;
+import org.tikv.common.predicates.IndexRange;
+import org.tikv.common.predicates.PredicateUtils;
+import org.tikv.common.predicates.ScanSpec;
 import org.tikv.common.types.IntegerType;
 import org.tikv.common.types.StringType;
 import java.util.ArrayList;

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.predicates;
+package org.tikv.common.predicates;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
+import static org.tikv.common.predicates.PredicateUtils.expressionToIndexRanges;
 import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 import static java.util.Objects.requireNonNull;
 
