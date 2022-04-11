@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.policy;
+package org.tikv.common.policy;
 
 import com.google.common.collect.ImmutableSet;
 import org.tikv.common.exception.GrpcException;
