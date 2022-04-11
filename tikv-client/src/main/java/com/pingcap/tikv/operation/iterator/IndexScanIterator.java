@@ -21,7 +21,7 @@ import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.key.Handle;
-import com.pingcap.tikv.meta.TiDAGRequest;
+import org.tikv.common.meta.TiDAGRequest;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;

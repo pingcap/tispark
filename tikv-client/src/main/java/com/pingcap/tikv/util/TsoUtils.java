@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.util;
 
-import com.pingcap.tikv.meta.TiTimestamp;
+import org.tikv.common.meta.TiTimestamp;
 
 public final class TsoUtils {
   public static boolean isExpired(long lockTS, long ttl) {

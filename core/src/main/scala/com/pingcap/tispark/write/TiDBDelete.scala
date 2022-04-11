@@ -18,13 +18,13 @@ package com.pingcap.tispark.write
 
 import com.pingcap.tikv.TiConfiguration
 import org.tikv.common.TiSession
-import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TwoPhaseCommitHepler, WriteUtil}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
+import org.tikv.common.meta.TiTableInfo
 
 case class TiDBDelete(
     df: DataFrame,

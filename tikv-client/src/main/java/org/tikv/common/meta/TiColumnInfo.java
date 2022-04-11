@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.meta;
+package org.tikv.common.meta;
 
 import static java.util.Objects.requireNonNull;
 

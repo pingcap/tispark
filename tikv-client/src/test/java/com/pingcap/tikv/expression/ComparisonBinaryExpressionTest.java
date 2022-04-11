@@ -31,7 +31,7 @@ import static org.junit.Assert.assertNull;
 import com.google.common.collect.ImmutableList;
 import org.tikv.common.key.TypedKey;
 import com.pingcap.tikv.meta.MetaUtils;
-import com.pingcap.tikv.meta.TiTableInfo;
+import org.tikv.common.meta.TiTableInfo;
 import org.tikv.common.expression.ColumnRef;
 import org.tikv.common.expression.ComparisonBinaryExpression;
 import org.tikv.common.expression.Constant;

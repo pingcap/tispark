@@ -21,7 +21,7 @@ package com.pingcap.tikv.types;
 import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
+import org.tikv.common.meta.TiColumnInfo.InternalTypeHolder;
 import org.junit.Test;
 import org.tikv.common.types.*;
 import org.tikv.types.*;

@@ -18,8 +18,8 @@
 
 package com.pingcap.tispark.statistics.estimate
 
-import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tispark.statistics.StatisticsManager
+import org.tikv.common.meta.TiTableInfo
 
 trait TableSizeEstimator {
 

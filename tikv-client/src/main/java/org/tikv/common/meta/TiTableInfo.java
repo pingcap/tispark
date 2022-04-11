@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.meta;
+package org.tikv.common.meta;
 
 import static java.util.Objects.requireNonNull;
 
@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.TableInfo;
 import org.tikv.common.exception.TiClientInternalException;
-import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
+import org.tikv.common.meta.TiColumnInfo.InternalTypeHolder;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.DataTypeFactory;
 import java.io.Serializable;

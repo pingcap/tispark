@@ -19,7 +19,7 @@ package org.tikv.common.codec;
 import com.pingcap.tikv.ExtendedDateTime;
 import org.tikv.common.exception.CodecException;
 import org.tikv.common.exception.TypeException;
-import com.pingcap.tikv.meta.TiColumnInfo;
+import org.tikv.common.meta.TiColumnInfo;
 import org.tikv.common.types.Converter;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.DecimalType;

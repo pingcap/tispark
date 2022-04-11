@@ -33,7 +33,7 @@ import org.tikv.common.columnar.datatypes.CHType;
 import org.tikv.common.key.CommonHandle;
 import org.tikv.common.key.Handle;
 import org.tikv.common.key.IntHandle;
-import com.pingcap.tikv.meta.TiDAGRequest;
+import org.tikv.common.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.row.RowReader;

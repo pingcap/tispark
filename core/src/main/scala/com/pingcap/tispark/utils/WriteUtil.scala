@@ -19,7 +19,7 @@ package com.pingcap.tispark.utils
 import com.pingcap.tikv.codec.CodecDataOutput
 import com.pingcap.tikv.exception.TiDBConvertException
 import com.pingcap.tikv.key.IndexKey
-import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
+import com.pingcap.tikv.meta.TiIndexColumn
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tispark.write.TiBatchWrite.{SparkRow, TiRow}
 import com.pingcap.tispark.write.{SerializableKey, WrappedEncodedRow, WrappedRow}
@@ -29,6 +29,7 @@ import org.tikv.common.codec.{CodecDataOutput, TableCodec}
 import org.tikv.common.exception
 import org.tikv.common.exception.{ConvertOverflowException, TiBatchWriteException, TiDBConvertException}
 import org.tikv.common.key.{CommonHandle, Handle, IndexKey, IntHandle, RowKey}
+import org.tikv.common.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import org.tikv.common.types.DataType
 
 import scala.collection.JavaConverters._

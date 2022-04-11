@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.operation.iterator;
 
-import static com.pingcap.tikv.meta.TiDAGRequest.PushDownType.STREAMING;
+import static org.tikv.common.meta.TiDAGRequest.PushDownType.STREAMING;
 
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
@@ -25,7 +25,7 @@ import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.TiSession;
 import org.tikv.common.exception.RegionTaskException;
 import org.tikv.common.exception.TiClientInternalException;
-import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
+import org.tikv.common.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;

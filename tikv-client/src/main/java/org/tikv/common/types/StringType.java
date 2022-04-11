@@ -21,7 +21,7 @@ package org.tikv.common.types;
 import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.exception.ConvertNotSupportException;
 import org.tikv.common.exception.ConvertOverflowException;
-import com.pingcap.tikv.meta.TiColumnInfo;
+import org.tikv.common.meta.TiColumnInfo;
 import java.nio.charset.StandardCharsets;
 
 public class StringType extends BytesType {

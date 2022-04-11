@@ -20,9 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.meta.TiDAGRequest;
-import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
-import com.pingcap.tikv.meta.TiTableInfo;
+import org.tikv.common.meta.TiDAGRequest;
+import org.tikv.common.meta.TiDAGRequest.PushDownType;
+import org.tikv.common.meta.TiTableInfo;
 import com.pingcap.tikv.predicates.TiKVScanAnalyzer;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;

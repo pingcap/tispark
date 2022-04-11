@@ -20,7 +20,7 @@ import com.google.protobuf.ByteString;
 import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.TiBatchWriteException;
-import com.pingcap.tikv.meta.TiTimestamp;
+import org.tikv.common.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;

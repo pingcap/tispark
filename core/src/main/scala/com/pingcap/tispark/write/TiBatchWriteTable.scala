@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory
 import org.tikv.common.codec.TableCodec
 import org.tikv.common.exception.TiBatchWriteException
 import org.tikv.common.key.{Handle, IndexKey, IntHandle, RowKey}
+import org.tikv.common.meta.{TiColumnInfo, TiDBInfo, TiIndexInfo, TiTableInfo, TiTimestamp}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

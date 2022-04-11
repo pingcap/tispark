@@ -18,7 +18,7 @@ package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.datatype.TypeMapping
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
+import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.region.TiStoreType
 import com.pingcap.tikv.types._
 import com.pingcap.tispark._
@@ -27,6 +27,7 @@ import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{SparkConf, sql}
+import org.tikv.common.meta.{TiDAGRequest, TiTableInfo}
 import org.tikv.common.types.Converter
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 

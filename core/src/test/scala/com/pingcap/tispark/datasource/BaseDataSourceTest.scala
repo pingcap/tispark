@@ -17,9 +17,7 @@
 package com.pingcap.tispark.datasource
 
 import java.util.Objects
-
 import com.pingcap.tikv.allocator.RowIDAllocator
-import com.pingcap.tikv.meta.TiColumnInfo
 import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import org.apache.spark.SparkException
 import org.apache.spark.rdd.RDD
@@ -27,6 +25,7 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{BaseTiSparkTest, DataFrame, Row}
+import org.tikv.common.meta.TiColumnInfo
 
 import scala.collection.mutable.ArrayBuffer
 

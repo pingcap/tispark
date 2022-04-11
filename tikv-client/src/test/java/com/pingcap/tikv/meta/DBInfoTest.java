@@ -20,6 +20,8 @@ import static org.junit.Assert.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
+import org.tikv.common.meta.SchemaState;
+import org.tikv.common.meta.TiDBInfo;
 
 public class DBInfoTest {
   @Test

@@ -20,9 +20,9 @@ import org.tikv.common.exception.CodecException;
 import org.tikv.common.key.CommonHandle;
 import org.tikv.common.key.Handle;
 import org.tikv.common.key.IntHandle;
-import com.pingcap.tikv.meta.TiColumnInfo;
-import com.pingcap.tikv.meta.TiIndexInfo;
-import com.pingcap.tikv.meta.TiTableInfo;
+import org.tikv.common.meta.TiColumnInfo;
+import org.tikv.common.meta.TiIndexInfo;
+import org.tikv.common.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
 import java.util.List;
 

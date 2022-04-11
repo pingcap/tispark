@@ -23,7 +23,7 @@ import static junit.framework.TestCase.fail;
 
 import com.google.protobuf.ByteString;
 import org.tikv.common.exception.KeyException;
-import com.pingcap.tikv.meta.TiTimestamp;
+import org.tikv.common.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;

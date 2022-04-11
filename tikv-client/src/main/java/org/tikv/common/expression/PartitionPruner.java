@@ -16,10 +16,10 @@
 
 package org.tikv.common.expression;
 
-import com.pingcap.tikv.meta.TiPartitionDef;
-import com.pingcap.tikv.meta.TiPartitionInfo;
-import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType;
-import com.pingcap.tikv.meta.TiTableInfo;
+import org.tikv.common.meta.TiPartitionDef;
+import org.tikv.common.meta.TiPartitionInfo;
+import org.tikv.common.meta.TiPartitionInfo.PartitionType;
+import org.tikv.common.meta.TiTableInfo;
 import com.pingcap.tikv.parser.TiParser;
 import java.util.ArrayList;
 import java.util.List;

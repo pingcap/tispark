@@ -19,8 +19,8 @@ package com.pingcap.tikv.catalog;
 import static org.junit.Assert.assertEquals;
 
 import com.pingcap.tikv.meta.MetaUtils.MetaMockHelper;
-import com.pingcap.tikv.meta.TiDBInfo;
-import com.pingcap.tikv.meta.TiTableInfo;
+import org.tikv.common.meta.TiDBInfo;
+import org.tikv.common.meta.TiTableInfo;
 import java.util.List;
 import org.junit.Test;
 import org.tikv.common.catalog.CatalogTransaction;

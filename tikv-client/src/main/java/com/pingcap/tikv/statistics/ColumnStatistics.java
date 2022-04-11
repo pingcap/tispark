@@ -18,7 +18,7 @@
 
 package com.pingcap.tikv.statistics;
 
-import com.pingcap.tikv.meta.TiColumnInfo;
+import org.tikv.common.meta.TiColumnInfo;
 
 /**
  * Each Column will have a single {@link ColumnStatistics} to store {@link Histogram} info and

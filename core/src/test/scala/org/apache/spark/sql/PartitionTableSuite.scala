@@ -16,8 +16,8 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tikv.meta.TiDAGRequest
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
+import org.tikv.common.meta.TiDAGRequest
 
 class PartitionTableSuite extends BasePlanTest {
   override def afterAll(): Unit =

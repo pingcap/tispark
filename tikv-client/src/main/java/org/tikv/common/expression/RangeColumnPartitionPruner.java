@@ -22,9 +22,9 @@ import com.google.common.collect.TreeRangeSet;
 import org.tikv.common.expression.visitor.DefaultVisitor;
 import org.tikv.common.expression.visitor.PrunedPartitionBuilder;
 import org.tikv.common.key.TypedKey;
-import com.pingcap.tikv.meta.TiPartitionDef;
-import com.pingcap.tikv.meta.TiPartitionInfo;
-import com.pingcap.tikv.meta.TiTableInfo;
+import org.tikv.common.meta.TiPartitionDef;
+import org.tikv.common.meta.TiPartitionInfo;
+import org.tikv.common.meta.TiTableInfo;
 import com.pingcap.tikv.parser.TiParser;
 import com.pingcap.tikv.predicates.PredicateUtils;
 

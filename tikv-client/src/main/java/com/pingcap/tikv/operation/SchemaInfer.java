@@ -18,7 +18,7 @@ package com.pingcap.tikv.operation;
 
 import org.tikv.common.expression.ByItem;
 import org.tikv.common.expression.Expression;
-import com.pingcap.tikv.meta.TiDAGRequest;
+import org.tikv.common.meta.TiDAGRequest;
 import org.tikv.common.types.DataType;
 import java.util.ArrayList;
 import java.util.List;

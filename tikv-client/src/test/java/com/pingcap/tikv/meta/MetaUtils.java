@@ -25,7 +25,8 @@ import org.tikv.common.codec.Codec.BytesCodec;
 import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.codec.CodecDataOutput;
 import org.tikv.common.exception.TiClientInternalException;
-import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType;
+import org.tikv.common.meta.*;
+import org.tikv.common.meta.TiPartitionInfo.PartitionType;
 import org.tikv.common.types.DataType;
 import java.util.ArrayList;
 import java.util.List;
@@ -93,7 +94,7 @@ public class MetaUtils {
     }
 
     public TableBuilder addPartition(
-        String expr, PartitionType type, List<TiPartitionDef> partitionDefs, List<CIStr> columns) {
+            String expr, PartitionType type, List<TiPartitionDef> partitionDefs, List<CIStr> columns) {
       this.partInfo =
           new TiPartitionInfo(
               TiPartitionInfo.partTypeToLong(type), expr, columns, true, partitionDefs);
@@ -112,17 +113,17 @@ public class MetaUtils {
 
       TiIndexInfo index =
           new TiIndexInfo(
-              iid,
-              CIStr.newCIStr(indexName),
-              CIStr.newCIStr(name),
-              ImmutableList.copyOf(indexCols),
-              false,
-              isPk,
-              SchemaState.StatePublic.getStateCode(),
-              "",
-              IndexType.IndexTypeBtree.getTypeCode(),
-              false,
-              false);
+                  iid,
+                  CIStr.newCIStr(indexName),
+                  CIStr.newCIStr(name),
+                  ImmutableList.copyOf(indexCols),
+                  false,
+                  isPk,
+                  SchemaState.StatePublic.getStateCode(),
+                  "",
+                  IndexType.IndexTypeBtree.getTypeCode(),
+                  false,
+                  false);
       indices.add(index);
       return this;
     }

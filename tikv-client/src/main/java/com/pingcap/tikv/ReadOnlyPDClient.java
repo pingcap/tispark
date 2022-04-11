@@ -17,7 +17,7 @@
 package com.pingcap.tikv;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.meta.TiTimestamp;
+import org.tikv.common.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import java.util.List;

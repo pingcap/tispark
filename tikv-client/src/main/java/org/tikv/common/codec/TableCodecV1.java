@@ -17,8 +17,8 @@
 package org.tikv.common.codec;
 
 import org.tikv.common.key.Handle;
-import com.pingcap.tikv.meta.TiColumnInfo;
-import com.pingcap.tikv.meta.TiTableInfo;
+import org.tikv.common.meta.TiColumnInfo;
+import org.tikv.common.meta.TiTableInfo;
 import com.pingcap.tikv.row.ObjectRowImpl;
 import com.pingcap.tikv.row.Row;
 import org.tikv.common.types.DataType.EncodeType;

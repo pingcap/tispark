@@ -28,7 +28,7 @@ import org.tikv.common.expression.Expression;
 import org.tikv.common.expression.FuncCallExpr;
 import org.tikv.common.expression.FuncCallExpr.Type;
 import org.tikv.common.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.meta.TiTableInfo;
+import org.tikv.common.meta.TiTableInfo;
 import com.pingcap.tikv.parser.MySqlParser.ExpressionContext;
 import com.pingcap.tikv.parser.MySqlParser.FunctionNameBaseContext;
 import org.tikv.common.types.IntegerType;
