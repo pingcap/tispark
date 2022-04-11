@@ -40,7 +40,7 @@ import org.tikv.common.exception.SelectException;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.exception.TiKVException;
 import org.tikv.common.operation.KVErrorHandler;
-import com.pingcap.tikv.streaming.StreamingResponse;
+import org.tikv.common.streaming.StreamingResponse;
 import com.pingcap.tikv.txn.AbstractLockResolverClient;
 import com.pingcap.tikv.txn.Lock;
 import com.pingcap.tikv.txn.ResolveLockResult;

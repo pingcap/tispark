@@ -22,7 +22,7 @@ import static io.grpc.stub.ClientCalls.blockingServerStreamingCall;
 import org.tikv.common.operation.ErrorHandler;
 import com.pingcap.tikv.policy.RetryMaxMs.Builder;
 import com.pingcap.tikv.policy.RetryPolicy;
-import com.pingcap.tikv.streaming.StreamingResponse;
+import org.tikv.common.streaming.StreamingResponse;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import io.grpc.MethodDescriptor;
