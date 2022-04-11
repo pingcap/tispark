@@ -16,12 +16,12 @@
 
 package org.tikv.common.columnar.datatypes;
 
-import static com.pingcap.tikv.util.MemoryUtil.allocateDirect;
+import static org.tikv.common.util.MemoryUtil.allocateDirect;
 
 import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.columnar.TiBlockColumnVector;
 import org.tikv.common.types.DataType;
-import com.pingcap.tikv.util.MemoryUtil;
+import org.tikv.common.util.MemoryUtil;
 import java.nio.ByteBuffer;
 
 // TODO Support nullable data types.

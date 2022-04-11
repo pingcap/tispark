@@ -30,7 +30,7 @@ import org.tikv.common.codec.MetaCodec;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.meta.TiDBInfo;
 import org.tikv.common.meta.TiTableInfo;
-import com.pingcap.tikv.util.Pair;
+import org.tikv.common.util.Pair;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;

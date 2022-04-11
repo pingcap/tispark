@@ -38,7 +38,7 @@ import org.tikv.common.row.Row;
 import org.tikv.common.operation.iterator.CoprocessorIterator;
 import org.tikv.common.types.IntegerType;
 import org.tikv.common.types.StringType;
-import com.pingcap.tikv.util.RangeSplitter.RegionTask;
+import org.tikv.common.util.RangeSplitter.RegionTask;
 import java.util.List;
 import org.junit.Test;
 import org.tikv.kvproto.Coprocessor.KeyRange;

@@ -49,7 +49,7 @@ import org.tikv.common.predicates.PredicateUtils;
 import org.tikv.common.region.TiStoreType;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.IntegerType;
-import com.pingcap.tikv.util.KeyRangeUtils;
+import org.tikv.common.util.KeyRangeUtils;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;

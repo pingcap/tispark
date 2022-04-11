@@ -29,7 +29,7 @@ import org.tikv.common.types.IntegerType;
 import org.tikv.common.types.JsonType;
 import org.tikv.common.types.TimeType;
 import org.tikv.common.types.TimestampType;
-import com.pingcap.tikv.util.JsonUtils;
+import org.tikv.common.util.JsonUtils;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;

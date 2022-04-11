@@ -16,7 +16,6 @@
 
 package org.apache.spark.sql.tispark
 
-import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.TiConfiguration
 import org.tikv.common.TiSession
 import com.pingcap.tispark.utils.TiUtil
@@ -27,6 +26,7 @@ import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 import org.tikv.common.key.Handle
 import org.tikv.common.meta.TiDAGRequest
+import org.tikv.common.util.RangeSplitter
 
 import java.util
 import scala.collection.JavaConversions._

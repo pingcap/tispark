@@ -17,8 +17,8 @@
 package com.pingcap.tikv;
 
 import org.tikv.common.region.TiStoreType;
-import com.pingcap.tikv.util.BackOffer;
-import com.pingcap.tikv.util.ConcreteBackOffer;
+import org.tikv.common.util.BackOffer;
+import org.tikv.common.util.ConcreteBackOffer;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;

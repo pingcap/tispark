@@ -18,7 +18,7 @@
 
 package org.tikv.common.operation;
 
-import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
+import static org.tikv.common.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
 import com.google.protobuf.ByteString;
 import org.tikv.common.codec.KeyUtils;
@@ -31,8 +31,8 @@ import org.tikv.common.region.TiRegion;
 import org.tikv.txn.AbstractLockResolverClient;
 import org.tikv.txn.Lock;
 import org.tikv.txn.ResolveLockResult;
-import com.pingcap.tikv.util.BackOffFunction;
-import com.pingcap.tikv.util.BackOffer;
+import org.tikv.common.util.BackOffFunction;
+import org.tikv.common.util.BackOffer;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import java.util.ArrayList;

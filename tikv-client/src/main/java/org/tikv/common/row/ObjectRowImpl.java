@@ -21,7 +21,7 @@ package org.tikv.common.row;
 import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.types.Converter;
 import org.tikv.common.types.DataType;
-import com.pingcap.tikv.util.LogDesensitization;
+import org.tikv.common.util.LogDesensitization;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Time;

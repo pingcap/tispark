@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv.util;
+package org.tikv.common.util;
 
 public interface BackOffer {
   // Back off types.

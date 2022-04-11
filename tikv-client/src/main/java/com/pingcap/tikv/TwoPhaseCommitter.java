@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv;
 
-import static com.pingcap.tikv.util.ClientUtils.groupKeysByRegion;
+import static org.tikv.common.util.ClientUtils.groupKeysByRegion;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
@@ -28,11 +28,11 @@ import org.tikv.common.region.TiRegion;
 import org.tikv.txn.TxnKVClient;
 import org.tikv.txn.type.BatchKeys;
 import org.tikv.txn.type.ClientRPCResult;
-import com.pingcap.tikv.util.BackOffFunction;
-import com.pingcap.tikv.util.BackOffer;
-import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.LogDesensitization;
-import com.pingcap.tikv.util.Pair;
+import org.tikv.common.util.BackOffFunction;
+import org.tikv.common.util.BackOffer;
+import org.tikv.common.util.ConcreteBackOffer;
+import org.tikv.common.util.LogDesensitization;
+import org.tikv.common.util.Pair;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;

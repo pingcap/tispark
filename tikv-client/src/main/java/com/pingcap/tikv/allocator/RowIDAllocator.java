@@ -15,7 +15,7 @@
  */
 package com.pingcap.tikv.allocator;
 
-import static com.pingcap.tikv.util.BackOffer.ROW_ID_ALLOCATOR_BACKOFF;
+import static org.tikv.common.util.BackOffer.ROW_ID_ALLOCATOR_BACKOFF;
 
 import com.google.common.primitives.UnsignedLongs;
 import com.google.protobuf.ByteString;
@@ -33,9 +33,9 @@ import org.tikv.common.exception.AllocateRowIDOverflowException;
 import org.tikv.common.exception.TiBatchWriteException;
 import org.tikv.common.meta.TiTableInfo;
 import org.tikv.common.meta.TiTimestamp;
-import com.pingcap.tikv.util.BackOffFunction;
-import com.pingcap.tikv.util.BackOffer;
-import com.pingcap.tikv.util.ConcreteBackOffer;
+import org.tikv.common.util.BackOffFunction;
+import org.tikv.common.util.BackOffer;
+import org.tikv.common.util.ConcreteBackOffer;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -18,7 +18,7 @@ package org.tikv.common.predicates;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.tikv.common.predicates.PredicateUtils.expressionToIndexRanges;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
+import static org.tikv.common.util.KeyRangeUtils.makeCoprocRange;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -46,7 +46,7 @@ import org.tikv.common.region.TiStoreType;
 import org.tikv.common.statistics.IndexStatistics;
 import org.tikv.common.statistics.TableStatistics;
 import org.tikv.common.types.MySQLType;
-import com.pingcap.tikv.util.Pair;
+import org.tikv.common.util.Pair;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;

@@ -19,9 +19,9 @@
 package org.tikv.common.region;
 
 import static org.tikv.common.region.RegionStoreClient.RequestTypes.REQ_TYPE_DAG;
-import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
-import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLock;
-import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
+import static org.tikv.common.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
+import static org.tikv.common.util.BackOffFunction.BackOffFuncType.BoTxnLock;
+import static org.tikv.common.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
@@ -44,13 +44,13 @@ import org.tikv.common.streaming.StreamingResponse;
 import org.tikv.txn.AbstractLockResolverClient;
 import org.tikv.txn.Lock;
 import org.tikv.txn.ResolveLockResult;
-import com.pingcap.tikv.util.BackOffFunction;
-import com.pingcap.tikv.util.BackOffer;
-import com.pingcap.tikv.util.Batch;
-import com.pingcap.tikv.util.ChannelFactory;
-import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.Pair;
-import com.pingcap.tikv.util.RangeSplitter;
+import org.tikv.common.util.BackOffFunction;
+import org.tikv.common.util.BackOffer;
+import org.tikv.common.util.Batch;
+import org.tikv.common.util.ChannelFactory;
+import org.tikv.common.util.ConcreteBackOffer;
+import org.tikv.common.util.Pair;
+import org.tikv.common.util.RangeSplitter;
 import io.grpc.ManagedChannel;
 import java.util.ArrayList;
 import java.util.Collections;

@@ -16,8 +16,8 @@
 
 package org.tikv.common.columnar.datatypes;
 
-import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
-import static com.pingcap.tikv.util.MemoryUtil.allocateDirect;
+import static org.tikv.common.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
+import static org.tikv.common.util.MemoryUtil.allocateDirect;
 
 import com.google.common.base.Preconditions;
 import org.tikv.common.codec.Codec.IntegerCodec;
@@ -25,7 +25,7 @@ import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.columnar.TiBlockColumnVector;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.StringType;
-import com.pingcap.tikv.util.MemoryUtil;
+import org.tikv.common.util.MemoryUtil;
 import java.nio.ByteBuffer;
 
 public class CHTypeString extends CHType {

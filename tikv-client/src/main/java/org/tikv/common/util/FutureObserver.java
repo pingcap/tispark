@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.util;
+package org.tikv.common.util;
 
 import com.google.common.util.concurrent.SettableFuture;
 import io.grpc.stub.StreamObserver;

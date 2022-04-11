@@ -23,7 +23,7 @@ import com.pingcap.tikv.Snapshot;
 import org.tikv.common.codec.Codec.BytesCodec;
 import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.exception.TiClientInternalException;
-import com.pingcap.tikv.util.Pair;
+import org.tikv.common.util.Pair;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;

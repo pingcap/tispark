@@ -17,7 +17,7 @@
 package org.tikv.txn.exception;
 
 import org.tikv.common.codec.KeyUtils;
-import com.pingcap.tikv.util.LogDesensitization;
+import org.tikv.common.util.LogDesensitization;
 
 public class WriteConflictException extends RuntimeException {
   public WriteConflictException(long callerStartTS, long txnID, long commitTS, byte[] key) {

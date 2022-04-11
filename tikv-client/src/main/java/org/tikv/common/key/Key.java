@@ -23,8 +23,8 @@ import com.google.common.primitives.Bytes;
 import com.google.protobuf.ByteString;
 import org.tikv.common.codec.CodecDataOutput;
 import org.tikv.common.types.DataType;
-import com.pingcap.tikv.util.FastByteComparisons;
-import com.pingcap.tikv.util.LogDesensitization;
+import org.tikv.common.util.FastByteComparisons;
+import org.tikv.common.util.LogDesensitization;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 

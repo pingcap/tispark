@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.util;
+package org.tikv.common.util;
 
 import java.util.concurrent.TimeUnit;
 

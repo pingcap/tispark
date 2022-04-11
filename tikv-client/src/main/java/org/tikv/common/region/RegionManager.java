@@ -20,7 +20,7 @@ package org.tikv.common.region;
 
 import static org.tikv.common.codec.KeyUtils.formatBytesUTF8;
 import static org.tikv.common.codec.KeyUtils.getEncodedKey;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
+import static org.tikv.common.util.KeyRangeUtils.makeRange;
 
 import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
@@ -30,9 +30,9 @@ import org.tikv.common.event.CacheInvalidateEvent;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.key.Key;
-import com.pingcap.tikv.util.BackOffer;
-import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.Pair;
+import org.tikv.common.util.BackOffer;
+import org.tikv.common.util.ConcreteBackOffer;
+import org.tikv.common.util.Pair;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

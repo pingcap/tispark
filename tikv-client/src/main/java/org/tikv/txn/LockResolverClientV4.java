@@ -18,9 +18,9 @@
 
 package org.tikv.txn;
 
-import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
-import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnNotFound;
-import static com.pingcap.tikv.util.ClientUtils.groupKeysByRegion;
+import static org.tikv.common.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
+import static org.tikv.common.util.BackOffFunction.BackOffFuncType.BoTxnNotFound;
+import static org.tikv.common.util.ClientUtils.groupKeysByRegion;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
@@ -38,9 +38,9 @@ import org.tikv.common.region.RegionManager;
 import org.tikv.common.region.RegionStoreClient;
 import org.tikv.common.region.TiRegion;
 import org.tikv.common.region.TiRegion.RegionVerID;
-import com.pingcap.tikv.util.BackOffer;
-import com.pingcap.tikv.util.ChannelFactory;
-import com.pingcap.tikv.util.TsoUtils;
+import org.tikv.common.util.BackOffer;
+import org.tikv.common.util.ChannelFactory;
+import org.tikv.common.util.TsoUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;

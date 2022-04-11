@@ -18,7 +18,7 @@
 
 package org.tikv.txn;
 
-import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
+import static org.tikv.common.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.PDClient;
@@ -32,9 +32,9 @@ import org.tikv.common.region.RegionManager;
 import org.tikv.common.region.RegionStoreClient;
 import org.tikv.common.region.TiRegion;
 import org.tikv.common.region.TiRegion.RegionVerID;
-import com.pingcap.tikv.util.BackOffer;
-import com.pingcap.tikv.util.ChannelFactory;
-import com.pingcap.tikv.util.TsoUtils;
+import org.tikv.common.util.BackOffer;
+import org.tikv.common.util.ChannelFactory;
+import org.tikv.common.util.TsoUtils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;

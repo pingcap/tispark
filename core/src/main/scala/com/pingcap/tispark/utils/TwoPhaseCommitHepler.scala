@@ -17,13 +17,13 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tikv._
-import com.pingcap.tikv.util.ConcreteBackOffer
 import com.pingcap.tispark.write.{SerializableKey, TiDBOptions}
 import org.tikv.common.{TiSession, exception}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.slf4j.LoggerFactory
 import org.tikv.common.exception.TiBatchWriteException
+import org.tikv.common.util.ConcreteBackOffer
 
 import scala.collection.JavaConverters._
 

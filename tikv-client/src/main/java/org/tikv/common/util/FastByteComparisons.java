@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.util;
+package org.tikv.common.util;
 
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.UnsignedBytes;

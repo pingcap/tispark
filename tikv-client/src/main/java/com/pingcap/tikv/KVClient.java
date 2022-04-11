@@ -18,8 +18,8 @@
 
 package com.pingcap.tikv;
 
-import static com.pingcap.tikv.util.ClientUtils.getBatches;
-import static com.pingcap.tikv.util.ClientUtils.getTasksWithOutput;
+import static org.tikv.common.util.ClientUtils.getBatches;
+import static org.tikv.common.util.ClientUtils.getTasksWithOutput;
 
 import com.google.protobuf.ByteString;
 import org.tikv.common.exception.GrpcException;
@@ -27,11 +27,11 @@ import org.tikv.common.exception.TiKVException;
 import org.tikv.common.region.RegionStoreClient;
 import org.tikv.common.region.RegionStoreClient.RegionStoreClientBuilder;
 import org.tikv.common.region.TiRegion;
-import com.pingcap.tikv.util.BackOffFunction;
-import com.pingcap.tikv.util.BackOffer;
-import com.pingcap.tikv.util.Batch;
-import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.Pair;
+import org.tikv.common.util.BackOffFunction;
+import org.tikv.common.util.BackOffer;
+import org.tikv.common.util.Batch;
+import org.tikv.common.util.ConcreteBackOffer;
+import org.tikv.common.util.Pair;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;

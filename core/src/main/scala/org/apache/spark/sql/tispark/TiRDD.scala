@@ -17,8 +17,7 @@
 package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
-import com.pingcap.tikv.util.RangeSplitter
-import com.pingcap.tikv.util.RangeSplitter.RegionTask
+import org.tikv.common.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.tikv.common.{TiSession, exception}
 import org.apache.spark.Partition
@@ -28,6 +27,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.tikv.common.exception.TiInternalException
 import org.tikv.common.meta.TiDAGRequest
 import org.tikv.common.types.Converter
+import org.tikv.common.util.RangeSplitter
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

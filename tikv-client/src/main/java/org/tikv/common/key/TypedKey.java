@@ -26,7 +26,7 @@ import org.tikv.common.types.BytesType;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.IntegerType;
 import org.tikv.common.types.StringType;
-import com.pingcap.tikv.util.LogDesensitization;
+import org.tikv.common.util.LogDesensitization;
 
 public class TypedKey extends Key {
   private final DataType type;

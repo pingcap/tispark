@@ -23,7 +23,7 @@ import static org.junit.Assert.fail;
 import com.google.protobuf.ByteString;
 import org.tikv.common.region.RegionManager;
 import org.tikv.common.region.TiRegion;
-import com.pingcap.tikv.util.Pair;
+import org.tikv.common.util.Pair;
 import java.io.IOException;
 import org.junit.Before;
 import org.junit.Test;

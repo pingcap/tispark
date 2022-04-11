@@ -16,7 +16,7 @@
 
 package org.tikv.common.columnar;
 
-import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
+import static org.tikv.common.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
 
 import com.pingcap.tikv.ExtendedDateTime;
 import org.tikv.common.codec.Codec.DateCodec;
@@ -25,7 +25,7 @@ import org.tikv.common.columnar.datatypes.CHType;
 import org.tikv.common.types.AbstractDateTimeType;
 import org.tikv.common.types.BytesType;
 import org.tikv.common.types.DateType;
-import com.pingcap.tikv.util.MemoryUtil;
+import org.tikv.common.util.MemoryUtil;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;

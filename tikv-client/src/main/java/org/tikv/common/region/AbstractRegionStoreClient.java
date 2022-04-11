@@ -24,7 +24,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiConfiguration;
 import org.tikv.common.exception.GrpcException;
-import com.pingcap.tikv.util.ChannelFactory;
+import org.tikv.common.util.ChannelFactory;
 import io.grpc.ManagedChannel;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.TikvGrpc;

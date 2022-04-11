@@ -23,7 +23,7 @@ import org.tikv.common.exception.CodecException;
 import org.tikv.common.types.Converter;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.MySQLType;
-import com.pingcap.tikv.util.FastByteComparisons;
+import org.tikv.common.util.FastByteComparisons;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Arrays;

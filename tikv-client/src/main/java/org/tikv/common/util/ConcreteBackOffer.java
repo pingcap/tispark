@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv.util;
+package org.tikv.common.util;
 
 import com.google.common.base.Preconditions;
 import org.tikv.common.exception.GrpcException;

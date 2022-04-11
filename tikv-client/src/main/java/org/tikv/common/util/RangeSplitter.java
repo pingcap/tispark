@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.util;
+package org.tikv.common.util;
 
 import static org.tikv.common.key.Key.toRawKey;
-import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
+import static org.tikv.common.util.KeyRangeUtils.formatByteString;
+import static org.tikv.common.util.KeyRangeUtils.makeCoprocRange;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
