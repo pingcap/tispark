@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.pd;
+package org.tikv.common.pd;
 
 import com.google.common.collect.ImmutableList;
 import java.net.URI;

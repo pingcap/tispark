@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import org.tikv.common.key.Handle;
 import org.tikv.common.key.RowKey;
-import com.pingcap.tikv.pd.PDUtils;
+import org.tikv.common.pd.PDUtils;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.region.TiStoreType;

@@ -18,12 +18,12 @@
 
 package org.tikv.common.operation;
 
-import static com.pingcap.tikv.pd.PDError.buildFromPdpbError;
+import static org.tikv.common.pd.PDError.buildFromPdpbError;
 
 import com.pingcap.tikv.PDClient;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.TiClientInternalException;
-import com.pingcap.tikv.pd.PDError;
+import org.tikv.common.pd.PDError;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import java.util.function.Function;
