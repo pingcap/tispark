@@ -23,6 +23,7 @@ import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import java.util.List;
 import org.junit.Test;
+import org.tikv.common.catalog.CatalogTransaction;
 
 public class CatalogTransactionTest extends CatalogTest {
   @Test

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.catalog;
+package org.tikv.common.catalog;
 
 import static com.pingcap.tikv.codec.MetaCodec.KEY_DBs;
 
