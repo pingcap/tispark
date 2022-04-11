@@ -16,9 +16,9 @@
  *
  */
 
-package com.pingcap.tikv.region;
+package org.tikv.common.region;
 
-import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.REQ_TYPE_DAG;
+import static org.tikv.common.region.RegionStoreClient.RequestTypes.REQ_TYPE_DAG;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLock;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;

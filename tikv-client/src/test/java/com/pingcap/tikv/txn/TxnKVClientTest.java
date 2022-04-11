@@ -21,8 +21,8 @@ import static org.mockito.Mockito.doThrow;
 
 import com.google.protobuf.ByteString;
 import org.tikv.common.exception.KeyException;
-import com.pingcap.tikv.region.RegionStoreClient;
-import com.pingcap.tikv.region.TiRegion;
+import org.tikv.common.region.RegionStoreClient;
+import org.tikv.common.region.TiRegion;
 import com.pingcap.tikv.txn.type.ClientRPCResult;
 import org.junit.Before;
 import org.junit.Test;

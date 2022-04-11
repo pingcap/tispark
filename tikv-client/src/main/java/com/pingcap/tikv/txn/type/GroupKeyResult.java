@@ -17,7 +17,7 @@
 package com.pingcap.tikv.txn.type;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.region.TiRegion;
+import org.tikv.common.region.TiRegion;
 import com.pingcap.tikv.util.Pair;
 import java.util.HashMap;
 import java.util.List;

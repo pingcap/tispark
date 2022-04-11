@@ -21,8 +21,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.region.RegionManager;
-import com.pingcap.tikv.region.TiRegion;
+import org.tikv.common.region.RegionManager;
+import org.tikv.common.region.TiRegion;
 import com.pingcap.tikv.util.Pair;
 import java.io.IOException;
 import org.junit.Before;

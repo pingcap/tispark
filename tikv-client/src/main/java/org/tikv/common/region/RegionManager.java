@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv.region;
+package org.tikv.common.region;
 
 import static org.tikv.common.codec.KeyUtils.formatBytesUTF8;
 import static org.tikv.common.codec.KeyUtils.getEncodedKey;

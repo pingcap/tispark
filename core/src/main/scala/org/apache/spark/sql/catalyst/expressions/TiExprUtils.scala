@@ -21,7 +21,7 @@ package org.apache.spark.sql.catalyst.expressions
 import com.pingcap.tikv.expression.visitor.MetaResolver
 import com.pingcap.tikv.expression.ExpressionBlocklist
 import com.pingcap.tikv.meta.TiTableInfo
-import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
+import org.tikv.common.region.RegionStoreClient.RequestTypes
 import com.pingcap.tispark.v2.TiDBTable
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.execution.TiConverter.fromSparkType

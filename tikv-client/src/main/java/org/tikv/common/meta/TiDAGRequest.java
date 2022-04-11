@@ -46,7 +46,7 @@ import org.tikv.common.expression.Expression;
 import org.tikv.common.expression.visitor.ProtoConverter;
 import org.tikv.common.key.RowKey;
 import com.pingcap.tikv.predicates.PredicateUtils;
-import com.pingcap.tikv.region.TiStoreType;
+import org.tikv.common.region.TiStoreType;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.IntegerType;
 import com.pingcap.tikv.util.KeyRangeUtils;

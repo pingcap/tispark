@@ -21,7 +21,7 @@ import org.tikv.common.key.Key;
 import org.tikv.common.key.RowKey;
 import org.tikv.common.meta.TiIndexInfo;
 import org.tikv.common.meta.TiTableInfo;
-import com.pingcap.tikv.region.TiRegion;
+import org.tikv.common.region.TiRegion;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;

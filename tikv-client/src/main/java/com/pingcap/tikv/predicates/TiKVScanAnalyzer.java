@@ -42,7 +42,7 @@ import org.tikv.common.meta.TiIndexInfo;
 import org.tikv.common.meta.TiPartitionDef;
 import org.tikv.common.meta.TiTableInfo;
 import org.tikv.common.meta.TiTimestamp;
-import com.pingcap.tikv.region.TiStoreType;
+import org.tikv.common.region.TiStoreType;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import org.tikv.common.types.MySQLType;

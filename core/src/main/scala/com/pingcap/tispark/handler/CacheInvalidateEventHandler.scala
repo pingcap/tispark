@@ -19,10 +19,10 @@
 package com.pingcap.tispark.handler
 
 import org.tikv.common.event.CacheInvalidateEvent.CacheType
-import com.pingcap.tikv.region.RegionManager
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import org.slf4j.LoggerFactory
 import org.tikv.common.event.CacheInvalidateEvent
+import org.tikv.common.region.RegionManager
 
 /**
  * A CacheInvalidateEventHandler as it's name indicates what this class will do.

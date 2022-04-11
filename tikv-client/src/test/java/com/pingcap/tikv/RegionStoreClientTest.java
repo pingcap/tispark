@@ -27,7 +27,7 @@ import com.pingcap.tidb.tipb.ExecType;
 import com.pingcap.tidb.tipb.Executor;
 import com.pingcap.tidb.tipb.SelectResponse;
 import org.tikv.common.exception.KeyException;
-import com.pingcap.tikv.region.RegionStoreClient;
+import org.tikv.common.region.RegionStoreClient;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.*;

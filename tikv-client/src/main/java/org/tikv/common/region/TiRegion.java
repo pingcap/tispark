@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv.region;
+package org.tikv.common.region;
 
 import com.google.protobuf.ByteString;
 import org.tikv.common.codec.Codec.BytesCodec;

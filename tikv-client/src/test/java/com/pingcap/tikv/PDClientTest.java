@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.meta.TiTimestamp;
-import com.pingcap.tikv.region.TiRegion;
+import org.tikv.common.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.concurrent.Callable;

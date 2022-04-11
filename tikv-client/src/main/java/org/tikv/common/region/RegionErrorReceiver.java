@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv.region;
+package org.tikv.common.region;
 
 import org.tikv.kvproto.Metapb.Store;
 

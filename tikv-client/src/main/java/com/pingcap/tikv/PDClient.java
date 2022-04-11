@@ -32,7 +32,7 @@ import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.operation.NoopHandler;
 import org.tikv.common.operation.PDErrorHandler;
 import org.tikv.common.pd.PDUtils;
-import com.pingcap.tikv.region.TiRegion;
+import org.tikv.common.region.TiRegion;
 import com.pingcap.tikv.util.BackOffFunction.BackOffFuncType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;

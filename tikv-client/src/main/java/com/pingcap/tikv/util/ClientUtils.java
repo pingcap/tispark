@@ -18,9 +18,9 @@ package com.pingcap.tikv.util;
 
 import com.google.protobuf.ByteString;
 import org.tikv.common.exception.TiKVException;
-import com.pingcap.tikv.region.RegionManager;
-import com.pingcap.tikv.region.RegionStoreClient;
-import com.pingcap.tikv.region.TiRegion;
+import org.tikv.common.region.RegionManager;
+import org.tikv.common.region.RegionStoreClient;
+import org.tikv.common.region.TiRegion;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

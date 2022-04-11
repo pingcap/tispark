@@ -17,7 +17,7 @@
 package com.pingcap.tikv;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.region.TiRegion;
+import org.tikv.common.region.TiRegion;
 import java.io.IOException;
 import org.junit.Before;
 import org.tikv.kvproto.Metapb;

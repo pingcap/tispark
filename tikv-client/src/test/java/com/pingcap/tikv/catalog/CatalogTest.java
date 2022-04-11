@@ -25,7 +25,7 @@ import com.pingcap.tikv.PDMockServerTest;
 import com.pingcap.tikv.meta.MetaUtils.MetaMockHelper;
 import org.tikv.common.meta.TiDBInfo;
 import org.tikv.common.meta.TiTableInfo;
-import com.pingcap.tikv.region.TiRegion;
+import org.tikv.common.region.TiRegion;
 import com.pingcap.tikv.util.ReflectionWrapper;
 import java.io.IOException;
 import java.util.List;

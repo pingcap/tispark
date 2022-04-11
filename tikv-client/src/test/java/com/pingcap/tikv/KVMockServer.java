@@ -24,7 +24,7 @@ import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import org.tikv.common.key.Key;
-import com.pingcap.tikv.region.TiRegion;
+import org.tikv.common.region.TiRegion;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.Status;

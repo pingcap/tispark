@@ -16,7 +16,7 @@
 
 package org.tikv.common.event;
 
-import com.pingcap.tikv.region.TiRegion;
+import org.tikv.common.region.TiRegion;
 import java.io.Serializable;
 
 public class CacheInvalidateEvent implements Serializable {

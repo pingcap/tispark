@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv;
 
-import com.pingcap.tikv.region.TiStoreType;
+import org.tikv.common.region.TiStoreType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.List;
