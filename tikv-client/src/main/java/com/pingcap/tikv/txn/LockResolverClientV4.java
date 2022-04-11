@@ -32,7 +32,7 @@ import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.exception.TiKVException;
 import org.tikv.txn.exception.TxnNotFoundException;
 import org.tikv.txn.exception.WriteConflictException;
-import com.pingcap.tikv.operation.KVErrorHandler;
+import org.tikv.common.operation.KVErrorHandler;
 import com.pingcap.tikv.region.AbstractRegionStoreClient;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;

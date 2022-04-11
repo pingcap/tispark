@@ -17,7 +17,7 @@
 package com.pingcap.tikv;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.pingcap.tikv.operation.PDErrorHandler.getRegionResponseErrorExtractor;
+import static org.tikv.common.operation.PDErrorHandler.getRegionResponseErrorExtractor;
 import static com.pingcap.tikv.pd.PDError.buildFromPdpbError;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -29,8 +29,8 @@ import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.meta.TiTimestamp;
-import com.pingcap.tikv.operation.NoopHandler;
-import com.pingcap.tikv.operation.PDErrorHandler;
+import org.tikv.common.operation.NoopHandler;
+import org.tikv.common.operation.PDErrorHandler;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffFunction.BackOffFuncType;

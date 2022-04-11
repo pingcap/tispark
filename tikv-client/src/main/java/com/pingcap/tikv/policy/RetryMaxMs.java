@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.policy;
 
-import com.pingcap.tikv.operation.ErrorHandler;
+import org.tikv.common.operation.ErrorHandler;
 import com.pingcap.tikv.util.BackOffer;
 
 public class RetryMaxMs<T> extends RetryPolicy<T> {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.operation.iterator;
+package org.tikv.common.operation.iterator;
 
 import static org.tikv.common.meta.TiDAGRequest.PushDownType.STREAMING;
 
@@ -26,7 +26,7 @@ import com.pingcap.tikv.TiSession;
 import org.tikv.common.exception.RegionTaskException;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.meta.TiDAGRequest.PushDownType;
-import com.pingcap.tikv.operation.SchemaInfer;
+import org.tikv.common.operation.SchemaInfer;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.region.TiStoreType;

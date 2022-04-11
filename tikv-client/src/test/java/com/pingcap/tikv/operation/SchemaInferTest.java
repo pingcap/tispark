@@ -31,6 +31,7 @@ import org.tikv.common.expression.Constant;
 import org.tikv.common.meta.TiDAGRequest;
 import org.tikv.common.meta.TiTableInfo;
 import org.tikv.common.meta.TiTimestamp;
+import org.tikv.common.operation.SchemaInfer;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.IntegerType;
 import org.tikv.common.types.StringType;

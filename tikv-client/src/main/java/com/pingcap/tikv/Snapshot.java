@@ -16,9 +16,9 @@
 
 package com.pingcap.tikv;
 
-import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getHandleIterator;
-import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getRowIterator;
-import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getTiChunkIterator;
+import static org.tikv.common.operation.iterator.CoprocessorIterator.getHandleIterator;
+import static org.tikv.common.operation.iterator.CoprocessorIterator.getRowIterator;
+import static org.tikv.common.operation.iterator.CoprocessorIterator.getTiChunkIterator;
 
 import com.google.protobuf.ByteString;
 import org.tikv.common.columnar.TiChunk;
@@ -26,8 +26,8 @@ import org.tikv.common.key.Handle;
 import org.tikv.common.key.Key;
 import org.tikv.common.meta.TiDAGRequest;
 import org.tikv.common.meta.TiTimestamp;
-import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
-import com.pingcap.tikv.operation.iterator.IndexScanIterator;
+import org.tikv.common.operation.iterator.ConcreteScanIterator;
+import org.tikv.common.operation.iterator.IndexScanIterator;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;

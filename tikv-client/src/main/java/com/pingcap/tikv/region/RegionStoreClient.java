@@ -39,7 +39,7 @@ import org.tikv.common.exception.RegionException;
 import org.tikv.common.exception.SelectException;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.exception.TiKVException;
-import com.pingcap.tikv.operation.KVErrorHandler;
+import org.tikv.common.operation.KVErrorHandler;
 import com.pingcap.tikv.streaming.StreamingResponse;
 import com.pingcap.tikv.txn.AbstractLockResolverClient;
 import com.pingcap.tikv.txn.Lock;

@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv.operation;
+package org.tikv.common.operation;
 
 import static com.pingcap.tikv.pd.PDError.buildFromPdpbError;
 

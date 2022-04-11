@@ -24,7 +24,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.RowMeta;
 import org.tikv.common.codec.CodecDataInput;
-import com.pingcap.tikv.operation.iterator.ChunkIterator;
+import org.tikv.common.operation.iterator.ChunkIterator;
 import com.pingcap.tikv.row.ObjectRowImpl;
 import com.pingcap.tikv.row.Row;
 import org.tikv.common.types.DataType;

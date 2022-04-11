@@ -26,7 +26,7 @@ import com.pingcap.tikv.TiConfiguration;
 import org.tikv.common.exception.KeyException;
 import org.tikv.common.exception.RegionException;
 import org.tikv.common.exception.TiClientInternalException;
-import com.pingcap.tikv.operation.KVErrorHandler;
+import org.tikv.common.operation.KVErrorHandler;
 import com.pingcap.tikv.region.AbstractRegionStoreClient;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;

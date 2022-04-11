@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.operation;
+package org.tikv.common.operation;
 
 import org.tikv.common.expression.ByItem;
 import org.tikv.common.expression.Expression;

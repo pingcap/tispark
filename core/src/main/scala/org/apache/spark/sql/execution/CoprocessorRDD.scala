@@ -20,7 +20,6 @@ import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
 import com.pingcap.tikv.columnar.TiColumnarBatchHelper
 import com.pingcap.tikv.meta.TiDAGRequest
-import com.pingcap.tikv.operation.iterator.CoprocessorIterator
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.TiConfiguration
@@ -39,6 +38,7 @@ import org.slf4j.LoggerFactory
 import org.tikv.common.columnar.TiChunk
 import org.tikv.common.key.Handle
 import org.tikv.common.meta.{TiDAGRequest, TiTimestamp}
+import org.tikv.common.operation.iterator.CoprocessorIterator
 import org.tikv.kvproto.Coprocessor.KeyRange
 
 import scala.collection.JavaConversions._

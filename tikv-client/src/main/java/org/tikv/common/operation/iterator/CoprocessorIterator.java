@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.operation.iterator;
+package org.tikv.common.operation.iterator;
 
 import static java.util.Objects.requireNonNull;
 
@@ -34,7 +34,7 @@ import org.tikv.common.key.CommonHandle;
 import org.tikv.common.key.Handle;
 import org.tikv.common.key.IntHandle;
 import org.tikv.common.meta.TiDAGRequest;
-import com.pingcap.tikv.operation.SchemaInfer;
+import org.tikv.common.operation.SchemaInfer;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.row.RowReaderFactory;

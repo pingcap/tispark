@@ -19,7 +19,7 @@ package com.pingcap.tikv;
 import static io.grpc.stub.ClientCalls.asyncBidiStreamingCall;
 import static io.grpc.stub.ClientCalls.blockingServerStreamingCall;
 
-import com.pingcap.tikv.operation.ErrorHandler;
+import org.tikv.common.operation.ErrorHandler;
 import com.pingcap.tikv.policy.RetryMaxMs.Builder;
 import com.pingcap.tikv.policy.RetryPolicy;
 import com.pingcap.tikv.streaming.StreamingResponse;

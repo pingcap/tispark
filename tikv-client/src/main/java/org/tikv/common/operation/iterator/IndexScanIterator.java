@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.operation.iterator;
+package org.tikv.common.operation.iterator;
 
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.TiConfiguration;
