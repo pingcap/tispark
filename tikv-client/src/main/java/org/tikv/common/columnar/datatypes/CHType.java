@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.columnar.datatypes;
+package org.tikv.common.columnar.datatypes;
 
 import static com.pingcap.tikv.util.MemoryUtil.allocateDirect;
 
 import org.tikv.common.codec.CodecDataInput;
-import com.pingcap.tikv.columnar.TiBlockColumnVector;
+import org.tikv.common.columnar.TiBlockColumnVector;
 import org.tikv.common.types.DataType;
 import com.pingcap.tikv.util.MemoryUtil;
 import java.nio.ByteBuffer;

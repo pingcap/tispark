@@ -17,6 +17,7 @@
 package com.pingcap.tikv.columnar;
 
 import org.apache.spark.sql.vectorized.ColumnarBatch;
+import org.tikv.common.columnar.TiChunk;
 
 /** A helper class to create {@link ColumnarBatch} from {@link TiChunk} */
 public final class TiColumnarBatchHelper {

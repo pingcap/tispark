@@ -16,24 +16,24 @@
 
 package com.pingcap.tikv.util;
 
-import com.pingcap.tikv.columnar.datatypes.CHType;
-import com.pingcap.tikv.columnar.datatypes.CHTypeDate;
-import com.pingcap.tikv.columnar.datatypes.CHTypeDateTime;
-import com.pingcap.tikv.columnar.datatypes.CHTypeDecimal;
-import com.pingcap.tikv.columnar.datatypes.CHTypeFixedString;
-import com.pingcap.tikv.columnar.datatypes.CHTypeMyDate;
-import com.pingcap.tikv.columnar.datatypes.CHTypeMyDateTime;
-import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeFloat32;
-import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeFloat64;
-import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeInt16;
-import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeInt32;
-import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeInt64;
-import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeInt8;
-import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeUInt16;
-import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeUInt32;
-import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeUInt64;
-import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeUInt8;
-import com.pingcap.tikv.columnar.datatypes.CHTypeString;
+import org.tikv.common.columnar.datatypes.CHType;
+import org.tikv.common.columnar.datatypes.CHTypeDate;
+import org.tikv.common.columnar.datatypes.CHTypeDateTime;
+import org.tikv.common.columnar.datatypes.CHTypeDecimal;
+import org.tikv.common.columnar.datatypes.CHTypeFixedString;
+import org.tikv.common.columnar.datatypes.CHTypeMyDate;
+import org.tikv.common.columnar.datatypes.CHTypeMyDateTime;
+import org.tikv.common.columnar.datatypes.CHTypeNumber.CHTypeFloat32;
+import org.tikv.common.columnar.datatypes.CHTypeNumber.CHTypeFloat64;
+import org.tikv.common.columnar.datatypes.CHTypeNumber.CHTypeInt16;
+import org.tikv.common.columnar.datatypes.CHTypeNumber.CHTypeInt32;
+import org.tikv.common.columnar.datatypes.CHTypeNumber.CHTypeInt64;
+import org.tikv.common.columnar.datatypes.CHTypeNumber.CHTypeInt8;
+import org.tikv.common.columnar.datatypes.CHTypeNumber.CHTypeUInt16;
+import org.tikv.common.columnar.datatypes.CHTypeNumber.CHTypeUInt32;
+import org.tikv.common.columnar.datatypes.CHTypeNumber.CHTypeUInt64;
+import org.tikv.common.columnar.datatypes.CHTypeNumber.CHTypeUInt8;
+import org.tikv.common.columnar.datatypes.CHTypeString;
 import org.apache.commons.lang3.StringUtils;
 
 public class CHTypeMapping {

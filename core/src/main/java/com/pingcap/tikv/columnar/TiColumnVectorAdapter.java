@@ -21,6 +21,7 @@ import org.apache.spark.sql.vectorized.ColumnVector;
 import org.apache.spark.sql.vectorized.ColumnarArray;
 import org.apache.spark.sql.vectorized.ColumnarMap;
 import org.apache.spark.unsafe.types.UTF8String;
+import org.tikv.common.columnar.TiColumnVector;
 
 public class TiColumnVectorAdapter extends ColumnVector {
   private final TiColumnVector tiColumnVector;

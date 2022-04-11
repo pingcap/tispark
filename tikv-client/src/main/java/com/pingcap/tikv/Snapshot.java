@@ -21,7 +21,7 @@ import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getRowIter
 import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getTiChunkIterator;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.columnar.TiChunk;
+import org.tikv.common.columnar.TiChunk;
 import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiDAGRequest;

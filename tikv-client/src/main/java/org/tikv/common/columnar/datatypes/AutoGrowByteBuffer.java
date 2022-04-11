@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.columnar.datatypes;
+package org.tikv.common.columnar.datatypes;
 
 import org.tikv.common.codec.CodecDataInput;
 import com.pingcap.tikv.util.MemoryUtil;

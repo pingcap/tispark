@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.columnar.datatypes;
+package org.tikv.common.columnar.datatypes;
 
 import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
 import static com.pingcap.tikv.util.MemoryUtil.allocateDirect;
@@ -22,7 +22,7 @@ import static com.pingcap.tikv.util.MemoryUtil.allocateDirect;
 import com.google.common.base.Preconditions;
 import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.codec.CodecDataInput;
-import com.pingcap.tikv.columnar.TiBlockColumnVector;
+import org.tikv.common.columnar.TiBlockColumnVector;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.StringType;
 import com.pingcap.tikv.util.MemoryUtil;

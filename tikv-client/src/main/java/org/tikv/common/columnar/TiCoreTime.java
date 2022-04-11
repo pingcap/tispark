@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.columnar;
+package org.tikv.common.columnar;
 
 /**
  * TiCoreTime is TiDB's representation of date/datetime/timestamp, used to decode chunk data from

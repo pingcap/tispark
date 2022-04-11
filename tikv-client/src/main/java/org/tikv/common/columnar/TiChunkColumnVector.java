@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.columnar;
+package org.tikv.common.columnar;
 
 import com.google.common.primitives.UnsignedLong;
 import org.tikv.common.codec.CodecDataInput;
