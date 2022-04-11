@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.txn;
+package org.tikv.txn;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
@@ -28,7 +28,7 @@ import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.region.RegionManager;
 import org.tikv.common.region.RegionStoreClient;
 import org.tikv.common.region.TiRegion;
-import com.pingcap.tikv.txn.type.ClientRPCResult;
+import org.tikv.txn.type.ClientRPCResult;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;

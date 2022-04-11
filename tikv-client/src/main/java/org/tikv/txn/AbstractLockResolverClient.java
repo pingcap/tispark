@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv.txn;
+package org.tikv.txn;
 
 import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.StoreVersion;

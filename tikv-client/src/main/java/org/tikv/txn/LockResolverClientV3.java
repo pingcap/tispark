@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv.txn;
+package org.tikv.txn;
 
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
 

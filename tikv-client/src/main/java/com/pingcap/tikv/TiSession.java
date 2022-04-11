@@ -28,7 +28,7 @@ import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.region.RegionManager;
 import org.tikv.common.region.RegionStoreClient;
 import org.tikv.common.region.TiRegion;
-import com.pingcap.tikv.txn.TxnKVClient;
+import org.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;

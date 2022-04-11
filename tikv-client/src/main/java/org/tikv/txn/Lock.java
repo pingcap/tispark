@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv.txn;
+package org.tikv.txn;
 
 import com.google.protobuf.ByteString;
 import org.tikv.common.codec.KeyUtils;

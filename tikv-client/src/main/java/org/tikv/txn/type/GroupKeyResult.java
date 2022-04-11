@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.txn.type;
+package org.tikv.txn.type;
 
 import com.google.protobuf.ByteString;
 import org.tikv.common.region.TiRegion;
