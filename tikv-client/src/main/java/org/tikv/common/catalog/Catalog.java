@@ -19,9 +19,6 @@ package org.tikv.common.catalog;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.tikv.common.Snapshot;
-import org.tikv.common.meta.TiDBInfo;
-import org.tikv.common.meta.TiTableInfo;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -33,6 +30,9 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.Snapshot;
+import org.tikv.common.meta.TiDBInfo;
+import org.tikv.common.meta.TiTableInfo;
 
 public class Catalog implements AutoCloseable {
   private final boolean showRowId;

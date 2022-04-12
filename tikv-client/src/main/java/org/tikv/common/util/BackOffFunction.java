@@ -16,8 +16,8 @@
 
 package org.tikv.common.util;
 
-import org.tikv.common.exception.GrpcException;
 import java.util.concurrent.ThreadLocalRandom;
+import org.tikv.common.exception.GrpcException;
 
 public class BackOffFunction {
   private final int base;

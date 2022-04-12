@@ -21,6 +21,11 @@ import static org.tikv.common.operation.iterator.CoprocessorIterator.getRowItera
 import static org.tikv.common.operation.iterator.CoprocessorIterator.getTiChunkIterator;
 
 import com.google.protobuf.ByteString;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import org.tikv.common.columnar.TiChunk;
 import org.tikv.common.key.Handle;
 import org.tikv.common.key.Key;
@@ -32,11 +37,6 @@ import org.tikv.common.row.Row;
 import org.tikv.common.util.ConcreteBackOffer;
 import org.tikv.common.util.RangeSplitter;
 import org.tikv.common.util.RangeSplitter.RegionTask;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 
 public class Snapshot {

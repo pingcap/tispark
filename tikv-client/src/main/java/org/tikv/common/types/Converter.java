@@ -18,18 +18,13 @@
 
 package org.tikv.common.types;
 
+import static java.util.Objects.requireNonNull;
 import static org.tikv.common.types.TimeType.HOUR;
 import static org.tikv.common.types.TimeType.MICROSECOND;
 import static org.tikv.common.types.TimeType.MINUTE;
 import static org.tikv.common.types.TimeType.SECOND;
-import static java.util.Objects.requireNonNull;
 
 import com.google.common.primitives.UnsignedLong;
-import org.tikv.common.ExtendedDateTime;
-import org.tikv.common.exception.ConvertNotSupportException;
-import org.tikv.common.exception.ConvertOverflowException;
-import org.tikv.common.exception.TypeException;
-import org.tikv.common.key.Handle;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -40,6 +35,11 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.tikv.common.ExtendedDateTime;
+import org.tikv.common.exception.ConvertNotSupportException;
+import org.tikv.common.exception.ConvertOverflowException;
+import org.tikv.common.exception.TypeException;
+import org.tikv.common.key.Handle;
 
 public class Converter {
 

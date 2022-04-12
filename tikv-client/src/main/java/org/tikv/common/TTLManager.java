@@ -17,19 +17,6 @@
 package org.tikv.common;
 
 import com.google.protobuf.ByteString;
-import org.tikv.common.codec.KeyUtils;
-import org.tikv.common.exception.GrpcException;
-import org.tikv.common.exception.TiBatchWriteException;
-import org.tikv.common.meta.TiTimestamp;
-import org.tikv.common.region.RegionManager;
-import org.tikv.common.region.TiRegion;
-import org.tikv.txn.TxnKVClient;
-import org.tikv.txn.type.ClientRPCResult;
-import org.tikv.common.util.BackOffFunction;
-import org.tikv.common.util.BackOffer;
-import org.tikv.common.util.ConcreteBackOffer;
-import org.tikv.common.util.LogDesensitization;
-import org.tikv.common.util.Pair;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -37,7 +24,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.codec.KeyUtils;
+import org.tikv.common.exception.GrpcException;
+import org.tikv.common.exception.TiBatchWriteException;
+import org.tikv.common.meta.TiTimestamp;
+import org.tikv.common.region.RegionManager;
+import org.tikv.common.region.TiRegion;
+import org.tikv.common.util.BackOffFunction;
+import org.tikv.common.util.BackOffer;
+import org.tikv.common.util.ConcreteBackOffer;
+import org.tikv.common.util.LogDesensitization;
+import org.tikv.common.util.Pair;
 import org.tikv.kvproto.Metapb;
+import org.tikv.txn.TxnKVClient;
+import org.tikv.txn.type.ClientRPCResult;
 
 /**
  * see funcionts `keepAlive` `close` `sendTxnHeartBeat` in

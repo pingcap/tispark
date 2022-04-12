@@ -16,9 +16,9 @@
 
 package org.tikv.common.columnar.datatypes;
 
+import java.nio.ByteBuffer;
 import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.util.MemoryUtil;
-import java.nio.ByteBuffer;
 
 public class AutoGrowByteBuffer {
   private final ByteBuffer initBuf;

@@ -17,7 +17,6 @@
 package org.tikv.common.util;
 
 import com.google.common.primitives.UnsignedLong;
-import org.tikv.common.codec.CodecDataInput;
 import com.sun.management.OperatingSystemMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
@@ -29,6 +28,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.codec.CodecDataInput;
 import sun.misc.Cleaner;
 import sun.misc.Unsafe;
 import sun.nio.ch.DirectBuffer;

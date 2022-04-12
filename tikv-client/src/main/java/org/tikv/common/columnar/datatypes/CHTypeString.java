@@ -20,13 +20,13 @@ import static org.tikv.common.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
 import static org.tikv.common.util.MemoryUtil.allocateDirect;
 
 import com.google.common.base.Preconditions;
+import java.nio.ByteBuffer;
 import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.columnar.TiBlockColumnVector;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.StringType;
 import org.tikv.common.util.MemoryUtil;
-import java.nio.ByteBuffer;
 
 public class CHTypeString extends CHType {
   // Use to prevent frequently reallocate the chars buffer.

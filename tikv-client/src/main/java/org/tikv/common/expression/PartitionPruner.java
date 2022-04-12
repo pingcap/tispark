@@ -16,14 +16,14 @@
 
 package org.tikv.common.expression;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import org.tikv.common.meta.TiPartitionDef;
 import org.tikv.common.meta.TiPartitionInfo;
 import org.tikv.common.meta.TiPartitionInfo.PartitionType;
 import org.tikv.common.meta.TiTableInfo;
 import org.tikv.common.parser.TiParser;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 
 public class PartitionPruner {
   public static List<Expression> extractLogicalOrComparisonExpr(List<Expression> filters) {

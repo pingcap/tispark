@@ -17,6 +17,7 @@
 package org.tikv.common.key;
 
 import com.google.common.base.Joiner;
+import java.util.List;
 import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.codec.CodecDataOutput;
 import org.tikv.common.exception.TypeException;
@@ -25,7 +26,6 @@ import org.tikv.common.meta.TiTableInfo;
 import org.tikv.common.row.Row;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.IntegerType;
-import java.util.List;
 
 public class IndexKey extends Key {
   private static final byte[] IDX_PREFIX_SEP = new byte[] {'_', 'i'};

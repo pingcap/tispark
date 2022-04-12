@@ -21,18 +21,6 @@ package org.tikv.common.operation;
 import static org.tikv.common.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
 import com.google.protobuf.ByteString;
-import org.tikv.common.codec.KeyUtils;
-import org.tikv.common.event.CacheInvalidateEvent;
-import org.tikv.common.exception.GrpcException;
-import org.tikv.common.exception.KeyException;
-import org.tikv.common.region.RegionErrorReceiver;
-import org.tikv.common.region.RegionManager;
-import org.tikv.common.region.TiRegion;
-import org.tikv.txn.AbstractLockResolverClient;
-import org.tikv.txn.Lock;
-import org.tikv.txn.ResolveLockResult;
-import org.tikv.common.util.BackOffFunction;
-import org.tikv.common.util.BackOffer;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import java.util.ArrayList;
@@ -41,10 +29,22 @@ import java.util.List;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.codec.KeyUtils;
+import org.tikv.common.event.CacheInvalidateEvent;
+import org.tikv.common.exception.GrpcException;
+import org.tikv.common.exception.KeyException;
+import org.tikv.common.region.RegionErrorReceiver;
+import org.tikv.common.region.RegionManager;
+import org.tikv.common.region.TiRegion;
+import org.tikv.common.util.BackOffFunction;
+import org.tikv.common.util.BackOffer;
 import org.tikv.kvproto.Errorpb;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.kvproto.Kvrpcpb.ScanResponse;
+import org.tikv.txn.AbstractLockResolverClient;
+import org.tikv.txn.Lock;
+import org.tikv.txn.ResolveLockResult;
 
 // TODO: consider refactor to Builder mode
 // TODO: KVErrorHandler should resolve locks if it could.

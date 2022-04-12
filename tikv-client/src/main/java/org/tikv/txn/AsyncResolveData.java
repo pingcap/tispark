@@ -19,11 +19,11 @@
 package org.tikv.txn;
 
 import com.google.protobuf.ByteString;
-import org.tikv.common.exception.ResolveLockException;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.exception.ResolveLockException;
 import org.tikv.kvproto.Kvrpcpb;
 
 public class AsyncResolveData {

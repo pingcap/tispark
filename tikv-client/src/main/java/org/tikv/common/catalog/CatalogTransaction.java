@@ -23,6 +23,11 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.common.Snapshot;
 import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.codec.KeyUtils;
@@ -31,11 +36,6 @@ import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.meta.TiDBInfo;
 import org.tikv.common.meta.TiTableInfo;
 import org.tikv.common.util.Pair;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Objects;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class CatalogTransaction {
   protected static final Logger logger = LoggerFactory.getLogger(CatalogTransaction.class);

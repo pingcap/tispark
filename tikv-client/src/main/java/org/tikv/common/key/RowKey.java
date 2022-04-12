@@ -18,12 +18,12 @@ package org.tikv.common.key;
 
 import static org.tikv.common.codec.Codec.IntegerCodec.writeLong;
 
+import java.io.Serializable;
 import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.codec.CodecDataOutput;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.exception.TiExpressionException;
-import java.io.Serializable;
 
 public class RowKey extends Key implements Serializable {
   private static final byte[] REC_PREFIX_SEP = new byte[] {'_', 'r'};

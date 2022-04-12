@@ -17,10 +17,10 @@
 package org.tikv.common.util;
 
 import com.google.protobuf.ByteString;
-import org.tikv.common.region.TiRegion;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.tikv.common.region.TiRegion;
 
 /** A Batch containing the region, a list of keys and/or values to send */
 public class Batch {

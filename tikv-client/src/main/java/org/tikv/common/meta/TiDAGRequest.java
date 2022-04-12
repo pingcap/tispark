@@ -18,8 +18,8 @@ package org.tikv.common.meta;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.tikv.common.predicates.PredicateUtils.mergeCNFExpressions;
 import static java.util.Objects.requireNonNull;
+import static org.tikv.common.predicates.PredicateUtils.mergeCNFExpressions;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -36,6 +36,18 @@ import com.pingcap.tidb.tipb.Limit;
 import com.pingcap.tidb.tipb.Selection;
 import com.pingcap.tidb.tipb.TableScan;
 import com.pingcap.tidb.tipb.TopN;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.exception.DAGRequestException;
 import org.tikv.common.exception.TiClientInternalException;
@@ -50,18 +62,6 @@ import org.tikv.common.region.TiStoreType;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.IntegerType;
 import org.tikv.common.util.KeyRangeUtils;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import org.tikv.kvproto.Coprocessor;
 
 /**

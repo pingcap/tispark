@@ -17,15 +17,24 @@
 package org.tikv.common.predicates;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 import static org.tikv.common.predicates.PredicateUtils.expressionToIndexRanges;
 import static org.tikv.common.util.KeyRangeUtils.makeCoprocRange;
-import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tidb.tipb.EncodeType;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.expression.Expression;
 import org.tikv.common.expression.PartitionPruner;
@@ -47,15 +56,6 @@ import org.tikv.common.statistics.IndexStatistics;
 import org.tikv.common.statistics.TableStatistics;
 import org.tikv.common.types.MySQLType;
 import org.tikv.common.util.Pair;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class TiKVScanAnalyzer {

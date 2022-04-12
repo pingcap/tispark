@@ -22,12 +22,6 @@ import static org.tikv.common.util.KeyRangeUtils.makeCoprocRange;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import org.tikv.common.key.Handle;
-import org.tikv.common.key.RowKey;
-import org.tikv.common.pd.PDUtils;
-import org.tikv.common.region.RegionManager;
-import org.tikv.common.region.TiRegion;
-import org.tikv.common.region.TiStoreType;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -38,6 +32,12 @@ import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.key.Handle;
+import org.tikv.common.key.RowKey;
+import org.tikv.common.pd.PDUtils;
+import org.tikv.common.region.RegionManager;
+import org.tikv.common.region.TiRegion;
+import org.tikv.common.region.TiStoreType;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Metapb;
 

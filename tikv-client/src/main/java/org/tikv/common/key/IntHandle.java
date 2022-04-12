@@ -16,12 +16,12 @@
 
 package org.tikv.common.key;
 
+import java.util.Arrays;
 import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.codec.CodecDataOutput;
 import org.tikv.common.exception.CodecException;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.IntegerType;
-import java.util.Arrays;
 
 public class IntHandle implements Handle {
   private final long handle;

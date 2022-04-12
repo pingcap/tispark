@@ -19,7 +19,6 @@
 package org.tikv.common.util;
 
 import com.google.common.base.Preconditions;
-import org.tikv.common.exception.GrpcException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -27,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.exception.GrpcException;
 
 public class ConcreteBackOffer implements BackOffer {
   private static final Logger logger = LoggerFactory.getLogger(ConcreteBackOffer.class);

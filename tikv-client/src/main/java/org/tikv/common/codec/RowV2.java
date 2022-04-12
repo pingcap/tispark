@@ -16,8 +16,8 @@
 
 package org.tikv.common.codec;
 
-import org.tikv.common.exception.InvalidCodecFormatException;
 import java.util.Arrays;
+import org.tikv.common.exception.InvalidCodecFormatException;
 
 public class RowV2 {
   // CodecVer is the constant number that represent the new row format.

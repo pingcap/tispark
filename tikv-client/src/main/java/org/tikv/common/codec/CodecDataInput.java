@@ -19,13 +19,13 @@ package org.tikv.common.codec;
 import static org.tikv.common.codec.Codec.*;
 
 import com.google.protobuf.ByteString;
-import org.tikv.common.exception.CodecException;
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import javax.annotation.Nonnull;
+import org.tikv.common.exception.CodecException;
 
 public class CodecDataInput implements DataInput {
   protected final DataInputStream inputStream;

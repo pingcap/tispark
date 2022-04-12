@@ -19,7 +19,17 @@ import static org.tikv.common.util.BackOffer.ROW_ID_ALLOCATOR_BACKOFF;
 
 import com.google.common.primitives.UnsignedLongs;
 import com.google.protobuf.ByteString;
-import org.tikv.BytePairWrapper;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
+import javax.annotation.Nonnull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tikv.common.BytePairWrapper;
 import org.tikv.common.Snapshot;
 import org.tikv.common.TiConfiguration;
 import org.tikv.common.TiSession;
@@ -36,16 +46,6 @@ import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.util.BackOffFunction;
 import org.tikv.common.util.BackOffer;
 import org.tikv.common.util.ConcreteBackOffer;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
-import javax.annotation.Nonnull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * RowIDAllocator read current start from TiKV and write back 'start+step' back to TiKV. It designs

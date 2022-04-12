@@ -16,17 +16,17 @@
 
 package org.tikv.common.key;
 
-import static org.tikv.common.codec.KeyUtils.formatBytes;
 import static java.util.Objects.requireNonNull;
+import static org.tikv.common.codec.KeyUtils.formatBytes;
 
 import com.google.common.primitives.Bytes;
 import com.google.protobuf.ByteString;
+import java.util.Arrays;
+import javax.annotation.Nonnull;
 import org.tikv.common.codec.CodecDataOutput;
 import org.tikv.common.types.DataType;
 import org.tikv.common.util.FastByteComparisons;
 import org.tikv.common.util.LogDesensitization;
-import java.util.Arrays;
-import javax.annotation.Nonnull;
 
 public class Key implements Comparable<Key> {
   public static final Key EMPTY = createEmpty();

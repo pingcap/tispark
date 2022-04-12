@@ -19,8 +19,8 @@ package org.tikv.common.meta;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.tikv.common.types.DataType;
 import java.io.Serializable;
+import org.tikv.common.types.DataType;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiIndexColumn implements Serializable {

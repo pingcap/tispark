@@ -16,13 +16,13 @@
 
 package org.tikv.common.operation;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.tikv.common.expression.ByItem;
 import org.tikv.common.expression.Expression;
 import org.tikv.common.meta.TiDAGRequest;
 import org.tikv.common.types.DataType;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * SchemaInfer extract row's type after query is executed. It is pretty rough version. Optimization

@@ -22,6 +22,15 @@ import static org.tikv.common.util.ClientUtils.getBatches;
 import static org.tikv.common.util.ClientUtils.getTasksWithOutput;
 
 import com.google.protobuf.ByteString;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Queue;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.TiKVException;
 import org.tikv.common.region.RegionStoreClient;
@@ -32,15 +41,6 @@ import org.tikv.common.util.BackOffer;
 import org.tikv.common.util.Batch;
 import org.tikv.common.util.ConcreteBackOffer;
 import org.tikv.common.util.Pair;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Queue;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ExecutorService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 
 public class KVClient implements AutoCloseable {

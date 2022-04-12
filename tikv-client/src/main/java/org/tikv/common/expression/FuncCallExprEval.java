@@ -16,24 +16,25 @@
 
 package org.tikv.common.expression;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+import org.joda.time.DateTime;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.DateTimeType;
 import org.tikv.common.types.DateType;
 import org.tikv.common.types.IntegerType;
 import org.tikv.common.types.StringType;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
-import org.joda.time.DateTime;
 
 public class FuncCallExprEval {
 
-  private static final Map<FuncCallExpr.Type, Function<Constant, Constant>> evalMap = new HashMap<>();
+  private static final Map<FuncCallExpr.Type, Function<Constant, Constant>> evalMap =
+      new HashMap<>();
 
   static {
     // adding year eval logic here
     evalMap.put(
-            FuncCallExpr.Type.YEAR,
+        FuncCallExpr.Type.YEAR,
         literal -> {
           DataType type = literal.getDataType();
           if (type instanceof StringType) {

@@ -16,6 +16,11 @@
 
 package org.tikv.common.operation.iterator;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutorCompletionService;
 import org.tikv.common.Snapshot;
 import org.tikv.common.TiConfiguration;
 import org.tikv.common.TiSession;
@@ -25,11 +30,6 @@ import org.tikv.common.meta.TiDAGRequest;
 import org.tikv.common.row.Row;
 import org.tikv.common.util.RangeSplitter;
 import org.tikv.common.util.RangeSplitter.RegionTask;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.concurrent.ExecutorCompletionService;
 
 public class IndexScanIterator implements Iterator<Row> {
   private final Iterator<Handle> handleIterator;

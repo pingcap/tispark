@@ -20,19 +20,6 @@ import static org.tikv.common.util.ClientUtils.groupKeysByRegion;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
-import org.tikv.common.codec.KeyUtils;
-import org.tikv.common.exception.GrpcException;
-import org.tikv.common.exception.TiBatchWriteException;
-import org.tikv.common.region.RegionManager;
-import org.tikv.common.region.TiRegion;
-import org.tikv.txn.TxnKVClient;
-import org.tikv.txn.type.BatchKeys;
-import org.tikv.txn.type.ClientRPCResult;
-import org.tikv.common.util.BackOffFunction;
-import org.tikv.common.util.BackOffer;
-import org.tikv.common.util.ConcreteBackOffer;
-import org.tikv.common.util.LogDesensitization;
-import org.tikv.common.util.Pair;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -45,9 +32,22 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.codec.KeyUtils;
+import org.tikv.common.exception.GrpcException;
+import org.tikv.common.exception.TiBatchWriteException;
+import org.tikv.common.region.RegionManager;
+import org.tikv.common.region.TiRegion;
+import org.tikv.common.util.BackOffFunction;
+import org.tikv.common.util.BackOffer;
+import org.tikv.common.util.ConcreteBackOffer;
+import org.tikv.common.util.LogDesensitization;
+import org.tikv.common.util.Pair;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.Op;
 import org.tikv.kvproto.Metapb;
+import org.tikv.txn.TxnKVClient;
+import org.tikv.txn.type.BatchKeys;
+import org.tikv.txn.type.ClientRPCResult;
 
 public class TwoPhaseCommitter {
 

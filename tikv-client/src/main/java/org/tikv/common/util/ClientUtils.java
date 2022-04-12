@@ -17,10 +17,6 @@
 package org.tikv.common.util;
 
 import com.google.protobuf.ByteString;
-import org.tikv.common.exception.TiKVException;
-import org.tikv.common.region.RegionManager;
-import org.tikv.common.region.RegionStoreClient;
-import org.tikv.common.region.TiRegion;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +28,10 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
+import org.tikv.common.exception.TiKVException;
+import org.tikv.common.region.RegionManager;
+import org.tikv.common.region.RegionStoreClient;
+import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 

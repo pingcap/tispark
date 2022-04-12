@@ -18,11 +18,11 @@ package org.tikv.common.columnar.datatypes;
 
 import static org.tikv.common.util.MemoryUtil.allocateDirect;
 
+import java.nio.ByteBuffer;
 import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.columnar.TiBlockColumnVector;
 import org.tikv.common.types.DataType;
 import org.tikv.common.util.MemoryUtil;
-import java.nio.ByteBuffer;
 
 // TODO Support nullable data types.
 // TODO Support nested, array and struct types.

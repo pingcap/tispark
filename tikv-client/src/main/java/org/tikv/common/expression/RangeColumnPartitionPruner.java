@@ -19,6 +19,13 @@ package org.tikv.common.expression;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import org.tikv.common.expression.visitor.DefaultVisitor;
 import org.tikv.common.expression.visitor.PrunedPartitionBuilder;
 import org.tikv.common.key.TypedKey;
@@ -28,17 +35,9 @@ import org.tikv.common.meta.TiTableInfo;
 import org.tikv.common.parser.TiParser;
 import org.tikv.common.predicates.PredicateUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-
 @SuppressWarnings("UnstableApiUsage")
 public class RangeColumnPartitionPruner
-        extends DefaultVisitor<Set<Integer>, LogicalBinaryExpression> {
+    extends DefaultVisitor<Set<Integer>, LogicalBinaryExpression> {
   private final int partsSize;
   private final TiPartitionInfo partInfo;
   private final Map<String, List<Expression>> partExprsPerColumnRef;

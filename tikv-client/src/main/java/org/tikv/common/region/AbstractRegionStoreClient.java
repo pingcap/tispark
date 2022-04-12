@@ -21,11 +21,11 @@ package org.tikv.common.region;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import io.grpc.ManagedChannel;
 import org.tikv.common.AbstractGRPCClient;
 import org.tikv.common.TiConfiguration;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.util.ChannelFactory;
-import io.grpc.ManagedChannel;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.TikvGrpc;
 

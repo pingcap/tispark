@@ -18,8 +18,9 @@
 
 package org.tikv.txn;
 
+import java.util.List;
 import org.tikv.common.PDClient;
-import org.tikv.StoreVersion;
+import org.tikv.common.StoreVersion;
 import org.tikv.common.TiConfiguration;
 import org.tikv.common.Version;
 import org.tikv.common.exception.KeyException;
@@ -28,7 +29,6 @@ import org.tikv.common.region.RegionStoreClient;
 import org.tikv.common.region.TiRegion;
 import org.tikv.common.util.BackOffer;
 import org.tikv.common.util.ChannelFactory;
-import java.util.List;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.TikvGrpc;
 

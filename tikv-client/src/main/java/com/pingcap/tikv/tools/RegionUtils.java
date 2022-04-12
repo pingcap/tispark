@@ -19,6 +19,10 @@ package com.pingcap.tikv.tools;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.tikv.common.TiSession;
 import org.tikv.common.meta.TiDAGRequest;
 import org.tikv.common.meta.TiDAGRequest.PushDownType;
@@ -26,10 +30,6 @@ import org.tikv.common.meta.TiTableInfo;
 import org.tikv.common.predicates.TiKVScanAnalyzer;
 import org.tikv.common.util.RangeSplitter;
 import org.tikv.common.util.RangeSplitter.RegionTask;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class RegionUtils {

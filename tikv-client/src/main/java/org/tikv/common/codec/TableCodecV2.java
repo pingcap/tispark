@@ -16,6 +16,9 @@
 
 package org.tikv.common.codec;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import org.tikv.common.key.Handle;
 import org.tikv.common.meta.TiColumnInfo;
 import org.tikv.common.meta.TiIndexColumn;
@@ -23,9 +26,6 @@ import org.tikv.common.meta.TiIndexInfo;
 import org.tikv.common.meta.TiTableInfo;
 import org.tikv.common.row.ObjectRowImpl;
 import org.tikv.common.row.Row;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 
 public class TableCodecV2 {
 

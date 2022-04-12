@@ -24,15 +24,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.ColumnInfo;
+import java.io.Serializable;
+import java.util.List;
+import java.util.Objects;
 import org.tikv.common.codec.CodecDataOutput;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.DataType.EncodeType;
 import org.tikv.common.types.DataTypeFactory;
 import org.tikv.common.types.IntegerType;
 import org.tikv.common.types.MySQLType;
-import java.io.Serializable;
-import java.util.List;
-import java.util.Objects;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiColumnInfo implements Serializable {

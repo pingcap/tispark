@@ -23,6 +23,8 @@ import com.pingcap.tidb.tipb.Expr;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tidb.tipb.FieldType;
 import com.pingcap.tidb.tipb.ScalarFuncSig;
+import java.util.Map;
+import java.util.Objects;
 import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.codec.CodecDataOutput;
 import org.tikv.common.exception.TiExpressionException;
@@ -52,8 +54,6 @@ import org.tikv.common.types.RealType;
 import org.tikv.common.types.StringType;
 import org.tikv.common.types.TimeType;
 import org.tikv.common.types.TimestampType;
-import java.util.Map;
-import java.util.Objects;
 
 public class ProtoConverter extends Visitor<Expr, Object> {
   // All concrete data type should be hooked to a type name

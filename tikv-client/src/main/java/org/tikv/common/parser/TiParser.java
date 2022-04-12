@@ -21,13 +21,13 @@ package org.tikv.common.parser;
 import com.pingcap.tikv.parser.MySqlLexer;
 import com.pingcap.tikv.parser.MySqlParser;
 import com.pingcap.tikv.parser.MySqlParserBaseVisitor;
-import org.tikv.common.exception.UnsupportedSyntaxException;
-import org.tikv.common.expression.Expression;
-import org.tikv.common.meta.TiTableInfo;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.atn.PredictionMode;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
+import org.tikv.common.exception.UnsupportedSyntaxException;
+import org.tikv.common.expression.Expression;
+import org.tikv.common.meta.TiTableInfo;
 
 public class TiParser extends MySqlParserBaseVisitor {
   private final AstBuilder astBuilder;

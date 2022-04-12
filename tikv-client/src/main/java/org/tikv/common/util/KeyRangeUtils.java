@@ -22,9 +22,9 @@ import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.protobuf.ByteString;
+import java.util.List;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.key.Key;
-import java.util.List;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class KeyRangeUtils {

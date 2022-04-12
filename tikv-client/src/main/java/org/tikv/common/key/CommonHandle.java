@@ -16,6 +16,11 @@
 
 package org.tikv.common.key;
 
+import java.sql.Date;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.tikv.common.codec.Codec;
 import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.codec.CodecDataOutput;
@@ -24,11 +29,6 @@ import org.tikv.common.types.Converter;
 import org.tikv.common.types.DataType;
 import org.tikv.common.types.MySQLType;
 import org.tikv.common.util.FastByteComparisons;
-import java.sql.Date;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class CommonHandle implements Handle {
   private final byte[] encoded;

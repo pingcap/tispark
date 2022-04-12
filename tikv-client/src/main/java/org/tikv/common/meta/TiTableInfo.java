@@ -23,15 +23,15 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.TableInfo;
-import org.tikv.common.exception.TiClientInternalException;
-import org.tikv.common.meta.TiColumnInfo.InternalTypeHolder;
-import org.tikv.common.types.DataType;
-import org.tikv.common.types.DataTypeFactory;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.tikv.common.exception.TiClientInternalException;
+import org.tikv.common.meta.TiColumnInfo.InternalTypeHolder;
+import org.tikv.common.types.DataType;
+import org.tikv.common.types.DataTypeFactory;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiTableInfo implements Serializable {

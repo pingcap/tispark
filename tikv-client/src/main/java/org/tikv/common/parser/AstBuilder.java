@@ -20,7 +20,10 @@ import static org.tikv.common.types.IntegerType.BOOLEAN;
 
 import com.google.common.primitives.Doubles;
 import com.pingcap.tikv.parser.MySqlParser;
+import com.pingcap.tikv.parser.MySqlParser.ExpressionContext;
+import com.pingcap.tikv.parser.MySqlParser.FunctionNameBaseContext;
 import com.pingcap.tikv.parser.MySqlParserBaseVisitor;
+import org.antlr.v4.runtime.tree.TerminalNode;
 import org.tikv.common.exception.UnsupportedSyntaxException;
 import org.tikv.common.expression.ArithmeticBinaryExpression;
 import org.tikv.common.expression.ColumnRef;
@@ -31,11 +34,8 @@ import org.tikv.common.expression.FuncCallExpr;
 import org.tikv.common.expression.FuncCallExpr.Type;
 import org.tikv.common.expression.LogicalBinaryExpression;
 import org.tikv.common.meta.TiTableInfo;
-import com.pingcap.tikv.parser.MySqlParser.ExpressionContext;
-import com.pingcap.tikv.parser.MySqlParser.FunctionNameBaseContext;
 import org.tikv.common.types.IntegerType;
 import org.tikv.common.types.RealType;
-import org.antlr.v4.runtime.tree.TerminalNode;
 
 // AstBuilder will convert ParseTree into Ast Node.
 // In tikv java client, we only need to parser expression
@@ -78,7 +78,8 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   }
 
   @Override
-  public Expression visitScalarFunctionCall(com.pingcap.tikv.parser.MySqlParser.ScalarFunctionCallContext ctx) {
+  public Expression visitScalarFunctionCall(
+      com.pingcap.tikv.parser.MySqlParser.ScalarFunctionCallContext ctx) {
     FunctionNameBaseContext fnNameCtx = ctx.scalarFunctionName().functionNameBase();
     if (fnNameCtx != null) {
       if (fnNameCtx.YEAR() != null) {
@@ -90,7 +91,8 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   }
 
   @Override
-  public Expression visitFullColumnName(com.pingcap.tikv.parser.MySqlParser.FullColumnNameContext ctx) {
+  public Expression visitFullColumnName(
+      com.pingcap.tikv.parser.MySqlParser.FullColumnNameContext ctx) {
     return visitUid(ctx.uid());
   }
 
@@ -107,7 +109,8 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   }
 
   @Override
-  public Expression visitDecimalLiteral(com.pingcap.tikv.parser.MySqlParser.DecimalLiteralContext ctx) {
+  public Expression visitDecimalLiteral(
+      com.pingcap.tikv.parser.MySqlParser.DecimalLiteralContext ctx) {
     if (ctx.ONE_DECIMAL() != null) {
       String val = ctx.ONE_DECIMAL().getSymbol().getText();
       return parseIntOrLongOrDec(val);
@@ -130,13 +133,15 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   }
 
   @Override
-  public Expression visitBooleanLiteral(com.pingcap.tikv.parser.MySqlParser.BooleanLiteralContext ctx) {
+  public Expression visitBooleanLiteral(
+      com.pingcap.tikv.parser.MySqlParser.BooleanLiteralContext ctx) {
     if (ctx.FALSE() != null) return Constant.create(0);
     return Constant.create(1, BOOLEAN);
   }
 
   @Override
-  public Expression visitStringLiteral(com.pingcap.tikv.parser.MySqlParser.StringLiteralContext ctx) {
+  public Expression visitStringLiteral(
+      com.pingcap.tikv.parser.MySqlParser.StringLiteralContext ctx) {
     if (ctx.STRING_LITERAL() != null) {
       StringBuilder sb = new StringBuilder();
       for (TerminalNode str : ctx.STRING_LITERAL()) {
@@ -174,7 +179,8 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   }
 
   @Override
-  public Expression visitConstantExpressionAtom(com.pingcap.tikv.parser.MySqlParser.ConstantExpressionAtomContext ctx) {
+  public Expression visitConstantExpressionAtom(
+      com.pingcap.tikv.parser.MySqlParser.ConstantExpressionAtomContext ctx) {
     return visitChildren(ctx);
   }
 
@@ -200,7 +206,8 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
         ctx.toString() + ": it is not possible reach to this line of code");
   }
 
-  public Expression visitLogicalExpression(com.pingcap.tikv.parser.MySqlParser.LogicalExpressionContext ctx) {
+  public Expression visitLogicalExpression(
+      com.pingcap.tikv.parser.MySqlParser.LogicalExpressionContext ctx) {
     ExpressionContext left = ctx.expression(0);
     ExpressionContext right = ctx.expression(1);
     switch (ctx.logicalOperator().getText()) {

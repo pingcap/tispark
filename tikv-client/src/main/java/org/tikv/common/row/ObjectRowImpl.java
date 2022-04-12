@@ -18,14 +18,14 @@
 
 package org.tikv.common.row;
 
-import org.tikv.common.codec.KeyUtils;
-import org.tikv.common.types.Converter;
-import org.tikv.common.types.DataType;
-import org.tikv.common.util.LogDesensitization;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import org.tikv.common.codec.KeyUtils;
+import org.tikv.common.types.Converter;
+import org.tikv.common.types.DataType;
+import org.tikv.common.util.LogDesensitization;
 
 // A dummy implementation of Row interface
 // Using non-memory compact format

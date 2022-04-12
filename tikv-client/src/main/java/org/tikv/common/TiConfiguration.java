@@ -17,9 +17,6 @@
 package org.tikv.common;
 
 import com.google.common.collect.ImmutableList;
-import org.tikv.common.pd.PDUtils;
-import org.tikv.common.region.TiStoreType;
-import org.tikv.common.types.Converter;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
@@ -28,6 +25,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import org.joda.time.DateTimeZone;
+import org.tikv.common.pd.PDUtils;
+import org.tikv.common.region.TiStoreType;
+import org.tikv.common.types.Converter;
 import org.tikv.kvproto.Kvrpcpb.CommandPri;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 

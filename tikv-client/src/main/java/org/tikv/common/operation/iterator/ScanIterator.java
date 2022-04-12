@@ -19,14 +19,14 @@ package org.tikv.common.operation.iterator;
 import static java.util.Objects.requireNonNull;
 
 import com.google.protobuf.ByteString;
+import java.util.Iterator;
+import java.util.List;
 import org.tikv.common.TiConfiguration;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.key.Key;
 import org.tikv.common.region.RegionStoreClient.RegionStoreClientBuilder;
 import org.tikv.common.region.TiRegion;
-import java.util.Iterator;
-import java.util.List;
 import org.tikv.kvproto.Kvrpcpb;
 
 public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {

@@ -16,13 +16,6 @@
 
 package org.tikv.common.codec;
 
-import org.tikv.common.ExtendedDateTime;
-import org.tikv.common.exception.CodecException;
-import org.tikv.common.exception.TypeException;
-import org.tikv.common.meta.TiColumnInfo;
-import org.tikv.common.types.Converter;
-import org.tikv.common.types.DataType;
-import org.tikv.common.types.DecimalType;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
@@ -31,6 +24,13 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import org.joda.time.DateTimeZone;
+import org.tikv.common.ExtendedDateTime;
+import org.tikv.common.exception.CodecException;
+import org.tikv.common.exception.TypeException;
+import org.tikv.common.meta.TiColumnInfo;
+import org.tikv.common.types.Converter;
+import org.tikv.common.types.DataType;
+import org.tikv.common.types.DecimalType;
 
 public class RowEncoderV2 {
   private static final long SIGN_MASK = 0x8000000000000000L;

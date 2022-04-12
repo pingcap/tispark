@@ -26,10 +26,10 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.ColumnInfo;
 import com.pingcap.tidb.tipb.IndexInfo;
-import org.tikv.common.exception.TiKVException;
 import java.io.Serializable;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.tikv.common.exception.TiKVException;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiIndexInfo implements Serializable {
