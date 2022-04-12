@@ -17,11 +17,12 @@
 package com.pingcap.tispark.write
 
 import java.util.Locale
-import com.pingcap.tikv.{TTLManager, TiConfiguration}
+import com.pingcap.tikv.TTLManager
 import com.pingcap.tispark.TiTableReference
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
-import org.tikv.common.exception
+import org.tikv.TTLManager
+import org.tikv.common.{TTLManager, TiConfiguration, exception}
 import org.tikv.common.exception.TiBatchWriteException
 
 import scala.collection.mutable.ListBuffer

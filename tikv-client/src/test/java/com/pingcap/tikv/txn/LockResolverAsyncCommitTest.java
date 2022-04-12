@@ -20,7 +20,7 @@ import static junit.framework.Assert.assertTrue;
 import static junit.framework.TestCase.assertEquals;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.Version;
+import org.tikv.common.Version;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

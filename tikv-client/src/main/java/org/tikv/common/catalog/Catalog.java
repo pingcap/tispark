@@ -19,7 +19,7 @@ package org.tikv.common.catalog;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.pingcap.tikv.Snapshot;
+import org.tikv.common.Snapshot;
 import org.tikv.common.meta.TiDBInfo;
 import org.tikv.common.meta.TiTableInfo;
 import java.util.Collection;

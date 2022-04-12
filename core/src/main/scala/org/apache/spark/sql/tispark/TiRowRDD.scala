@@ -20,7 +20,7 @@ import com.pingcap.tikv._
 import com.pingcap.tikv.columnar.TiColumnarBatchHelper
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.{TiPartition, TiTableReference}
-import org.tikv.common.TiSession
+import org.tikv.common.{TiConfiguration, TiSession}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute

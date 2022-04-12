@@ -19,7 +19,7 @@ package com.pingcap.tikv.tools;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.TiSession;
+import org.tikv.common.TiSession;
 import org.tikv.common.meta.TiDAGRequest;
 import org.tikv.common.meta.TiDAGRequest.PushDownType;
 import org.tikv.common.meta.TiTableInfo;

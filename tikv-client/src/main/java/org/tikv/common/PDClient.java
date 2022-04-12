@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv;
+package org.tikv.common;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.tikv.common.operation.PDErrorHandler.getRegionResponseErrorExtractor;

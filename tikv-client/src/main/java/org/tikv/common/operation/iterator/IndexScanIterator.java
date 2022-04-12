@@ -16,9 +16,9 @@
 
 package org.tikv.common.operation.iterator;
 
-import com.pingcap.tikv.Snapshot;
-import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.TiSession;
+import org.tikv.common.Snapshot;
+import org.tikv.common.TiConfiguration;
+import org.tikv.common.TiSession;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.key.Handle;
 import org.tikv.common.meta.TiDAGRequest;

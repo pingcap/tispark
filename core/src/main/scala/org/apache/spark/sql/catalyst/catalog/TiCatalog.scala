@@ -16,9 +16,7 @@
 
 package org.apache.spark.sql.catalyst.catalog
 
-import com.pingcap.tikv.TiConfiguration
-import org.tikv.common.TiSession;
-import com.pingcap.tispark.{MetaManager, TiTableReference}
+import org.tikv.common.{TiConfiguration, TiSession}
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.v2.TiDBTable
 import org.apache.spark.sql.SparkSession

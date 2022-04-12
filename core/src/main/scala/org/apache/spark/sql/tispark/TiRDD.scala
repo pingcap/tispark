@@ -19,7 +19,7 @@ package org.apache.spark.sql.tispark
 import com.pingcap.tikv._
 import org.tikv.common.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.{TiPartition, TiTableReference}
-import org.tikv.common.{TiSession, exception}
+import org.tikv.common.{TiConfiguration, TiSession, exception}
 import org.apache.spark.Partition
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession

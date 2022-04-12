@@ -18,6 +18,7 @@ package com.pingcap.tikv;
 
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
+import org.tikv.common.Version;
 import org.tikv.common.codec.Codec.BytesCodec;
 import org.tikv.common.codec.CodecDataOutput;
 import java.util.Arrays;

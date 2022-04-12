@@ -25,7 +25,7 @@ import static org.tikv.common.types.TimeType.SECOND;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.primitives.UnsignedLong;
-import com.pingcap.tikv.ExtendedDateTime;
+import org.tikv.common.ExtendedDateTime;
 import org.tikv.common.exception.ConvertNotSupportException;
 import org.tikv.common.exception.ConvertOverflowException;
 import org.tikv.common.exception.TypeException;

@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
+import org.tikv.common.PDClient;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.region.TiRegion;

@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv;
+package org.tikv.common;
 
 public class Version {
   public static final String RESOLVE_LOCK_V2 = "2.0.0";

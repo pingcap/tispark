@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.EncodeType;
-import com.pingcap.tikv.TiSession;
+import org.tikv.common.TiSession;
 import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.columnar.BatchedTiChunkColumnVector;

@@ -18,10 +18,11 @@ package com.pingcap.tispark.utils
 
 import com.pingcap.tikv._
 import com.pingcap.tispark.write.{SerializableKey, TiDBOptions}
-import org.tikv.common.{TiSession, exception}
+import org.tikv.common.{TTLManager, TiConfiguration, TiSession, TwoPhaseCommitter, exception}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.slf4j.LoggerFactory
+import org.tikv.{BytePairWrapper, ByteWrapper, StoreVersion}
 import org.tikv.common.exception.TiBatchWriteException
 import org.tikv.common.util.ConcreteBackOffer
 

@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.Snapshot;
+import org.tikv.common.Snapshot;
 import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.codec.MetaCodec;

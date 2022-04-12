@@ -16,8 +16,7 @@
 
 package org.apache.spark.sql.tispark
 
-import com.pingcap.tikv.TiConfiguration
-import org.tikv.common.TiSession
+import org.tikv.common.{TiConfiguration, TiSession}
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.sql.catalyst.expressions.Attribute

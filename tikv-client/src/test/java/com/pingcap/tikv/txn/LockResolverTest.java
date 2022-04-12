@@ -21,10 +21,10 @@ import static junit.framework.TestCase.assertTrue;
 import static junit.framework.TestCase.fail;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.StoreVersion;
-import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.Version;
+import org.tikv.StoreVersion;
+import org.tikv.common.TiConfiguration;
+import org.tikv.common.TiSession;
+import org.tikv.common.Version;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.KeyException;
 import org.tikv.common.exception.RegionException;

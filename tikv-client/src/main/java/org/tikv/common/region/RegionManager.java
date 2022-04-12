@@ -25,7 +25,7 @@ import static org.tikv.common.util.KeyRangeUtils.makeRange;
 import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.ReadOnlyPDClient;
+import org.tikv.common.ReadOnlyPDClient;
 import org.tikv.common.event.CacheInvalidateEvent;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.TiClientInternalException;

@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv;
+package org.tikv.common;
 
 import java.sql.Timestamp;
 import org.joda.time.DateTime;

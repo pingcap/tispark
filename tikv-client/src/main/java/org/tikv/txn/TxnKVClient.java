@@ -17,8 +17,8 @@
 package org.tikv.txn;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.ReadOnlyPDClient;
-import com.pingcap.tikv.TiConfiguration;
+import org.tikv.common.ReadOnlyPDClient;
+import org.tikv.common.TiConfiguration;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.KeyException;
 import org.tikv.common.exception.RegionException;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv;
+package org.tikv.common;
 
 import com.google.protobuf.ByteString;
 import org.tikv.common.codec.KeyUtils;

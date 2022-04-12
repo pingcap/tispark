@@ -22,7 +22,7 @@ import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tidb.tipb.SelectResponse;
-import com.pingcap.tikv.TiSession;
+import org.tikv.common.TiSession;
 import org.tikv.common.exception.RegionTaskException;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.meta.TiDAGRequest.PushDownType;

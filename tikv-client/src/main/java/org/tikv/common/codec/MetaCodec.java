@@ -19,7 +19,7 @@ package org.tikv.common.codec;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.Snapshot;
+import org.tikv.common.Snapshot;
 import org.tikv.common.codec.Codec.BytesCodec;
 import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.exception.TiClientInternalException;

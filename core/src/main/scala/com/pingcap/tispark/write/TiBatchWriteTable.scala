@@ -20,7 +20,7 @@ import java.util
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.key.IndexKey
 import com.pingcap.tikv.meta._
-import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient}
+import com.pingcap.tikv.TiDBJDBCClient
 import org.tikv.common.{TiSession, exception}
 import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
@@ -29,6 +29,7 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{TiContext, _}
 import org.slf4j.LoggerFactory
+import org.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient}
 import org.tikv.common.codec.TableCodec
 import org.tikv.common.exception.TiBatchWriteException
 import org.tikv.common.key.{Handle, IndexKey, IntHandle, RowKey}

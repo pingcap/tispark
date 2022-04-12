@@ -20,7 +20,7 @@ package org.tikv.common.operation;
 
 import static org.tikv.common.pd.PDError.buildFromPdpbError;
 
-import com.pingcap.tikv.PDClient;
+import org.tikv.common.PDClient;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.pd.PDError;

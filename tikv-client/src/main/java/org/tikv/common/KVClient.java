@@ -16,7 +16,7 @@
  *
  */
 
-package com.pingcap.tikv;
+package org.tikv.common;
 
 import static org.tikv.common.util.ClientUtils.getBatches;
 import static org.tikv.common.util.ClientUtils.getTasksWithOutput;

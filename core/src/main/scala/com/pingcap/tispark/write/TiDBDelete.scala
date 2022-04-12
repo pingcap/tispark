@@ -16,8 +16,7 @@
 
 package com.pingcap.tispark.write
 
-import com.pingcap.tikv.TiConfiguration
-import org.tikv.common.TiSession
+import org.tikv.common.{TiConfiguration, TiSession}
 import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TwoPhaseCommitHepler, WriteUtil}
 import org.apache.spark.{SparkConf, SparkContext}

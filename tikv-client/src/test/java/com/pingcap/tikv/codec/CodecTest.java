@@ -28,7 +28,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.google.common.primitives.UnsignedLong;
-import com.pingcap.tikv.ExtendedDateTime;
+import org.tikv.common.ExtendedDateTime;
 import org.tikv.common.codec.Codec.BytesCodec;
 import org.tikv.common.codec.Codec.DateCodec;
 import org.tikv.common.codec.Codec.DateTimeCodec;

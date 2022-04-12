@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv;
+package org.tikv.common;
 
 import static org.tikv.common.util.ClientUtils.groupKeysByRegion;
 

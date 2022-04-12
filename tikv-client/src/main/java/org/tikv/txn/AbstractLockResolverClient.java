@@ -18,10 +18,10 @@
 
 package org.tikv.txn;
 
-import com.pingcap.tikv.PDClient;
-import com.pingcap.tikv.StoreVersion;
-import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.Version;
+import org.tikv.common.PDClient;
+import org.tikv.StoreVersion;
+import org.tikv.common.TiConfiguration;
+import org.tikv.common.Version;
 import org.tikv.common.exception.KeyException;
 import org.tikv.common.region.RegionManager;
 import org.tikv.common.region.RegionStoreClient;

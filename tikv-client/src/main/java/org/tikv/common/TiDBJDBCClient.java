@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv;
+package org.tikv.common;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

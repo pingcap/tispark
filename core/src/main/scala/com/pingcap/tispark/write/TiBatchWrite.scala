@@ -19,12 +19,13 @@ package com.pingcap.tispark.write
 import com.pingcap.tikv._
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler}
-import org.tikv.common.{TiSession, exception}
+import org.tikv.common.{TTLManager, TiConfiguration, TiDBJDBCClient, TiSession, exception}
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{DataFrame, SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
+import org.tikv.StoreVersion
 import org.tikv.common.exception.TiBatchWriteException
 import org.tikv.common.row.Row
 import org.tikv.common.types.DataType

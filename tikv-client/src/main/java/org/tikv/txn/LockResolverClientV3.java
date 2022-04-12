@@ -21,8 +21,8 @@ package org.tikv.txn;
 import static org.tikv.common.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.PDClient;
-import com.pingcap.tikv.TiConfiguration;
+import org.tikv.common.PDClient;
+import org.tikv.common.TiConfiguration;
 import org.tikv.common.exception.KeyException;
 import org.tikv.common.exception.RegionException;
 import org.tikv.common.exception.TiClientInternalException;

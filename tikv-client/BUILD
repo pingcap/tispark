@@ -6,7 +6,7 @@ package(default_visibility = ["//visibility:public"])
 
 java_binary(
     name = "tikv-java-client",
-    main_class = "com.pingcap.tikv.Main",
+    main_class = "org.tikv.Main",
     runtime_deps = [
         "//src/main/java/com/pingcap/tikv:tikv-java-client-lib",
         ":shaded_scalding",

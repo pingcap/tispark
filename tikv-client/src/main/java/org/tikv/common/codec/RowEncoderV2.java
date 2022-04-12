@@ -16,7 +16,7 @@
 
 package org.tikv.common.codec;
 
-import com.pingcap.tikv.ExtendedDateTime;
+import org.tikv.common.ExtendedDateTime;
 import org.tikv.common.exception.CodecException;
 import org.tikv.common.exception.TypeException;
 import org.tikv.common.meta.TiColumnInfo;

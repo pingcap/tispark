@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv;
+package org.tikv.common;
 
 import static org.tikv.common.operation.iterator.CoprocessorIterator.getHandleIterator;
 import static org.tikv.common.operation.iterator.CoprocessorIterator.getRowIterator;

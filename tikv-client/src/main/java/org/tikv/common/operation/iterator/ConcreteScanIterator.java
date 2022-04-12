@@ -21,7 +21,7 @@ package org.tikv.common.operation.iterator;
 import static java.util.Objects.requireNonNull;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.TiConfiguration;
+import org.tikv.common.TiConfiguration;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.exception.KeyException;
 import org.tikv.common.exception.TiKVException;

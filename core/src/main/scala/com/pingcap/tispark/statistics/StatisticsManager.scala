@@ -21,8 +21,7 @@ package com.pingcap.tispark.statistics
 import com.google.common.cache.CacheBuilder
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.statistics._
-import com.pingcap.tikv.Snapshot
-import org.tikv.common.TiSession
+import org.tikv.common.{Snapshot, TiSession}
 import com.pingcap.tispark.statistics.StatisticsHelper.shouldUpdateHistogram
 import com.pingcap.tispark.statistics.estimate.{DefaultTableSizeEstimator, TableSizeEstimator}
 import org.slf4j.LoggerFactory

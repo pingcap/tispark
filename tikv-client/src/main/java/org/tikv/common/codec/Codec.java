@@ -18,7 +18,7 @@ package org.tikv.common.codec;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.pingcap.tikv.ExtendedDateTime;
+import org.tikv.common.ExtendedDateTime;
 import org.tikv.common.exception.CodecException;
 import org.tikv.common.exception.ConvertOverflowException;
 import org.tikv.common.exception.InvalidCodecFormatException;

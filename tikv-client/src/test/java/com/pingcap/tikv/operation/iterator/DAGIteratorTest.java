@@ -23,7 +23,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.GrpcUtils;
 import com.pingcap.tikv.KVMockServer;
 import com.pingcap.tikv.MockServerTest;
-import com.pingcap.tikv.Version;
+import org.tikv.common.Version;
 import org.tikv.common.codec.Codec.BytesCodec;
 import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.codec.CodecDataOutput;

@@ -21,8 +21,8 @@ package org.tikv.common.region;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.pingcap.tikv.AbstractGRPCClient;
-import com.pingcap.tikv.TiConfiguration;
+import org.tikv.common.AbstractGRPCClient;
+import org.tikv.common.TiConfiguration;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.util.ChannelFactory;
 import io.grpc.ManagedChannel;

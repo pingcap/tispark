@@ -19,11 +19,11 @@ import static org.tikv.common.util.BackOffer.ROW_ID_ALLOCATOR_BACKOFF;
 
 import com.google.common.primitives.UnsignedLongs;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.BytePairWrapper;
-import com.pingcap.tikv.Snapshot;
-import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.TwoPhaseCommitter;
+import org.tikv.BytePairWrapper;
+import org.tikv.common.Snapshot;
+import org.tikv.common.TiConfiguration;
+import org.tikv.common.TiSession;
+import org.tikv.common.TwoPhaseCommitter;
 import org.tikv.common.codec.Codec.IntegerCodec;
 import org.tikv.common.codec.CodecDataInput;
 import org.tikv.common.codec.CodecDataOutput;

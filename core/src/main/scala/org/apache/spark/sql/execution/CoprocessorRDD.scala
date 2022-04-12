@@ -22,8 +22,7 @@ import com.pingcap.tikv.columnar.TiColumnarBatchHelper
 import com.pingcap.tikv.meta.TiDAGRequest
 import org.tikv.common.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.RangeSplitter
-import com.pingcap.tikv.TiConfiguration
-import org.tikv.common.TiSession
+import org.tikv.common.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.rdd.RDD
