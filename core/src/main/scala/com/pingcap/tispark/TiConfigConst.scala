@@ -36,7 +36,6 @@ object TiConfigConst {
   val REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD: String =
     "spark.tispark.plan.downgrade.index_threshold"
   val UNSUPPORTED_TYPES: String = "spark.tispark.type.unsupported_mysql_types"
-  val ENABLE_AUTO_LOAD_STATISTICS: String = "spark.tispark.statistics.auto_load"
   val CACHE_EXPIRE_AFTER_ACCESS: String = "spark.tispark.statistics.expire_after_access"
   val SHOW_ROWID: String = "spark.tispark.show_rowid"
   val DB_PREFIX: String = "spark.tispark.db_prefix"
