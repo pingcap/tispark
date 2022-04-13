@@ -283,6 +283,19 @@ df.write
 
 Please set `isolationLevel` to `NONE` to avoid large single transactions which might lead to TiDB OOM and also avoid the `ISOLATION LEVEL does not support` error (TiDB currently only supports `REPEATABLE-READ`).
 
+## Statistics information
+
+TiSpark uses the statistic information for:
+
++ Determining which index to use in your query plan with the lowest estimated cost.
++ Small table broadcasting, which enables efficient broadcast join.
+
+For TiSpark to use the statistic information, first make sure that relevant tables have been analyzed.
+
+See [here](https://github.com/pingcap/docs/blob/master/statistics.md) for more details about how to analyze tables.
+
+Since TiSpark 2.0, statistics information is default to auto-load.
+
 ## Reading partition table from TiDB
 
 TiSpark reads the range and hash partition table from TiDB.
