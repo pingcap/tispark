@@ -210,10 +210,6 @@ Set time zone by using the `-Duser.timezone` system property (for example, `-Dus
 
 Do not use `spark.sql.session.timeZone`.
 
-## Statistics information
-
-For how TiSpark can benefit from TiDB's statistic information, see [here](./docs/userguide.md).
-
 ## Authorization and authentication
 
 See [here](./docs/authorization_userguide.md).

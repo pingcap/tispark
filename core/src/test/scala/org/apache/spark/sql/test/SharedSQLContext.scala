@@ -447,7 +447,6 @@ trait SharedSQLContext
       }
       import com.pingcap.tispark.TiConfigConst._
       conf.set(PD_ADDRESSES, pdAddresses)
-      conf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
       conf.set(ALLOW_INDEX_READ, getFlagOrTrue(_tidbConf, ALLOW_INDEX_READ).toString)
       conf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
       conf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
