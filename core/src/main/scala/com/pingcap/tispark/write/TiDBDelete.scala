@@ -112,6 +112,7 @@ case class TiDBDelete(
       val commitTs = twoPhaseCommitHepler.commitPrimaryKeyWithRetryByDriver(
         primaryKey,
         List(SchemaUpdateTime(database, table, tiTableInfo.getUpdateTimestamp)))
+      twoPhaseCommitHepler.stopPrimaryKeyTTLUpdate()
       twoPhaseCommitHepler.commitSecondaryKeyByExecutors(secondaryKeysRDD, commitTs)
     } finally {
       twoPhaseCommitHepler.close()

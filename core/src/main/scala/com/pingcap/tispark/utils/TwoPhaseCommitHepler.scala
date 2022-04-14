@@ -136,7 +136,6 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
           error = e
       }
     }
-    stopPrimaryKeyTTLUpdate()
     throw error
   }
 
@@ -243,7 +242,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
   }
 
   // Stop primary key ttl update
-  private def stopPrimaryKeyTTLUpdate(): Unit = {
+  def stopPrimaryKeyTTLUpdate(): Unit = {
     if (isTTLUpdate) {
       ttlManager.close()
     }
