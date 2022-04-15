@@ -67,8 +67,6 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
   val debug: DebugTool = new DebugTool
-  val autoLoad: Boolean =
-    conf.getBoolean(TiConfigConst.ENABLE_AUTO_LOAD_STATISTICS, defaultValue = true)
 
   // tidbMapTable does not do any check any meta information
   // it just register table for later use
