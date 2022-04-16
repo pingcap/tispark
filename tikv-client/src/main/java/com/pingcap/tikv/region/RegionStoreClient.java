@@ -569,7 +569,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     }
 
     if (resp.hasError()) {
-      throw new TiClientInternalException("TxnHeartBeat fail, " + resp.getError().getAbort());
+      throw new KeyException(resp.getError(), "TxnHeartBeat fail, " + resp.getError().getAbort());
     }
 
     return true;
