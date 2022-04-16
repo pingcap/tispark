@@ -16,9 +16,7 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessThan;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
 import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
 import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.assertEquals;
@@ -91,6 +89,29 @@ public class TiKVScanAnalyzerTest {
         .addColumn("c3", StringType.VARCHAR)
         .addColumn("c4", IntegerType.INT)
         .appendIndex("testIndex", ImmutableList.of("c1", "c2", "c3"), false)
+        .setPkHandle(true)
+        .build();
+  }
+
+  private static TiTableInfo createTableWithUnsignedLong(long tableId, long indexId) {
+    InternalTypeHolder holder =
+        new InternalTypeHolder(
+            MySQLType.TypeLonglong.getTypeCode(),
+            32,   // indicating a unsigned type
+            -1,
+            -1,
+            "",
+            "",
+            ImmutableList.of());
+    DataType unsignedLong = DataTypeFactory.of(holder);
+    return new MetaUtils.TableBuilder()
+        .name("testTable")
+        .addColumn("c1", unsignedLong, true)
+        .addColumn("c2", StringType.VARCHAR)
+        .addColumn("c3", StringType.VARCHAR)
+        .addColumn("c4", IntegerType.TINYINT)
+        .tableId(tableId)
+        .appendIndex(indexId, "testIndex", ImmutableList.of("c1", "c2", "c3"), false)
         .setPkHandle(true)
         .build();
   }
@@ -407,5 +428,41 @@ public class TiKVScanAnalyzerTest {
       boolean isCovering = scanBuilder.isCoveringIndex(columns, indexInfo, pkIsHandle);
       assertEquals(t.isCovering, isCovering);
     }
+  }
+
+  @Test
+  public void buildRangeWithUnsignedLongPKTest() {
+    TiTableInfo table = createTableWithUnsignedLong(6, 5);
+    TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
+
+    Expression eq1 =
+        greaterThan(ColumnRef.create("c1", table), Constant.create(0, IntegerType.BIGINT));
+    Expression eq2 =
+            lessThan(ColumnRef.create("c1", table), Constant.create(10, IntegerType.BIGINT));
+
+    List<Expression> exprs = ImmutableList.of(eq1, eq2);
+
+    ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, pkIndex);
+    List<IndexRange> irs =
+        expressionToIndexRanges(
+            result.getPointPredicates(), result.getRangePredicate(), table, pkIndex);
+
+    TiKVScanAnalyzer scanAnalyzer = new TiKVScanAnalyzer();
+
+    Map<Long, List<Coprocessor.KeyRange>> keyRanges =
+        scanAnalyzer.buildTableScanKeyRange(table, irs, null);
+
+    assertEquals(keyRanges.size(), 1);
+
+    Coprocessor.KeyRange keyRange = keyRanges.get(table.getId()).get(0);
+
+    assertEquals(
+        ByteString.copyFrom(
+            new byte[] {116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 114, 0, 0, 0, 0, 0, 0, 0, 1}),
+        keyRange.getStart());
+    assertEquals(
+        ByteString.copyFrom(
+            new byte[] {116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 115, 0, 0, 0, 0, 0, 0, 0, 0}),
+        keyRange.getEnd());
   }
 }

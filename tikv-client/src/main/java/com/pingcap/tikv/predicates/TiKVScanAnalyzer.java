@@ -322,7 +322,7 @@ public class TiKVScanAnalyzer {
         try {
           // Comparison with null should be filtered since it yields unknown always
           startKey = RowKey.toRowKey(id, r.lowerEndpoint());
-        }catch (TiExpressionException e){
+        } catch (TiExpressionException e) {
           startKey = RowKey.createMin(id);
         }
         if (r.lowerBoundType().equals(BoundType.OPEN)) {
@@ -336,7 +336,7 @@ public class TiKVScanAnalyzer {
       } else {
         try {
           endKey = RowKey.toRowKey(id, r.upperEndpoint());
-        }catch (TiExpressionException e){
+        } catch (TiExpressionException e) {
           endKey = RowKey.createBeyondMax(id);
         }
         if (r.upperBoundType().equals(BoundType.CLOSED)) {
