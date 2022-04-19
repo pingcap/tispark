@@ -95,6 +95,12 @@ public class TiConfiguration implements Serializable {
 
   private List<TiStoreType> isolationReadEngines = DEF_ISOLATION_READ_ENGINES;
 
+  // TLS configure
+  private boolean tlsEnable = false;
+  private String trustCertCollectionFile;
+  private String keyCertChainFile;
+  private String keyFile;
+
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
     TiConfiguration conf = new TiConfiguration();
@@ -357,5 +363,37 @@ public class TiConfiguration implements Serializable {
 
   public void setKvClientConcurrency(int kvClientConcurrency) {
     this.kvClientConcurrency = kvClientConcurrency;
+  }
+
+  public boolean isTlsEnable() {
+    return tlsEnable;
+  }
+
+  public void setTlsEnable(boolean tlsEnable) {
+    this.tlsEnable = tlsEnable;
+  }
+
+  public String getTrustCertCollectionFile() {
+    return trustCertCollectionFile;
+  }
+
+  public void setTrustCertCollectionFile(String trustCertCollectionFile) {
+    this.trustCertCollectionFile = trustCertCollectionFile;
+  }
+
+  public String getKeyCertChainFile() {
+    return keyCertChainFile;
+  }
+
+  public void setKeyCertChainFile(String keyCertChainFile) {
+    this.keyCertChainFile = keyCertChainFile;
+  }
+
+  public String getKeyFile() {
+    return keyFile;
+  }
+
+  public void setKeyFile(String keyFile) {
+    this.keyFile = keyFile;
   }
 }

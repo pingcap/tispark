@@ -1,0 +1,51 @@
+version: '2.3'
+
+services:
+  pd:
+    image: pingcap/pd:v6.0.0
+    ports:
+      - "2379:2379"
+    volumes:
+      - ./config:/config:ro
+      - ./data:/data
+    command:
+      - --name=pd
+      - --client-urls=https://0.0.0.0:2379
+      - --peer-urls=https://0.0.0.0:2380
+      - --advertise-client-urls=https://pd:2379
+      - --advertise-peer-urls=https://pd:2380
+      - --initial-cluster=pd=https://pd:2380
+      - --data-dir=/data/pd
+      - --config=/config/pd-TLS.toml
+    restart: on-failure
+  tikv:
+    image: pingcap/tikv:v6.0.0
+    ports:
+      - "20160:20160"
+    volumes:
+      - ./config:/config:ro
+      - ./data:/data
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv:20160
+      - --data-dir=/data/tikv
+      - --pd=https://pd:2379
+      - --config=/config/tikv-TLS.toml
+    depends_on:
+      - "pd"
+    restart: on-failure
+  tidb:
+    image: pingcap/tidb:v6.0.0
+    ports:
+      - "4000:4000"
+      - "10080:10080"
+    volumes:
+      - ./config:/config:ro
+    command:
+      - --store=tikv
+      - --path=pd:2379
+      - --config=/config/tidb-TLS.toml
+      - -L=warn
+    depends_on:
+      - "tikv"
+    restart: on-failure

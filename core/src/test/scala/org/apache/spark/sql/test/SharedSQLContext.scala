@@ -345,9 +345,15 @@ trait SharedSQLContext
   private def initializeJDBCUrl(): Unit = {
     // TODO(Zhexuan Yang) for zero datetime issue, we need further investigation.
     //  https://github.com/pingcap/tispark/issues/1238
+
+    var SSLPara = "false"
+    if (conf.contains("enableJDBCSSL") && conf.get("enableJDBCSSL").equals("true")){
+      SSLPara = "true&verifyServerCertificate=false&requireSSL=true"
+    }
+
     jdbcUrl =
       s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword" +
-        s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=round&useSSL=false" +
+        s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=round&useSSL=$SSLPara" +
         s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
         s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}&sessionVariables=time_zone='$timeZoneOffset'"
 
@@ -462,6 +468,15 @@ trait SharedSQLContext
       } else {
         conf.set("spark.sql.auth.enable", "false")
       }
+//      if (_isTLSEnabled) {
+//        conf.set("spark.tispark.tikv.tls_enable","true")
+////        conf.set("spark.tispark.tikv.trust_cert_collection",
+////          "config/cert/root.crt")
+////        conf.set("spark.tispark.tikv.key_cert_chain",
+////          "config/cert/client.crt")
+////        conf.set("spark.tispark.tikv.key_file",
+////          "config/cert/client-pkcs8.key")
+//      }
     }
 
   private class TiContextCache {

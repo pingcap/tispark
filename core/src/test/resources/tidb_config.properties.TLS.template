@@ -1,0 +1,17 @@
+#
+spark.tispark.pd.addresses=https://pd:2379
+spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
+spark.sql.catalog.tidb_catalog.pd.addresses https://pd:2379
+
+# TLS
+spark.tispark.tikv.tls_enable=true
+spark.tispark.tikv.trust_cert_collection=config/cert/root.crt
+spark.tispark.tikv.key_cert_chain=config/cert/client.crt
+spark.tispark.tikv.key_file=config/cert/client-pkcs8.key
+
+spark.sql.catalog.tidb_catalog.tikv.tls_enable=true
+spark.sql.catalog.tidb_catalog.tikv.trust_cert_collection=config/cert/root.crt
+spark.sql.catalog.tidb_catalog.tikv.key_cert_chain=config/cert/client.crt
+spark.sql.catalog.tidb_catalog.tikv.key_file=config/cert/client-pkcs8.key
+
+spark.tispark.enableJDBCSSL=True

@@ -17,18 +17,47 @@
 package com.pingcap.tikv.util;
 
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
+import io.grpc.netty.GrpcSslContexts;
+import io.grpc.netty.NettyChannelBuilder;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import java.io.File;
 import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import javax.net.ssl.SSLException;
 
 public class ChannelFactory implements AutoCloseable {
   private final int maxFrameSize;
   private final Map<String, ManagedChannel> connPool = new ConcurrentHashMap<>();
+  private final SslContextBuilder sslContextBuilder;
 
   public ChannelFactory(int maxFrameSize) {
     this.maxFrameSize = maxFrameSize;
+    this.sslContextBuilder = null;
+  }
+
+  public ChannelFactory(
+      int maxFrameSize,
+      String trustCertCollectionFilePath,
+      String keyCertChainFilePath,
+      String keyFilePath) {
+    this.maxFrameSize = maxFrameSize;
+    this.sslContextBuilder =
+        getSslContextBuilder(trustCertCollectionFilePath, keyCertChainFilePath, keyFilePath);
+  }
+
+  private SslContextBuilder getSslContextBuilder(
+      String trustCertCollectionFilePath, String keyCertChainFilePath, String keyFilePath) {
+    SslContextBuilder builder = GrpcSslContexts.forClient();
+    if (trustCertCollectionFilePath != null) {
+      builder.trustManager(new File(trustCertCollectionFilePath));
+    }
+    if (keyCertChainFilePath != null && keyFilePath != null) {
+      builder.keyManager(new File(keyCertChainFilePath), new File(keyFilePath));
+    }
+    return builder;
   }
 
   private ManagedChannel addrToChannel(String addressStr) {
@@ -38,13 +67,24 @@ public class ChannelFactory implements AutoCloseable {
     } catch (Exception e) {
       throw new IllegalArgumentException("failed to form address " + addressStr);
     }
-    // Channel should be lazy without actual connection until first call
-    // So a coarse grain lock is ok here
-    return ManagedChannelBuilder.forAddress(address.getHost(), address.getPort())
-        .maxInboundMessageSize(maxFrameSize)
-        .usePlaintext()
-        .idleTimeout(60, TimeUnit.SECONDS)
-        .build();
+
+    NettyChannelBuilder builder =
+        NettyChannelBuilder.forAddress(address.getHost(), address.getPort())
+            .maxInboundMessageSize(maxFrameSize)
+            .keepAliveWithoutCalls(true)
+            .idleTimeout(60, TimeUnit.SECONDS);
+
+    if (sslContextBuilder == null) {
+      return builder.usePlaintext().build();
+    } else {
+      SslContext sslContext = null;
+      try {
+        sslContext = sslContextBuilder.build();
+      } catch (SSLException e) {
+        return null;
+      }
+      return builder.sslContext(sslContext).build();
+    }
   }
 
   public synchronized ManagedChannel getChannel(String addressStr) {

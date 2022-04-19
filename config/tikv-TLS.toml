@@ -1,0 +1,4 @@
+[security]
+ca-path = "/config/cert/root.crt"
+cert-path = "/config/cert/tikv.crt"
+key-path = "/config/cert/tikv.key"

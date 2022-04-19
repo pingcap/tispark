@@ -137,10 +137,19 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val tidbRowId: Boolean = getOrDefault(TIDB_ROWID, "false").toBoolean
 
   // ------------------------------------------------------------
+  // Enable JDBC SSL connection
+  //
+  // ------------------------------------------------------------
+  var SSLParameters = getOrDefault(TiDB_ENABLE_JDBC_SSL, "false")
+  if (SSLParameters.equals("true")) {
+    SSLParameters = "true&verifyServerCertificate=false&requireSSL=true"
+  }
+
+  // ------------------------------------------------------------
   // Calculated parameters
   // ------------------------------------------------------------
   val url: String =
-    s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useSSL=false&rewriteBatchedStatements=true"
+    s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useSSL=$SSLParameters&rewriteBatchedStatements=true"
       .replaceAll("%", "%25")
 
   def useTableLock(isV4: Boolean): Boolean = {
@@ -279,6 +288,10 @@ object TiDBOptions {
   val TIDB_SLEEP_AFTER_PREWRITE_SECONDARY_KEY: String = newOption(
     "sleepAfterPrewriteSecondaryKey")
   val TIDB_SLEEP_AFTER_GET_COMMIT_TS: String = newOption("sleepAfterGetCommitTS")
+
+  // TLS
+  val TiDB_ENABLE_JDBC_SSL : String = newOption("enableJDBCSSL")
+
 
   private def newOption(name: String): String = {
     name.toLowerCase(Locale.ROOT)

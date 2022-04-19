@@ -65,9 +65,29 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
     logger.info(s"Initialize TiCatalog with name: $name, pd address: $pdAddress")
     val conf = TiConfiguration.createDefault(pdAddress)
+
+    // just get TLS parameters
+    getTLSPara(conf, options)
+
     val session = TiSession.getInstance(conf)
     meta = Some(new MetaManager(session.getCatalog))
     tiSession = Some(session)
+  }
+
+  // get TLS path from properties
+  def getTLSPara (conf : TiConfiguration, options: CaseInsensitiveStringMap) {
+    val TLSEnable = options.getOrDefault("tikv.tls_enable", "false").toBoolean
+    if(TLSEnable) {
+      try {
+        conf.setTlsEnable(true)
+        conf.setTrustCertCollectionFile(options.get("tikv.trust_cert_collection"))
+        conf.setKeyCertChainFile(options.get("tikv.key_cert_chain"))
+        conf.setKeyFile(options.get("tikv.key_file"))
+      } catch {
+        case e: Throwable =>
+          logger.warn("TiCatalog can't get TLS cert", e)
+      }
+    }
   }
 
   override def name(): String = _name.get

@@ -1,0 +1,13 @@
+index-limit = 512
+host = "0.0.0.0"
+store = "tikv"
+
+[security]
+auto-tls = true
+#ssl-ca = "/home/wq/tidb_cert/root.crt"
+#ssl-cert = "/home/wq/tidb_cert/tidb.crt"
+#ssl-key = "/home/wq/tidb_cert/tidb.key"
+
+cluster-ssl-ca = "/config/cert/root.crt"
+cluster-ssl-cert = "/config/cert/tidb.crt"
+cluster-ssl-key = "/config/cert/tidb.key"
