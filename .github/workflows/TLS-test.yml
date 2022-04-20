@@ -36,7 +36,3 @@ jobs:
 
       - name: test
         run: mvn test -Dtest=moo -DwildcardSuites=JDBCTLSSuite,TiKVClientTLSSuite,TiSparkTLSSuite -DfailIfNoTests=false
-
-
-
-
