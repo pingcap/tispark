@@ -347,7 +347,7 @@ trait SharedSQLContext
     //  https://github.com/pingcap/tispark/issues/1238
 
     var SSLPara = "false"
-    if (conf.contains("enableJDBCSSL") && conf.get("enableJDBCSSL").equals("true")){
+    if (conf.contains("enableJDBCSSL") && conf.get("enableJDBCSSL").equals("true")) {
       SSLPara = "true&verifyServerCertificate=false&requireSSL=true"
     }
 

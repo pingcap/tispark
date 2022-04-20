@@ -19,7 +19,7 @@ package com.pingcap.tispark.tls
 import org.apache.spark.sql.test.SharedSQLContext
 import org.scalatest.Matchers.{be, noException}
 
-class JDBCTLSSuite extends  SharedSQLContext{
+class JDBCTLSSuite extends SharedSQLContext {
 
   override def beforeAll(): Unit = {
     conf.set("enableJDBCSSL", "true")
@@ -31,15 +31,15 @@ class JDBCTLSSuite extends  SharedSQLContext{
     super.afterAll();
   }
 
-  test ("test JDBC driver connect") {
+  test("test JDBC driver connect") {
     // do nothing, because JDBC connector init in beforeAll()
     noException should be thrownBy ()
   }
 
-  test ("test JDBC connection is SSL") {
+  test("test JDBC connection is SSL") {
     val result = tidbStmt.executeQuery("SHOW STATUS LIKE \"%Ssl_cipher%\";")
     while (result.next()) {
-      if(result.getString("Variable_name").equals("Ssl_cipher")) {
+      if (result.getString("Variable_name").equals("Ssl_cipher")) {
         assert(!result.getString("Value").equals(""))
       }
     }
@@ -47,7 +47,8 @@ class JDBCTLSSuite extends  SharedSQLContext{
 
   test("test JDBC func") {
     tidbStmt.execute("CREATE DATABASE IF NOT EXISTS `TLS_TEST`;")
-    tidbStmt.execute("CREATE TABLE IF NOT EXISTS `TLS_TEST`.`tls_test_table`(id int, name varchar (128)); ")
+    tidbStmt.execute(
+      "CREATE TABLE IF NOT EXISTS `TLS_TEST`.`tls_test_table`(id int, name varchar (128)); ")
     tidbStmt.execute("INSERT INTO `TLS_TEST`.`tls_test_table` VALUES (1, 'jack');")
     val result = tidbStmt.executeQuery("SELECT * FROM `TLS_TEST`.`tls_test_table`")
     while (result.next()) {

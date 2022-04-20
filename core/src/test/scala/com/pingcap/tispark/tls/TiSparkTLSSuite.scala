@@ -18,12 +18,13 @@ package com.pingcap.tispark.tls
 
 import org.apache.spark.sql.BaseTiSparkTest
 
-class TiSparkTLSSuite extends BaseTiSparkTest{
+class TiSparkTLSSuite extends BaseTiSparkTest {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
     tidbStmt.execute("CREATE DATABASE IF NOT EXISTS `TLS_TEST`;")
-    tidbStmt.execute("CREATE TABLE IF NOT EXISTS `TLS_TEST`.`tls_test_table`(id int, name varchar (128)); ")
+    tidbStmt.execute(
+      "CREATE TABLE IF NOT EXISTS `TLS_TEST`.`tls_test_table`(id int, name varchar (128)); ")
     tidbStmt.execute("INSERT INTO `TLS_TEST`.`tls_test_table` VALUES (1, 'jack');")
   }
   override def afterAll(): Unit = {
@@ -31,8 +32,9 @@ class TiSparkTLSSuite extends BaseTiSparkTest{
     super.afterAll()
   }
 
-  test ("test Spark SQL by SSL connection") {
+  test("test Spark SQL by SSL connection") {
     assert(1 == spark.sql("SELECT * FROM `TLS_TEST`.`tls_test_table`").collect().head.get(0))
-    assert("jack".equals(spark.sql("SELECT * FROM `TLS_TEST`.`tls_test_table`").collect().head.get(1)))
+    assert(
+      "jack".equals(spark.sql("SELECT * FROM `TLS_TEST`.`tls_test_table`").collect().head.get(1)))
   }
 }

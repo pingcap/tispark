@@ -290,8 +290,7 @@ object TiDBOptions {
   val TIDB_SLEEP_AFTER_GET_COMMIT_TS: String = newOption("sleepAfterGetCommitTS")
 
   // TLS
-  val TiDB_ENABLE_JDBC_SSL : String = newOption("enableJDBCSSL")
-
+  val TiDB_ENABLE_JDBC_SSL: String = newOption("enableJDBCSSL")
 
   private def newOption(name: String): String = {
     name.toLowerCase(Locale.ROOT)

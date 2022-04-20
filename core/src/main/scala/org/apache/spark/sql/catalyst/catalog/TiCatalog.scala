@@ -75,9 +75,9 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   }
 
   // get TLS path from properties
-  def getTLSPara (conf : TiConfiguration, options: CaseInsensitiveStringMap) {
+  def getTLSPara(conf: TiConfiguration, options: CaseInsensitiveStringMap) {
     val TLSEnable = options.getOrDefault("tikv.tls_enable", "false").toBoolean
-    if(TLSEnable) {
+    if (TLSEnable) {
       try {
         conf.setTlsEnable(true)
         conf.setTrustCertCollectionFile(options.get("tikv.trust_cert_collection"))
