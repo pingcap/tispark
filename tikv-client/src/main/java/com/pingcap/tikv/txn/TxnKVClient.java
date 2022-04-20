@@ -179,7 +179,8 @@ public class TxnKVClient implements AutoCloseable {
           || ke.hasConflict()
           || ke.hasAlreadyExist()
           || ke.hasDeadlock()
-          || ke.hasCommitTsExpired()) return false;
+          || ke.hasCommitTsExpired()
+          || ke.hasTxnNotFound()) return false;
       return true;
     }
     return false;
