@@ -468,15 +468,6 @@ trait SharedSQLContext
       } else {
         conf.set("spark.sql.auth.enable", "false")
       }
-//      if (_isTLSEnabled) {
-//        conf.set("spark.tispark.tikv.tls_enable","true")
-////        conf.set("spark.tispark.tikv.trust_cert_collection",
-////          "config/cert/root.crt")
-////        conf.set("spark.tispark.tikv.key_cert_chain",
-////          "config/cert/client.crt")
-////        conf.set("spark.tispark.tikv.key_file",
-////          "config/cert/client-pkcs8.key")
-//      }
     }
 
   private class TiContextCache {
