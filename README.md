@@ -171,7 +171,7 @@ spark.sql("delete from ${database}.${table} where xxx").show
  See [here](./docs/delete_userguide.md) for more details.
 
 ## Benchmark
-See [here](https://github.com/pingcap/tispark/wiki) for more details.
+See [here](https://github.com/pingcap/tispark/wiki/TiSpark-BenchMark) for more details.
 
 ## Configuration
 
