@@ -35,6 +35,10 @@ trait BaseRandomDataTypeTest extends BaseTiSparkTest with RandomTest {
     initSQLList.foreach { sql =>
       try {
         tidbStmt.execute(sql)
+        // we need to sleep 2s to wait schme changed, or wirte will throw `schema has changed during prewrite!`
+        if(sql.contains("SET TIFLASH REPLICA")){
+          Thread.sleep(2000)
+        }
         println(sql)
       } catch {
         case e: Throwable =>
