@@ -205,6 +205,22 @@ The configurations in the table below can be put together with `spark-defaults.c
 | `spark.sql.catalog.tidb_catalog.tikv.key_file`              | ``               | The same as `spark.tispark.tikv.key_file`, e.g. `/home/tispark/client_pkcs8.key`.                                                                                                                                                                                                                                       |
 | `spark.tispark.enableJDBCSSL`                               | `false`          | Whether to enable TLS when use JDBC connector.                                                                                                                                                                                                                                                                        |
 
+### TLS Combination Configuration
+To enable TiSpark TLS, you should config all configurations about TiKV Client TLS and JDBC TLS. And if you want to use 
+TiSpark catalog, you should repeat the TLS configurations for catalog. 
+Here's an example of opening the TLS configuration.
+```
+spark.tispark.tikv.tls_enable                                  true
+spark.tispark.tikv.trust_cert_collection                       /home/tispark/root.crt
+spark.tispark.tikv.key_cert_chain                              /home/tispark/client.crt
+spark.tispark.tikv.key_file                                    /home/tispark/client.key
+spark.sql.catalog.tidb_catalog.tikv.tls_enable                 true
+spark.sql.catalog.tidb_catalog.tikv.trust_cert_collection      /home/tispark/root.crt
+spark.sql.catalog.tidb_catalog.tikv.key_cert_chain             /home/tispark/client.crt
+spark.sql.catalog.tidb_catalog.tikv.key_file                   /home/tispark/client.key
+spark.tispark.enableJDBCSSL                                    true
+```
+
 ## `Log4j` Configuration
 
 When you start `spark-shell` or `spark-sql` and run query, you might see the following warnings:

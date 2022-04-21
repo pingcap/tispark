@@ -27,11 +27,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ChannelFactory implements AutoCloseable {
   private final int maxFrameSize;
   private final Map<String, ManagedChannel> connPool = new ConcurrentHashMap<>();
   private final SslContextBuilder sslContextBuilder;
+  private static final Logger LOG = LoggerFactory.getLogger(ChannelFactory.class);
 
   public ChannelFactory(int maxFrameSize) {
     this.maxFrameSize = maxFrameSize;
@@ -50,7 +53,7 @@ public class ChannelFactory implements AutoCloseable {
 
   private SslContextBuilder getSslContextBuilder(
       String trustCertCollectionFilePath, String keyCertChainFilePath, String keyFilePath) {
-    SslContextBuilder builder = GrpcSslContexts.forClient();
+    SslContextBuilder builder = GrpcSslContexts.forClient().protocols("TLSv1.2", "TLSv1.3");
     if (trustCertCollectionFilePath != null) {
       builder.trustManager(new File(trustCertCollectionFilePath));
     }
@@ -81,6 +84,7 @@ public class ChannelFactory implements AutoCloseable {
       try {
         sslContext = sslContextBuilder.build();
       } catch (SSLException e) {
+        LOG.error("build sslContextBuilder false", e);
         return null;
       }
       return builder.sslContext(sslContext).build();
