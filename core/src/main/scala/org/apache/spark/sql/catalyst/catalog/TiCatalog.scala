@@ -67,7 +67,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     val conf = TiConfiguration.createDefault(pdAddress)
 
     // just get TLS parameters
-    getTLSPara(conf, options)
+    getTLSParam(conf, options)
 
     val session = TiSession.getInstance(conf)
     meta = Some(new MetaManager(session.getCatalog))
@@ -75,7 +75,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   }
 
   // get TLS path from properties
-  def getTLSPara(conf: TiConfiguration, options: CaseInsensitiveStringMap) {
+  def getTLSParam(conf: TiConfiguration, options: CaseInsensitiveStringMap) {
     val TLSEnable = options.getOrDefault("tikv.tls_enable", "false").toBoolean
     if (TLSEnable) {
       try {
