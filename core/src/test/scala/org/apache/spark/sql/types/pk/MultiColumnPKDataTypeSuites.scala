@@ -61,7 +61,7 @@ trait MultiColumnPKDataTypeSuites extends BaseRandomDataTypeTest {
       .flatten { i =>
         dataTypes.indices
           .filter { j =>
-            i != j
+            i < j
           }
           .map { j =>
             (i, j)
