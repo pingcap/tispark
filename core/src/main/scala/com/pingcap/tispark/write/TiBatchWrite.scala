@@ -279,6 +279,9 @@ class TiBatchWrite(
     val commitTs =
       twoPhaseCommitHepler.commitPrimaryKeyWithRetryByDriver(primaryKey, schemaUpdateTimes)
 
+    // stop ttl
+    twoPhaseCommitHepler.stopPrimaryKeyTTLUpdate()
+
     // unlock table
     tiBatchWriteTables.foreach(_.unlockTable())
 
