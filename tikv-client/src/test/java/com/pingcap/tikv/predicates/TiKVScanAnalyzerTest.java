@@ -97,7 +97,7 @@ public class TiKVScanAnalyzerTest {
     InternalTypeHolder holder =
         new InternalTypeHolder(
             MySQLType.TypeLonglong.getTypeCode(),
-            32,   // indicating a unsigned type
+            32, // indicating a unsigned type
             -1,
             -1,
             "",
@@ -438,7 +438,7 @@ public class TiKVScanAnalyzerTest {
     Expression eq1 =
         greaterThan(ColumnRef.create("c1", table), Constant.create(0, IntegerType.BIGINT));
     Expression eq2 =
-            lessThan(ColumnRef.create("c1", table), Constant.create(10, IntegerType.BIGINT));
+        lessThan(ColumnRef.create("c1", table), Constant.create(10, IntegerType.BIGINT));
 
     List<Expression> exprs = ImmutableList.of(eq1, eq2);
 
