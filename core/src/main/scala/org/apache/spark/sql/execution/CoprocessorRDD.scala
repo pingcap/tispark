@@ -392,8 +392,7 @@ case class ColumnarRegionTaskExec(
     WholeStageCodegenExec(this)(codegenStageId = 0).execute()
   }
 
-  //Don't use override to pass the compile for different spark version
-  protected def withNewChildInternal(newChild: SparkPlan): SparkPlan = {
+  protected def withNewChildInternal(newChild: SparkPlan): ColumnarRegionTaskExec = {
     copy(child = newChild)
   }
 }

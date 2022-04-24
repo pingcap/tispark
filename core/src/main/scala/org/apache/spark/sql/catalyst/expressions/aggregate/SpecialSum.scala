@@ -113,7 +113,6 @@ case class SpecialSum(child: Expression, retType: DataType, initVal: Any)
     TypeUtils.checkForNumericExpr(child.dataType, "function sum")
 
   /**
-   *  Don't use override to pass the compile for different spark version
    *  The implement is same as the [[org.apache.spark.sql.catalyst.expressions.aggregate.Sum]]
    * @param newChildren
    */
