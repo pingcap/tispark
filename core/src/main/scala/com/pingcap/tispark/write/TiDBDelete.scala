@@ -18,8 +18,7 @@ package com.pingcap.tispark.write
 
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tikv.meta.TiTableInfo
-import com.pingcap.tispark.TiConfigConst
-import com.pingcap.tispark.utils.TiUtil.sparkConfToTiConfWithoutPD
+import com.pingcap.tispark.utils.TiUtil.sparkConfToTiConf
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TwoPhaseCommitHepler, WriteUtil}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
@@ -154,9 +153,7 @@ case class TiDBDelete(
 
   private def getTiSessionFromSparkConf: TiSession = {
     val sparkConf: SparkConf = SparkContext.getOrCreate().getConf
-    val tiConf: TiConfiguration =
-      TiConfiguration.createDefault(sparkConf.get(TiConfigConst.PD_ADDRESSES))
-    sparkConfToTiConfWithoutPD(sparkConf, tiConf)
+    val tiConf: TiConfiguration = sparkConfToTiConf(sparkConf, Option.empty)
     TiSession.getInstance(tiConf)
   }
 
