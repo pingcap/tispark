@@ -94,6 +94,11 @@ class BatchWriteUniqueIndexSuite
     val tableSchema = TiUtil.getSchemaFromTable(tiTblInfo)
     val data = generateRandomRows(schema, writeRowCount, r)
 
+    // check tiflash ready
+    if (enableTiFlashTest) {
+      checkLoadTiFlashWithRetry(schema.tableName, Some(schema.database))
+    }
+
     // gen data
     val rows = data.map(tiRowToSparkRow(_, tiColInfos))
     // insert data to tikv
