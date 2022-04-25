@@ -139,10 +139,10 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // ------------------------------------------------------------
   // Enable JDBC SSL connection
   // ------------------------------------------------------------
-  var SSLParameters = getOrDefault(TIDB_ENABLE_JDBC_SSL, "false")
+  var SSLParameters: String = getOrDefault(TIDB_ENABLE_JDBC_SSL, "false")
   if (SSLParameters.equals("true")) {
     val clientCertStore = getOrDefault(TIDB_JDBC_CLIENT_CERT_STORE, "")
-    val clientCertPassword = getOrDefault(TIDB_JDBC_CLIENT_CERTR_PASSWORD, "")
+    val clientCertPassword = getOrDefault(TIDB_JDBC_CLIENT_CERT_PASSWORD, "")
     val serverCertStore = getOrDefault(TIDB_JDBC_SERVER_CERT_STORE, "")
     val serverCertPassword = getOrDefault(TIDB_JDBC_SERVER_CERT_PASSWORD, "")
     // Set up Server authentication
@@ -307,7 +307,7 @@ object TiDBOptions {
   // TLS
   val TIDB_ENABLE_JDBC_SSL: String = newOption("jdbc.tls_enable")
   val TIDB_JDBC_CLIENT_CERT_STORE: String = newOption("jdbc.client_cert_store")
-  val TIDB_JDBC_CLIENT_CERTR_PASSWORD: String = newOption("jdbc.client_cert_password")
+  val TIDB_JDBC_CLIENT_CERT_PASSWORD: String = newOption("jdbc.client_cert_password")
   val TIDB_JDBC_SERVER_CERT_STORE: String = newOption("jdbc.server_cert_store")
   val TIDB_JDBC_SERVER_CERT_PASSWORD: String = newOption("jdbc.server_cert_password")
 
