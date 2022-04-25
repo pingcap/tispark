@@ -34,7 +34,6 @@ public class ChannelFactory implements AutoCloseable {
   private final int maxFrameSize;
   private final Map<String, ManagedChannel> connPool = new ConcurrentHashMap<>();
   private final SslContextBuilder sslContextBuilder;
-  private static final Logger LOG = LoggerFactory.getLogger(ChannelFactory.class);
 
   public ChannelFactory(int maxFrameSize) {
     this.maxFrameSize = maxFrameSize;
@@ -84,8 +83,7 @@ public class ChannelFactory implements AutoCloseable {
       try {
         sslContext = sslContextBuilder.build();
       } catch (SSLException e) {
-        LOG.error("build sslContextBuilder false", e);
-        return null;
+        throw new TiKVException("build sslContextBuilder false", e);
       }
       return builder.sslContext(sslContext).build();
     }
