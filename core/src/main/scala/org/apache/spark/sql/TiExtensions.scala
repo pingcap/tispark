@@ -18,6 +18,7 @@ package org.apache.spark.sql
 
 import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tispark.TiSparkInfo
+import com.pingcap.tispark.telemetry.TelemetryRule
 import org.apache.spark.sql.catalyst.analyzer.{TiAuthRuleFactory, TiAuthorizationRule}
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
 import org.apache.spark.sql.catalyst.planner.TiStrategyFactory
@@ -33,6 +34,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 
     e.injectResolutionRule(new TiAuthRuleFactory(getOrCreateTiContext))
     e.injectPlannerStrategy(new TiStrategyFactory(getOrCreateTiContext))
+    e.injectResolutionRule(TelemetryRule)
   }
 
   // call from pyspark only
@@ -110,4 +112,16 @@ object TiExtensions {
     tiExtensions
   }
 
+  /**
+   * check that telemetry is on
+   * default on
+   *
+   * @param sparkSession
+   * @return
+   */
+  def telemetryEnable(sparkSession: SparkSession): Boolean = {
+    sparkSession.sparkContext.conf
+      .get("spark.tispark.telemetry.enable", "true")
+      .toBoolean
+  }
 }
