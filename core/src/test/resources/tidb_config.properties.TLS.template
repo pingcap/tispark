@@ -9,9 +9,8 @@ spark.tispark.tikv.trust_cert_collection=config/cert/root.crt
 spark.tispark.tikv.key_cert_chain=config/cert/client.crt
 spark.tispark.tikv.key_file=config/cert/client-pkcs8.key
 
-spark.sql.catalog.tidb_catalog.tikv.tls_enable=true
-spark.sql.catalog.tidb_catalog.tikv.trust_cert_collection=config/cert/root.crt
-spark.sql.catalog.tidb_catalog.tikv.key_cert_chain=config/cert/client.crt
-spark.sql.catalog.tidb_catalog.tikv.key_file=config/cert/client-pkcs8.key
-
-spark.tispark.enableJDBCSSL=True
+spark.tispark.jdbc.tls_enable=true
+spark.tispark.jdbc.server_cert_store = /config/cert/server-cert-store
+spark.tispark.jdbc.server_cert_password = 12345678
+spark.tispark.jdbc.client_cert_store = /config/cert/client-keystore
+spark.tispark.jdbc.client_cert_password = 123456

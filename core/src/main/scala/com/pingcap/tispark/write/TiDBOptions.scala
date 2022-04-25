@@ -138,11 +138,26 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
 
   // ------------------------------------------------------------
   // Enable JDBC SSL connection
-  //
   // ------------------------------------------------------------
-  var SSLParameters = getOrDefault(TiDB_ENABLE_JDBC_SSL, "false")
+  var SSLParameters = getOrDefault(TIDB_ENABLE_JDBC_SSL, "false")
   if (SSLParameters.equals("true")) {
-    SSLParameters = "true&verifyServerCertificate=false&requireSSL=true"
+    val clientCertStore = getOrDefault(TIDB_JDBC_CLIENT_CERT_STORE, "")
+    val clientCertPassword = getOrDefault(TIDB_JDBC_CLIENT_CERTR_PASSWORD, "")
+    val serverCertStore = getOrDefault(TIDB_JDBC_SERVER_CERT_STORE, "")
+    val serverCertPassword = getOrDefault(TIDB_JDBC_SERVER_CERT_PASSWORD, "")
+    // Set up Server authentication
+    if (serverCertStore.equals("")) {
+      SSLParameters = "true&requireSSL=true&verifyServerCertificate=false"
+    } else {
+      SSLParameters =
+        "true&requireSSL=true&verifyServerCertificate=true&trustCertificateKeyStoreUrl=" +
+          serverCertStore + "&trustCertificateKeyStorePassword=" + serverCertPassword
+    }
+    // Setting up client authentication
+    if (!clientCertStore.equals("")) {
+      SSLParameters += "&clientCertificateKeyStoreUrl=" + clientCertStore +
+        "&clientCertificateKeyStorePassword=" + clientCertPassword
+    }
   }
 
   // ------------------------------------------------------------
@@ -290,7 +305,11 @@ object TiDBOptions {
   val TIDB_SLEEP_AFTER_GET_COMMIT_TS: String = newOption("sleepAfterGetCommitTS")
 
   // TLS
-  val TiDB_ENABLE_JDBC_SSL: String = newOption("enableJDBCSSL")
+  val TIDB_ENABLE_JDBC_SSL: String = newOption("jdbc.tls_enable")
+  val TIDB_JDBC_CLIENT_CERT_STORE: String = newOption("jdbc.client_cert_store")
+  val TIDB_JDBC_CLIENT_CERTR_PASSWORD: String = newOption("jdbc.client_cert_password")
+  val TIDB_JDBC_SERVER_CERT_STORE: String = newOption("jdbc.server_cert_store")
+  val TIDB_JDBC_SERVER_CERT_PASSWORD: String = newOption("jdbc.server_cert_password")
 
   private def newOption(name: String): String = {
     name.toLowerCase(Locale.ROOT)

@@ -17,7 +17,7 @@
 package org.apache.spark.sql.catalyst.catalog
 
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{MetaManager, TiTableReference}
+import com.pingcap.tispark.{MetaManager, TiConfigConst, TiTableReference}
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.v2.TiDBTable
 import org.apache.spark.sql.SparkSession
@@ -67,7 +67,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     val conf = TiConfiguration.createDefault(pdAddress)
 
     // just get TLS parameters
-    getTLSParam(conf, options)
+    getTLSParam(conf)
 
     val session = TiSession.getInstance(conf)
     meta = Some(new MetaManager(session.getCatalog))
@@ -75,18 +75,20 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   }
 
   // get TLS path from properties
-  def getTLSParam(conf: TiConfiguration, options: CaseInsensitiveStringMap) {
-    val TLSEnable = options.getOrDefault("tikv.tls_enable", "false").toBoolean
-    if (TLSEnable) {
-      try {
+  def getTLSParam(conf: TiConfiguration) {
+    try {
+      val sqlConf = SparkSession.active.sqlContext.conf
+      val TLSEnable = sqlConf.getConfString(TiConfigConst.TIKV_TLS_ENABLE, "false").toBoolean
+      if (TLSEnable) {
         conf.setTlsEnable(true)
-        conf.setTrustCertCollectionFile(options.get("tikv.trust_cert_collection"))
-        conf.setKeyCertChainFile(options.get("tikv.key_cert_chain"))
-        conf.setKeyFile(options.get("tikv.key_file"))
-      } catch {
-        case e: Throwable =>
-          logger.warn("TiCatalog can't get TLS cert", e)
+        conf.setTrustCertCollectionFile(
+          sqlConf.getConfString(TiConfigConst.TIKV_TRUST_CERT_COLLECTION))
+        conf.setKeyCertChainFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_CERT_CHAIN))
+        conf.setKeyFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_FILE))
       }
+    } catch {
+      case e: Throwable =>
+        logger.warn("TiCatalog can't get TLS cert", e)
     }
   }
 

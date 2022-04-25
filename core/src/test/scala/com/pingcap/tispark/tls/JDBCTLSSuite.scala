@@ -25,7 +25,7 @@ class JDBCTLSSuite extends SharedSQLContext {
 
   override def beforeAll(): Unit = {
     if (TLSEnable) {
-      conf.set("enableJDBCSSL", "true")
+      conf.set("jdbc.tls_enable", "true")
       super.beforeAll()
     }
   }
