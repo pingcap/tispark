@@ -85,7 +85,7 @@ class BatchWritePkSuite
 
     // check tiflash ready
     if (enableTiFlashTest) {
-      checkLoadTiFlashWithRetry(schema.tableName, Some(schema.database))
+      assert(checkLoadTiFlashWithRetry(schema.tableName, Some(schema.database)))
     }
 
     // gen data
