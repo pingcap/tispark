@@ -16,6 +16,7 @@
 
 package com.pingcap.tikv.util;
 
+import com.pingcap.tikv.exception.TiKVException;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
@@ -27,8 +28,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ChannelFactory implements AutoCloseable {
   private final int maxFrameSize;
