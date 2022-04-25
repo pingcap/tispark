@@ -82,7 +82,7 @@ public class ChannelFactory implements AutoCloseable {
       try {
         sslContext = sslContextBuilder.build();
       } catch (SSLException e) {
-        throw new TiKVException("build sslContextBuilder false", e);
+        throw new TiKVException("Failed to build sslContextBuilder", e);
       }
       return builder.sslContext(sslContext).build();
     }
