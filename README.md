@@ -168,8 +168,10 @@ TiSpark >= 2.6.0 supports DELETE
 spark.sql("use tidb_catalog")
 spark.sql("delete from ${database}.${table} where xxx").show
 ```
- See [here](./docs/delete_userguide.md) for more details..
+ See [here](./docs/delete_userguide.md) for more details.
 
+## Benchmark
+See [here](https://github.com/pingcap/tispark/wiki/TiSpark-BenchMark) for more details.
 
 ## Configuration
 
