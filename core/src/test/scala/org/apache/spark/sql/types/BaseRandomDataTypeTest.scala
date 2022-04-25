@@ -63,7 +63,7 @@ trait BaseRandomDataTypeTest extends BaseTiSparkTest with RandomTest {
     setCurrentDatabase(dbName)
 
     if (enableTiFlashTest) {
-      checkLoadTiFlashWithRetry(tableName, Some(dbName))
+      assert(checkLoadTiFlashWithRetry(tableName, Some(dbName)))
     }
 
     for ((op, value) <- getOperations(dataType)) {
