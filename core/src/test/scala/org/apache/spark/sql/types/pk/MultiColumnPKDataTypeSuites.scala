@@ -57,7 +57,7 @@ trait MultiColumnPKDataTypeSuites extends BaseRandomDataTypeTest {
 
   protected val tests: Map[Int, Seq[(Int, Int)]] = {
     val size = dataTypes.size - 1
-    val ans = dataTypes.indices
+    dataTypes.indices
     // filter i<j rather than i!=j to exclude the same tuple (ignore order)
       .flatten { i =>
         dataTypes.indices
@@ -73,7 +73,6 @@ trait MultiColumnPKDataTypeSuites extends BaseRandomDataTypeTest {
           (i * size + (if (i > j) j else j - 1)) % 36
       }
       .withDefaultValue(Seq.empty[(Int, Int)])
-    ans
   }
 
   def currentTest: Seq[(Int, Int)]
