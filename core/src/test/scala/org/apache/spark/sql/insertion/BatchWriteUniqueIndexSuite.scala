@@ -96,7 +96,10 @@ class BatchWriteUniqueIndexSuite
 
     // check tiflash ready
     if (enableTiFlashTest) {
-      assert(checkLoadTiFlashWithRetry(schema.tableName, Some(schema.database)))
+      if (!checkLoadTiFlashWithRetry(schema.tableName, Some(schema.database))) {
+        log.warn("TiFlash is not ready")
+        cancel()
+      }
     }
 
     // gen data
