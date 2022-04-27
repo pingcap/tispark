@@ -58,6 +58,7 @@ trait MultiColumnPKDataTypeSuites extends BaseRandomDataTypeTest {
     val size = dataTypes.size - 1
     dataTypes.indices
     // filter i<j rather than i!=j to exclude the same tuple (ignore order)
+    // We test if we can fetch the correct data, I think the order of col in pk won't affect it
       .flatten { i =>
         dataTypes.indices
           .filter { j =>
