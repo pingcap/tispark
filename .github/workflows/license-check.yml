@@ -20,4 +20,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           log: info
-          config: .github/workflows/license-checker-config.yml
+          config: .github/license-checker-config.yml
