@@ -26,7 +26,7 @@ class TiSparkTLSSuite extends BaseTiSparkTest {
 
   override def beforeAll(): Unit = {
     if (!TLSEnable) {
-      cancel
+      return
     }
     super.beforeAll()
     tidbStmt.execute("CREATE DATABASE IF NOT EXISTS `TLS_TEST`;")
@@ -37,7 +37,7 @@ class TiSparkTLSSuite extends BaseTiSparkTest {
 
   override def afterAll(): Unit = {
     if (!TLSEnable) {
-      cancel
+      return
     }
     tidbStmt.execute("DROP DATABASE IF EXISTS `TLS_TEST`")
     super.afterAll()

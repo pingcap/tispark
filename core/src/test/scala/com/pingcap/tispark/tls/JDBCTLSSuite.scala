@@ -25,7 +25,7 @@ class JDBCTLSSuite extends SharedSQLContext {
 
   override def beforeAll(): Unit = {
     if (!TLSEnable) {
-      cancel
+      return
     }
     conf.set("jdbc.tls_enable", "true")
     super.beforeAll()
@@ -33,13 +33,16 @@ class JDBCTLSSuite extends SharedSQLContext {
 
   override def afterAll(): Unit = {
     if (!TLSEnable) {
-      cancel
+      return
     }
     tidbStmt.execute(s"DROP DATABASE IF EXISTS `TLS_TEST`;")
     super.afterAll();
   }
 
   test("test JDBC driver connect") {
+    if (!TLSEnable) {
+      cancel
+    }
     // do nothing, because JDBC connector init in beforeAll()
     noException should be thrownBy ()
   }
