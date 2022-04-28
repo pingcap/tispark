@@ -41,10 +41,6 @@ object CheckTLSEnable {
     val jvmProp = System.getProperty(TLSEnable)
     tlsEnable = if (jvmProp != null) jvmProp else tlsEnable
 
-    if (tlsEnable != null && tlsEnable.equals("true")) {
-      return true
-    } else {
-      return false
-    }
+    tlsEnable != null && tlsEnable.equals("true")
   }
 }

@@ -24,17 +24,19 @@ class JDBCTLSSuite extends SharedSQLContext {
   val TLSEnable = CheckTLSEnable.isEnableTest()
 
   override def beforeAll(): Unit = {
-    if (TLSEnable) {
-      conf.set("jdbc.tls_enable", "true")
-      super.beforeAll()
+    if (!TLSEnable) {
+      cancel
     }
+    conf.set("jdbc.tls_enable", "true")
+    super.beforeAll()
   }
 
   override def afterAll(): Unit = {
-    if (TLSEnable) {
-      tidbStmt.execute(s"DROP DATABASE IF EXISTS `TLS_TEST`;")
-      super.afterAll();
+    if (!TLSEnable) {
+      cancel
     }
+    tidbStmt.execute(s"DROP DATABASE IF EXISTS `TLS_TEST`;")
+    super.afterAll();
   }
 
   test("test JDBC driver connect") {
@@ -43,27 +45,29 @@ class JDBCTLSSuite extends SharedSQLContext {
   }
 
   test("test JDBC connection is SSL") {
-    if (TLSEnable) {
-      val result = tidbStmt.executeQuery("SHOW STATUS LIKE \"%Ssl_cipher%\";")
-      while (result.next()) {
-        if (result.getString("Variable_name").equals("Ssl_cipher")) {
-          assert(!result.getString("Value").equals(""))
-        }
+    if (!TLSEnable) {
+      cancel
+    }
+    val result = tidbStmt.executeQuery("SHOW STATUS LIKE \"%Ssl_cipher%\";")
+    while (result.next()) {
+      if (result.getString("Variable_name").equals("Ssl_cipher")) {
+        assert(!result.getString("Value").equals(""))
       }
     }
   }
 
   test("test JDBC func with SSL") {
-    if (TLSEnable) {
-      tidbStmt.execute("CREATE DATABASE IF NOT EXISTS `TLS_TEST`;")
-      tidbStmt.execute(
-        "CREATE TABLE IF NOT EXISTS `TLS_TEST`.`tls_test_table`(id int, name varchar (128)); ")
-      tidbStmt.execute("INSERT INTO `TLS_TEST`.`tls_test_table` VALUES (1, 'jack');")
-      val result = tidbStmt.executeQuery("SELECT * FROM `TLS_TEST`.`tls_test_table`")
-      while (result.next()) {
-        assert(result.getInt("id").equals(1))
-        assert(result.getString("name").equals("jack"))
-      }
+    if (!TLSEnable) {
+      cancel
+    }
+    tidbStmt.execute("CREATE DATABASE IF NOT EXISTS `TLS_TEST`;")
+    tidbStmt.execute(
+      "CREATE TABLE IF NOT EXISTS `TLS_TEST`.`tls_test_table`(id int, name varchar (128)); ")
+    tidbStmt.execute("INSERT INTO `TLS_TEST`.`tls_test_table` VALUES (1, 'jack');")
+    val result = tidbStmt.executeQuery("SELECT * FROM `TLS_TEST`.`tls_test_table`")
+    while (result.next()) {
+      assert(result.getInt("id").equals(1))
+      assert(result.getString("name").equals("jack"))
     }
   }
 }

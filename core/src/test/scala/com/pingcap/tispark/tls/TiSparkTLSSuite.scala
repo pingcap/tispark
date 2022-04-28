@@ -22,59 +22,64 @@ import org.apache.spark.sql.{BaseTiSparkTest, Row}
 
 class TiSparkTLSSuite extends BaseTiSparkTest {
 
-  val TLSEnable = CheckTLSEnable.isEnableTest()
+  val TLSEnable: Boolean = CheckTLSEnable.isEnableTest
 
   override def beforeAll(): Unit = {
-    if (TLSEnable) {
-      super.beforeAll()
-      tidbStmt.execute("CREATE DATABASE IF NOT EXISTS `TLS_TEST`;")
-      tidbStmt.execute(
-        "CREATE TABLE IF NOT EXISTS `TLS_TEST`.`tls_test_table`(id int, name varchar (128)); ")
-      tidbStmt.execute("INSERT INTO `TLS_TEST`.`tls_test_table` VALUES (1, 'TiDB');")
+    if (!TLSEnable) {
+      cancel
     }
+    super.beforeAll()
+    tidbStmt.execute("CREATE DATABASE IF NOT EXISTS `TLS_TEST`;")
+    tidbStmt.execute(
+      "CREATE TABLE IF NOT EXISTS `TLS_TEST`.`tls_test_table`(id int, name varchar (128)); ")
+    tidbStmt.execute("INSERT INTO `TLS_TEST`.`tls_test_table` VALUES (1, 'TiDB');")
   }
 
   override def afterAll(): Unit = {
-    if (TLSEnable) {
-      tidbStmt.execute("DROP DATABASE IF EXISTS `TLS_TEST`")
-      super.afterAll()
+    if (!TLSEnable) {
+      cancel
     }
+    tidbStmt.execute("DROP DATABASE IF EXISTS `TLS_TEST`")
+    super.afterAll()
   }
 
   test("test Spark SELECT SQL by SSL connection") {
-    if (TLSEnable) {
-      val df = spark.sql("SELECT * FROM `TLS_TEST`.`tls_test_table`")
-      assert(1 == df.collect().head.get(0))
-      assert("TiDB".equals(df.collect().head.get(1)))
+    if (!TLSEnable) {
+      cancel
     }
+    val df = spark.sql("SELECT * FROM `TLS_TEST`.`tls_test_table`")
+    assert(1 == df.collect().head.get(0))
+    assert("TiDB".equals(df.collect().head.get(1)))
   }
 
   test("test Spark DELETE SQL by SSL connection") {
-    if (TLSEnable) {
-      spark.sql("DELETE FROM `TLS_TEST`.`tls_test_table` WHERE `id` = 1")
-      assert(0 == spark.sql("SELECT * FROM `TLS_TEST`.`tls_test_table`").collect().size)
+    if (!TLSEnable) {
+      cancel
     }
+    spark.sql("DELETE FROM `TLS_TEST`.`tls_test_table` WHERE `id` = 1")
+    assert(0 == spark.sql("SELECT * FROM `TLS_TEST`.`tls_test_table`").collect().size)
   }
 
   test("test Spark WRITE SQL by SSL connection") {
-    if (TLSEnable) {
-      val row1 = Row(2, "TiKV")
-      val row2 = Row(3, "PD")
-      val schema =
-        StructType(List(StructField("id", IntegerType), StructField("name", StringType)))
-      val data: RDD[Row] = sc.makeRDD(List(row1, row2))
-      var df = sqlContext.createDataFrame(data, schema)
-      df.write
-        .format("tidb")
-        .options(tidbOptions)
-        .option("database", "TLS_TEST")
-        .option("table", "tls_test_table")
-        .mode("append")
-        .save()
-      df = spark.sql("SELECT * FROM `TLS_TEST`.`tls_test_table`")
-      assert(2 == df.collect().size)
-      assert(2 == df.collect().head.get(0))
-      assert("TiKV".equals(df.collect().head.get(1)))
+    if (!TLSEnable) {
+      cancel
     }
+    val row1 = Row(2, "TiKV")
+    val row2 = Row(3, "PD")
+    val schema =
+      StructType(List(StructField("id", IntegerType), StructField("name", StringType)))
+    val data: RDD[Row] = sc.makeRDD(List(row1, row2))
+    var df = sqlContext.createDataFrame(data, schema)
+    df.write
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", "TLS_TEST")
+      .option("table", "tls_test_table")
+      .mode("append")
+      .save()
+    df = spark.sql("SELECT * FROM `TLS_TEST`.`tls_test_table`")
+    assert(2 == df.collect().size)
+    assert(2 == df.collect().head.get(0))
+    assert("TiKV".equals(df.collect().head.get(1)))
   }
 }

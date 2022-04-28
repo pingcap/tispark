@@ -65,16 +65,12 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
     logger.info(s"Initialize TiCatalog with name: $name, pd address: $pdAddress")
     val conf = TiConfiguration.createDefault(pdAddress)
-
-    // just get TLS parameters
     getTLSParam(conf)
-
     val session = TiSession.getInstance(conf)
     meta = Some(new MetaManager(session.getCatalog))
     tiSession = Some(session)
   }
 
-  // get TLS path from properties
   def getTLSParam(conf: TiConfiguration) {
     try {
       val sqlConf = SparkSession.active.sqlContext.conf
@@ -87,6 +83,12 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
         conf.setKeyFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_FILE))
       }
     } catch {
+      case e: IllegalStateException =>
+        logger.error("Failed to active Spark session", e)
+        throw e
+      case e: IllegalArgumentException =>
+        logger.error("Wrong tikv.tls_enable config", e)
+        throw e
       case e: Throwable =>
         logger.warn("TiCatalog can't get TLS cert", e)
     }

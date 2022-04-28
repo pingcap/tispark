@@ -1,4 +1,3 @@
-#
 spark.tispark.pd.addresses=https://pd:2379
 spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
 spark.sql.catalog.tidb_catalog.pd.addresses https://pd:2379

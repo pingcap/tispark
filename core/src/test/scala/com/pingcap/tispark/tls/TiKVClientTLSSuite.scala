@@ -23,19 +23,20 @@ import org.scalatest.Matchers.{be, noException}
 class TiKVClientTLSSuite extends FunSuite {
 
   test("test client-java TLS connection") {
-    if (CheckTLSEnable.isEnableTest()) {
-      noException should be thrownBy {
-        val conf = TiConfiguration.createDefault("pd:2379")
-        conf.setTlsEnable(true)
-        conf.setTrustCertCollectionFile("config/cert/root.crt")
-        conf.setKeyCertChainFile("config/cert/client.crt")
-        conf.setKeyFile("config/cert/client-pkcs8.key")
-        val session = TiSession.getInstance(conf)
-        val pdClient = session.getPDClient
-        pdClient.updateLeader()
-        session.getCatalog()
-        session.createSnapshot()
-      }
+    if (!CheckTLSEnable.isEnableTest()) {
+      cancel
+    }
+    noException should be thrownBy {
+      val conf = TiConfiguration.createDefault("pd:2379")
+      conf.setTlsEnable(true)
+      conf.setTrustCertCollectionFile("config/cert/root.crt")
+      conf.setKeyCertChainFile("config/cert/client.crt")
+      conf.setKeyFile("config/cert/client-pkcs8.key")
+      val session = TiSession.getInstance(conf)
+      val pdClient = session.getPDClient
+      pdClient.updateLeader()
+      session.getCatalog()
+      session.createSnapshot()
     }
   }
 }

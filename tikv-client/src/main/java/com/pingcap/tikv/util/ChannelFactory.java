@@ -69,11 +69,16 @@ public class ChannelFactory implements AutoCloseable {
       throw new IllegalArgumentException("failed to form address " + addressStr);
     }
 
-    NettyChannelBuilder builder =
-        NettyChannelBuilder.forAddress(address.getHost(), address.getPort())
-            .maxInboundMessageSize(maxFrameSize)
-            .keepAliveWithoutCalls(true)
-            .idleTimeout(60, TimeUnit.SECONDS);
+    NettyChannelBuilder builder = null;
+    try {
+      builder =
+          NettyChannelBuilder.forAddress(address.getHost(), address.getPort())
+              .maxInboundMessageSize(maxFrameSize)
+              .keepAliveWithoutCalls(true)
+              .idleTimeout(60, TimeUnit.SECONDS);
+    } catch (Exception e) {
+      throw new TiKVException("Failed to build NettyChannelBuilder", e);
+    }
 
     if (sslContextBuilder == null) {
       return builder.usePlaintext().build();

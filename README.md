@@ -208,7 +208,7 @@ The configurations in the table below can be put together with `spark-defaults.c
 | `spark.tispark.jdbc.client_cert_password`       | ``               | The password of `spark.tispark.jdbc.client_cert_store`.                                                                                                                                                                                                                                                               |
 
 ### TLS Combination Configuration
-TiSpark TLS has two partitions: TiKV Client TLS and JDBC connector TLS. When you want to enable TLS in TiSpark, you need to 
+TiSpark TLS has two parts: TiKV Client TLS and JDBC connector TLS. When you want to enable TLS in TiSpark, you need to 
 configure two parts of configuration. `spark.tispark.tikv.xxx` is used for TiKV Client to create TLS connection with PD and 
 TiKV server. While `spark.tispark.jdbc.xxx` is used for JDBC connect with TiDB server in TLS connection.
 
