@@ -84,7 +84,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
       }
     } catch {
       case e: IllegalStateException =>
-        logger.error("Failed to active Spark session", e)
+        logger.error("Failed to activate Spark session", e)
         throw e
       case e: IllegalArgumentException =>
         logger.error("Wrong tikv.tls_enable config", e)
