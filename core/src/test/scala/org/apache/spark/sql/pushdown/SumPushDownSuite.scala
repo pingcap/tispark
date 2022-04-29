@@ -47,6 +47,7 @@ class SumPushDownSuite extends BasePlanTest {
     allCases.foreach { query =>
       val df = spark.sql(query)
       if (!extractDAGRequests(df).head.toString.contains("Aggregates")) {
+        df.explain()
         fail(s"sum is not pushed down in query:$query")
       }
       runTest(query)
