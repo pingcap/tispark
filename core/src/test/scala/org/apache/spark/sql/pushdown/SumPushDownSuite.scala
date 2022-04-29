@@ -44,7 +44,6 @@ class SumPushDownSuite extends BasePlanTest {
     "select sum(tp_double) from full_data_type_table")
 
   test("Test - Sum push down") {
-    spark.sql("select sum(tp_smallint) from full_data_type_table").explain()
     allCases.foreach { query =>
       val df = spark.sql(query)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
