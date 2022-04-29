@@ -31,18 +31,14 @@ import org.apache.spark.sql.types._
 
 object PromotedSum {
   def apply(child: Expression): SpecialSum = {
-    val retType = child.dataType match {
-      case DecimalType.Fixed(precision, scale) =>
-        DecimalType.bounded(precision + 10, scale)
+    child.dataType match {
       // We need to convert MySQLType: TypeTiny,TypeShort,TypeInt24,TypeLong,TypeLonglong,TINYINT,TypeYear to DecimalType in order to push down sum
       // The whole data convert flow: all of the above MySQLType => Spark LongType => Spark DecimalType => MySQLType DecimalType
       // here we just convert Spark LongType => Spark DecimalType, we will convert Spark DecimalType => MySQLType DecimalType later
-      case LongType =>
-        DecimalType.bounded(DecimalType.MAX_PRECISION, 0)
-      case _ => DoubleType
+      case LongType => SpecialSum(child, DecimalType.BigIntDecimal, null)
+      case _ =>
+        throw new IllegalStateException("only LongType will use PromotedSum to replace Sum")
     }
-
-    SpecialSum(child, retType, null)
   }
 
   def unapply(s: SpecialSum): Option[Expression] =
