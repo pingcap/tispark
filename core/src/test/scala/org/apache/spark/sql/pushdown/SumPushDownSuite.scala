@@ -33,27 +33,56 @@ import org.apache.spark.sql.catalyst.plans.BasePlanTest
 class SumPushDownSuite extends BasePlanTest {
 
   private val allCases = Seq[String](
-    "select sum(tp_smallint) from full_data_type_table",
-    "select sum(tp_bigint) from full_data_type_table",
-    "select sum(tp_decimal) from full_data_type_table",
-    "select sum(tp_mediumint) from full_data_type_table",
-    "select sum(tp_real) from full_data_type_table",
-    "select sum(tp_tinyint) from full_data_type_table",
-    "select sum(id_dt) from full_data_type_table",
-    "select sum(tp_int) from full_data_type_table",
-    "select sum(tp_double) from full_data_type_table")
+    "select sum(tp_smallint) from full_data_type_table_cluster",
+    "select sum(tp_bigint) from full_data_type_table_cluster",
+    "select sum(tp_decimal) from full_data_type_table_cluster",
+    "select sum(tp_mediumint) from full_data_type_table_cluster",
+    "select sum(tp_real) from full_data_type_table_cluster",
+    "select sum(tp_tinyint) from full_data_type_table_cluster",
+    "select sum(id_dt) from full_data_type_table_cluster",
+    "select sum(tp_int) from full_data_type_table_cluster",
+    "select sum(tp_double) from full_data_type_table_cluster")
 
   test("Test - Sum push down") {
-    spark.sql("use tidb_catalog.tispark_test")
+    tidbStmt.execute("DROP TABLE IF EXISTS `full_data_type_table_cluster`")
+    tidbStmt.execute("""
+         CREATE TABLE `full_data_type_table_cluster` (
+        `id_dt` int(11) NOT NULL,
+        `tp_varchar` varchar(45) DEFAULT NULL,
+        `tp_datetime` datetime DEFAULT CURRENT_TIMESTAMP,
+        `tp_blob` blob DEFAULT NULL,
+        `tp_binary` binary(2) DEFAULT NULL,
+        `tp_date` date DEFAULT NULL,
+        `tp_timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `tp_year` year DEFAULT NULL,
+        `tp_bigint` bigint(20) DEFAULT NULL,
+        `tp_decimal` decimal(38,18) DEFAULT NULL,
+        `tp_double` double DEFAULT NULL,
+        `tp_float` float DEFAULT NULL,
+        `tp_int` int(11) DEFAULT NULL,
+        `tp_mediumint` mediumint(9) DEFAULT NULL,
+        `tp_real` double DEFAULT NULL,
+        `tp_smallint` smallint(6) DEFAULT NULL,
+        `tp_tinyint` tinyint(4) DEFAULT NULL,
+        `tp_char` char(10) DEFAULT NULL,
+        `tp_nvarchar` varchar(40) DEFAULT NULL,
+        `tp_longtext` longtext DEFAULT NULL,
+        `tp_mediumtext` mediumtext DEFAULT NULL,
+        `tp_text` text DEFAULT NULL,
+        `tp_tinytext` tinytext DEFAULT NULL,
+        `tp_bit` bit(1) DEFAULT NULL,
+        `tp_time` time DEFAULT NULL,
+        `tp_enum` enum('1','2','3','4') DEFAULT NULL,
+        `tp_set` set('a','b','c','d') DEFAULT NULL,
+        PRIMARY KEY (`id_dt`)/*T![clustered_index] CLUSTERED */
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+      """)
+
     allCases.foreach { query =>
       val df = spark.sql(query)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
-        df.explain()
-        val result = queryTiDBViaJDBC(
-          "SELECT TIDB_PK_TYPE FROM information_schema.tables WHERE table_schema = 'tispark_test' AND table_name = 'full_data_type_table'")
-        println(result)
         fail(
-          s"cluster:$result,sum is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+          s"sum is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
             df).head.toString)
       }
       runTest(query)
