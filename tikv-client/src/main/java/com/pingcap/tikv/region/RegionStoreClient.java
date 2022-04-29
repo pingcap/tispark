@@ -568,8 +568,11 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       throw new RegionException(resp.getRegionError());
     }
 
+    // throw KeyException because
+    // 1. resp's KeyError is KeyException
+    // 2. we need KeyException to judge if we should retry
     if (resp.hasError()) {
-      throw new TiClientInternalException("TxnHeartBeat fail, " + resp.getError().getAbort());
+      throw new KeyException(resp.getError(), "TxnHeartBeat fail, " + resp.getError().getAbort());
     }
 
     return true;
