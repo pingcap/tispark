@@ -44,12 +44,16 @@ class SumPushDownSuite extends BasePlanTest {
     "select sum(tp_double) from full_data_type_table")
 
   test("Test - Sum push down") {
+    spark.sql("use tidb_catalog.tispark_test")
     allCases.foreach { query =>
       val df = spark.sql(query)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
         df.explain()
+        val result = queryTiDBViaJDBC(
+          "SELECT TIDB_PK_TYPE FROM information_schema.tables WHERE table_schema = 'tispark_test' AND table_name = 'full_data_type_table'")
+        println(result)
         fail(
-          s"sum is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+          s"cluster:$result,sum is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
             df).head.toString)
       }
       runTest(query)
