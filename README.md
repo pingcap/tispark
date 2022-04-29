@@ -215,7 +215,7 @@ TiKV server. While `spark.tispark.jdbc.xxx` is used for JDBC connect with TiDB s
 When TiSpark TLS is enabled, `tikv.trust_cert_collection`, `tikv.key_cert_chain` and `tikv.key_file` must be configured.
 While `jdbc.server_cert_store` and `jdbc.client_cert_store` is optional.
 
-Now TLS only support TLSv1.2 and TLSv1.3 version.
+TiSpark only supports TLSv1.2 and TLSv1.3 version.
 
 Here's an example of opening the TLS configuration.
 ```
