@@ -33,21 +33,20 @@ object TiSparkTeleInfo {
   private val tidb_version: String = getPd_version
   private val spark_version: String = org.apache.spark.SPARK_VERSION
 
-  val tiSparkTeleInfo: Map[String, Any] = generateTiSparkTeleInfo
+  val tiSparkTeleInfo: Map[String, Any] = generateTiSparkTeleInfo()
 
   /**
    * Get tiSparkTeleInfo that cantains TiSpark version, TiDB version, Spark Version.
    *
    * @return tiSparkTeleInfo
    */
-  def getTiSparkTeleInfo: Map[String, Any] = tiSparkTeleInfo
+  def getTiSparkTeleInfo(): Map[String, Any] = tiSparkTeleInfo
 
-  private def generateTiSparkTeleInfo: Map[String, Any] = {
+  private def generateTiSparkTeleInfo(): Map[String, Any] = {
     Map(
       "tispark_version" -> this.tispark_version,
       "tidb_version" -> this.tidb_version,
-      "spark_version" -> this.spark_version
-    )
+      "spark_version" -> this.spark_version)
   }
 
   private def getTispark_version: String = {
@@ -95,7 +94,7 @@ class PDStatus {
   var start_timestamp: String = _
 
   def setBuild_ts(build_ts: String): Unit = this.build_ts = build_ts
-  def setVersion(version: String):Unit = this.version = version
-  def setGit_hash(git_hash:String):Unit = this.git_hash = git_hash
-  def setStart_timestamp(Start: String):Unit = this.start_timestamp = start_timestamp
+  def setVersion(version: String): Unit = this.version = version
+  def setGit_hash(git_hash: String): Unit = this.git_hash = git_hash
+  def setStart_timestamp(Start: String): Unit = this.start_timestamp = start_timestamp
 }

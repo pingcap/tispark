@@ -16,6 +16,8 @@
 
 package com.pingcap.tispark.telemetry
 
+import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.pingcap.tispark.utils.HttpClientUtil
 import org.slf4j.LoggerFactory
 
@@ -32,18 +34,25 @@ class Telemetry {
    *
    * @param msg the msg sent to telemetry server
    */
-  def report(msg: TeleMsg.type): Unit = {
-      // Don't try again even if the message failed to be sent
-      msg.changeState(MsgState.SENT)
-      val httpClient = new HttpClientUtil
-      try {
-        httpClient.postJSON(url, msg)
-      } catch {
-        case e : Throwable => logger.warn("Failed to report telemetry", e)
-      }
+  def report(msg: TeleMsg): Unit = {
+    // Don't try again even if the message failed to be sent
+    msg.changeState(MsgState.SENT)
+    val httpClient = new HttpClientUtil
+
+    val mapper = new ObjectMapper()
+      .registerModule(DefaultScalaModule)
+      .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    val msgString = mapper.writeValueAsString(msg)
+    logger.info("Telemetry report: " + msgString)
+
+    try {
+      httpClient.postJSON(url, msg)
+    } catch {
+      case e: Throwable => logger.warn("Failed to report telemetry", e)
+    }
   }
 
-  def setUrl(url : String): Unit = {
+  def setUrl(url: String): Unit = {
     this.url = url
   }
 }

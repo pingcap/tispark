@@ -33,11 +33,14 @@ object TiSparkTeleConf {
   generateTiSparkTeleConf()
 
   /**
-   * Get TiSparkTeleConf.
+   * Get the newest TiSparkTeleConf.
    *
    * @return telemetry message about TiSpark configuration
    */
-  def getTiSparkTeleConf: Map[String, String] = tiSparkTeleConf
+  def getTiSparkTeleConf(): Map[String, String] = {
+    generateTiSparkTeleConf()
+    tiSparkTeleConf
+  }
 
   /**
    * set TiSparkTeleConf.

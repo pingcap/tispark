@@ -32,7 +32,10 @@ class HttpClientUtil {
    * @param headers HTTP header
    * @return HTTP response string
    */
-  def postJSON(url: String, msg: Object, headers: Map[String, String] = null): HttpResponse[String] = {
+  def postJSON(
+      url: String,
+      msg: Object,
+      headers: Map[String, String] = null): HttpResponse[String] = {
     try {
       val mapper = new ObjectMapper()
         .registerModule(DefaultScalaModule)
@@ -78,9 +81,7 @@ class HttpClientUtil {
 
   private def checkResp(resp: HttpResponse[String]): Unit = {
     if (!resp.isSuccess) {
-      logger.error("failed to get HTTP request: %s, response: %s, code %d",
-        resp.body,
-        resp.code)
+      logger.error("failed to get HTTP request: %s, response: %s, code %d", resp.body, resp.code)
     }
   }
 }

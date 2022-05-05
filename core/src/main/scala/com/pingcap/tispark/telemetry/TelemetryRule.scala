@@ -18,7 +18,6 @@ package com.pingcap.tispark.telemetry
 
 import org.apache.spark.sql.{SparkSession, TiExtensions}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.catalyst.rules.Rule
 import org.slf4j.LoggerFactory
 
 /**
@@ -27,18 +26,17 @@ import org.slf4j.LoggerFactory
  *
  * @param sparkSession
  */
-case class TelemetryRule(sparkSession: SparkSession) extends Rule[LogicalPlan] {
+case class TelemetryRule(sparkSession: SparkSession) extends (LogicalPlan => Unit) {
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
   if (TiExtensions.telemetryEnable(sparkSession)) {
-    if (TeleMsg.shouldSendMsg) {
-      val telemetry = new Telemetry
-      telemetry.report(TeleMsg)
+    val telemetry = new Telemetry
+    val teleMsg = new TeleMsg(sparkSession)
+    if (teleMsg.shouldSendMsg) {
+      telemetry.report(teleMsg)
       logger.info("Telemetry done")
     }
   }
 
-  override def apply(plan: LogicalPlan): LogicalPlan = {
-    plan
-  }
+  override def apply(plan: LogicalPlan): Unit = plan
 }

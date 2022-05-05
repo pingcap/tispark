@@ -74,8 +74,7 @@ object SystemInfoUtil {
     Map(
       "model" -> SystemInfoUtil.getCpuName,
       "logicalCores" -> SystemInfoUtil.getCpuLogicalCores,
-      "physicalCores" -> SystemInfoUtil.getCpuPhysicalCore
-    )
+      "physicalCores" -> SystemInfoUtil.getCpuPhysicalCore)
   }
 
   /**
@@ -95,11 +94,7 @@ object SystemInfoUtil {
     val diskStore = hal.getDiskStores
     for (i <- 0 until diskStore.size()) {
       disks.append(
-        Map(
-          "name" -> diskStore.get(i).getName,
-          "size" -> diskStore.get(i).getSize.toString
-        )
-      )
+        Map("name" -> diskStore.get(i).getName, "size" -> diskStore.get(i).getSize.toString))
     }
     disks
   }
@@ -114,12 +109,7 @@ object SystemInfoUtil {
     val fileStores = fs.getFileStores
     for (i <- 0 until fileStores.size()) {
       val fileStore = fileStores.get(i)
-      fileSystem.append(
-        Map(
-          "name" -> fileStore.getName,
-          "type" -> fileStore.getDescription
-        )
-      )
+      fileSystem.append(Map("name" -> fileStore.getName, "type" -> fileStore.getDescription))
     }
     fileSystem
   }

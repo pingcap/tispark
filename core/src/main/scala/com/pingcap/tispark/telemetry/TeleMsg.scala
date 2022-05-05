@@ -17,22 +17,23 @@
 package com.pingcap.tispark.telemetry
 
 import com.pingcap.tispark.utils.SystemInfoUtil
+import org.apache.spark.sql.SparkSession
 
 import java.text.SimpleDateFormat
-import java.util.{Date, UUID}
+import java.util.Date
 
 /**
  * Telemetry message.
  */
-object TeleMsg {
+class TeleMsg(sparkSession: SparkSession) {
 
   // telemetry message entry
-  var uuid: String = setUUID()
+  var id: String = setAppId()
   val time: String = setTime()
   val app: String = "TiSpark"
-  val hardware: Map[String, Any] = generateHardwareInfo
-  val instance: Map[String, Any] = TiSparkTeleInfo.getTiSparkTeleInfo
-  val configuration: Map[String, String] = TiSparkTeleConf.getTiSparkTeleConf
+  val hardware: Map[String, Any] = generateHardwareInfo()
+  val instance: Map[String, Any] = TiSparkTeleInfo.getTiSparkTeleInfo()
+  val configuration: Map[String, String] = TiSparkTeleConf.getTiSparkTeleConf()
 
   // judge this message should be sent or not
   private var state = MsgState.UNSENT
@@ -43,8 +44,8 @@ object TeleMsg {
    *
    * @return True means that msg should send, False means shouldn't.
    */
-  def shouldSendMsg : Boolean = {
-    if(state == MsgState.UNSENT) true else false
+  def shouldSendMsg: Boolean = {
+    if (state == MsgState.UNSENT) true else false
   }
 
   /**
@@ -53,35 +54,24 @@ object TeleMsg {
    * @param msgState MsgState.UNSENT or MsgState.SENT
    */
   def changeState(msgState: MsgState.Value): Unit = {
-      this.state = msgState
+    this.state = msgState
   }
 
-  def setUUID(): String = {
-    var uuid = ""
-    try {
-      uuid = System.getProperty("TISPARK_UUID")
-      if (uuid == null) {
-        uuid = UUID.randomUUID().toString
-        System.setProperty("TISPARK_UUID", uuid)
-      }
-    } catch {
-      case _: Throwable => uuid = ""
-    }
-    uuid
+  private def setAppId(): String = {
+    sparkSession.sparkContext.applicationId
   }
 
-  def setTime() : String = {
+  private def setTime(): String = {
     new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date)
   }
 
-  def generateHardwareInfo: Map[String, Any] = {
+  private def generateHardwareInfo(): Map[String, Any] = {
     Map[String, Any](
       "os" -> SystemInfoUtil.getOsFamily,
       "version" -> SystemInfoUtil.getOsVersion,
       "cpu" -> SystemInfoUtil.getCpu,
       "memory" -> SystemInfoUtil.getMemoryInfo,
-      "disks" -> SystemInfoUtil.getDisks
-    )
+      "disks" -> SystemInfoUtil.getDisks)
   }
 }
 

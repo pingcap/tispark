@@ -17,15 +17,18 @@
 package com.pingcap.tispark.telemetry
 
 import com.pingcap.tispark.utils.HttpClientUtil
-import com.sun.net.httpserver.{HttpExchange, HttpHandler, HttpServer, HttpsConfigurator, HttpsServer}
-import io.netty.handler.codec.http.HttpUtil
-import org.apache.spark.{SharedSparkContext, SparkFunSuite}
+import com.sun.net.httpserver.{
+  HttpExchange,
+  HttpHandler,
+  HttpServer,
+  HttpsConfigurator,
+  HttpsServer
+}
 import org.apache.spark.sql.test.SharedSQLContext
-import scalaj.http.Http
 
 import java.net.InetSocketAddress
 
-class TelemetrySuite extends SharedSQLContext{
+class TelemetrySuite extends SharedSQLContext {
   var server: HttpServer = _
 
   override def beforeEach(): Unit = {
@@ -47,15 +50,15 @@ class TelemetrySuite extends SharedSQLContext{
   test("test telemetry") {
     val telemetry = new Telemetry
     telemetry.setUrl("http://127.0.0.1:8091/test")
-    telemetry.report(TeleMsg)
-    assert(!TeleMsg.shouldSendMsg)
+    val teleMsg = new TeleMsg(_sparkSession)
+    telemetry.report(teleMsg)
+    assert(!teleMsg.shouldSendMsg)
   }
 
-  test ("test get TiDB version") {
-    val tiSparkTeleInfo = TiSparkTeleInfo.getTiSparkTeleInfo
-    assert(!tiSparkTeleInfo.get("tidb_version").contains(null))
+  test("test get TiDB version") {
+    val tiSparkTeleInfo = TiSparkTeleInfo.getTiSparkTeleInfo()
+    assert(!tiSparkTeleInfo.get("tidb_version").toString.equals("unknown"))
   }
-
 }
 
 object TestHttpHandler extends HttpHandler {

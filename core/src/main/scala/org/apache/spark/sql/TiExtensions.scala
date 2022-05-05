@@ -34,7 +34,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 
     e.injectResolutionRule(new TiAuthRuleFactory(getOrCreateTiContext))
     e.injectPlannerStrategy(new TiStrategyFactory(getOrCreateTiContext))
-    e.injectResolutionRule(TelemetryRule)
+    e.injectCheckRule(TelemetryRule)
   }
 
   // call from pyspark only

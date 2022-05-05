@@ -195,6 +195,7 @@ The configurations in the table below can be put together with `spark-defaults.c
 | `spark.tispark.request.isolation.level` |  `SI` | Isolation level means whether to resolve locks for the underlying TiDB clusters. When you use the "RC", you get the latest version of record smaller than your `tso` and ignore the locks. If you use "SI", you resolve the locks and get the records depending on whether the resolved lock is committed or aborted.  |
 | `spark.tispark.coprocessor.chunk_batch_size` | `1024` | How many rows fetched from Coprocessor |
 | `spark.tispark.isolation_read_engines` | `tikv,tiflash` | List of readable engines of TiSpark, comma separated, storage engines not listed will not be read |
+| `spark.tispark.telemetry.enable` | `true` | whether to enable the telemetry collection feature in TiSpark |
 
 ## `Log4j` Configuration
 
@@ -280,6 +281,20 @@ For more details about the test, see [here](./core/src/test/Readme.md).
 
 7. TiSpark doesn't support TLS now. You can't connect TiDB with TLS.
 
+## Telemetry
+By default, TiSpark collect usage information and share the information with PingCAP. You can close it by configuring 
+`spark.tispark.telemetry.enable = flase` in `spark-default.conf`.
+
+When the telemetry collection feature is enabled, usage information will be shared, including(but not limited to):
+* The Spark application ID.
+* OS and hardware information, such as OS name, OS version, CPU, memory, and disk.
+* A part of TiSpark configuration.
+
+To view the full content of telemetry, set the level `log4j.logger.com.pingcap.tispark` upper than `INFO` in 
+`${SPARK_HOME}/conf/log4j.properties`. And the telemetry content will be saved in the log file.
+```shell
+22/05/05 14:22:21 INFO Telemetry: Telemetry report: {"id":"local-1651731735091","time":"2022-05-04 23:22:20","app":"TiSpark","hardware":{"os":"Ubuntu","disks":[{"name":"/dev/nvme0n1","size":"512110190592"}],"version":"20.04.4 LTS (Focal Fossa) build 5.13.0-41-generic","cpu":{"model":"11th Gen Intel(R) Core(TM) i7-1160G7 @ 1.20GHz","logicalCores":"8","physicalCores":"4"},"memory":"Available: 828.1 MiB/15.4 GiB"},"instance":{"tispark_version":"2.5.0-SNAPSHOT","tidb_version":"v6.0.0","spark_version":"3.0.2"},"configuration":{"spark.tispark.plan.use_index_scan_first":"false","spark.tispark.index.scan_concurrency":"5","spark.tispark.type.unsupported_mysql_types":"","spark.tispark.plan.allow_index_read":"true","spark.tispark.request.command.priority":"LOW","spark.tispark.request.isolation.level":"SI","spark.tispark.show_rowid":"false","spark.tispark.plan.allow_agg_pushdown":"false","spark.tispark.isolation_read_engines":"tikv","spark.sql.auth.enable":"true","spark.tispark.coprocessor.chunk_batch_size":"1024","spark.tispark.index.scan_batch_size":"20000","spark.tispark.coprocess.codec_format":"chblock","spark.tispark.coprocess.streaming":"false"}}
+```
 
 ## Follow us
 
