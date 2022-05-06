@@ -20,6 +20,7 @@ import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.sql.catalyst.analyzer.{TiAuthRuleFactory, TiAuthorizationRule}
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
+import org.apache.spark.sql.catalyst.parser.TiParserFactory
 import org.apache.spark.sql.catalyst.planner.TiStrategyFactory
 import org.slf4j.LoggerFactory
 
@@ -31,6 +32,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
   override def apply(e: SparkSessionExtensions): Unit = {
     TiSparkInfo.checkVersion()
 
+    e.injectParser(TiParserFactory(getOrCreateTiContext))
     e.injectResolutionRule(new TiAuthRuleFactory(getOrCreateTiContext))
     e.injectPlannerStrategy(new TiStrategyFactory(getOrCreateTiContext))
   }

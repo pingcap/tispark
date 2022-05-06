@@ -18,7 +18,7 @@ package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.datatype.TypeMapping
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tikv.region.TiStoreType
 import com.pingcap.tikv.types._
 import com.pingcap.tispark._
@@ -27,6 +27,7 @@ import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{SparkConf, sql}
+import org.slf4j.LoggerFactory
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import java.time.{Instant, LocalDate, ZoneId}
@@ -35,6 +36,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.NANOSECONDS
 
 object TiUtil {
+  private final val logger = LoggerFactory.getLogger(getClass.getName)
   val MICROS_PER_MILLIS = 1000L
   val MICROS_PER_SECOND = 1000000L
 
@@ -238,5 +240,37 @@ object TiUtil {
     }
 
     mutableRow
+  }
+
+  def getTiDBSnapshot(sparkSession: SparkSession): Option[TiTimestamp] = {
+    val tidbSnapshot =
+      sparkSession.conf.get(TiConfigConst.TIDB_SNAPSHOT, TiConfigConst.DEFAULT_TIDB_SNAPSHOT)
+    logger.info(s"${TiConfigConst.TIDB_SNAPSHOT} = $tidbSnapshot")
+    if (tidbSnapshot.isEmpty) {
+      Option.empty
+    } else {
+      Some(parseTimestamp(tidbSnapshot))
+    }
+  }
+
+  def parseTimestamp(str: String): TiTimestamp = {
+    try {
+      val ts = java.sql.Timestamp.valueOf(str)
+      new TiTimestamp(ts.getTime << 8 / 1000, 0L)
+    } catch {
+      case _: Throwable =>
+        try {
+          val ts = java.lang.Long.parseLong(str)
+          new TiTimestamp(ts, 0L)
+        } catch {
+          case _: Throwable =>
+            throw new IllegalArgumentException(TiConfigConst.TIDB_SNAPSHOT + ":" + str)
+        }
+    }
+  }
+
+  def main(args: Array[String]): Unit = {
+    val b = TiUtil.parseTimestamp("2022-05-06 17:39:00")
+    println(b)
   }
 }
