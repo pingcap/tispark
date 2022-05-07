@@ -24,6 +24,7 @@ import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.MySQLType;
 import com.pingcap.tikv.util.FastByteComparisons;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -33,6 +34,7 @@ public class CommonHandle implements Handle {
   private final byte[] encoded;
   private final int[] colEndOffsets;
 
+  private static final int MS_OF_ONE_DAY = 24 * 3600 * 1000;
   private static final int MIN_ENCODE_LEN = 9;
 
   public static CommonHandle newCommonHandle(DataType[] dataTypes, Object[] data) {
@@ -48,13 +50,14 @@ public class CommonHandle implements Handle {
     CodecDataOutput cdo = new CodecDataOutput();
     for (int i = 0; i < data.length; i++) {
       if (dataTypes[i].getType().equals(MySQLType.TypeTimestamp)) {
-        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, ((long) data[i]) / 1000);
+        long milliseconds = ((Timestamp) data[i]).getTime();
+        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, milliseconds);
       } else if (dataTypes[i].getType().equals(MySQLType.TypeDate)) {
-        long days = (long) data[i];
+        long days = (long) Math.ceil(((double) ((Date) data[i]).getTime()) / MS_OF_ONE_DAY);
         if (Converter.getLocalTimezone().getOffset(0) < 0) {
           days += 1;
         }
-        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, new Date((days) * 24 * 3600 * 1000));
+        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, new Date((days) * MS_OF_ONE_DAY));
       } else {
         if (prefixLengthes[i] > 0 && data[i] instanceof String) {
           String source = (String) data[i];
