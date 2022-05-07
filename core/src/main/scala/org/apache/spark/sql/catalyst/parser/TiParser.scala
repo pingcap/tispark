@@ -35,7 +35,8 @@ case class TiParser(
 
   override def parseDataType(sqlText: String): DataType = delegate.parseDataType(sqlText)
 
-  override def parseRawDataType(sqlText: String): DataType = delegate.parseRawDataType(sqlText)
+  @scala.throws[ParseException]("Text cannot be parsed to a DataType")
+  def parseRawDataType(sqlText: String): DataType = ???
 
   def getOrElseInitTiCatalog: TiCatalog = {
     val catalogManager = sparkSession.sessionState.catalogManager
