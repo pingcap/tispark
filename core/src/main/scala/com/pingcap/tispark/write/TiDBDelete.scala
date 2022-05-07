@@ -70,17 +70,12 @@ case class TiDBDelete(
       WrappedRow(row, WriteUtil.extractHandle(row, tiTableInfo))
     }
 
-    //persist deletionRDD
-    val persistDeletionRDD =
-      deletion.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
-    persistedRDDList = persistDeletionRDD :: persistedRDDList
-
     // encode record & index
     val tableId = tiTableInfo.getId
-    val recordKV = WriteUtil.generateRecordKVToDelete(persistDeletionRDD, tableId)
+    val recordKV = WriteUtil.generateRecordKVToDelete(deletion, tableId)
     val indexKV = WriteUtil.generateIndexKV(
       SparkSession.active.sparkContext,
-      persistDeletionRDD,
+      deletion,
       tiTableInfo,
       remove = true)
     val keyValueRDD = (recordKV ++ indexKV).map(obj => (obj.encodedKey, obj.encodedValue))
@@ -112,6 +107,7 @@ case class TiDBDelete(
       val commitTs = twoPhaseCommitHepler.commitPrimaryKeyWithRetryByDriver(
         primaryKey,
         List(SchemaUpdateTime(database, table, tiTableInfo.getUpdateTimestamp)))
+      twoPhaseCommitHepler.stopPrimaryKeyTTLUpdate()
       twoPhaseCommitHepler.commitSecondaryKeyByExecutors(secondaryKeysRDD, commitTs)
     } finally {
       twoPhaseCommitHepler.close()

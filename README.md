@@ -13,7 +13,7 @@ Read the [Quick Start](./docs/userguide.md).
 
 ## Getting TiSpark
 
-+ Currently, TiSpark 2.4.3, 2.5.0 is the latest stable version, which is highly recommended. You can get compatibility information from the [table](##-How-to-choose-TiSpark-Version). Please follow the [document](./docs/userguide.md).
++ Currently, TiSpark 2.4.3, 2.5.0 is the latest stable version, which is highly recommended. You can get compatibility information from the [table](#How-to-choose-TiSpark-Version). Please follow the [document](./docs/userguide.md).
 
 + If you are using TiDB-5.0 and Spark 2.3.0+/2.4.0+, TiSpark 2.4.3 is recommended.
 
@@ -168,8 +168,10 @@ TiSpark >= 2.6.0 supports DELETE
 spark.sql("use tidb_catalog")
 spark.sql("delete from ${database}.${table} where xxx").show
 ```
- See [here](./docs/delete_userguide.md) for more details..
+ See [here](./docs/delete_userguide.md) for more details.
 
+## Benchmark
+See [here](https://github.com/pingcap/tispark/wiki/TiSpark-BenchMark) for more details.
 
 ## Configuration
 
