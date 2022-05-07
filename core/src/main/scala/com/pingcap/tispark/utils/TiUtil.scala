@@ -268,9 +268,4 @@ object TiUtil {
         }
     }
   }
-
-  def main(args: Array[String]): Unit = {
-    val b = TiUtil.parseTimestamp("2022-05-06 17:39:00")
-    println(b)
-  }
 }
