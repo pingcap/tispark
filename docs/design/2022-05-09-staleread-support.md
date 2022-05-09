@@ -35,7 +35,7 @@ TiSpark will support stale read after this doc, but it will not read from TiKV f
 
 ### New configuration
 TiSpark supports stale read with a new configurations `spark.tispark.stale_read`
-- This configurations accept timestamp which is Long type
+- This configurations accept timestamp(ms) which is Long type
 - This configuration better meet this condition ${now} - ${spark.tispark.stale_read} + ${sql execution time}) < ${GC lifetime} to avoid the historical data be cleared.
 
 
@@ -70,19 +70,17 @@ TiSpark will check `spark.tispark.stale_read` in `TiStrategy`, then set start_ts
 - Stale read will affect DML(SQL) with the historical schema, So avoid using DML with stale read.
 
 ## API
-
-### use with config
+#### use with config
 - config `spark.tispark.stale_read` in spark-default.conf
-- or you can config when you submit application `spark-submit --conf spark.tispark.stale_read="2016-10-08 16:45:26"`
-### use with java/scala code
-you can config `spark.tispark.tidb_snapshot` with different timestamp before every SQL to read different snapshot
-
-To quit stale read, just config with `spark.conf.unset("spark.tispark.stale_read")` or `spark.conf.set("spark.tispark.stale_read", "")`
+- or you can config when you submit application `spark-submit --conf spark.tispark.stale_read=1651766410000`
+#### use with java/scala code
+you can config `spark.tispark.stale_read` with different time before every SQL. To quit stale read, just config with `spark.conf.unset("spark.tispark.stale_read")` or `spark.conf.set("spark.tispark.stale_read", "")`
 ```
-spark.conf.set("spark.tispark.stale_read", "2022-05-06 00:00:05")
+val spark = SparkSession.builder.config(sparkConf).getOrCreate()
+spark.conf.set("spark.tispark.stale_read", 1651766410000L) //"2022-05-06 00:00:10"
 spark.sql("select * from test.t")
 
-spark.conf.set("spark.tispark.stale_read", "2022-05-06 00:00:10")
+spark.conf.set("spark.tispark.stale_read", 1651766420000L) //"2022-05-06 00:00:20"
 spark.sql("select * from test.t")
 
 spark.conf.set("spark.tispark.stale_read", "")
