@@ -12,7 +12,7 @@
     * [Step](#step)
     * [Parse timestamp to PD TSO](#parse-timestamp-to-pd-tso)
     * [Update TiCatalog's meta](#update-tiCatalog's-meta)
-    * [update start_ts](#update-start_ts)
+    * [Update start_ts](#update-start_ts)
 * [Compatibility](#compatibility)
 * [API](#api)
 * [Test Design](#test-design)
@@ -61,13 +61,14 @@ TiSpark needs schema with specified TSO in stale read. So, we introduce `snapSho
 
 ![image alt text](imgs/stale-read/meta.png)
 
-### update start_ts
-TiSpark will check `spark.tispark.stale_read` in `TiStrategy`, then set start_ts to corresponding TSO if the configurations is valid
+### Update start_ts
+TiSpark will check `spark.tispark.stale_read` in `TiStrategy`, then set start_ts to corresponding TSO if the configuration is valid
 
 
 ## Compatibility
 - Stale read only affects Spark-SQL. DataSource API will not be affected, such as `df.write` and `spark.read`.
 - Stale read will affect DML(SQL) with the historical schema, So avoid using DML with stale read.
+- Stale read is not thread safety in a SparkSession, but you can execute SELECT statement concurrently in different SparkSession.
 
 ## API
 #### use with config
