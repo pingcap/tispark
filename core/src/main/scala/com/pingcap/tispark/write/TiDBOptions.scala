@@ -137,10 +137,34 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val tidbRowId: Boolean = getOrDefault(TIDB_ROWID, "false").toBoolean
 
   // ------------------------------------------------------------
+  // Enable JDBC SSL connection
+  // ------------------------------------------------------------
+  var SSLParameters: String = getOrDefault(TIDB_ENABLE_JDBC_SSL, "false")
+  if (SSLParameters.equals("true")) {
+    val clientCertStore = getOrDefault(TIDB_JDBC_CLIENT_CERT_STORE, "")
+    val clientCertPassword = getOrDefault(TIDB_JDBC_CLIENT_CERT_PASSWORD, "")
+    val serverCertStore = getOrDefault(TIDB_JDBC_SERVER_CERT_STORE, "")
+    val serverCertPassword = getOrDefault(TIDB_JDBC_SERVER_CERT_PASSWORD, "")
+    // Set up Server authentication
+    if (serverCertStore.equals("")) {
+      SSLParameters = "true&requireSSL=true&verifyServerCertificate=false"
+    } else {
+      SSLParameters =
+        "true&requireSSL=true&verifyServerCertificate=true&trustCertificateKeyStoreUrl=" +
+          serverCertStore + "&trustCertificateKeyStorePassword=" + serverCertPassword
+    }
+    // Setting up client authentication
+    if (!clientCertStore.equals("")) {
+      SSLParameters += "&clientCertificateKeyStoreUrl=" + clientCertStore +
+        "&clientCertificateKeyStorePassword=" + clientCertPassword
+    }
+  }
+
+  // ------------------------------------------------------------
   // Calculated parameters
   // ------------------------------------------------------------
   val url: String =
-    s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useSSL=false&rewriteBatchedStatements=true"
+    s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useSSL=$SSLParameters&rewriteBatchedStatements=true"
       .replaceAll("%", "%25")
 
   def useTableLock(isV4: Boolean): Boolean = {
@@ -279,6 +303,13 @@ object TiDBOptions {
   val TIDB_SLEEP_AFTER_PREWRITE_SECONDARY_KEY: String = newOption(
     "sleepAfterPrewriteSecondaryKey")
   val TIDB_SLEEP_AFTER_GET_COMMIT_TS: String = newOption("sleepAfterGetCommitTS")
+
+  // TLS
+  val TIDB_ENABLE_JDBC_SSL: String = newOption("jdbc.tls_enable")
+  val TIDB_JDBC_CLIENT_CERT_STORE: String = newOption("jdbc.client_cert_store")
+  val TIDB_JDBC_CLIENT_CERT_PASSWORD: String = newOption("jdbc.client_cert_password")
+  val TIDB_JDBC_SERVER_CERT_STORE: String = newOption("jdbc.server_cert_store")
+  val TIDB_JDBC_SERVER_CERT_PASSWORD: String = newOption("jdbc.server_cert_password")
 
   private def newOption(name: String): String = {
     name.toLowerCase(Locale.ROOT)
