@@ -27,20 +27,20 @@ Stale read is a mechanism that can read historical versions of data stored in Ti
 
 TiDB has provided [stale read](https://docs.pingcap.com/zh/tidb/stable/stale-read). 
 - Using stale read, we can read historical data from TiKV
-- Using stale read, we can read from TiKV follower to reduce the pressure of leader. Therefore, stale read can improve the query performance.
+- Using stale read, we can read from TiKV followers to reduce the pressure of the leader. Therefore, stale read can improve the query performance.
 
-TiSpark will support stale read after this doc, but it will not read from TiKV follower for TiSpark does not support follower read yet.
+TiSpark will support stale read after this doc, but it will not read from TiKV followers for TiSpark does not support follower read yet.
 
 ## Detailed design
 
 ### New configuration
-TiSpark support stale read with a new configurations `spark.tispark.stale_read`
+TiSpark supports stale read with a new configurations `spark.tispark.stale_read`
 - This configurations accept timestamp which is Long type
 - This configuration better meet this condition ${now} - ${spark.tispark.stale_read} + ${sql execution time}) < ${GC lifetime} to avoid the historical data be cleared.
 
 
 ### Step
-To support stale read, TiSpark need to
+To support stale read, TiSpark needs to
 1. parse timestamp to PD TSO
 2. update TiCatalog's meta to historical meta
 3. update start_ts to read historical data
@@ -53,11 +53,11 @@ PD TSO is a globally unique time service provided by PD, it consists of physical
 
 
 ### Update TiCatalog's meta
-TiSpark use TiCatalog to provide schema to catalyst, TiCatalog's meta contains the TiKV catalog.
+TiSpark uses TiCatalog to provide schema for catalyst, TiCatalog's meta contains the TiKV catalog.
 - TiCatalog is the Catalog plugin provided by Spark
-- TiKV catalog can provide schema with current TSO
+- TiKV catalog can provide schema with the current TSO
 
-TiSpark need schema with specified TSO in stale read. So, we introduce snapShotCatalog to do this and update TiCatalog's meta with snapShotCatalog
+TiSpark needs schema with specified TSO in stale read. So, we introduce `snapShotCatalog` to do this and update TiCatalog's meta with `snapShotCatalog`
 
 ![image alt text](imgs/stale-read/meta.png)
 
@@ -67,7 +67,7 @@ TiSpark will check `spark.tispark.stale_read` in `TiStrategy`, then set start_ts
 
 ## Compatibility
 - Stale read only affects Spark-SQL. DataSource API will not be affected, such as `df.write` and `spark.read`.
-- Stale read will affect DML(SQL) with the historical schema, So avoid use DML with stale read.
+- Stale read will affect DML(SQL) with the historical schema, So avoid using DML with stale read.
 
 ## API
 
@@ -91,13 +91,13 @@ spark.sql("select * from test.t")
 
 ## Test Design
 | scenes                         | expected results                 |
-| ------------------------------ | -------------------------------- |
-| invaild timestamp test         | throw exception                  |
-| vaild timestamp test           | read historical data correctly   |
+|--------------------------------|----------------------------------|
+| invalid timestamp test         | throw exception                  |
+| valid timestamp test           | read historical data correctly   |
 | session level test             | does not affect other sessions   |
 | dynamic configuration test     | each SQL takes effect            |
 | schema change test             | read historical schema correctly |
-| stale read with datasource api | will not affect datasource api   |
+| stale read with Datasource API | will not affect Datasource API   |
 
 
 
