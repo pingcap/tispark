@@ -16,7 +16,6 @@
 
 package org.apache.spark.sql.catalyst.analyzer
 
-import com.pingcap.tispark.MetaManager
 import com.pingcap.tispark.auth.TiAuthorization
 import org.apache.spark.sql.catalyst.plans.logical.{
   DeleteFromTable,
@@ -26,7 +25,6 @@ import org.apache.spark.sql.catalyst.plans.logical.{
 }
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.{SparkSession, TiContext}
-import org.slf4j.LoggerFactory
 
 /**
  * Only work for table v2(catalog plugin)
@@ -35,10 +33,8 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
     sparkSession: SparkSession)
     extends Rule[LogicalPlan] {
 
-  protected lazy val meta: MetaManager = tiContext.meta
   protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
   private lazy val tiAuthorization: Option[TiAuthorization] = tiContext.tiAuthorization
-  private val logger = LoggerFactory.getLogger(getClass.getName)
 
   protected def checkForAuth: PartialFunction[LogicalPlan, LogicalPlan] = {
     case dt @ DeleteFromTable(SubqueryAlias(identifier, _), _) =>
