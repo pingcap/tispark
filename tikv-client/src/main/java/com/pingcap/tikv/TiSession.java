@@ -68,7 +68,14 @@ public class TiSession implements AutoCloseable {
 
   private TiSession(TiConfiguration conf) {
     this.conf = conf;
-    this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
+    this.channelFactory =
+        conf.isTlsEnable()
+            ? new ChannelFactory(
+                conf.getMaxFrameSize(),
+                conf.getTrustCertCollectionFile(),
+                conf.getKeyCertChainFile(),
+                conf.getKeyFile())
+            : new ChannelFactory(conf.getMaxFrameSize());
     this.regionManager = null;
     this.clientBuilder = null;
   }

@@ -56,4 +56,10 @@ object TiConfigConst {
 
   val CHUNK_CODEC_FORMAT: String = "chunk"
   val DEFAULT_CODEC_FORMAT: String = "chblock"
+
+  // TLS
+  val TIKV_TLS_ENABLE: String = "spark.tispark.tikv.tls_enable"
+  val TIKV_TRUST_CERT_COLLECTION: String = "spark.tispark.tikv.trust_cert_collection"
+  val TIKV_KEY_CERT_CHAIN: String = "spark.tispark.tikv.key_cert_chain"
+  val TIKV_KEY_FILE: String = "spark.tispark.tikv.key_file"
 }

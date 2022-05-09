@@ -345,9 +345,15 @@ trait SharedSQLContext
   private def initializeJDBCUrl(): Unit = {
     // TODO(Zhexuan Yang) for zero datetime issue, we need further investigation.
     //  https://github.com/pingcap/tispark/issues/1238
+
+    var SSLPara = "false"
+    if (conf.contains("jdbc.tls_enable") && conf.get("jdbc.tls_enable").equals("true")) {
+      SSLPara = "true&verifyServerCertificate=false&requireSSL=true"
+    }
+
     jdbcUrl =
       s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword" +
-        s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=round&useSSL=false" +
+        s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=round&useSSL=$SSLPara" +
         s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
         s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}&sessionVariables=time_zone='$timeZoneOffset'"
 
