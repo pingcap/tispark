@@ -52,11 +52,20 @@ public class CommonHandle implements Handle {
     CodecDataOutput cdo = new CodecDataOutput();
     for (int i = 0; i < data.length; i++) {
       if (dataTypes[i].getType().equals(MySQLType.TypeTimestamp)) {
-        long milliseconds = ((Timestamp) data[i]).getTime();
+        // When writing `Timestamp`, it will pass `Timestamp` object.
+        // When indexScan or tableScan, it will pass `Long` object.
+        // It's a compromise here since we don't have a good way to make them consistent.
+        long milliseconds;
+        if (data[i] instanceof Timestamp) {
+          milliseconds = ((Timestamp) data[i]).getTime();
+        } else {
+          milliseconds = ((long) data[i]) / 1000;
+        }
+
         dataTypes[i].encode(cdo, DataType.EncodeType.KEY, milliseconds);
       } else if (dataTypes[i].getType().equals(MySQLType.TypeDate)) {
         long days;
-        // When write date, it will pass `Date` object.
+        // When writing `Date`, it will pass `Date` object.
         // When indexScan or tableScan, it will pass `Long` object.
         // It's a compromise here since we don't have a good way to make them consistent.
         if (data[i] instanceof Date) {
