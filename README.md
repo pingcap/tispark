@@ -13,7 +13,7 @@ Read the [Quick Start](./docs/userguide.md).
 
 ## Getting TiSpark
 
-+ Currently, TiSpark 2.4.3, 2.5.0 is the latest stable version, which is highly recommended. You can get compatibility information from the [table](##-How-to-choose-TiSpark-Version). Please follow the [document](./docs/userguide.md).
++ Currently, TiSpark 2.4.3, 2.5.0 is the latest stable version, which is highly recommended. You can get compatibility information from the [table](#How-to-choose-TiSpark-Version). Please follow the [document](./docs/userguide.md).
 
 + If you are using TiDB-5.0 and Spark 2.3.0+/2.4.0+, TiSpark 2.4.3 is recommended.
 
