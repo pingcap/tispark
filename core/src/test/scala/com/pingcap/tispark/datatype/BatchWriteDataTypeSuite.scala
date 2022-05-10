@@ -549,6 +549,52 @@ class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test
     }
   }
 
+  test("Test timestamp pk clustered") {
+    jdbcUpdate(s"""
+                  |create table $dbtable(
+                  |i timestamp primary key CLUSTERED,
+                  |c1 varchar(64)
+                  |)
+      """.stripMargin)
+    val schema = StructType(List(StructField("i", TimestampType), StructField("c1", StringType)))
+    val timeInLong = Calendar.getInstance().getTimeInMillis
+    val timeInLong1 = timeInLong + 12345
+    val row1 = Row(new Timestamp(timeInLong), "test")
+    val row2 = Row(new Timestamp(timeInLong1), "spark")
+    var data = List(row1, row2)
+    tidbWrite(data, schema)
+    testTiDBSelect(data)
+
+    val row3 = Row(new Timestamp(timeInLong), "spark")
+    data = List(row1, row3)
+    intercept[TiBatchWriteException] {
+      tidbWrite(data, schema)
+    }
+  }
+
+  test("Test date pk clustered") {
+    jdbcUpdate(s"""
+                  |create table $dbtable(
+                  |i date primary key CLUSTERED,
+                  |c1 varchar(64)
+                  |)
+      """.stripMargin)
+    val schema = StructType(List(StructField("i", StringType), StructField("c1", StringType)))
+    val row1 = Row("2019-06-10", "test")
+    val row2 = Row("2019-06-11", "spark")
+    var data = List(row1, row2)
+    val ref =
+      List(Row(Date.valueOf("2019-06-10"), "test"), Row(Date.valueOf("2019-06-11"), "spark"))
+    tidbWrite(data, schema)
+    testTiDBSelect(ref)
+
+    val row3 = Row("2019-06-10", "spark")
+    data = List(row1, row3)
+    intercept[TiBatchWriteException] {
+      tidbWrite(data, schema)
+    }
+  }
+
   test("Test datetime") {
 
     compareTiDBWriteWithJDBC {
