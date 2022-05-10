@@ -63,24 +63,24 @@ object TiAggregationImpl {
             ._1
 
         val sumsRewriteMap = sums.map {
-          case s @ AggregateExpression(Sum(ref), _, _, _, _) =>
+          case s @ AggregateExpression(r: Sum, _, _, _, _) =>
             // need cast long type to decimal type
             val sum =
-              if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
+              if (r.child.dataType.eq(LongType)) PromotedSum(r.child) else Sum(r.child)
             s.resultAttribute -> s.copy(aggregateFunction = sum, resultId = newExprId)
         }.toMap
 
         // An auxiliary map that maps result attribute IDs of all detected `Average`s to corresponding
         // converted `Sum`s and `Count`s.
         val avgRewriteMap = averages.map {
-          case a @ AggregateExpression(Average(ref), _, _, _, _) =>
+          case a @ AggregateExpression(r: Average, _, _, _, _) =>
             // We need to do a type promotion on Sum(Long) to avoid LongType overflow in Average rewrite
             // scenarios to stay consistent with original spark's Average behaviour
             val sum =
-              if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
+              if (r.child.dataType.eq(LongType)) PromotedSum(r.child) else Sum(r.child)
             a.resultAttribute -> Seq(
               a.copy(aggregateFunction = sum, resultId = newExprId),
-              a.copy(aggregateFunction = Count(ref), resultId = newExprId))
+              a.copy(aggregateFunction = Count(r.child), resultId = newExprId))
         }.toMap
 
         val sumRewrite = sumsRewriteMap.map {

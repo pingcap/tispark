@@ -122,7 +122,7 @@ class BasePlanTest extends BaseTiSparkTest {
   def getEstimatedRowCount[T](df: Dataset[T], tableName: String): Double =
     extractTiSparkPlans(df).collect { extractDAGRequest }.head.getEstimatedCount
 
-  def toPlan[T](df: Dataset[T]): SparkPlan = df.queryExecution.executedPlan
+  def toPlan[T](df: Dataset[T]): SparkPlan = df.queryExecution.sparkPlan
 
   private def fail[T](df: Dataset[T], message: String, throwable: Throwable): Unit = {
     df.explain

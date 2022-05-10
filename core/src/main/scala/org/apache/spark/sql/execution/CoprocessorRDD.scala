@@ -111,7 +111,6 @@ case class ColumnarRegionTaskExec(
     dagRequest: TiDAGRequest,
     tiConf: TiConfiguration,
     ts: TiTimestamp,
-    @transient private val session: TiSession,
     @transient private val sparkSession: SparkSession)
     extends UnaryExecNode {
 
@@ -390,5 +389,9 @@ case class ColumnarRegionTaskExec(
 
   override protected def doExecute(): RDD[InternalRow] = {
     WholeStageCodegenExec(this)(codegenStageId = 0).execute()
+  }
+
+  protected def withNewChildInternal(newChild: SparkPlan): ColumnarRegionTaskExec = {
+    copy(child = newChild)
   }
 }

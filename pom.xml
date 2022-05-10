@@ -167,6 +167,7 @@
         <module>core</module>
         <module>spark-wrapper/spark-3.0</module>
         <module>spark-wrapper/spark-3.1</module>
+        <module>spark-wrapper/spark-3.2</module>
         <module>assembly</module>
     </modules>
 
@@ -179,6 +180,16 @@
             <properties>
                 <spark.version.compile>3.1.1</spark.version.compile>
                 <spark.version.test>3.1.1</spark.version.test>
+            </properties>
+        </profile>
+        <profile>
+            <id>spark-3.2.1</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <spark.version.compile>3.2.1</spark.version.compile>
+                <spark.version.test>3.2.1</spark.version.test>
             </properties>
         </profile>
         <profile>

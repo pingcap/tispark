@@ -169,8 +169,10 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   test(f"Show tables should not contain invisible table") {
     noException should be thrownBy spark.sql(s"use $databaseWithPrefix")
 
+    // spark 3.2 add isTemporary col when `show tables`, we need to exclude it.
     val tables = spark
       .sql(s"show tables")
+      .drop("isTemporary")
       .collect()
       .map(row => row.toString())
       .toList
