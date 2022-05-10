@@ -30,6 +30,7 @@
         <joda-convert.version>1.9.2</joda-convert.version>
         <proto.folder>${basedir}/proto</proto.folder>
         <mockito.version>2.28.2</mockito.version>
+        <netty.tcnative.version>2.0.34.Final</netty.tcnative.version>
     </properties>
 
     <dependencies>
@@ -110,6 +111,11 @@
             <groupId>org.joda</groupId>
             <artifactId>joda-convert</artifactId>
             <version>${joda-convert.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-tcnative-boringssl-static</artifactId>
+            <version>${netty.tcnative.version}</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
