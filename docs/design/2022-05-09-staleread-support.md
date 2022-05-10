@@ -53,11 +53,13 @@ PD TSO is a globally unique time service provided by PD, it consists of physical
 
 
 ### Update TiCatalog's meta
-TiSpark uses TiCatalog to provide schema for catalyst, TiCatalog's meta contains the TiKV catalog.
+TiSpark uses TiCatalog to provide schema for catalyst, TiCatalog's meta is provided by TiKV catalog.
 - TiCatalog is the Catalog plugin provided by Spark
 - TiKV catalog can provide schema with the current TSO
 
-TiSpark needs schema with specified TSO in stale read. So, we introduce `snapShotCatalog` to do this and update TiCatalog's meta with `snapShotCatalog`
+In order to update TiCatalog's meta
+- TiSpark needs catalog provides schema with specified TSO in stale read. So, we introduce `snapShotCatalog` to do this and update TiCatalog's meta with `snapShotCatalog`
+- TiCatalog's schema will be used in analyzer, so we inject parser to update TiCatalog's meta before it be used.
 
 ![image alt text](imgs/stale-read/meta.png)
 
