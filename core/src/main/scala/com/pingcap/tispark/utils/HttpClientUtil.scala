@@ -46,12 +46,11 @@ class HttpClientUtil {
         if (headers != null) headers else Map("Content-Type" -> "application/json")
 
       val resp = Http(url).postData(msgString).headers(header).asString
-      checkResp(resp)
+      checkResp(url, resp)
 
       resp
     } catch {
       case e: Throwable =>
-        logger.error("Failed to send HTTP POST request")
         throw e
     }
   }
@@ -69,19 +68,19 @@ class HttpClientUtil {
         if (headers != null) headers else Map("Content-Type" -> "application/json")
 
       val resp = Http(url).headers(header).asString
-      checkResp(resp)
+      checkResp(url, resp)
 
       resp
     } catch {
       case e: Throwable =>
-        logger.error("Failed to send HTTP GET request")
         throw e
     }
   }
 
-  private def checkResp(resp: HttpResponse[String]): Unit = {
+  private def checkResp(url: String, resp: HttpResponse[String]): Unit = {
     if (!resp.isSuccess) {
-      logger.error("failed to get HTTP request: %s, response: %s, code %d", resp.body, resp.code)
+      logger.info(
+        s"Failed to get HTTP request: ${url}, response: ${resp.body}, code ${resp.code}")
     }
   }
 }

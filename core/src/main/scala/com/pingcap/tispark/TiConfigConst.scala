@@ -56,4 +56,6 @@ object TiConfigConst {
 
   val CHUNK_CODEC_FORMAT: String = "chunk"
   val DEFAULT_CODEC_FORMAT: String = "chblock"
+
+  val TELEMETRY_ENABEL: String = "spark.tispark.telemetry.enable"
 }

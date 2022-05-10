@@ -77,7 +77,7 @@ object TiSparkTeleInfo {
       pDStatus.version
     } catch {
       case e: Throwable =>
-        logger.warn("Failed to get PD version", e)
+        logger.info("Failed to get PD version " + e.getMessage)
         "unknown"
     }
   }

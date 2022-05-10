@@ -26,8 +26,7 @@ import org.slf4j.LoggerFactory
  */
 class Telemetry {
   private val logger = LoggerFactory.getLogger(getClass.getName)
-  // TODO need a real url
-  private var url = "https://127.0.0.1:2379"
+  private var url = "https://telemetry.pingcap.com/api/v1/tispark/report"
 
   /**
    * Send telemetry message.
@@ -48,7 +47,7 @@ class Telemetry {
     try {
       httpClient.postJSON(url, msg)
     } catch {
-      case e: Throwable => logger.warn("Failed to report telemetry", e)
+      case e: Throwable => logger.info("Failed to report telemetry. " + e.getMessage)
     }
   }
 

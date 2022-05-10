@@ -16,6 +16,7 @@
 
 package org.apache.spark.sql
 
+import com.pingcap.tispark.TiConfigConst.TELEMETRY_ENABEL
 import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tispark.TiSparkInfo
 import com.pingcap.tispark.telemetry.TelemetryRule
@@ -121,7 +122,7 @@ object TiExtensions {
    */
   def telemetryEnable(sparkSession: SparkSession): Boolean = {
     sparkSession.sparkContext.conf
-      .get("spark.tispark.telemetry.enable", "true")
+      .get(TELEMETRY_ENABEL, "true")
       .toBoolean
   }
 }

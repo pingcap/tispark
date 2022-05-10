@@ -19,6 +19,7 @@ package com.pingcap.tispark.telemetry
 import org.apache.spark.sql.{SparkSession, TiExtensions}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.slf4j.LoggerFactory
+import java.util.concurrent.CompletableFuture
 
 /**
  * A telemetry rule injected into Spark.
@@ -29,13 +30,23 @@ import org.slf4j.LoggerFactory
 case class TelemetryRule(sparkSession: SparkSession) extends (LogicalPlan => Unit) {
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
-  if (TiExtensions.telemetryEnable(sparkSession)) {
-    val telemetry = new Telemetry
-    val teleMsg = new TeleMsg(sparkSession)
-    if (teleMsg.shouldSendMsg) {
-      telemetry.report(teleMsg)
+  val task: Runnable = () => {
+    try {
+      val telemetry = new Telemetry
+      val teleMsg = new TeleMsg(sparkSession)
+      if (teleMsg.shouldSendMsg) {
+        telemetry.report(teleMsg)
+      }
+    } catch {
+      case e: Throwable =>
+        logger.info("Failed to send telemetry message. " + e.getMessage)
+    } finally {
       logger.info("Telemetry done")
     }
+  }
+
+  if (TiExtensions.telemetryEnable(sparkSession)) {
+    CompletableFuture.runAsync(task)
   }
 
   override def apply(plan: LogicalPlan): Unit = plan

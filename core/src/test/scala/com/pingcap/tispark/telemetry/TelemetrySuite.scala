@@ -57,7 +57,7 @@ class TelemetrySuite extends SharedSQLContext {
 
   test("test get TiDB version") {
     val tiSparkTeleInfo = TiSparkTeleInfo.getTiSparkTeleInfo()
-    assert(!tiSparkTeleInfo.get("tidb_version").toString.equals("unknown"))
+    assert(!tiSparkTeleInfo.get("tidb_version").contains("unknown"))
   }
 }
 
