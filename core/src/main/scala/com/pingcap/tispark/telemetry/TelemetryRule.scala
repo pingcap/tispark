@@ -34,9 +34,7 @@ case class TelemetryRule(sparkSession: SparkSession) extends (LogicalPlan => Uni
     try {
       val telemetry = new Telemetry
       val teleMsg = new TeleMsg(sparkSession)
-      if (teleMsg.shouldSendMsg) {
-        telemetry.report(teleMsg)
-      }
+      telemetry.report(teleMsg)
     } catch {
       case e: Throwable =>
         logger.info("Failed to send telemetry message. " + e.getMessage)
@@ -45,6 +43,11 @@ case class TelemetryRule(sparkSession: SparkSession) extends (LogicalPlan => Uni
     }
   }
 
+  /**
+   *  Telemetry message should only be sent once when a Spark application injects rule at startup.
+   *  Don't set telemetry task in apply(). If set like that, telemetry will be sent every time the TelemetryRule
+   *  is executed.
+   */
   if (TiExtensions.telemetryEnable(sparkSession)) {
     CompletableFuture.runAsync(task)
   }

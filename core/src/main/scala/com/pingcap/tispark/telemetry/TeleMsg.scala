@@ -18,7 +18,6 @@ package com.pingcap.tispark.telemetry
 
 import com.pingcap.tispark.utils.SystemInfoUtil
 import org.apache.spark.sql.SparkSession
-
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -33,28 +32,6 @@ class TeleMsg(sparkSession: SparkSession) {
   val hardware: Map[String, Any] = generateHardwareInfo()
   val instance: Map[String, Any] = TiSparkTeleInfo.getTiSparkTeleInfo()
   val configuration: Map[String, String] = TiSparkTeleConf.getTiSparkTeleConf()
-
-  // judge this message should be sent or not
-  private var state = MsgState.UNSENT
-
-  /**
-   * Message sending strategy.
-   * Now strategy: the message is sent only once.
-   *
-   * @return True means that msg should send, False means shouldn't.
-   */
-  def shouldSendMsg: Boolean = {
-    if (state == MsgState.UNSENT) true else false
-  }
-
-  /**
-   * Change message state.
-   *
-   * @param msgState MsgState.UNSENT or MsgState.SENT
-   */
-  def changeState(msgState: MsgState.Value): Unit = {
-    this.state = msgState
-  }
 
   private def setAppId(): String = {
     sparkSession.sparkContext.applicationId
@@ -72,9 +49,4 @@ class TeleMsg(sparkSession: SparkSession) {
       "memory" -> SystemInfoUtil.getMemoryInfo,
       "disks" -> SystemInfoUtil.getDisks)
   }
-}
-
-object MsgState extends Enumeration {
-  val SENT = Value
-  val UNSENT = Value
 }

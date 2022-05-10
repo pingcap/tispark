@@ -34,8 +34,6 @@ class Telemetry {
    * @param msg the msg sent to telemetry server
    */
   def report(msg: TeleMsg): Unit = {
-    // Don't try again even if the message failed to be sent
-    msg.changeState(MsgState.SENT)
     val httpClient = new HttpClientUtil
 
     val mapper = new ObjectMapper()
@@ -45,6 +43,7 @@ class Telemetry {
     logger.info("Telemetry report: " + msgString)
 
     try {
+      // Don't try again even if the message failed to be sent
       httpClient.postJSON(url, msg)
     } catch {
       case e: Throwable => logger.info("Failed to report telemetry. " + e.getMessage)

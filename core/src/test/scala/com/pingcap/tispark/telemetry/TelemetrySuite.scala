@@ -25,6 +25,7 @@ import com.sun.net.httpserver.{
   HttpsServer
 }
 import org.apache.spark.sql.test.SharedSQLContext
+import org.scalatest.Matchers.{be, noException}
 
 import java.net.InetSocketAddress
 
@@ -48,11 +49,12 @@ class TelemetrySuite extends SharedSQLContext {
   }
 
   test("test telemetry") {
-    val telemetry = new Telemetry
-    telemetry.setUrl("http://127.0.0.1:8091/test")
-    val teleMsg = new TeleMsg(_sparkSession)
-    telemetry.report(teleMsg)
-    assert(!teleMsg.shouldSendMsg)
+    noException should be thrownBy {
+      val telemetry = new Telemetry
+      telemetry.setUrl("http://127.0.0.1:8091/test")
+      val teleMsg = new TeleMsg(_sparkSession)
+      telemetry.report(teleMsg)
+    }
   }
 
   test("test get TiDB version") {
