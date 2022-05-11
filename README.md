@@ -7,81 +7,6 @@
 
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer complex OLAP queries. It enjoys the merits of both the Spark platform and the distributed clusters of TiKV while seamlessly integrated to TiDB, a distributed OLTP database, to provide one-stop Hybrid Transactional/Analytical Processing (HTAP) solutions for online transactions and analyses.
 
-## Quick start
-
-Read the [Quick Start](./docs/userguide.md).
-
-## Getting TiSpark
-
-+ Currently, TiSpark 2.4.3, 2.5.0 is the latest stable version, which is highly recommended. You can get compatibility information from the [table](#How-to-choose-TiSpark-Version). Please follow the [document](./docs/userguide.md).
-
-+ If you are using TiDB-5.0 and Spark 2.3.0+/2.4.0+, TiSpark 2.4.3 is recommended.
-
-+ If you are using Spark 3.0/3.1, TiSpark 2.5.0 is recommended.
-  
-+ TiSpark 1.2.1 is compatible with Spark 2.1.0+, which is not supported anymore 
-  - If you still want to use TiSpark 1.2.1, follow the [document for Spark 2.1](./docs/userguide_spark2.1.md).
-
-You might also [build from sources](#how-to-build-from-sources) to try the new features on TiSpark master branch.
-
-If you are using maven (recommended), add the following code to your `pom.xml`:
-```xml
-<dependencies>
-    <dependency>
-      <groupId>com.pingcap.tispark</groupId>
-      <artifactId>tispark-assembly</artifactId>
-      <version>2.5.0</version>
-    </dependency>
-</dependencies>
-```
-
-For TiSpark-2.4.x, you need to specify the scala version:
-```xml
-<dependencies>
-    <dependency>
-      <groupId>com.pingcap.tispark</groupId>
-      <artifactId>tispark-assembly</artifactId>
-      <version>2.4.3-scala_${scala.binary.version}</version>
-    </dependency>
-</dependencies>
-```
-
-For other build tools, visit <https://search.maven.org/> and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap). This search also lists all the available modules of TiSpark including tikv-client.
-
-You can download the nightly version (master branch) [here](https://download.pingcap.org/tispark-assembly-nightly-linux-amd64.tar.gz).
-
-## How to build from sources
-
-TiSpark now supports Spark 2.3.0+、2.4.0+、3.0.0+ and 3.1.0+. The earlier TiSpark versions for Spark 2.1.0+ are not supported anymore. 
-
-Currently `java8` is the only choice to build TiSpark, run `mvn -version` to check.
-
-```
-git clone https://github.com/pingcap/tispark.git
-```
-
-To build all TiSpark modules from sources, run the following command under the TiSpark root directory:
-
-```
-mvn clean install -Dmaven.test.skip=true
-```
-
-To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
-
-## How to choose TiSpark Version
-
-| TiSpark version | TiDB、TiKV、PD version | Spark version | Scala version |
-| ---------------  | -------------------- | ------------- | ------------- |
-| 2.4.x-scala_2.11 | 5.x，4.x             | 2.3.x，2.4.x   | 2.11          |
-| 2.4.x-scala_2.12 | 5.x，4.x             | 2.4.x         | 2.12          |
-| 2.5.x            | 5.x，4.x             | 3.0.x，3.1.x   | 2.12          |
-
-## How to upgrade from Spark 2.1 to Spark 2.3/2.4
-
-For the users of Spark 2.1 who wish to upgrade to the latest TiSpark version on Spark 2.3/2.4, download or install Spark 2.3+/2.4+ by following the instructions on [Apache Spark Site](http://spark.apache.org/downloads.html) and overwrite the old spark version in `$SPARK_HOME`.
-
-## TiSpark Architecture
-
 The figure below show the architecture of TiSpark.
 
 ![architecture](./docs/architecture.png)
@@ -95,83 +20,18 @@ TiSpark relies on the availability of TiKV clusters and PDs. You also need to se
 
 Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](https://github.com/pingcap/tispark/tree/master/tikv-client) library.
 
-## Quick Start
-### Setup
-Ensure that you have below configs in `spark-defaults.conf` .
-```
-spark.sql.extensions  org.apache.spark.sql.TiExtensions
-spark.tispark.pd.addresses  ${your_pd_adress}
-```
-
-For TiSpark version >= 2.5.0, please add the following additional configuration to enable `Catalog` provided by Spark 3
-```
-spark.sql.catalog.tidb_catalog  org.apache.spark.sql.catalyst.catalog.TiCatalog
-spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_adress}
-```
-
-### Start Spark
-
-```
-./bin/spark-shell --jars /wherever-it-is/tispark-${name_with_version}.jar
-```
-### Get TiSpark Version
-
-```
-spark.sql("select ti_version()").collect
-```
-### Read with TiSpark
-For TiSpark version 2.4.x:
-
-```
-spark.sql("select count(*) from ${database}.${table}").show
-```
-
-For TiSpark version >= 2.5.0:
-
-```
-spark.sql("use tidb_catalog")
-spark.sql("select count(*) from ${database}.${table}").show
-```
-
-### Write with TiSpark
-TiSpark natively supports writing data to TiKV via Spark Data Source API and guarantees ACID.
-
-For example:
-
-```scala
-// tispark will send `lock table` command to TiDB via JDBC
-val tidbOptions: Map[String, String] = Map(
-  "tidb.addr" -> "127.0.0.1",
-  "tidb.password" -> "",
-  "tidb.port" -> "4000",
-  "tidb.user" -> "root",
-  "spark.tispark.pd.addresses" -> "127.0.0.1:2379"
-)
-
-val customer = spark.sql("select * from customer limit 100000")
-
-customer.write
-.format("tidb")
-.option("database", "tpch_test")
-.option("table", "cust_test_select")
-.options(tidbOptions)
-.mode("append")
-.save()
-```
-
-See [here](./docs/datasource_api_userguide.md) for more details.
-
-### Delete with TiSpark
-TiSpark >= 2.6.0 supports DELETE
-
-```
-spark.sql("use tidb_catalog")
-spark.sql("delete from ${database}.${table} where xxx").show
-```
- See [here](./docs/delete_userguide.md) for more details.
-
-## Benchmark
-See [here](https://github.com/pingcap/tispark/wiki/TiSpark-BenchMark) for more details.
+## TOC
+- [Getting TiSpark](https://github.com/pingcap/tispark/wiki/Getting-TiSpark)
+- [Getting Started](https://github.com/pingcap/tispark/wiki/Getting-Started)
+- [User Guide](https://github.com/pingcap/tispark/blob/master/docs/userguide.md)
+- [Configuration](#configuration)
+- [Authorization and authentication](./docs/authorization_userguide.md)
+- [Compatibility with TiDB](compatibility-with-tidb)
+- [BenchMark](https://github.com/pingcap/tispark/wiki/TiSpark-Benchmark)
+- [Limitations](limitations)
+- [Dev Guide](https://github.com/pingcap/tispark/wiki/Dev-Guide)
+- [Example Programs](https://github.com/pingcap/tispark-test/tree/master/tispark-examples)
+- [Follow us](follow-us)
 
 ## Configuration
 
@@ -232,7 +92,7 @@ spark.tispark.jdbc.client_cert_password                        clientstore_passw
 For how to open TiDB TLS, see [here](https://docs.pingcap.com/tidb/dev/enable-tls-between-clients-and-servers)．
 For how to generate a JAVA key store, see [here](https://dev.mysql.com/doc/connector-j/5.1/en/connector-j-reference-using-ssl.html)．
 
-## `Log4j` Configuration
+### `Log4j` Configuration
 
 When you start `spark-shell` or `spark-sql` and run query, you might see the following warnings:
 ```
@@ -250,19 +110,12 @@ To mute them, append the following text to `${SPARK_HOME}/conf/log4j.properties`
 log4j.logger.org.apache.hadoop.hive.metastore.ObjectStore=ERROR
 ```
 
-## Time Zone
+### Time Zone Configuration
 
 Set time zone by using the `-Duser.timezone` system property (for example, `-Duser.timezone=GMT-7`), which affects the `Timestamp` type.
 
 Do not use `spark.sql.session.timeZone`.
 
-## Statistics information
-
-For how TiSpark can benefit from TiDB's statistic information, see [here](./docs/userguide.md).
-
-## Authorization and authentication
-
-See [here](./docs/authorization_userguide.md).
 
 
 ## Compatibility with TiDB
@@ -287,18 +140,6 @@ In most cases, TiSpark use a full table scan on partition tables. Only in certai
 
 TiSpark currently supports retrieving data from table with `Expression Index`, but the `Expression Index` will not be used by the planner of TiSpark.
 
-## Example Programs
-There are some [sample programs](https://github.com/pingcap/tispark-test/tree/master/tispark-examples) for TiSpark. You can run them locally or on a cluster following the document.
-
-## How to test
-
-TiDB uses [docker-compose](https://docs.docker.com/compose/) to provide the TiDB cluster service which allows you to run test across different platforms.
-
-It is recommended to install Docker to conduct the test locally, or to set up your own TiDB cluster locally as you wish.
-
-For the former method, you can use `docker-compose up -d` to launch TiDB cluster service under the home directory of TiSpark. To see the logs of TiDB cluster, launch TiDB cluster service via `docker-compose up`. To shut down the entire TiDB cluster service, use `docker-compose down`. All the data is stored in the `data` directory at the root of this project. You can change it as you like.
-
-For more details about the test, see [here](./core/src/test/Readme.md).
 
 ## Limitations
 
