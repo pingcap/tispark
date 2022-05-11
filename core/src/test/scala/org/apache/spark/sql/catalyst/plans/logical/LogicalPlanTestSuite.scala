@@ -30,11 +30,13 @@ class LogicalPlanTestSuite extends BasePlanTest {
     spark.sql(
       "SET spark.sql.optimizer.excludedRules=org.apache.spark.sql.catalyst.optimizer.CombineLimits")
     val df = spark.sql("select id from test_l limit 1").limit(21)
-    if (!extractDAGRequests(df).head.toString.contains("Limit")) {
+    val DAGRequest = extractDAGRequests(df).head.toString
+    spark.sql("SET spark.sql.optimizer.excludedRules=''")
+    if (DAGRequest.contains("Limit")) {
       fail("Limit not push down")
     }
-
   }
+
   test("fix Residual Filter containing wrong info") {
     val df = spark
       .sql("select * from full_data_type_table where tp_mediumint > 0 order by tp_int")
