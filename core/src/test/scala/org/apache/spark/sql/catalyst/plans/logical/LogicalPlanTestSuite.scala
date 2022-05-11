@@ -32,7 +32,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     val df = spark.sql("select id from test_l limit 1").limit(21)
     val DAGRequest = extractDAGRequests(df).head.toString
     spark.sql("SET spark.sql.optimizer.excludedRules=''")
-    if (DAGRequest.contains("Limit")) {
+    if (!DAGRequest.contains("Limit")) {
       fail("Limit not push down")
     }
   }
