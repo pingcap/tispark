@@ -6,6 +6,7 @@
 
 This document introduces how to set up and use TiSpark, which requires some basic knowledge of Apache Spark. Refer to [Spark website](https://spark.apache.org/docs/latest/index.html) for details.
 
+# TOC
 * [Overview](#overview)
 * [Prerequisites for setting up TiSpark](#prerequisites-for-setting-up-tispark)
 * [Recommended deployment configurations](#recommended-deployment-configurations)
