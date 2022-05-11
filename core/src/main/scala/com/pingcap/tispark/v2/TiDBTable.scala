@@ -22,12 +22,12 @@ import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
-import com.pingcap.tispark.v2.sink.TiDBWriterBuilder
+import com.pingcap.tispark.v2.sink.TiDBWriteBuilder
 import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions}
 import com.pingcap.tispark.TiTableReference
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
-import org.apache.spark.sql.catalyst.util.{DateFormatter, DateTimeUtils, TimestampFormatter}
+import org.apache.spark.sql.catalyst.util.{DateTimeUtils, TimestampFormatter}
 import org.apache.spark.sql.connector.catalog.{
   SupportsDelete,
   SupportsRead,
@@ -61,7 +61,7 @@ import org.apache.spark.sql.sources.{
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
-import org.apache.spark.sql.{SQLContext, SparkSession, execution}
+import org.apache.spark.sql.{SQLContext, execution}
 import org.slf4j.LoggerFactory
 
 import java.sql.{Date, SQLException, Timestamp}
@@ -129,7 +129,6 @@ case class TiDBTable(
   override def capabilities(): util.Set[TableCapability] = {
     val capabilities = new util.HashSet[TableCapability]
     capabilities.add(TableCapability.BATCH_READ)
-    capabilities.add(TableCapability.V1_BATCH_WRITE)
     capabilities
   }
 
@@ -159,7 +158,7 @@ case class TiDBTable(
     }
     // Get TiDBOptions
     val tiDBOptions = new TiDBOptions(scalaMap)
-    TiDBWriterBuilder(info, tiDBOptions, sqlContext)
+    TiDBWriteBuilder(info, tiDBOptions, sqlContext)
   }
 
   override def deleteWhere(filters: Array[Filter]): Unit = {
@@ -247,7 +246,6 @@ object TiDBTable {
       dagRequest,
       session.getConf,
       session.getTimestamp,
-      session,
       sqlContext.sparkSession)
   }
 
@@ -298,10 +296,7 @@ object TiDBTable {
             DateTimeUtils.getZoneId(SQLConf.get.sessionLocalTimeZone))
           s"'${timestampFormatter.format(timestampValue)}'"
         case dateValue: Date => "'" + dateValue + "'"
-        case dateValue: LocalDate =>
-          val dateFormatter = DateFormatter(
-            DateTimeUtils.getZoneId(SQLConf.get.sessionLocalTimeZone))
-          s"'${dateFormatter.format(dateValue)}'"
+        case dateValue: LocalDate => "'" + dateValue + "'"
         case arrayValue: Array[Any] => arrayValue.map(compileValue).mkString(", ")
         case _ => value
       }

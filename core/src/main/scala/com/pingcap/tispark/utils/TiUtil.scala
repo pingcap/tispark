@@ -178,6 +178,23 @@ object TiUtil {
       tiConf.setKvClientConcurrency(conf.get(TiConfigConst.KV_CLIENT_CONCURRENCY).toInt)
     }
 
+    // TLS
+    if (conf.contains(TiConfigConst.TIKV_TLS_ENABLE)) {
+      tiConf.setTlsEnable(conf.get(TiConfigConst.TIKV_TLS_ENABLE).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_TRUST_CERT_COLLECTION)) {
+      tiConf.setTrustCertCollectionFile(conf.get(TiConfigConst.TIKV_TRUST_CERT_COLLECTION))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_KEY_CERT_CHAIN)) {
+      tiConf.setKeyCertChainFile(conf.get(TiConfigConst.TIKV_KEY_CERT_CHAIN))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_KEY_FILE)) {
+      tiConf.setKeyFile(conf.get(TiConfigConst.TIKV_KEY_FILE))
+    }
+
     tiConf
   }
 

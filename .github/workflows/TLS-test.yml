@@ -1,0 +1,38 @@
+name: TLS test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: '8'
+          distribution: 'adopt'
+          cache: maven
+
+      - name: add host and copy properties
+        run: | 
+          echo -e "127.0.0.1   pd \n127.0.0.1   tikv" | sudo tee -a /etc/hosts
+          cp core/src/test/resources/tidb_config.properties.TLS.template core/src/test/resources/tidb_config.properties
+
+      - name: build docker
+        run: docker-compose -f docker-compose-TiDB-TLS.yaml up -d
+
+      - name: build
+        run: mvn clean package -Dmaven.test.skip=true -B
+
+      - name: test
+        run: mvn test -Dtest=moo -DwildcardSuites=JDBCTLSSuite,TiKVClientTLSSuite,TiSparkTLSSuite -DfailIfNoTests=false
