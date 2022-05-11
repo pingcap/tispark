@@ -69,7 +69,8 @@ object TiExprUtils {
       case _: Average =>
         throw new IllegalArgumentException("Should never be here")
 
-      case f @ Sum(BasicExpression(arg)) =>
+      case f: Sum =>
+        val arg = BasicExpression.unapply(f.child).get
         addingSumAggToDAgReq(meta, dagRequest, f, arg)
 
       case f @ PromotedSum(BasicExpression(arg)) =>
@@ -175,7 +176,15 @@ object TiExprUtils {
       tiDBRelation: TiDBTable,
       blocklist: ExpressionBlocklist): Boolean =
     aggExpr.aggregateFunction match {
-      case Average(_) | Sum(_) | SumNotNullable(_) | PromotedSum(_) | Min(_) | Max(_) =>
+      case _: Average =>
+        !aggExpr.isDistinct &&
+          aggExpr.aggregateFunction.children
+            .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))
+      case _: Sum =>
+        !aggExpr.isDistinct &&
+          aggExpr.aggregateFunction.children
+            .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))
+      case SumNotNullable(_) | PromotedSum(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
             .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))
