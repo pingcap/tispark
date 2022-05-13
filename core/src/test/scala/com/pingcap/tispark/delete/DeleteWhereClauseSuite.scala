@@ -48,6 +48,7 @@ class DeleteWhereClauseSuite extends BaseBatchWriteTest("test_delete_where_claus
     "s<'0'",
     "s>='0'",
     "s<='0'",
+    "s ='0\\'0'",
     "s>'0' and s<'2'",
     "s<'0' or s>'2'",
     "s like '%1%'",
