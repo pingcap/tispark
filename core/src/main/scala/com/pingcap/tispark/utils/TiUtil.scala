@@ -280,9 +280,10 @@ object TiUtil {
         val ts = java.lang.Long.parseLong(str)
         new TiTimestamp(ts, 0L)
       } catch {
-        case _: Throwable =>
+        case e: Throwable =>
           throw new IllegalArgumentException(
-            "Parse " + TiConfigConst.STALE_READ + " fail: " + str)
+            "Fail to Parse " + TiConfigConst.STALE_READ + ": " + str,
+            e)
       }
     }
   }
