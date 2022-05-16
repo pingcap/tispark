@@ -555,7 +555,7 @@ class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test
     }
     jdbcUpdate(s"""
                   |create table $dbtable(
-                  |i timestamp primary key /*T![clustered_index] CLUSTERED */,
+                  |i timestamp primary key CLUSTERED,
                   |c1 varchar(64)
                   |)
       """.stripMargin)
@@ -581,7 +581,7 @@ class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test
     }
     jdbcUpdate(s"""
                   |create table $dbtable(
-                  |i date primary key /*T![clustered_index] CLUSTERED */,
+                  |i date primary key CLUSTERED,
                   |c1 varchar(64)
                   |)
       """.stripMargin)
