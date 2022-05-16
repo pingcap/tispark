@@ -28,17 +28,17 @@ class TeleMsg(sparkSession: SparkSession) {
 
   // telemetry message entry
   var id: String = setAppId()
-  val time: String = setTime()
+  val time: Long = setTime()
   val hardware: Map[String, Any] = generateHardwareInfo()
   val instance: Map[String, Any] = TiSparkTeleInfo.getTiSparkTeleInfo()
-  val configuration: Map[String, String] = TiSparkTeleConf.getTiSparkTeleConf()
+  val configuration: Map[String, Any] = TiSparkTeleConf.getTiSparkTeleConf()
 
   private def setAppId(): String = {
     sparkSession.sparkContext.applicationId
   }
 
-  private def setTime(): String = {
-    new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date)
+  private def setTime(): Long = {
+    (System.currentTimeMillis() / 1000L)
   }
 
   private def generateHardwareInfo(): Map[String, Any] = {

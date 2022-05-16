@@ -26,8 +26,8 @@ import org.slf4j.LoggerFactory
 object TiSparkTeleConf {
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
-  private var defaultConfMap: Map[String, String] = Map[String, String]()
-  private var tiSparkTeleConf: Map[String, String] = Map[String, String]()
+  private var defaultConfMap: Map[String, Any] = Map[String, Any]()
+  private var tiSparkTeleConf: Map[String, Any] = Map[String, Any]()
 
   generateDefaultConfList()
   generateTiSparkTeleConf()
@@ -37,7 +37,7 @@ object TiSparkTeleConf {
    *
    * @return telemetry message about TiSpark configuration
    */
-  def getTiSparkTeleConf(): Map[String, String] = {
+  def getTiSparkTeleConf(): Map[String, Any] = {
     generateTiSparkTeleConf()
     tiSparkTeleConf
   }
@@ -53,27 +53,38 @@ object TiSparkTeleConf {
   }
 
   private def generateDefaultConfList(): Unit = {
-    defaultConfMap += (TiConfigConst.ALLOW_AGG_PUSHDOWN -> "false")
-    defaultConfMap += (TiConfigConst.ALLOW_INDEX_READ -> "true")
-    defaultConfMap += (TiConfigConst.INDEX_SCAN_BATCH_SIZE -> "20000")
-    defaultConfMap += (TiConfigConst.INDEX_SCAN_CONCURRENCY -> "5")
+    defaultConfMap += (TiConfigConst.ALLOW_AGG_PUSHDOWN -> false)
+    defaultConfMap += (TiConfigConst.ALLOW_INDEX_READ -> true)
+    defaultConfMap += (TiConfigConst.INDEX_SCAN_BATCH_SIZE -> 20000)
+    defaultConfMap += (TiConfigConst.INDEX_SCAN_CONCURRENCY -> 5)
     defaultConfMap += (TiConfigConst.REQUEST_COMMAND_PRIORITY -> "LOW")
     defaultConfMap += (TiConfigConst.REQUEST_ISOLATION_LEVEL -> "SI")
-    defaultConfMap += (TiConfigConst.USE_INDEX_SCAN_FIRST -> "false")
-    defaultConfMap += (TiConfigConst.COPROCESS_STREAMING -> "false")
+    defaultConfMap += (TiConfigConst.USE_INDEX_SCAN_FIRST -> false)
+    defaultConfMap += (TiConfigConst.COPROCESS_STREAMING -> false)
     defaultConfMap += (TiConfigConst.CODEC_FORMAT -> "chblock")
     defaultConfMap += (TiConfigConst.UNSUPPORTED_TYPES -> "")
-    defaultConfMap += (TiConfigConst.CHUNK_BATCH_SIZE -> "1024")
-    defaultConfMap += (TiConfigConst.SHOW_ROWID -> "false")
+    defaultConfMap += (TiConfigConst.CHUNK_BATCH_SIZE -> 1024)
+    defaultConfMap += (TiConfigConst.SHOW_ROWID -> false)
     defaultConfMap += (TiConfigConst.ISOLATION_READ_ENGINES -> "tikv")
-    defaultConfMap += ("spark.sql.auth.enable" -> "false")
+    defaultConfMap += ("spark.sql.auth.enable" -> false)
   }
 
   private def generateTiSparkTeleConf(): Unit = {
     try {
       val sparkConf = SparkSession.active.sessionState.conf.clone()
       for ((conf, defaultValue) <- defaultConfMap) {
-        tiSparkTeleConf += (conf -> sparkConf.getConfString(conf, defaultValue))
+        defaultValue match {
+          case t: Boolean =>
+            tiSparkTeleConf += (conf -> sparkConf
+              .getConfString(conf, defaultValue.toString)
+              .toBoolean)
+          case i: Int =>
+            tiSparkTeleConf += (conf -> sparkConf
+              .getConfString(conf, defaultValue.toString)
+              .toInt)
+          case _ =>
+            tiSparkTeleConf += (conf -> sparkConf.getConfString(conf, defaultValue.toString))
+        }
       }
     } catch {
       case e: Throwable => logger.warn("Failed to get tispark configuration of telemetry", e)

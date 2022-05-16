@@ -70,11 +70,11 @@ object SystemInfoUtil {
    */
   def getCpuPhysicalCore: String = processor.getPhysicalProcessorCount.toString
 
-  def getCpu: Map[String, String] = {
+  def getCpu: Map[String, Any] = {
     Map(
       "model" -> SystemInfoUtil.getCpuName,
-      "logicalCores" -> SystemInfoUtil.getCpuLogicalCores,
-      "physicalCores" -> SystemInfoUtil.getCpuPhysicalCore)
+      "logicalCores" -> SystemInfoUtil.getCpuLogicalCores.toInt,
+      "physicalCores" -> SystemInfoUtil.getCpuPhysicalCore.toInt)
   }
 
   /**
@@ -89,12 +89,11 @@ object SystemInfoUtil {
    *
    * @return A List of {disk name, disk size}
    */
-  def getDisks: ListBuffer[Map[String, String]] = {
-    val disks = new ListBuffer[Map[String, String]]()
+  def getDisks: ListBuffer[Map[String, Any]] = {
+    val disks = new ListBuffer[Map[String, Any]]()
     val diskStore = hal.getDiskStores
     for (i <- 0 until diskStore.size()) {
-      disks.append(
-        Map("name" -> diskStore.get(i).getName, "size" -> diskStore.get(i).getSize.toString))
+      disks.append(Map("name" -> diskStore.get(i).getName, "size" -> diskStore.get(i).getSize))
     }
     disks
   }
