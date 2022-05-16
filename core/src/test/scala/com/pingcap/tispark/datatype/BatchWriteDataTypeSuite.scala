@@ -550,6 +550,9 @@ class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test
   }
 
   test("Test timestamp pk clustered") {
+    if (!supportClusteredIndex) {
+      cancel("currently tidb instance does not support clustered index")
+    }
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i timestamp primary key /*T![clustered_index] CLUSTERED */,
@@ -573,6 +576,9 @@ class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test
   }
 
   test("Test date pk clustered") {
+    if (!supportClusteredIndex) {
+      cancel("currently tidb instance does not support clustered index")
+    }
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i date primary key /*T![clustered_index] CLUSTERED */,
