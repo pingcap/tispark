@@ -288,6 +288,6 @@ object TiUtil {
   }
 
   private def isValidTimestampMill(str: String): Boolean = {
-    StringUtils.isBlank(str) || !StringUtils.isNumeric(str)
+    !StringUtils.isBlank(str) && StringUtils.isNumeric(str)
   }
 }
