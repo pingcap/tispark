@@ -274,7 +274,7 @@ object TiUtil {
   private def parseTimestamp(str: String): TiTimestamp = {
     if (!isValidTimestampMill(str)) {
       throw new IllegalArgumentException(
-        "Invalid value of " + TiConfigConst.STALE_READ + ":" + str)
+        "Invalid value of " + TiConfigConst.STALE_READ + ": " + str)
     } else {
       try {
         val ts = java.lang.Long.parseLong(str)
@@ -282,15 +282,12 @@ object TiUtil {
       } catch {
         case _: Throwable =>
           throw new IllegalArgumentException(
-            "Unknown error to parse" + TiConfigConst.STALE_READ + ":" + str)
+            "Parse " + TiConfigConst.STALE_READ + " fail: " + str)
       }
     }
   }
 
   private def isValidTimestampMill(str: String): Boolean = {
-    if (StringUtils.isBlank(str) || !StringUtils.isNumeric(str)) {
-      return false
-    }
-    str.length() == 13;
+    StringUtils.isBlank(str) || !StringUtils.isNumeric(str)
   }
 }
