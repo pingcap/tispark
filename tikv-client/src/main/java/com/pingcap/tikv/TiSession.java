@@ -144,7 +144,7 @@ public class TiSession implements AutoCloseable {
   }
 
   public TiTimestamp getSnapshotTimestamp() {
-    return snappashotTimestamp == null ? getTimestamp() : snapshotTimestamp;
+    return snapshotTimestamp == null ? getTimestamp() : snapshotTimestamp;
   }
 
   public Snapshot createSnapshotWithSnapshotTimestamp() {
