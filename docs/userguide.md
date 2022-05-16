@@ -6,6 +6,30 @@
 
 This document introduces how to set up and use TiSpark, which requires some basic knowledge of Apache Spark. Refer to [Spark website](https://spark.apache.org/docs/latest/index.html) for details.
 
+# TOC
+* [Overview](#overview)
+* [Prerequisites for setting up TiSpark](#prerequisites-for-setting-up-tispark)
+* [Recommended deployment configurations](#recommended-deployment-configurations)
+   + [For independent deployment of Spark cluster and TiSpark cluster](#for-independent-deployment-of-spark-cluster-and-tispark-cluster)
+   + [For hybrid deployment of TiSpark and TiKV cluster](#for-hybrid-deployment-of-tispark-and-tikv-cluster)
+* [Deploy TiSpark](#deploy-tispark)
+   + [Deploy TiSpark on existing Spark cluster](#deploy-tispark-on-existing-spark-cluster)
+   + [Deploy TiSpark without Spark cluster](#deploy-tispark-without-spark-cluster)
+* [Demonstration](#demonstration)
+* [TiSparkR](#tisparkr)
+* [TiSpark on PySpark](#tispark-on-pyspark)
+* [Use TiSpark with Hive](#use-tispark-with-hive)
+* [Load Spark DataFrame into TiDB using TiDB Connector](#load-spark-dataframe-into-tidb-using-tidb-connector)
+* [Load Spark DataFrame into TiDB using JDBC](#load-spark-dataframe-into-tidb-using-jdbc)
+* [Statistics information](#statistics-information)
+* [Reading partition table from TiDB](#reading-partition-table-from-tidb)
+* [Common port numbers used by Spark cluster](#common-port-numbers-used-by-spark-cluster)
+* [FAQ](#13-faq)
+* [Errors and Exceptions](#14-errors-and-exceptions)
+   + [Netty OutOfDirectMemoryError](#netty-outofdirectmemoryerror)
+   + [Chinese characters are garbled](#chinese-characters-are-garbled)
+   + [GRPC message exceeds maximum size error](#grpc-message-exceeds-maximum-size-error)
+   
 ## Overview
 
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. While enjoying the merits of both the Spark platform and the distributed clusters of TiKV, it is seamlessly integrated with TiDB, the distributed OLTP database, and thus blessed to provide one-stop Hybrid Transactional/Analytical Processing (HTAP) solutions for online transactions and analyses.
@@ -335,7 +359,7 @@ If partition pruning is not applied, TiSpark's reading is equivalent to doing a 
 |Shuffle server  |  `7337`   | spark.shuffle.service.port  |  Optional; it is only applied if you use the external shuffle service.  |
 |  Application web UI  |  `4040`  |  spark.ui.port | If `4040` has been occupied, then `4041` is used. |
 
-## 13. FAQ
+## FAQ
 
 Q: What are the pros and cons of independent deployment as opposed to a shared resource with an existing Spark / Hadoop cluster?
 
@@ -357,7 +381,7 @@ Q: How to use SparkR with TiSpark?
 
 A: Follow [TiSpark on SparkR](../R/README.md).
 
-## 14. Errors and Exceptions
+## Errors and Exceptions
 
 ### Netty OutOfDirectMemoryError
 
