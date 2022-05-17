@@ -10,6 +10,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
@@ -25,7 +26,7 @@ import com.pingcap.tikv.expression.visitor.{
 import com.pingcap.tikv.expression.{AggregateFunction, ByItem, ColumnRef, ExpressionBlocklist}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
-import com.pingcap.tispark.TiDBRelation
+import com.pingcap.tispark.v2.TiDBTable
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.execution.TiConverter.fromSparkType
 
@@ -68,7 +69,8 @@ object TiExprUtils {
       case _: Average =>
         throw new IllegalArgumentException("Should never be here")
 
-      case f @ Sum(BasicExpression(arg)) =>
+      case f: Sum =>
+        val arg = BasicExpression.unapply(f.child).get
         addingSumAggToDAgReq(meta, dagRequest, f, arg)
 
       case f @ PromotedSum(BasicExpression(arg)) =>
@@ -171,10 +173,18 @@ object TiExprUtils {
 
   def isSupportedAggregate(
       aggExpr: AggregateExpression,
-      tiDBRelation: TiDBRelation,
+      tiDBRelation: TiDBTable,
       blocklist: ExpressionBlocklist): Boolean =
     aggExpr.aggregateFunction match {
-      case Average(_) | Sum(_) | SumNotNullable(_) | PromotedSum(_) | Min(_) | Max(_) =>
+      case _: Average =>
+        !aggExpr.isDistinct &&
+          aggExpr.aggregateFunction.children
+            .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))
+      case _: Sum =>
+        !aggExpr.isDistinct &&
+          aggExpr.aggregateFunction.children
+            .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))
+      case SumNotNullable(_) | PromotedSum(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
             .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))
@@ -183,12 +193,12 @@ object TiExprUtils {
 
   def isSupportedBasicExpression(
       expr: Expression,
-      tiDBRelation: TiDBRelation,
+      table: TiDBTable,
       blocklist: ExpressionBlocklist): Boolean = {
     if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG)) return false
 
     BasicExpression.convertToTiExpr(expr).fold(false) { expr: TiExpression =>
-      MetaResolver.resolve(expr, tiDBRelation.table)
+      MetaResolver.resolve(expr, table.table)
       return SupportedExpressionValidator.isSupportedExpression(expr, blocklist)
     }
   }
@@ -199,7 +209,7 @@ object TiExprUtils {
    * @param expr the expression to examine
    * @return whether expression can be pushed down
    */
-  def isPushDownSupported(expr: Expression, source: TiDBRelation): Boolean = {
+  def isPushDownSupported(expr: Expression, source: TiDBTable): Boolean = {
     val nameTypeMap = mutable.HashMap[String, com.pingcap.tikv.types.DataType]()
     source.table.getColumns
       .foreach((info: TiColumnInfo) => nameTypeMap(info.getName) = info.getType)
@@ -229,20 +239,20 @@ object TiExprUtils {
 
   def isSupportedOrderBy(
       expr: Expression,
-      source: TiDBRelation,
+      source: TiDBTable,
       blocklist: ExpressionBlocklist): Boolean =
     isSupportedBasicExpression(expr, source, blocklist) && isPushDownSupported(expr, source)
 
   def isSupportedFilter(
       expr: Expression,
-      source: TiDBRelation,
+      source: TiDBTable,
       blocklist: ExpressionBlocklist): Boolean =
     isSupportedBasicExpression(expr, source, blocklist) && isPushDownSupported(expr, source)
 
   // if contains UDF / functions that cannot be folded
   def isSupportedGroupingExpr(
       expr: NamedExpression,
-      source: TiDBRelation,
+      source: TiDBTable,
       blocklist: ExpressionBlocklist): Boolean =
     isSupportedBasicExpression(expr, source, blocklist) && isPushDownSupported(expr, source)
 }

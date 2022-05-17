@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -548,11 +549,87 @@ class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test
     }
   }
 
-  ignore("Test enum with trailing spaces") {
-    jdbcUpdate(s"create table $dbtable(a enum('a','b '))")
+  test("Test timestamp pk clustered") {
+    if (!supportClusteredIndex) {
+      cancel("currently tidb instance does not support clustered index")
+    }
+    jdbcUpdate(s"""
+                  |create table $dbtable(
+                  |i timestamp primary key CLUSTERED,
+                  |c1 varchar(64)
+                  |)
+      """.stripMargin)
+    val schema = StructType(List(StructField("i", TimestampType), StructField("c1", StringType)))
+    val timeInLong = Calendar.getInstance().getTimeInMillis
+    val timeInLong1 = timeInLong + 12345
+    val row1 = Row(new Timestamp(timeInLong), "test")
+    val row2 = Row(new Timestamp(timeInLong1), "spark")
+    var data = List(row1, row2)
+    tidbWrite(data, schema)
+    testTiDBSelect(data)
 
-    val schema = StructType(List(StructField("a", StringType)))
-    tidbWrite(List(Row("b")), schema, None)
-    compareTiDBSelectWithJDBC(List(Row("b ")), schema, sortCol = "a")
+    val row3 = Row(new Timestamp(timeInLong), "spark")
+    data = List(row1, row3)
+    intercept[TiBatchWriteException] {
+      tidbWrite(data, schema)
+    }
+  }
+
+  test("Test date pk clustered") {
+    if (!supportClusteredIndex) {
+      cancel("currently tidb instance does not support clustered index")
+    }
+    jdbcUpdate(s"""
+                  |create table $dbtable(
+                  |i date primary key CLUSTERED,
+                  |c1 varchar(64)
+                  |)
+      """.stripMargin)
+    val schema = StructType(List(StructField("i", StringType), StructField("c1", StringType)))
+    val row1 = Row("2019-06-10", "test")
+    val row2 = Row("2019-06-11", "spark")
+    var data = List(row1, row2)
+    val ref =
+      List(Row(Date.valueOf("2019-06-10"), "test"), Row(Date.valueOf("2019-06-11"), "spark"))
+    tidbWrite(data, schema)
+    testTiDBSelect(ref)
+
+    val row3 = Row("2019-06-10", "spark")
+    data = List(row1, row3)
+    intercept[TiBatchWriteException] {
+      tidbWrite(data, schema)
+    }
+  }
+
+  test("Test datetime") {
+
+    compareTiDBWriteWithJDBC {
+      case (writeFunc, _) =>
+        jdbcUpdate(s"drop table if exists $dbtable")
+        jdbcUpdate(s"""
+                      |create table $dbtable(
+                      |id varchar(10),
+                      |dt datetime
+                      |)
+      """.stripMargin)
+
+        val rows = List(
+          Row("test0", Timestamp.valueOf("2020-10-10 05:12:03")),
+          Row("test1", Timestamp.valueOf("2020-10-10 19:12:03")),
+          Row("test2", Timestamp.valueOf("1000-01-01 05:12:03")),
+          Row("test3", Timestamp.valueOf("1000-01-01 19:12:03")),
+          Row("test4", Timestamp.valueOf("1000-01-01 00:00:00")),
+          Row("test5", Timestamp.valueOf("0999-12-31 17:00:00")),
+          Row("test6", Timestamp.valueOf("1582-10-04 23:59:59")),
+          Row("test7", Timestamp.valueOf("1582-10-04 16:59:59")),
+          Row("test8", Timestamp.valueOf("1582-10-14 17:00:00")),
+          Row("test9", Timestamp.valueOf("1582-10-15 00:00:00")))
+
+        val schema =
+          StructType(List(StructField("id", StringType), StructField("dt", TimestampType)))
+
+        writeFunc(rows, schema, None)
+        compareTiDBSelectWithJDBC(rows, schema, sortCol = "id")
+    }
   }
 }

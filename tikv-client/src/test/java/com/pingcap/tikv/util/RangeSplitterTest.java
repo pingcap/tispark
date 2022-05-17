@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -278,17 +279,6 @@ public class RangeSplitterTest {
       super(null, null);
       mockRegionMap =
           ranges.stream().collect(Collectors.toMap(kr -> kr, kr -> region(ranges.indexOf(kr), kr)));
-    }
-
-    @Override
-    public TiRegion getRegionById(long regionId) {
-      return mockRegionMap
-          .entrySet()
-          .stream()
-          .filter(e -> e.getValue().getId() == regionId)
-          .findFirst()
-          .get()
-          .getValue();
     }
 
     @Override

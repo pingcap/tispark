@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -29,12 +30,7 @@ import io.grpc.ServerBuilder;
 import io.grpc.Status;
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Errorpb;
@@ -59,6 +55,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   private static final int STALE_COMMAND = 8;
   private static final int STORE_NOT_MATCH = 9;
   private static final int RAFT_ENTRY_TOO_LARGE = 10;
+  static final int WRITE_CONFLICT = 11;
   private int port;
   private Server server;
   private TiRegion region;
@@ -345,6 +342,30 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
     } catch (Exception e) {
       responseObserver.onError(Status.INTERNAL.asRuntimeException());
     }
+  }
+
+  @Override
+  public void kvPrewrite(
+      org.tikv.kvproto.Kvrpcpb.PrewriteRequest request,
+      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.PrewriteResponse> responseObserver) {
+    Kvrpcpb.PrewriteResponse.Builder builder = Kvrpcpb.PrewriteResponse.newBuilder();
+    ByteString key = request.getPrimaryLock();
+    Integer errorCode = errorMap.remove(key);
+    Kvrpcpb.KeyError.Builder errBuilder = Kvrpcpb.KeyError.newBuilder();
+
+    if (errorCode != null) {
+      if (errorCode == ABORT) {
+        errBuilder.setAbort("ABORT");
+      } else if (errorCode == RETRY) {
+        errBuilder.setRetryable("Retry");
+      } else if (errorCode == WRITE_CONFLICT) {
+        Kvrpcpb.WriteConflict.Builder writeConflict = Kvrpcpb.WriteConflict.newBuilder();
+        errBuilder.setConflict(writeConflict);
+      }
+      builder.addErrors(errBuilder);
+    }
+    responseObserver.onNext(builder.build());
+    responseObserver.onCompleted();
   }
 
   public int start(TiRegion region) throws IOException {

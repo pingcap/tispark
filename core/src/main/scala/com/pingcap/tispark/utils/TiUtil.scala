@@ -9,20 +9,19 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
 package com.pingcap.tispark.utils
 
-import java.util.concurrent.TimeUnit
-
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.datatype.TypeMapping
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.TiStoreType
 import com.pingcap.tikv.types._
-import com.pingcap.tispark.{TiConfigConst, _}
+import com.pingcap.tispark._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
@@ -30,7 +29,45 @@ import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{SparkConf, sql}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
+import java.time.{Instant, LocalDate, ZoneId}
+import java.util.TimeZone
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeUnit.NANOSECONDS
+
 object TiUtil {
+  val MICROS_PER_MILLIS = 1000L
+  val MICROS_PER_SECOND = 1000000L
+
+  def defaultTimeZone(): TimeZone = TimeZone.getDefault
+
+  def daysToMillis(days: Int): Long = {
+    daysToMillis(days, defaultTimeZone().toZoneId)
+  }
+
+  def daysToMillis(days: Int, zoneId: ZoneId): Long = {
+    val instant = daysToLocalDate(days).atStartOfDay(zoneId).toInstant
+    toMillis(instantToMicros(instant))
+  }
+
+  /*
+   * Converts the timestamp to milliseconds since epoch. In spark timestamp values have microseconds
+   * precision, so this conversion is lossy.
+   */
+  def toMillis(us: Long): Long = {
+    // When the timestamp is negative i.e before 1970, we need to adjust the millseconds portion.
+    // Example - 1965-01-01 10:11:12.123456 is represented as (-157700927876544) in micro precision.
+    // In millis precision the above needs to be represented as (-157700927877).
+    Math.floorDiv(us, MICROS_PER_MILLIS)
+  }
+
+  def instantToMicros(instant: Instant): Long = {
+    val us = Math.multiplyExact(instant.getEpochSecond, MICROS_PER_SECOND)
+    val result = Math.addExact(us, NANOSECONDS.toMicros(instant.getNano))
+    result
+  }
+
+  def daysToLocalDate(days: Int): LocalDate = LocalDate.ofEpochDay(days)
+
   def getSchemaFromTable(table: TiTableInfo): StructType = {
     val fields = new Array[StructField](table.getColumns.size())
     for (i <- 0 until table.getColumns.size()) {
@@ -52,9 +89,15 @@ object TiUtil {
     df.rdd.isEmpty()
   }
 
-  def sparkConfToTiConf(conf: SparkConf): TiConfiguration = {
-    val tiConf = TiConfiguration.createDefault(conf.get(TiConfigConst.PD_ADDRESSES))
+  def sparkConfToTiConf(conf: SparkConf, option: Option[String]): TiConfiguration = {
+    val tiConf = TiConfiguration.createDefault(if (option.isDefined) {
+      option.get
+    } else conf.get(TiConfigConst.PD_ADDRESSES))
 
+    sparkConfToTiConfWithoutPD(conf, tiConf)
+  }
+
+  def sparkConfToTiConfWithoutPD(conf: SparkConf, tiConf: TiConfiguration): TiConfiguration = {
     if (conf.contains(TiConfigConst.GRPC_FRAME_SIZE)) {
       tiConf.setMaxFrameSize(conf.get(TiConfigConst.GRPC_FRAME_SIZE).toInt)
     }
@@ -86,7 +129,8 @@ object TiUtil {
     }
 
     if (conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {
-      val priority = CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
+      val priority =
+        CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
       tiConf.setCommandPriority(priority)
     }
 
@@ -132,6 +176,23 @@ object TiUtil {
 
     if (conf.contains(TiConfigConst.KV_CLIENT_CONCURRENCY)) {
       tiConf.setKvClientConcurrency(conf.get(TiConfigConst.KV_CLIENT_CONCURRENCY).toInt)
+    }
+
+    // TLS
+    if (conf.contains(TiConfigConst.TIKV_TLS_ENABLE)) {
+      tiConf.setTlsEnable(conf.get(TiConfigConst.TIKV_TLS_ENABLE).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_TRUST_CERT_COLLECTION)) {
+      tiConf.setTrustCertCollectionFile(conf.get(TiConfigConst.TIKV_TRUST_CERT_COLLECTION))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_KEY_CERT_CHAIN)) {
+      tiConf.setKeyCertChainFile(conf.get(TiConfigConst.TIKV_KEY_CERT_CHAIN))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_KEY_FILE)) {
+      tiConf.setKeyFile(conf.get(TiConfigConst.TIKV_KEY_FILE))
     }
 
     tiConf

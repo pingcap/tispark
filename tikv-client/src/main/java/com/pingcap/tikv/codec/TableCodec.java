@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -20,11 +21,15 @@ import com.pingcap.tikv.key.CommonHandle;
 import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
 import java.util.List;
 
 public class TableCodec {
+  public static byte IndexVersionFlag = 125;
+  public static byte CommonHandleFlag = 127;
+
   public static byte[] encodeRow(
       List<TiColumnInfo> columnInfos,
       Object[] values,
@@ -58,5 +63,26 @@ public class TableCodec {
       return new CommonHandle(value);
     }
     return new IntHandle(new CodecDataInput(value).readLong());
+  }
+
+  /* only for unique index */
+  public static byte[] genIndexValueForClusteredIndexVersion1(TiIndexInfo index, Handle handle) {
+    CodecDataOutput cdo = new CodecDataOutput();
+    cdo.writeByte(0);
+    cdo.writeByte(IndexVersionFlag);
+    cdo.writeByte(1);
+
+    assert (index.isUnique());
+    encodeCommonHandle(cdo, handle);
+
+    return cdo.toBytes();
+  }
+
+  private static void encodeCommonHandle(CodecDataOutput cdo, Handle handle) {
+    cdo.write(CommonHandleFlag);
+    byte[] encoded = handle.encoded();
+    int hLen = encoded.length;
+    cdo.writeShort(hLen);
+    cdo.write(encoded);
   }
 }

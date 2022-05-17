@@ -45,6 +45,12 @@ enable-table-lock = true
 # In order to support "drop primary key" operation , this flag must be true and the table does not have the pkIsHandle flag.
 alter-primary-key = true
 
+# index-limit is used to deal with compatibility issues. It can only be in [64, 64*8].
+index-limit = 512
+
+# Whether new collations are enabled, as indicated by its name, this configuration entry take effect ONLY when a TiDB cluster bootstraps for the first time.
+new_collations_enabled_on_first_bootstrap = false
+
 [log]
 # Log level: info, debug, warn, error, fatal.
 level = "info"

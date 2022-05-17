@@ -10,6 +10,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
@@ -19,12 +20,18 @@ package com.pingcap.tikv;
 
 import java.sql.Timestamp;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 /** Extend joda DateTime to support micro second */
 public class ExtendedDateTime {
 
   private final DateTime dateTime;
   private final int microsOfMillis;
+  private static final DateTimeZone LOCAL_TIME_ZOME = DateTimeZone.getDefault();
+  private static final DateTimeFormatter DATE_TIME_FORMATTER =
+      DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.S").withZone(LOCAL_TIME_ZOME);
 
   /**
    * if timestamp = 2019-11-11 11:11:11 123456, then dateTime = 2019-11-11 11:11:11 123
@@ -56,12 +63,8 @@ public class ExtendedDateTime {
   }
 
   public Timestamp toTimeStamp() {
-    Timestamp timestamp = new Timestamp(dateTime.getMillis() / 1000 * 1000);
+    Timestamp timestamp = Timestamp.valueOf(dateTime.toString(DATE_TIME_FORMATTER));
     timestamp.setNanos(dateTime.getMillisOfSecond() * 1000000 + microsOfMillis * 1000);
     return timestamp;
-  }
-
-  public long toEpochMicro() {
-    return toTimeStamp().getTime() * 1000 + getMicrosOfMillis();
   }
 }

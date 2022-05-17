@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -110,4 +111,13 @@ case class SpecialSum(child: Expression, retType: DataType, initVal: Any)
 
   override def checkInputDataTypes(): TypeCheckResult =
     TypeUtils.checkForNumericExpr(child.dataType, "function sum")
+
+  /**
+   *  The implement is same as the [[org.apache.spark.sql.catalyst.expressions.aggregate.Sum]]
+   * @param newChildren
+   */
+  protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    assert(newChildren.size == 1, "Incorrect number of children")
+    copy(child = newChildren.head)
+  }
 }

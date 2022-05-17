@@ -9,50 +9,83 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
 package com.pingcap.tikv;
 
-import com.google.protobuf.ByteString;
-import com.pingcap.tikv.exception.TiBatchWriteException;
-import com.pingcap.tikv.region.RegionManager;
-import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.txn.type.GroupKeyResult;
-import com.pingcap.tikv.util.BackOffer;
-import com.pingcap.tikv.util.Pair;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import org.tikv.kvproto.Metapb;
+import com.google.common.collect.ImmutableMap;
+import java.util.Locale;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Utils {
-  public static GroupKeyResult groupKeysByRegion(
-      RegionManager regionManager, List<ByteString> keys, BackOffer backOffer) {
-    return groupKeysByRegion(
-        regionManager, keys.toArray(new ByteString[0]), keys.size(), backOffer);
+  // org.apache.spark.network.util.JavaUtils
+  private static final ImmutableMap<String, TimeUnit> timeSuffixes =
+      ImmutableMap.<String, TimeUnit>builder()
+          .put("us", TimeUnit.MICROSECONDS)
+          .put("ms", TimeUnit.MILLISECONDS)
+          .put("s", TimeUnit.SECONDS)
+          .put("m", TimeUnit.MINUTES)
+          .put("min", TimeUnit.MINUTES)
+          .put("h", TimeUnit.HOURS)
+          .put("d", TimeUnit.DAYS)
+          .build();
+
+  public static ConcurrentHashMap<String, String> getSystemProperties() {
+    ConcurrentHashMap<String, String> map = new ConcurrentHashMap<>();
+    System.getProperties()
+        .stringPropertyNames()
+        .forEach(key -> map.put(key, System.getProperty(key)));
+    return map;
   }
 
-  public static GroupKeyResult groupKeysByRegion(
-      RegionManager regionManager, ByteString[] keys, int size, BackOffer backOffer)
-      throws TiBatchWriteException {
-    Map<Pair<TiRegion, Metapb.Store>, List<ByteString>> groups = new HashMap<>();
-    int index = 0;
+  public static void setSystemProperties(ConcurrentHashMap<String, String> settings) {
+    Properties prop = new Properties();
+    settings.forEach(prop::setProperty);
+    System.setProperties(prop);
+  }
+
+  // org.apache.spark.network.util.JavaUtils
+  public static long timeStringAs(String str, TimeUnit unit) {
+    String lower = str.toLowerCase(Locale.ROOT).trim();
+
     try {
-      for (; index < size; index++) {
-        ByteString key = keys[index];
-        Pair<TiRegion, Metapb.Store> pair = regionManager.getRegionStorePairByKey(key, backOffer);
-        if (pair != null) {
-          groups.computeIfAbsent(pair, e -> new ArrayList<>()).add(key);
-        }
+      Matcher m = Pattern.compile("(-?[0-9]+)([a-z]+)?").matcher(lower);
+      if (!m.matches()) {
+        throw new NumberFormatException("Failed to parse time string: " + str);
       }
-    } catch (Exception e) {
-      throw new TiBatchWriteException("Txn groupKeysByRegion error", e);
+
+      long val = Long.parseLong(m.group(1));
+      String suffix = m.group(2);
+
+      // Check for invalid suffixes
+      if (suffix != null && !timeSuffixes.containsKey(suffix)) {
+        throw new NumberFormatException("Invalid suffix: \"" + suffix + "\"");
+      }
+
+      // If suffix is valid use that, otherwise none was provided and use the default passed
+      return unit.convert(val, suffix != null ? timeSuffixes.get(suffix) : unit);
+    } catch (NumberFormatException e) {
+      String timeError =
+          "Time must be specified as seconds (s), "
+              + "milliseconds (ms), microseconds (us), minutes (m or min), hour (h), or day (d). "
+              + "E.g. 50s, 100ms, or 250us.";
+
+      throw new NumberFormatException(timeError + "\n" + e.getMessage());
     }
-    GroupKeyResult result = new GroupKeyResult();
-    result.setGroupsResult(groups);
-    return result;
+  }
+
+  public static long timeStringAsMs(String str) {
+    return timeStringAs(str, TimeUnit.MILLISECONDS);
+  }
+
+  public static long timeStringAsSec(String str) {
+    return timeStringAs(str, TimeUnit.SECONDS);
   }
 }

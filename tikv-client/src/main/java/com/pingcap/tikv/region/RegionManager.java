@@ -10,6 +10,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
@@ -18,6 +19,7 @@
 package com.pingcap.tikv.region;
 
 import static com.pingcap.tikv.codec.KeyUtils.formatBytesUTF8;
+import static com.pingcap.tikv.codec.KeyUtils.getEncodedKey;
 import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
 
 import com.google.common.collect.RangeMap;
@@ -30,7 +32,6 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.LogDesensitization;
 import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -61,8 +62,17 @@ public class RegionManager {
     this.cacheInvalidateCallback = cacheInvalidateCallback;
   }
 
+  public RegionManager(ReadOnlyPDClient pdClient) {
+    this.cache = new RegionCache(pdClient);
+    this.cacheInvalidateCallback = null;
+  }
+
   public Function<CacheInvalidateEvent, Void> getCacheInvalidateCallback() {
     return cacheInvalidateCallback;
+  }
+
+  public ReadOnlyPDClient getPDClient() {
+    return this.cache.pdClient;
   }
 
   public TiRegion getRegionByKey(ByteString key) {
@@ -71,17 +81,6 @@ public class RegionManager {
 
   public TiRegion getRegionByKey(ByteString key, BackOffer backOffer) {
     return cache.getRegionByKey(key, backOffer);
-  }
-
-  @Deprecated
-  // Do not use GetRegionByID when retrying request.
-  //
-  //   A,B |_______|_____|
-  //   A   |_____________|
-  // Consider region A, B. After merge of (A, B) -> A, region ID B does not exist.
-  // This request is unrecoverable.
-  public TiRegion getRegionById(long regionId) {
-    return cache.getRegionById(ConcreteBackOffer.newGetBackOff(), regionId);
   }
 
   public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key, BackOffer backOffer) {
@@ -100,8 +99,7 @@ public class RegionManager {
       ByteString key, TiStoreType storeType, BackOffer backOffer) {
     TiRegion region = cache.getRegionByKey(key, backOffer);
     if (region == null) {
-      throw new TiClientInternalException(
-          "Region not exist for key:" + LogDesensitization.hide(formatBytesUTF8(key)));
+      throw new TiClientInternalException("Region not exist for key:" + formatBytesUTF8(key));
     }
     if (!region.isValid()) {
       throw new TiClientInternalException("Region invalid: " + region.toString());
@@ -125,7 +123,7 @@ public class RegionManager {
       }
       if (store == null) {
         // clear the region cache so we may get the learner peer next time
-        cache.invalidateRegion(region.getId());
+        cache.invalidateRange(region.getStartKey(), region.getEndKey());
       }
     }
 
@@ -145,23 +143,22 @@ public class RegionManager {
     return cache.getStoreById(id, backOffer);
   }
 
-  public void onRegionStale(long regionId) {
-    cache.invalidateRegion(regionId);
+  public void onRegionStale(TiRegion region) {
+    cache.invalidateRegion(region);
   }
 
-  public boolean updateLeader(long regionId, long storeId) {
-    TiRegion r = cache.regionCache.get(regionId);
-    if (r != null) {
-      if (!r.switchPeer(storeId)) {
-        // failed to switch leader, possibly region is outdated, we need to drop region cache from
-        // regionCache
-        logger.warn("Cannot find peer when updating leader (" + regionId + "," + storeId + ")");
-        // drop region cache using verId
-        cache.invalidateRegion(regionId);
-        return false;
-      }
+  public TiRegion updateLeader(TiRegion region, long storeId) {
+    if (region.getLeader().getStoreId() == storeId) {
+      return region;
     }
-    return true;
+    TiRegion newRegion = region.switchPeer(storeId);
+    if (cache.updateRegion(region, newRegion)) {
+      return newRegion;
+    }
+    // failed to switch leader, possibly region is outdated, we need to drop region cache from
+    // regionCache
+    logger.warn("Cannot find peer when updating leader (" + region.getId() + "," + storeId + ")");
+    return null;
   }
 
   /**
@@ -170,11 +167,11 @@ public class RegionManager {
    * @param region region
    */
   public void onRequestFail(TiRegion region) {
-    onRequestFail(region.getId(), region.getLeader().getStoreId());
+    onRequestFail(region, region.getLeader().getStoreId());
   }
 
-  public void onRequestFail(long regionId, long storeId) {
-    cache.invalidateRegion(regionId);
+  private void onRequestFail(TiRegion region, long storeId) {
+    cache.invalidateRegion(region);
     cache.invalidateAllRegionForStore(storeId);
   }
 
@@ -182,46 +179,36 @@ public class RegionManager {
     cache.invalidateStore(storeId);
   }
 
-  public void invalidateRegion(long regionId) {
-    cache.invalidateRegion(regionId);
+  public void invalidateRegion(TiRegion region) {
+    cache.invalidateRegion(region);
   }
 
   public static class RegionCache {
-    private final Map<Long, TiRegion> regionCache;
+    // private final Map<Long, TiRegion> regionCache;
     private final Map<Long, Store> storeCache;
-    private final RangeMap<Key, Long> keyToRegionIdCache;
+    private final RangeMap<Key, TiRegion> regionCache;
     private final ReadOnlyPDClient pdClient;
 
     public RegionCache(ReadOnlyPDClient pdClient) {
-      regionCache = new HashMap<>();
+      regionCache = TreeRangeMap.create();
       storeCache = new HashMap<>();
 
-      keyToRegionIdCache = TreeRangeMap.create();
       this.pdClient = pdClient;
     }
 
     public synchronized TiRegion getRegionByKey(ByteString key, BackOffer backOffer) {
-      Long regionId;
-      regionId = keyToRegionIdCache.get(Key.toRawKey(key));
+      TiRegion region = regionCache.get(getEncodedKey(key));
       if (logger.isDebugEnabled()) {
         logger.debug(
-            String.format(
-                "getRegionByKey key[%s] -> ID[%s]",
-                LogDesensitization.hide(formatBytesUTF8(key)), regionId));
+            String.format("getRegionByKey key[%s] -> Region[%s]", formatBytesUTF8(key), region));
       }
 
-      if (regionId == null) {
-        logger.debug(
-            "Key not find in keyToRegionIdCache:" + LogDesensitization.hide(formatBytesUTF8(key)));
-        TiRegion region = pdClient.getRegionByKey(backOffer, key);
+      if (region == null) {
+        logger.debug("Key not found in keyToRegionIdCache:" + formatBytesUTF8(key));
+        region = pdClient.getRegionByKey(backOffer, key);
         if (!putRegion(region)) {
           throw new TiClientInternalException("Invalid Region: " + region.toString());
         }
-        return region;
-      }
-      TiRegion region = regionCache.get(regionId);
-      if (logger.isDebugEnabled()) {
-        logger.debug(String.format("getRegionByKey ID[%s] -> Region[%s]", regionId, region));
       }
 
       return region;
@@ -231,42 +218,54 @@ public class RegionManager {
       if (logger.isDebugEnabled()) {
         logger.debug("putRegion: " + region);
       }
-      regionCache.put(region.getId(), region);
-      keyToRegionIdCache.put(makeRange(region.getStartKey(), region.getEndKey()), region.getId());
+      regionCache.remove(makeRange(region.getStartKey(), region.getEndKey()));
+      regionCache.put(makeRange(region.getStartKey(), region.getEndKey()), region);
       return true;
     }
 
-    private synchronized TiRegion getRegionById(BackOffer backOffer, long regionId) {
-      TiRegion region = regionCache.get(regionId);
-      if (logger.isDebugEnabled()) {
-        logger.debug(String.format("getRegionByKey ID[%s] -> Region[%s]", regionId, region));
-      }
-      if (region == null) {
-        region = pdClient.getRegionByID(backOffer, regionId);
-        if (!putRegion(region)) {
-          throw new TiClientInternalException("Invalid Region: " + region.toString());
+    public synchronized boolean updateRegion(TiRegion expected, TiRegion region) {
+      try {
+        if (logger.isDebugEnabled()) {
+          logger.debug(String.format("invalidateRegion ID[%s]", region.getId()));
         }
+        TiRegion oldRegion = regionCache.get(getEncodedKey(region.getStartKey()));
+        if (oldRegion == null || !expected.getMeta().equals(oldRegion.getMeta())) {
+          return false;
+        } else {
+          regionCache.remove(makeRange(oldRegion.getStartKey(), oldRegion.getEndKey()));
+          regionCache.put(makeRange(region.getStartKey(), region.getEndKey()), region);
+          return true;
+        }
+      } catch (Exception ignore) {
+        return false;
       }
-      return region;
+    }
+
+    private synchronized TiRegion getRegionFromCache(Key key) {
+      return regionCache.get(key);
+    }
+
+    private synchronized void invalidateRange(ByteString startKey, ByteString endKey) {
+      regionCache.remove(makeRange(startKey, endKey));
     }
 
     /** Removes region associated with regionId from regionCache. */
-    public synchronized void invalidateRegion(long regionId) {
+    public synchronized void invalidateRegion(TiRegion region) {
       try {
         if (logger.isDebugEnabled()) {
-          logger.debug(String.format("invalidateRegion ID[%s]", regionId));
+          logger.debug(String.format("invalidateRegion ID[%s]", region.getId()));
         }
-        TiRegion region = regionCache.get(regionId);
-        keyToRegionIdCache.remove(makeRange(region.getStartKey(), region.getEndKey()));
+        TiRegion oldRegion = regionCache.get(getEncodedKey(region.getStartKey()));
+        if (oldRegion != null && oldRegion.equals(region)) {
+          regionCache.remove(makeRange(region.getStartKey(), region.getEndKey()));
+        }
       } catch (Exception ignore) {
-      } finally {
-        regionCache.remove(regionId);
       }
     }
 
     public synchronized void invalidateAllRegionForStore(long storeId) {
       List<TiRegion> regionToRemove = new ArrayList<>();
-      for (TiRegion r : regionCache.values()) {
+      for (TiRegion r : regionCache.asMapOfRanges().values()) {
         if (r.getLeader().getStoreId() == storeId) {
           if (logger.isDebugEnabled()) {
             logger.debug(String.format("invalidateAllRegionForStore Region[%s]", r));
@@ -277,8 +276,7 @@ public class RegionManager {
 
       // remove region
       for (TiRegion r : regionToRemove) {
-        regionCache.remove(r.getId());
-        keyToRegionIdCache.remove(makeRange(r.getStartKey(), r.getEndKey()));
+        regionCache.remove(makeRange(r.getStartKey(), r.getEndKey()));
       }
     }
 

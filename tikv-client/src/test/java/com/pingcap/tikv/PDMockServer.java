@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -117,6 +118,18 @@ public class PDMockServer extends PDGrpc.PDImplBase {
       resp.onCompleted();
     } catch (Exception e) {
       resp.onError(Status.INTERNAL.asRuntimeException());
+    }
+  }
+
+  @Override
+  public void getAllStores(
+      org.tikv.kvproto.Pdpb.GetAllStoresRequest request,
+      io.grpc.stub.StreamObserver<org.tikv.kvproto.Pdpb.GetAllStoresResponse> responseObserver) {
+    try {
+      responseObserver.onNext(null);
+      responseObserver.onCompleted();
+    } catch (Exception e) {
+      responseObserver.onError(Status.INTERNAL.asRuntimeException());
     }
   }
 

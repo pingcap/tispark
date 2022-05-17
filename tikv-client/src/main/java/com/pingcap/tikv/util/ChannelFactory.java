@@ -9,49 +9,100 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
 package com.pingcap.tikv.util;
 
+import com.pingcap.tikv.exception.TiKVException;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
+import io.grpc.netty.GrpcSslContexts;
+import io.grpc.netty.NettyChannelBuilder;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import java.io.File;
 import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import javax.net.ssl.SSLException;
 
 public class ChannelFactory implements AutoCloseable {
   private final int maxFrameSize;
   private final Map<String, ManagedChannel> connPool = new ConcurrentHashMap<>();
+  private final SslContextBuilder sslContextBuilder;
 
   public ChannelFactory(int maxFrameSize) {
     this.maxFrameSize = maxFrameSize;
+    this.sslContextBuilder = null;
   }
 
-  public ManagedChannel getChannel(String addressStr) {
-    return connPool.computeIfAbsent(
-        addressStr,
-        key -> {
-          URI address;
-          try {
-            address = URI.create("http://" + key);
-          } catch (Exception e) {
-            throw new IllegalArgumentException("failed to form address " + key);
-          }
-          // Channel should be lazy without actual connection until first call
-          // So a coarse grain lock is ok here
-          return ManagedChannelBuilder.forAddress(address.getHost(), address.getPort())
+  public ChannelFactory(
+      int maxFrameSize,
+      String trustCertCollectionFilePath,
+      String keyCertChainFilePath,
+      String keyFilePath) {
+    this.maxFrameSize = maxFrameSize;
+    this.sslContextBuilder =
+        getSslContextBuilder(trustCertCollectionFilePath, keyCertChainFilePath, keyFilePath);
+  }
+
+  private SslContextBuilder getSslContextBuilder(
+      String trustCertCollectionFilePath, String keyCertChainFilePath, String keyFilePath) {
+    SslContextBuilder builder = GrpcSslContexts.forClient().protocols("TLSv1.2", "TLSv1.3");
+    if (trustCertCollectionFilePath != null) {
+      builder.trustManager(new File(trustCertCollectionFilePath));
+    }
+    if (keyCertChainFilePath != null && keyFilePath != null) {
+      builder.keyManager(new File(keyCertChainFilePath), new File(keyFilePath));
+    }
+    return builder;
+  }
+
+  private ManagedChannel addrToChannel(String addressStr) {
+    URI address;
+    try {
+      address = URI.create("http://" + addressStr);
+    } catch (Exception e) {
+      throw new IllegalArgumentException("failed to form address " + addressStr);
+    }
+
+    NettyChannelBuilder builder = null;
+    try {
+      builder =
+          NettyChannelBuilder.forAddress(address.getHost(), address.getPort())
               .maxInboundMessageSize(maxFrameSize)
-              .usePlaintext()
-              .idleTimeout(60, TimeUnit.SECONDS)
-              .build();
-        });
+              .keepAliveWithoutCalls(true)
+              .idleTimeout(60, TimeUnit.SECONDS);
+    } catch (Exception e) {
+      throw new TiKVException("Failed to build NettyChannelBuilder", e);
+    }
+
+    if (sslContextBuilder == null) {
+      return builder.usePlaintext().build();
+    } else {
+      SslContext sslContext = null;
+      try {
+        sslContext = sslContextBuilder.build();
+      } catch (SSLException e) {
+        throw new TiKVException("Failed to build sslContextBuilder", e);
+      }
+      return builder.sslContext(sslContext).build();
+    }
+  }
+
+  public synchronized ManagedChannel getChannel(String addressStr) {
+    ManagedChannel channel = connPool.computeIfAbsent(addressStr, this::addrToChannel);
+    if (channel.isShutdown()) {
+      return connPool.put(addressStr, addrToChannel(addressStr));
+    }
+    return channel;
   }
 
   @Override
-  public void close() {
+  public synchronized void close() {
     connPool.forEach(
         (k, v) -> {
           v.shutdownNow();

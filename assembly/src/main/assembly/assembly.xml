@@ -17,4 +17,34 @@
             <unpack>true</unpack>
         </dependencySet>
     </dependencySets>
+
+    <fileSets>
+        <fileSet>
+            <directory>
+                ${project.parent.basedir}/spark-wrapper/spark-3.0/target/classes/
+            </directory>
+            <outputDirectory>resources/spark-wrapper-spark-3_0</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>
+                ${project.parent.basedir}/spark-wrapper/spark-3.1/target/classes/
+            </directory>
+            <outputDirectory>resources/spark-wrapper-spark-3_1</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>
+                ${project.parent.basedir}/spark-wrapper/spark-3.2/target/classes/
+            </directory>
+            <outputDirectory>resources/spark-wrapper-spark-3_2</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+    </fileSets>
 </assembly>

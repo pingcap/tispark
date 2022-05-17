@@ -10,6 +10,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
@@ -18,6 +19,7 @@
 package com.pingcap.tikv.txn;
 
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.codec.KeyUtils;
 import org.tikv.kvproto.Kvrpcpb;
 
 public class Lock {
@@ -78,5 +80,16 @@ public class Lock {
 
   public long getMinCommitTS() {
     return minCommitTS;
+  }
+
+  @Override
+  public String toString() {
+    return String.format(
+        "Lock{TxnID:%d,LockType:%s,Key:%s,PrimaryKey:%s,TTL:%d}",
+        txnID,
+        lockType.toString(),
+        KeyUtils.formatBytesUTF8(key),
+        KeyUtils.formatBytesUTF8(primary),
+        ttl);
   }
 }

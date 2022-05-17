@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -216,7 +217,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
             session.getRegionStoreClientBuilder().build(region, store, storeType);
         client.addResolvedLocks(startTs, resolvedLocks);
         Collection<RangeSplitter.RegionTask> tasks =
-            client.coprocess(backOffer, dagRequest, ranges, responseQueue, startTs);
+            client.coprocess(backOffer, dagRequest, region, ranges, responseQueue, startTs);
         if (tasks != null) {
           remainTasks.addAll(tasks);
         }
@@ -229,7 +230,6 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
                 + " tasks not executed due to",
             e);
         // Rethrow to upper levels
-        eof = true;
         throw new RegionTaskException("Handle region task failed:", e);
       }
     }

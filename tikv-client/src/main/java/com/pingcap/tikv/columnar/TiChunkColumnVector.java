@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -31,8 +32,12 @@ import com.pingcap.tikv.types.TimestampType;
 import com.pingcap.tikv.util.JsonUtils;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import org.joda.time.LocalDate;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 /** An implementation of {@link TiColumnVector}. All data is stored in TiDB chunk format. */
 public class TiChunkColumnVector extends TiColumnVector {
@@ -46,6 +51,9 @@ public class TiChunkColumnVector extends TiColumnVector {
   private final long[] offsets;
 
   private final ByteBuffer data;
+
+  private static final DateTimeFormatter DATE_TIME_FORMATTER =
+      DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.S");
 
   public TiChunkColumnVector(
       DataType dataType,
@@ -123,7 +131,8 @@ public class TiChunkColumnVector extends TiColumnVector {
 
   private long getTime(int rowId) {
     int startPos = rowId * fixLength;
-    TiCoreTime coreTime = new TiCoreTime(data.getLong(startPos));
+    long time = data.getLong(startPos);
+    TiCoreTime coreTime = new TiCoreTime(time);
 
     int year = coreTime.getYear();
     int month = coreTime.getMonth();
@@ -131,13 +140,14 @@ public class TiChunkColumnVector extends TiColumnVector {
     int hour = coreTime.getHour();
     int minute = coreTime.getMinute();
     int second = coreTime.getSecond();
-    long microsecond = coreTime.getMicroSecond();
+    int microsecond = coreTime.getMicroSecond();
+    int nanosecond = coreTime.getNanoSecond();
     // This behavior can be modified using the zeroDateTimeBehavior configuration property.
     // The allowable values are:
     //    * exception (the default), which throws an SQLException with an SQLState of S1009.
     //    * convertToNull, which returns NULL instead of the date.
     //    * round, which rounds the date to the nearest closest value which is 0001-01-01.
-    if (year == 0 && month == 0 && day == 0 && hour == 0 && minute == 0 && microsecond == 0) {
+    if (time == 0) {
       year = 1;
       month = 1;
       day = 1;
@@ -146,11 +156,10 @@ public class TiChunkColumnVector extends TiColumnVector {
       LocalDate date = new LocalDate(year, month, day);
       return ((DateType) this.type).getDays(date);
     } else if (type instanceof DateTimeType || type instanceof TimestampType) {
-      // only return microsecond from epoch.
-      Timestamp ts =
-          new Timestamp(
-              year - 1900, month - 1, day, hour, minute, second, (int) microsecond * 1000);
-      return ts.getTime() / 1000 * 1000000 + ts.getNanos() / 1000;
+      LocalDateTime dateTime =
+          LocalDateTime.of(year, month, day, hour, minute, second, microsecond * 1000);
+      ZonedDateTime zonedDateTime = ZonedDateTime.of(dateTime, ZoneOffset.systemDefault());
+      return zonedDateTime.toEpochSecond() * 1000000 + microsecond;
     } else {
       throw new UnsupportedOperationException("data, datetime, timestamp are already handled.");
     }
@@ -161,7 +170,7 @@ public class TiChunkColumnVector extends TiColumnVector {
     if (bytes.length == 0) return 0;
     long result = 0;
     for (byte b : bytes) {
-      result = (result << 8) | b;
+      result = (result << 8) | (b & 0xff);
     }
     return result;
   }

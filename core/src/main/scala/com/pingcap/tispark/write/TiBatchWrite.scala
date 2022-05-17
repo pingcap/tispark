@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -16,10 +17,9 @@
 package com.pingcap.tispark.write
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.util.{BackOffFunction, BackOffer, ConcreteBackOffer}
-import com.pingcap.tikv.{TTLManager, TiDBJDBCClient, TwoPhaseCommitter, _}
+import com.pingcap.tikv._
 import com.pingcap.tispark.TiDBUtils
-import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler}
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -53,10 +53,10 @@ object TiBatchWrite {
       parameters: Map[String, String]): Unit = {
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
-        new TiBatchWrite(
-          dataToWrite,
-          tiContext,
-          new TiDBOptions(parameters ++ Map(TiDBOptions.TIDB_MULTI_TABLES -> "true"))).write()
+        val tiDBOptions = new TiDBOptions(
+          parameters ++ Map(TiDBOptions.TIDB_MULTI_TABLES -> "true"))
+        tiDBOptions.checkWriteRequired()
+        new TiBatchWrite(dataToWrite, tiContext, tiDBOptions).write()
       case None =>
         throw new TiBatchWriteException("TiExtensions is disable!")
     }
@@ -81,6 +81,8 @@ class TiBatchWrite(
   @transient private var tiDBJDBCClient: TiDBJDBCClient = _
   @transient private var tiBatchWriteTables: List[TiBatchWriteTable] = _
   @transient private var startMS: Long = _
+  private var startTs: Long = _
+  private var twoPhaseCommitHepler: TwoPhaseCommitHepler = _
 
   private def write(): Unit = {
     try {
@@ -100,9 +102,15 @@ class TiBatchWrite(
     }
 
     try {
-      if (ttlManager != null) {
-        ttlManager.close()
+      if (tiBatchWriteTables != null) {
+        tiBatchWriteTables.foreach(_.unpersistAll())
       }
+    } catch {
+      case _: Throwable =>
+    }
+
+    try {
+      twoPhaseCommitHepler.close()
     } catch {
       case _: Throwable =>
     }
@@ -129,6 +137,7 @@ class TiBatchWrite(
     tiConf = mergeSparkConfWithDataSourceConf(tiContext.conf, options)
     tiSession = tiContext.tiSession
     val tikvSupportUpdateTTL = StoreVersion.minTiKVVersion("3.0.5", tiSession.getPDClient)
+    val isTiDBV4 = StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient)
     isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
     lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
     tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
@@ -142,7 +151,8 @@ class TiBatchWrite(
             tiContext,
             options.setDBTable(dbTable),
             tiConf,
-            tiDBJDBCClient)
+            tiDBJDBCClient,
+            isTiDBV4)
       }.toList
     }
 
@@ -169,7 +179,6 @@ class TiBatchWrite(
     if (useTableLock) {
       tiBatchWriteTables.foreach(_.lockTable())
     } else {
-      val isTiDBV4 = StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient)
       if (!isTiDBV4) {
         if (tiContext.tiConf.isWriteWithoutLockTable) {
           logger.warn("write tidb-2.x or 3.x without lock table enabled! only for test!")
@@ -185,7 +194,7 @@ class TiBatchWrite(
 
     // get timestamp as start_ts
     val startTimeStamp = tiSession.getTimestamp
-    val startTs = startTimeStamp.getVersion
+    startTs = startTimeStamp.getVersion
     logger.info(s"startTS: $startTs")
 
     // pre calculate
@@ -243,23 +252,11 @@ class TiBatchWrite(
       logger.info(s"sleep ${options.sleepBeforePrewritePrimaryKey} ms for test")
       Thread.sleep(options.sleepBeforePrewritePrimaryKey)
     }
+
+    twoPhaseCommitHepler = TwoPhaseCommitHepler(startTs, options)
+
     // driver primary pre-write
-    logger.info("start to prewritePrimaryKey")
-    val ti2PCClient =
-      new TwoPhaseCommitter(
-        tiConf,
-        startTs,
-        lockTTLSeconds * 1000 + TTLManager.calculateUptime(tiSession.createTxnClient(), startTs),
-        options.txnPrewriteBatchSize,
-        options.txnCommitBatchSize,
-        options.writeBufferSize,
-        options.writeThreadPerTask,
-        options.retryCommitSecondaryKey,
-        options.prewriteMaxRetryTimes)
-    val prewritePrimaryBackoff =
-      ConcreteBackOffer.newCustomBackOff(options.prewriteBackOfferMS)
-    ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
-    logger.info("prewritePrimaryKey success")
+    twoPhaseCommitHepler.prewritePrimaryKeyByDriver(primaryKey, primaryRow)
 
     // for test
     if (options.sleepAfterPrewritePrimaryKey > 0) {
@@ -267,161 +264,37 @@ class TiBatchWrite(
       Thread.sleep(options.sleepAfterPrewritePrimaryKey)
     }
 
-    // start primary key ttl update
-    if (isTTLUpdate) {
-      ttlManager = new TTLManager(tiConf, startTs, primaryKey.bytes)
-      ttlManager.keepAlive()
-    }
-
     // executors secondary pre-write
-    logger.info("start to prewriteSecondaryKeys")
-    secondaryKeysRDD.foreachPartition { iterator =>
-      val ti2PCClientOnExecutor =
-        new TwoPhaseCommitter(
-          tiConf,
-          startTs,
-          lockTTLSeconds * 1000,
-          options.txnPrewriteBatchSize,
-          options.txnCommitBatchSize,
-          options.writeBufferSize,
-          options.writeThreadPerTask,
-          options.retryCommitSecondaryKey,
-          options.prewriteMaxRetryTimes)
+    twoPhaseCommitHepler.prewriteSecondaryKeyByExecutors(secondaryKeysRDD, primaryKey)
 
-      val pairs = iterator.map { keyValue =>
-        new BytePairWrapper(keyValue._1.bytes, keyValue._2)
-      }.asJava
-
-      ti2PCClientOnExecutor.prewriteSecondaryKeys(
-        primaryKey.bytes,
-        pairs,
-        options.prewriteBackOfferMS)
-
-      try {
-        ti2PCClientOnExecutor.close()
-      } catch {
-        case _: Throwable =>
-      }
+    // check connection lost if using lock table
+    checkConnectionLost()
+    // checkschema if not useTableLock
+    val schemaUpdateTimes = if (useTableLock) {
+      Nil
+    } else {
+      tiBatchWriteTables.map(_.buildSchemaUpdateTime())
     }
-    logger.info("prewriteSecondaryKeys success")
-
     // driver primary commit
-    val commitTs = commitPrimaryKeyWithRetry(startTs, primaryKey, ti2PCClient)
+    val commitTs =
+      twoPhaseCommitHepler.commitPrimaryKeyWithRetryByDriver(primaryKey, schemaUpdateTimes)
 
-    // stop primary key ttl update
-    if (isTTLUpdate) {
-      ttlManager.close()
-    }
+    // stop ttl
+    twoPhaseCommitHepler.stopPrimaryKeyTTLUpdate()
 
     // unlock table
     tiBatchWriteTables.foreach(_.unlockTable())
 
     // executors secondary commit
-    if (!options.skipCommitSecondaryKey) {
-      logger.info("start to commitSecondaryKeys")
-      secondaryKeysRDD.foreachPartition { iterator =>
-        val ti2PCClientOnExecutor = new TwoPhaseCommitter(
-          tiConf,
-          startTs,
-          lockTTLSeconds * 1000,
-          options.txnPrewriteBatchSize,
-          options.txnCommitBatchSize,
-          options.writeBufferSize,
-          options.writeThreadPerTask,
-          options.retryCommitSecondaryKey,
-          options.prewriteMaxRetryTimes)
+    twoPhaseCommitHepler.commitSecondaryKeyByExecutors(secondaryKeysRDD, commitTs)
 
-        val keys = iterator.map { keyValue =>
-          new ByteWrapper(keyValue._1.bytes)
-        }.asJava
-
-        try {
-          ti2PCClientOnExecutor.commitSecondaryKeys(keys, commitTs, options.commitBackOfferMS)
-        } catch {
-          case e: TiBatchWriteException =>
-            // ignored
-            logger.warn(s"commit secondary key error", e)
-        }
-
-        try {
-          ti2PCClientOnExecutor.close()
-        } catch {
-          case _: Throwable =>
-        }
-      }
-      logger.info("commitSecondaryKeys finish")
-    } else {
-      logger.info("skipping commit secondary key")
+    // update table statistics: modify_count & count
+    if (options.enableUpdateTableStatistics) {
+      tiBatchWriteTables.foreach(_.updateTableStatistics(startTs))
     }
 
     val endMS = System.currentTimeMillis()
     logger.info(s"batch write cost ${(endMS - startMS) / 1000} seconds")
-  }
-
-  private def commitPrimaryKeyWithRetry(
-      startTs: Long,
-      primaryKey: SerializableKey,
-      ti2PCClient: TwoPhaseCommitter): Long = {
-    var tryCount = 1
-    var error: Throwable = null
-    var break = false
-    while (!break && tryCount <= options.commitPrimaryKeyRetryNumber) {
-      tryCount += 1
-      try {
-        return commitPrimaryKey(startTs, primaryKey, ti2PCClient)
-      } catch {
-        case e: TiBatchWriteException =>
-          error = e
-          break = true
-        case e: Throwable =>
-          error = e
-      }
-    }
-    throw error
-  }
-
-  private def commitPrimaryKey(
-      startTs: Long,
-      primaryKey: SerializableKey,
-      ti2PCClient: TwoPhaseCommitter): Long = {
-    val commitTsAttempt = tiSession.getTimestamp.getVersion
-    // check commitTS
-    if (commitTsAttempt <= startTs) {
-      throw new TiBatchWriteException(
-        s"invalid transaction tso with startTs=$startTs, commitTsAttempt=$commitTsAttempt")
-    }
-
-    // for test
-    if (options.sleepAfterPrewriteSecondaryKey > 0) {
-      logger.info(s"sleep ${options.sleepAfterPrewriteSecondaryKey} ms for test")
-      Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
-    }
-
-    // check schema change
-    if (!useTableLock) {
-      tiBatchWriteTables.foreach(_.checkSchemaChange())
-    }
-
-    // for test
-    if (options.sleepAfterGetCommitTS > 0) {
-      logger.info(s"sleep ${options.sleepAfterGetCommitTS} ms for test")
-      Thread.sleep(options.sleepAfterGetCommitTS)
-    }
-
-    val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(PRIMARY_KEY_COMMIT_BACKOFF)
-
-    // check connection lost if using lock table
-    checkConnectionLost()
-
-    logger.info(s"start to commitPrimaryKey, commitTsAttempt=$commitTsAttempt")
-    ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTsAttempt)
-    try {
-      ti2PCClient.close()
-    } catch {
-      case _: Throwable =>
-    }
-    logger.info("commitPrimaryKey success")
-    commitTsAttempt
   }
 
   private def getRegionSplitPoints(
@@ -521,7 +394,7 @@ class TiBatchWrite(
     val clonedConf = conf.clone()
     // priority: data source config > spark config
     clonedConf.setAll(options.parameters)
-    TiUtil.sparkConfToTiConf(clonedConf)
+    TiUtil.sparkConfToTiConf(clonedConf, Option.empty)
   }
 
   private def checkConnectionLost(): Unit = {

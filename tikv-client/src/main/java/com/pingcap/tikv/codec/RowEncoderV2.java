@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -24,6 +25,7 @@ import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DecimalType;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
@@ -31,7 +33,6 @@ import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
 public class RowEncoderV2 {
@@ -176,8 +177,8 @@ public class RowEncoderV2 {
           this.row.colIDs32[j] = Byte.toUnsignedInt(this.row.colIDs[j]);
         }
         this.row.initOffsets32();
-        if (numCols >= 0) {
-          System.arraycopy(this.row.offsets, 0, this.row.offsets32, 0, numCols);
+        if (this.row.numNotNullCols >= 0) {
+          System.arraycopy(this.row.offsets, 0, this.row.offsets32, 0, this.row.numNotNullCols);
         }
         this.row.large = true;
       }
@@ -220,7 +221,8 @@ public class RowEncoderV2 {
         encodeString(cdo, value);
         break;
       case TypeNewDecimal:
-        encodeDecimal(cdo, value);
+        DecimalType decimalType = (DecimalType) tp;
+        encodeDecimal(cdo, value, (int) decimalType.getLength(), decimalType.getDecimal());
         break;
       case TypeBit:
         encodeBit(cdo, value);
@@ -307,15 +309,11 @@ public class RowEncoderV2 {
 
   private void encodeTimestamp(CodecDataOutput cdo, Object value, DateTimeZone tz) {
     if (value instanceof Timestamp) {
-      Timestamp timestamp = (Timestamp) value;
-      DateTime dateTime = new DateTime(timestamp.getTime());
-      int nanos = timestamp.getNanos();
-      ExtendedDateTime extendedDateTime = new ExtendedDateTime(dateTime, (nanos / 1000) % 1000);
+      ExtendedDateTime extendedDateTime = Converter.convertToDateTime(value);
       long t = DateTimeCodec.toPackedLong(extendedDateTime, tz);
       encodeInt(cdo, t);
     } else if (value instanceof Date) {
-      ExtendedDateTime extendedDateTime =
-          new ExtendedDateTime(new DateTime(((Date) value).getTime()));
+      ExtendedDateTime extendedDateTime = Converter.convertToDateTime(value);
       long t = DateTimeCodec.toPackedLong(extendedDateTime, tz);
       encodeInt(cdo, t);
     } else {
@@ -333,17 +331,14 @@ public class RowEncoderV2 {
     }
   }
 
-  private void encodeDecimal(CodecDataOutput cdo, Object value) {
+  private void encodeDecimal(CodecDataOutput cdo, Object value, int precision, int frac) {
     if (value instanceof MyDecimal) {
       MyDecimal dec = (MyDecimal) value;
-      DecimalCodec.writeDecimal(cdo, dec, dec.precision(), dec.frac());
+      DecimalCodec.writeDecimal(cdo, dec, precision, frac);
     } else if (value instanceof BigDecimal) {
       MyDecimal dec = new MyDecimal();
-      BigDecimal decimal = (BigDecimal) value;
-      int prec = decimal.precision();
-      int frac = decimal.scale();
       dec.fromString(((BigDecimal) value).toPlainString());
-      DecimalCodec.writeDecimal(cdo, dec, prec, frac);
+      DecimalCodec.writeDecimal(cdo, dec, precision, frac);
     } else {
       throw new CodecException("invalid decimal type " + value.getClass());
     }

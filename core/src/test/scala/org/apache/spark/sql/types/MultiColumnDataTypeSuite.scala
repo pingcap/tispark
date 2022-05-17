@@ -10,6 +10,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
@@ -17,50 +18,49 @@
 
 package org.apache.spark.sql.types
 
-import org.apache.spark.sql.test.generator.DataType._
-import org.apache.spark.sql.test.generator.TestDataGenerator._
+import com.pingcap.tispark.test.generator.DataGenerator._
+import com.pingcap.tispark.test.generator.DataType.ReflectedDataType
+import com.pingcap.tispark.test.generator.{NullableType, SchemaAndData}
 
-class MultiColumnDataTypeSuite
-    extends MultiColumnDataTypeTest
-    with RunMultiColumnDataTypeTestAction {
-  override val generator: BaseMultiColumnDataTypeGenerator = BaseMultiColumnDataTypeGenerator(
-    dataTypes,
-    unsignedDataTypes,
-    dataTypeTestDir,
-    dbName,
-    testDesc)
-  override def dataTypes: List[ReflectedDataType] = numeric ::: stringType
-  override def unsignedDataTypes: List[ReflectedDataType] = numeric
-  override def dataTypeTestDir: String = "multi-column-dataType-test"
-  override def dbName: String = "multi_column_data_type_test"
-  override def testDesc: String = "Base test for multi-column data types"
+class MultiColumnDataTypeSuite extends BaseRandomDataTypeTest {
+  override protected def rowCount: Int = 50
 
-  def startTest(dataTypes: List[ReflectedDataType]): Unit = {
-    val typeNames = dataTypes.map(getTypeName)
-    val tblName = generator.getTableName(typeNames: _*)
-    val columnNames = typeNames.zipWithIndex.map { x =>
-      generator.getColumnNameByOffset(x._2)
-    }
-    for (i <- columnNames.indices) {
-      val col1 = columnNames(i)
-      for (j <- columnNames.indices) {
-        val col2 = columnNames(j)
-        val dataType2 = dataTypes(j)
-        simpleSelect(dbName, tblName, col1, col2, dataType2)
+  private val dataTypes: List[ReflectedDataType] = numeric ::: stringType
+
+  override protected val database: String = "multi_column_data_type_test"
+
+  private def startTest(schemaAndDataList: List[SchemaAndData]): Unit = {
+    test("Test multi-column data types") {
+      schemaAndDataList.foreach { schemaAndData =>
+        loadToDB(schemaAndData)
+
+        val dbName = schemaAndData.schema.database
+        val tblName = schemaAndData.schema.tableName
+        val columnNames = schemaAndData.schema.columnNames
+
+        for (i <- columnNames.indices) {
+          val col1 = columnNames(i)
+          for (j <- columnNames.indices) {
+            val col2 = columnNames(j)
+            val dataType2 = dataTypes(j)
+            simpleSelect(dbName, tblName, col1, col2, dataType2)
+          }
+        }
       }
     }
   }
 
-  def check(): Unit = {
-    if (generateData) {
-      generator.test()
+  private def generateTestCases(): Unit = {
+    val dataTypesWithDesc: List[(ReflectedDataType, String, String)] = dataTypes.map {
+      genDescription(_, NullableType.Nullable)
     }
+    val schemaAndDataList = genSchemaAndData(
+      rowCount,
+      dataTypesWithDesc,
+      database,
+      hasTiFlashReplica = enableTiFlashTest)
+    startTest(schemaAndDataList)
   }
 
-  override def test(): Unit = {
-    startTest(dataTypes)
-  }
-
-  check()
-  test()
+  generateTestCases()
 }

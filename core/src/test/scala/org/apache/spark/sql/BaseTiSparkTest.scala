@@ -10,6 +10,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
@@ -23,7 +24,6 @@ import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient, Version}
 import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
-import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
 import org.apache.spark.sql.execution.ExplainMode
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.test.SharedSQLContext
@@ -85,7 +85,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       .createOrReplaceTempView(s"`$viewName$postfix`")
 
   protected def setCurrentDatabase(dbName: String): Unit =
-    if (catalogPluginMode) {
+    if (validateCatalog) {
       if (dbName != "default") {
         tidbConn.setCatalog(dbName)
         initializeStatement()
@@ -99,24 +99,15 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
         }
       }
     } else {
-      if (tiCatalog
-          .catalogOf(Some(dbPrefix + dbName))
-          .exists(_.isInstanceOf[TiSessionCatalog])) {
-        tidbConn.setCatalog(dbName)
-        initializeStatement()
-        spark.sql(s"use `$dbPrefix$dbName`")
-      } else {
-        // should be an existing database in hive/meta_store
-        try {
-          spark.sql(s"use `$dbName`")
-          logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
-        } catch {
-          case e: NoSuchDatabaseException => fail(e)
-        }
+      // should be an existing database in hive/meta_store
+      try {
+        spark.sql(s"use `$dbName`")
+        logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
+      } catch {
+        case e: NoSuchDatabaseException => fail(e)
       }
-    }
 
-  private def tiCatalog = ti.tiCatalog
+    }
 
   def beforeAllWithoutLoadData(): Unit = {
     super.beforeAll()

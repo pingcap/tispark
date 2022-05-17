@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -48,11 +49,8 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
       ByteString endKey,
       int limit) {
     this.startKey = requireNonNull(startKey, "start key is null");
-    if (startKey.isEmpty()) {
-      throw new IllegalArgumentException("start key cannot be empty");
-    }
     this.endKey = Key.toRawKey(requireNonNull(endKey, "end key is null"));
-    this.hasEndKey = !endKey.equals(ByteString.EMPTY);
+    this.hasEndKey = !endKey.isEmpty();
     this.limit = limit;
     this.conf = conf;
     this.builder = builder;
@@ -71,7 +69,7 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     if (endOfScan || processingLastBatch) {
       return true;
     }
-    if (startKey == null || startKey.isEmpty()) {
+    if (startKey == null) {
       return true;
     }
     try {
@@ -85,26 +83,24 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
         return true;
       }
       index = 0;
-      Key lastKey = Key.EMPTY;
+      Key lastKey;
       // Session should be single-threaded itself
       // so that we don't worry about conf change in the middle
       // of a transaction. Otherwise below code might lose data
-      if (currentCache.size() < conf.getScanBatchSize()) {
+      if (currentCache.size() < limit) {
         startKey = curRegionEndKey;
         lastKey = Key.toRawKey(curRegionEndKey);
-      } else if (currentCache.size() > conf.getScanBatchSize()) {
+      } else if (currentCache.size() > limit) {
         throw new IndexOutOfBoundsException(
-            "current cache size = "
-                + currentCache.size()
-                + ", larger than "
-                + conf.getScanBatchSize());
+            "current cache size = " + currentCache.size() + ", larger than " + limit);
       } else {
         // Start new scan from exact next key in current region
         lastKey = Key.toRawKey(currentCache.get(currentCache.size() - 1).getKey());
         startKey = lastKey.next().toByteString();
       }
       // notify last batch if lastKey is greater than or equal to endKey
-      if (hasEndKey && lastKey.compareTo(endKey) >= 0) {
+      // if startKey is empty, it indicates +∞
+      if (hasEndKey && lastKey.compareTo(endKey) >= 0 || startKey.isEmpty()) {
         processingLastBatch = true;
         startKey = null;
       }

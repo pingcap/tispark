@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -18,22 +19,31 @@ import static com.pingcap.tikv.util.BackOffer.ROW_ID_ALLOCATOR_BACKOFF;
 
 import com.google.common.primitives.UnsignedLongs;
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.BytePairWrapper;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.TwoPhaseCommitter;
+import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.codec.MetaCodec;
 import com.pingcap.tikv.exception.AllocateRowIDOverflowException;
 import com.pingcap.tikv.exception.TiBatchWriteException;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
+import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,11 +54,13 @@ import org.slf4j.LoggerFactory;
  * <p>(start, end] is allocated
  */
 public final class RowIDAllocator implements Serializable {
+
   private final long maxShardRowIDBits;
   private final long dbId;
   private final TiConfiguration conf;
   private final long step;
   private long end;
+  private TiTimestamp timestamp;
 
   private static final Logger LOG = LoggerFactory.getLogger(RowIDAllocator.class);
 
@@ -123,20 +135,28 @@ public final class RowIDAllocator implements Serializable {
     return end;
   }
 
-  // set key value pair to tikv via two phase committer protocol.
-  private void set(ByteString key, byte[] value) {
+  // set key value pairs to tikv via two phase committer protocol.
+  private void set(@Nonnull List<BytePairWrapper> pairs, @Nonnull TiTimestamp timestamp) {
+    Iterator<BytePairWrapper> iterator = pairs.iterator();
+    if (!iterator.hasNext()) {
+      return;
+    }
     TiSession session = TiSession.getInstance(conf);
-    TwoPhaseCommitter twoPhaseCommitter =
-        new TwoPhaseCommitter(conf, session.getTimestamp().getVersion());
-
+    TwoPhaseCommitter twoPhaseCommitter = new TwoPhaseCommitter(conf, timestamp.getVersion());
+    BytePairWrapper primaryPair = iterator.next();
     twoPhaseCommitter.prewritePrimaryKey(
         ConcreteBackOffer.newCustomBackOff(BackOffer.PREWRITE_MAX_BACKOFF),
-        key.toByteArray(),
-        value);
+        primaryPair.getKey(),
+        primaryPair.getValue());
+
+    if (iterator.hasNext()) {
+      twoPhaseCommitter.prewriteSecondaryKeys(
+          primaryPair.getKey(), iterator, BackOffer.PREWRITE_MAX_BACKOFF);
+    }
 
     twoPhaseCommitter.commitPrimaryKey(
         ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF),
-        key.toByteArray(),
+        primaryPair.getKey(),
         session.getTimestamp().getVersion());
 
     try {
@@ -145,18 +165,25 @@ public final class RowIDAllocator implements Serializable {
     }
   }
 
-  private void updateMeta(ByteString key, byte[] oldVal, Snapshot snapshot) {
+  private Optional<BytePairWrapper> getMetaToUpdate(
+      ByteString key, byte[] oldVal, Snapshot snapshot) {
     // 1. encode hash meta key
     // 2. load meta via hash meta key from TiKV
     // 3. update meta's filed count and set it back to TiKV
     CodecDataOutput cdo = new CodecDataOutput();
     ByteString metaKey = MetaCodec.encodeHashMetaKey(cdo, key.toByteArray());
-    long fieldCount;
+    long fieldCount = 0;
     ByteString metaVal = snapshot.get(metaKey);
 
     // decode long from bytes
     // big endian the 8 bytes
-    fieldCount = new CodecDataInput(metaVal.toByteArray()).readLong();
+    if (!metaVal.isEmpty()) {
+      try {
+        fieldCount = IntegerCodec.readULong(new CodecDataInput(metaVal.toByteArray()));
+      } catch (Exception ignored) {
+        LOG.warn("metaDecode failed, field is ignored." + KeyUtils.formatBytesUTF8(metaVal));
+      }
+    }
 
     // update meta field count only oldVal is null
     if (oldVal == null || oldVal.length == 0) {
@@ -164,8 +191,9 @@ public final class RowIDAllocator implements Serializable {
       cdo.reset();
       cdo.writeLong(fieldCount);
 
-      set(metaKey, cdo.toBytes());
+      return Optional.of(new BytePairWrapper(metaKey.toByteArray(), cdo.toBytes()));
     }
+    return Optional.empty();
   }
 
   private long updateHash(
@@ -192,8 +220,10 @@ public final class RowIDAllocator implements Serializable {
       return 0L;
     }
 
-    set(dataKey, newVal);
-    updateMeta(key, oldVal, snapshot);
+    List<BytePairWrapper> pairs = new ArrayList<>(2);
+    pairs.add(new BytePairWrapper(dataKey.toByteArray(), newVal));
+    getMetaToUpdate(key, oldVal, snapshot).ifPresent(pairs::add);
+    set(pairs, snapshot.getTimestamp());
     return Long.parseLong(new String(newVal));
   }
 

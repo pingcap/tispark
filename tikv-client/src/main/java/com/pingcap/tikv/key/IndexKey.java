@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -63,15 +64,18 @@ public class IndexKey extends Key {
     // when appendHandleIfContainsNull is true, append handle column if any of the index column is
     // NULL
     boolean appendHandle = false;
-    if (appendHandleIfContainsNull) {
-      for (TiIndexColumn col : indexColumns) {
-        DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
-        if (row.get(col.getOffset(), colTp) == null) {
-          appendHandle = true;
-          break;
+    if (handle.isInt()) {
+      if (appendHandleIfContainsNull) {
+        for (TiIndexColumn col : indexColumns) {
+          DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
+          if (row.get(col.getOffset(), colTp) == null) {
+            appendHandle = true;
+            break;
+          }
         }
       }
     }
+
     Key[] keys = new Key[indexColumns.size() + (appendHandle ? 1 : 0)];
     for (int i = 0; i < indexColumns.size(); i++) {
       TiIndexColumn col = indexColumns.get(i);

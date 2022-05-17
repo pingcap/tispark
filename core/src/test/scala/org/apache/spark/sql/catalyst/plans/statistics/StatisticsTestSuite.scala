@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -150,8 +151,10 @@ class StatisticsTestSuite extends BasePlanTest {
     initTable()
     val tblStatistics = StatisticsManager.getTableStatistics(fDataIdxTbl.getId)
     val idxStatistics = tblStatistics.getIndexHistMap.get(idx.getId)
-    val rc = idxStatistics.getRowCount(irs).toLong
-    assert(rc == expectedCount)
+    if (idxStatistics != null) {
+      val rc = idxStatistics.getRowCount(irs).toLong
+      assert(rc == expectedCount)
+    }
   }
 
   tableScanCases.foreach { query =>

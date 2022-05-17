@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -24,30 +25,72 @@ import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.MySQLType;
 import com.pingcap.tikv.util.FastByteComparisons;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.joda.time.Days;
+import org.joda.time.LocalDate;
 
 public class CommonHandle implements Handle {
   private final byte[] encoded;
   private final int[] colEndOffsets;
 
+  private static final int MS_OF_ONE_DAY = 24 * 3600 * 1000;
   private static final int MIN_ENCODE_LEN = 9;
 
   public static CommonHandle newCommonHandle(DataType[] dataTypes, Object[] data) {
+    long[] prefixLengthes = new long[dataTypes.length];
+    for (int i = 0; i < dataTypes.length; i++) {
+      prefixLengthes[i] = -1;
+    }
+    return newCommonHandle(dataTypes, data, prefixLengthes);
+  }
+
+  public static CommonHandle newCommonHandle(
+      DataType[] dataTypes, Object[] data, long[] prefixLengthes) {
     CodecDataOutput cdo = new CodecDataOutput();
     for (int i = 0; i < data.length; i++) {
       if (dataTypes[i].getType().equals(MySQLType.TypeTimestamp)) {
-        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, ((long) data[i]) / 1000);
+        // When writing `Timestamp`, it will pass `Timestamp` object.
+        // When indexScan or tableScan, it will pass `Long` object.
+        // It's a compromise here since we don't have a good way to make them consistent.
+        long milliseconds;
+        if (data[i] instanceof Timestamp) {
+          milliseconds = ((Timestamp) data[i]).getTime();
+        } else {
+          milliseconds = ((long) data[i]) / 1000;
+        }
+
+        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, milliseconds);
       } else if (dataTypes[i].getType().equals(MySQLType.TypeDate)) {
-        long days = (long) data[i];
+        long days;
+        // When writing `Date`, it will pass `Date` object.
+        // When indexScan or tableScan, it will pass `Long` object.
+        // It's a compromise here since we don't have a good way to make them consistent.
+        if (data[i] instanceof Date) {
+          days = Days.daysBetween(new LocalDate(0), new LocalDate(data[i])).getDays();
+        } else {
+          days = (long) data[i];
+        }
+
+        // Convert to UTC days for row key.
         if (Converter.getLocalTimezone().getOffset(0) < 0) {
           days += 1;
         }
-        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, new Date((days) * 24 * 3600 * 1000));
+        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, new Date((days) * MS_OF_ONE_DAY));
       } else {
-        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, data[i]);
+        if (prefixLengthes[i] > 0 && data[i] instanceof String) {
+          String source = (String) data[i];
+          String dest = source;
+          if (source.length() > prefixLengthes[i]) {
+            dest = source.substring(0, (int) prefixLengthes[i]);
+          }
+          dataTypes[i].encode(cdo, DataType.EncodeType.KEY, dest);
+        } else {
+          dataTypes[i].encode(cdo, DataType.EncodeType.KEY, data[i]);
+        }
       }
     }
     return new CommonHandle(cdo.toBytes());
@@ -116,6 +159,11 @@ public class CommonHandle implements Handle {
 
   @Override
   public byte[] encoded() {
+    return this.encoded;
+  }
+
+  @Override
+  public byte[] encodedAsKey() {
     return this.encoded;
   }
 

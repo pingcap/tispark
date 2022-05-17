@@ -10,6 +10,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
@@ -17,37 +18,95 @@
 
 package org.apache.spark.sql.types.pk
 
-import org.apache.spark.sql.test.generator.DataType._
-import org.apache.spark.sql.test.generator.TestDataGenerator._
-import org.apache.spark.sql.types.{BaseDataTypeTest, RunUnitDataTypeTestAction}
+import com.pingcap.tispark.test.generator.DataGenerator._
+import com.pingcap.tispark.test.generator.DataType.{ReflectedDataType, getTypeName}
+import com.pingcap.tispark.test.generator._
+import org.apache.spark.sql.types.BaseRandomDataTypeTest
 
-class DataTypePKSuite extends BaseDataTypeTest with RunUnitDataTypeTestAction {
-  override lazy protected val generator: DataTypePKGenerator =
-    DataTypePKGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, dbName, testDesc)
-  override def dataTypes: List[ReflectedDataType] =
+import scala.util.Random
+
+class DataTypePKSuite extends BaseRandomDataTypeTest {
+  override protected def rowCount = 10
+
+  private val dataTypes: List[ReflectedDataType] =
     integers ::: decimals ::: doubles ::: stringType
-  override def unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
-  override def dataTypeTestDir = "dataType-test-pk"
-  override def dbName = "data_type_test_pk"
-  override def testDesc = "Test for single PK column data types (and unsigned types)"
 
-  def startTest(typeName: String): Unit = {
+  private val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
+
+  override protected val database = "data_type_test_pk"
+
+  private val testDesc = "Test for single PK column data types (and unsigned types)"
+
+  private val extraDescUnsigned = "unsigned"
+
+  override protected def genIndex(
+      dataTypesWithDesc: List[(ReflectedDataType, String, String)],
+      r: Random): List[List[Index]] = {
+    val dataType = dataTypesWithDesc.head._1
+    val index = if (isStringType(dataType)) {
+      List(PrimaryKey(List(PrefixColumn(1, r.nextInt(4) + 2))))
+    } else {
+      List(PrimaryKey(List(DefaultColumn(1))))
+    }
+    List(index)
+  }
+
+  private def startTest(schemaAndData: SchemaAndData, typeName: String): Unit = {
     test(s"Test $typeName - $testDesc") {
-      simpleSelect(dbName, typeName)
+      loadToDB(schemaAndData)
+
+      setCurrentDatabase(database)
+      val tblName = schemaAndData.schema.tableName
+      val colName = schemaAndData.schema.columnNames.head
+      val query = s"select $colName from $tblName"
+      println(query)
+      runTest(query)
     }
   }
 
-  def startUnsignedTest(typeName: String): Unit = {
-    test(s"Test $extraDesc $typeName - $testDesc") {
-      simpleSelect(dbName, typeName, extraDesc)
+  private def startUnsignedTest(schemaAndData: SchemaAndData, typeName: String): Unit = {
+    test(s"Test $extraDescUnsigned $typeName - $testDesc") {
+      loadToDB(schemaAndData)
+
+      setCurrentDatabase(database)
+      val tblName = schemaAndData.schema.tableName
+      val colName = schemaAndData.schema.columnNames.head
+      val query = s"select $colName from $tblName"
+      println(query)
+      runTest(query, skipJDBC = true)
     }
   }
 
-  def check(): Unit = {
-    if (generateData) {
-      generator.test()
+  private def generateTestCases(): Unit = {
+    for (dataType <- dataTypes) {
+      val typeName = getTypeName(dataType)
+      val dataTypesWithDesc: List[(ReflectedDataType, String, String)] = List(
+        genDescription(dataType, NullableType.NotNullable))
+
+      val schemaAndDataList = genSchemaAndData(
+        rowCount,
+        dataTypesWithDesc,
+        database,
+        hasTiFlashReplica = enableTiFlashTest)
+      schemaAndDataList.foreach { schemaAndData =>
+        startTest(schemaAndData, typeName)
+      }
+    }
+    for (dataType <- unsignedDataTypes) {
+      val typeName = getTypeName(dataType)
+      val dataTypesWithDesc: List[(ReflectedDataType, String, String)] = List(
+        genDescription(dataType, NullableType.NotNullable, extraDescUnsigned))
+      val schemaAndDataList =
+        genSchemaAndData(
+          rowCount,
+          dataTypesWithDesc,
+          database,
+          hasTiFlashReplica = enableTiFlashTest)
+      schemaAndDataList.foreach { schemaAndData =>
+        startUnsignedTest(schemaAndData, typeName)
+      }
     }
   }
 
-  test()
+  generateTestCases()
 }

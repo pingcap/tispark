@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -34,7 +35,7 @@ public class TiConfiguration implements Serializable {
   private static final DateTimeZone DEF_TIMEZONE = Converter.getLocalTimezone();
   private static final int DEF_TIMEOUT = 10;
   private static final TimeUnit DEF_TIMEOUT_UNIT = TimeUnit.MINUTES;
-  private static final int DEF_SCAN_BATCH_SIZE = 100;
+  private static final int DEF_SCAN_BATCH_SIZE = 10480;
   private static final boolean DEF_IGNORE_TRUNCATE = true;
   private static final boolean DEF_TRUNCATE_AS_WARNING = false;
   private static final int DEF_MAX_FRAME_SIZE = 2147483647; // 2 GB
@@ -45,6 +46,11 @@ public class TiConfiguration implements Serializable {
   private static final int MAX_REQUEST_KEY_RANGE_SIZE = 20000;
   private static final int DEF_INDEX_SCAN_CONCURRENCY = 5;
   private static final int DEF_TABLE_SCAN_CONCURRENCY = 512;
+  private static final int DEF_BATCH_GET_CONCURRENCY = 20;
+  private static final int DEF_BATCH_PUT_CONCURRENCY = 20;
+  private static final int DEF_BATCH_DELETE_CONCURRENCY = 20;
+  private static final int DEF_BATCH_SCAN_CONCURRENCY = 5;
+  private static final int DEF_DELETE_RANGE_CONCURRENCY = 20;
   private static final CommandPri DEF_COMMAND_PRIORITY = CommandPri.Low;
   private static final IsolationLevel DEF_ISOLATION_LEVEL = IsolationLevel.SI;
   private static final boolean DEF_SHOW_ROWID = false;
@@ -53,7 +59,7 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_WRITE_ALLOW_SPARK_SQL = false;
   private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
   private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
-  private static final int DEF_PARTITION_PER_SPLIT = 1;
+  private static final int DEF_PARTITION_PER_SPLIT = 10;
   private static final int DEF_KV_CLIENT_CONCURRENCY = 10;
   private static final List<TiStoreType> DEF_ISOLATION_READ_ENGINES =
       ImmutableList.of(TiStoreType.TiKV, TiStoreType.TiFlash);
@@ -68,6 +74,11 @@ public class TiConfiguration implements Serializable {
   private int downgradeThreshold = DEF_REGION_SCAN_DOWNGRADE_THRESHOLD;
   private int indexScanConcurrency = DEF_INDEX_SCAN_CONCURRENCY;
   private int tableScanConcurrency = DEF_TABLE_SCAN_CONCURRENCY;
+  private int batchGetConcurrency = DEF_BATCH_GET_CONCURRENCY;
+  private int batchPutConcurrency = DEF_BATCH_PUT_CONCURRENCY;
+  private int batchDeleteConcurrency = DEF_BATCH_DELETE_CONCURRENCY;
+  private int batchScanConcurrency = DEF_BATCH_SCAN_CONCURRENCY;
+  private int deleteRangeConcurrency = DEF_DELETE_RANGE_CONCURRENCY;
   private CommandPri commandPriority = DEF_COMMAND_PRIORITY;
   private IsolationLevel isolationLevel = DEF_ISOLATION_LEVEL;
   private int maxRequestKeyRangeSize = MAX_REQUEST_KEY_RANGE_SIZE;
@@ -83,6 +94,12 @@ public class TiConfiguration implements Serializable {
   private int kvClientConcurrency = DEF_KV_CLIENT_CONCURRENCY;
 
   private List<TiStoreType> isolationReadEngines = DEF_ISOLATION_READ_ENGINES;
+
+  // TLS configure
+  private boolean tlsEnable = false;
+  private String trustCertCollectionFile;
+  private String keyCertChainFile;
+  private String keyFile;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
@@ -196,6 +213,51 @@ public class TiConfiguration implements Serializable {
     this.tableScanConcurrency = tableScanConcurrency;
   }
 
+  public int getBatchGetConcurrency() {
+    return batchGetConcurrency;
+  }
+
+  public TiConfiguration setBatchGetConcurrency(int batchGetConcurrency) {
+    this.batchGetConcurrency = batchGetConcurrency;
+    return this;
+  }
+
+  public int getBatchPutConcurrency() {
+    return batchPutConcurrency;
+  }
+
+  public TiConfiguration setBatchPutConcurrency(int batchPutConcurrency) {
+    this.batchPutConcurrency = batchPutConcurrency;
+    return this;
+  }
+
+  public int getBatchDeleteConcurrency() {
+    return batchDeleteConcurrency;
+  }
+
+  public TiConfiguration setBatchDeleteConcurrency(int batchDeleteConcurrency) {
+    this.batchDeleteConcurrency = batchDeleteConcurrency;
+    return this;
+  }
+
+  public int getBatchScanConcurrency() {
+    return batchScanConcurrency;
+  }
+
+  public TiConfiguration setBatchScanConcurrency(int batchScanConcurrency) {
+    this.batchScanConcurrency = batchScanConcurrency;
+    return this;
+  }
+
+  public int getDeleteRangeConcurrency() {
+    return deleteRangeConcurrency;
+  }
+
+  public TiConfiguration setDeleteRangeConcurrency(int deleteRangeConcurrency) {
+    this.deleteRangeConcurrency = deleteRangeConcurrency;
+    return this;
+  }
+
   public CommandPri getCommandPriority() {
     return commandPriority;
   }
@@ -301,5 +363,37 @@ public class TiConfiguration implements Serializable {
 
   public void setKvClientConcurrency(int kvClientConcurrency) {
     this.kvClientConcurrency = kvClientConcurrency;
+  }
+
+  public boolean isTlsEnable() {
+    return tlsEnable;
+  }
+
+  public void setTlsEnable(boolean tlsEnable) {
+    this.tlsEnable = tlsEnable;
+  }
+
+  public String getTrustCertCollectionFile() {
+    return trustCertCollectionFile;
+  }
+
+  public void setTrustCertCollectionFile(String trustCertCollectionFile) {
+    this.trustCertCollectionFile = trustCertCollectionFile;
+  }
+
+  public String getKeyCertChainFile() {
+    return keyCertChainFile;
+  }
+
+  public void setKeyCertChainFile(String keyCertChainFile) {
+    this.keyCertChainFile = keyCertChainFile;
+  }
+
+  public String getKeyFile() {
+    return keyFile;
+  }
+
+  public void setKeyFile(String keyFile) {
+    this.keyFile = keyFile;
   }
 }

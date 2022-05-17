@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -35,7 +36,6 @@ object TiConfigConst {
   val REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD: String =
     "spark.tispark.plan.downgrade.index_threshold"
   val UNSUPPORTED_TYPES: String = "spark.tispark.type.unsupported_mysql_types"
-  val ENABLE_AUTO_LOAD_STATISTICS: String = "spark.tispark.statistics.auto_load"
   val CACHE_EXPIRE_AFTER_ACCESS: String = "spark.tispark.statistics.expire_after_access"
   val SHOW_ROWID: String = "spark.tispark.show_rowid"
   val DB_PREFIX: String = "spark.tispark.db_prefix"
@@ -56,4 +56,10 @@ object TiConfigConst {
 
   val CHUNK_CODEC_FORMAT: String = "chunk"
   val DEFAULT_CODEC_FORMAT: String = "chblock"
+
+  // TLS
+  val TIKV_TLS_ENABLE: String = "spark.tispark.tikv.tls_enable"
+  val TIKV_TRUST_CERT_COLLECTION: String = "spark.tispark.tikv.trust_cert_collection"
+  val TIKV_KEY_CERT_CHAIN: String = "spark.tispark.tikv.key_cert_chain"
+  val TIKV_KEY_FILE: String = "spark.tispark.tikv.key_file"
 }

@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -122,7 +123,7 @@ class BasePlanTest extends BaseTiSparkTest {
   def getEstimatedRowCount[T](df: Dataset[T], tableName: String): Double =
     extractTiSparkPlans(df).collect { extractDAGRequest }.head.getEstimatedCount
 
-  def toPlan[T](df: Dataset[T]): SparkPlan = df.queryExecution.executedPlan
+  def toPlan[T](df: Dataset[T]): SparkPlan = df.queryExecution.sparkPlan
 
   private def fail[T](df: Dataset[T], message: String, throwable: Throwable): Unit = {
     df.explain

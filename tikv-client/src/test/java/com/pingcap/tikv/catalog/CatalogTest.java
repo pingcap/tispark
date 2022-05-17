@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -111,8 +112,8 @@ public class CatalogTest extends PDMockServerTest {
     helper.addTable(130, 44, "other");
     helper.setSchemaVersion(667);
 
-    ReflectionWrapper wrapper = new ReflectionWrapper(cat);
-    wrapper.call("reloadCache");
+    ReflectionWrapper wrapper = new ReflectionWrapper(cat, boolean.class);
+    wrapper.call("reloadCache", true);
 
     tables = cat.listTables(db);
     names = tables.stream().map(TiTableInfo::getName).sorted().collect(Collectors.toList());
@@ -126,7 +127,7 @@ public class CatalogTest extends PDMockServerTest {
 
     helper.dropTable(db.getId(), tables.get(0).getId());
     helper.setSchemaVersion(668);
-    wrapper.call("reloadCache");
+    wrapper.call("reloadCache", true);
     tables = cat.listTables(db);
     assertEquals(2, tables.size());
 

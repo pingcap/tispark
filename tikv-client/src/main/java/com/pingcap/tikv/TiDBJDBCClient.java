@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -31,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TiDBJDBCClient implements AutoCloseable {
+
   private static final String UNLOCK_TABLES_SQL = "unlock tables";
   private static final String SELECT_TIDB_CONFIG_SQL = "select @@tidb_config";
   private static final String ENABLE_TABLE_LOCK_KEY = "enable-table-lock";
@@ -41,7 +43,9 @@ public class TiDBJDBCClient implements AutoCloseable {
   private static final int TIDB_ROW_FORMAT_VERSION_DEFAULT = 1;
   private static final String ALTER_PRIMARY_KEY_KEY = "alter-primary-key";
   private static final Boolean ALTER_PRIMARY_KEY_DEFAULT = false;
+
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
+
   private final Connection connection;
 
   public TiDBJDBCClient(Connection connection) {
@@ -132,11 +136,33 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
   }
 
+  public void updateTableStatistics(long startTS, long tableId, long delta, long count)
+      throws SQLException {
+    try (Statement tidbStmt = connection.createStatement()) {
+      String sql;
+      if (delta < 0) {
+        sql =
+            String.format(
+                "update mysql.stats_meta set version = %s, count = count - %s, modify_count = modify_count + %s where table_id = %s and count >= %s",
+                startTS, -delta, count, tableId, -delta);
+      } else {
+        sql =
+            String.format(
+                "update mysql.stats_meta set version = %s, count = count + %s, modify_count = modify_count + %s where table_id = %s",
+                startTS, delta, count, tableId);
+      }
+
+      logger.info("updateTableStatistics: " + sql);
+      tidbStmt.executeUpdate(sql);
+    }
+  }
+
   private Map<String, Object> readConfMapFromTiDB() throws SQLException, IOException {
     String configJSON = (String) queryTiDBViaJDBC(SELECT_TIDB_CONFIG_SQL).get(0).get(0);
     ObjectMapper objectMapper = new ObjectMapper();
     TypeReference<HashMap<String, Object>> typeRef =
         new TypeReference<HashMap<String, Object>>() {};
+
     return objectMapper.readValue(configJSON, typeRef);
   }
 

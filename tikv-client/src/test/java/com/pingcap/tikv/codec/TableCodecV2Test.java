@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -123,7 +124,7 @@ public class TableCodecV2Test {
                 new int[] {128, 0, 1, 0, 0, 0, 1, 5, 0, 6, 4, 139, 38, 172},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", DecimalType.DECIMAL)
+                    .addColumn("c1", new DecimalType(6, 4))
                     .build(),
                 new Object[] {new BigDecimal("11.9900")}),
             // test bit
@@ -136,12 +137,12 @@ public class TableCodecV2Test {
                 new Object[] {new byte[] {49, 48, 48}}),
             // test date
             TestCase.createNew(
-                new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 69, 77, 105, 166, 25},
+                new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 0, 0, 104, 166, 25},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
                     .addColumn("c1", DateType.DATE)
                     .build(),
-                new Object[] {new Date(1590007985000L - timezoneOffset)}),
+                new Object[] {Date.valueOf("2020-05-20")}),
             // test datetime
             TestCase.createNew(
                 new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 69, 77, 105, 166, 25},
@@ -250,7 +251,7 @@ public class TableCodecV2Test {
             .addColumn("c5", StringType.CHAR, 25)
             .addColumn("c6", TimestampType.TIMESTAMP, 5)
             .addColumn("c7", TimeType.TIME, 16)
-            .addColumn("c8", DecimalType.DECIMAL, 8)
+            .addColumn("c8", new DecimalType(6, 4), 8)
             .addColumn("c9", IntegerType.YEAR, 12)
             .addColumn("c10", TEST_ENUM_TYPE, 9)
             // .addColumn("c11", JsonType.JSON, 14)
@@ -309,7 +310,36 @@ public class TableCodecV2Test {
     testCase.test();
   }
 
-  public static class TestCase {
+  @Test
+  public void testSpecialDateTimeType() {
+    TestCase testCase =
+        TestCase.createNew(
+            new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 0, 0, 66, 178, 12},
+            MetaUtils.TableBuilder.newBuilder()
+                .name("t")
+                .addColumn("c1", DateTimeType.DATETIME)
+                .build(),
+            new Object[] {Timestamp.valueOf("1000-01-01 00:00:00")});
+    testCase.test();
+    testCase =
+        TestCase.createNew(
+            new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 0, 0, 255, 177, 12},
+            MetaUtils.TableBuilder.newBuilder()
+                .name("t")
+                .addColumn("c1", TimestampType.TIMESTAMP)
+                .build(),
+            new Object[] {Timestamp.valueOf("1000-01-01 00:00:00")});
+    testCase.test();
+    // test date
+    testCase =
+        TestCase.createNew(
+            new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 0, 0, 66, 178, 12},
+            MetaUtils.TableBuilder.newBuilder().name("t").addColumn("c1", DateType.DATE).build(),
+            new Object[] {Date.valueOf("1000-01-01")});
+    testCase.test();
+  }
+
+  private static class TestCase {
     private final byte[] bytes;
     private final TiTableInfo tableInfo;
     private final Handle handle;
@@ -393,7 +423,7 @@ public class TableCodecV2Test {
         } else if (o instanceof byte[]) {
           s.append(Arrays.toString((byte[]) o));
         } else {
-          s.append(o.toString());
+          s.append(o);
         }
       }
       return s.toString();

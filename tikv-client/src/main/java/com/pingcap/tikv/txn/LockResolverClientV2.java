@@ -10,6 +10,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
@@ -134,7 +135,6 @@ public class LockResolverClientV2 extends AbstractRegionStoreClient
               regionManager,
               this,
               this,
-              region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
               resp -> resp.hasError() ? resp.getError() : null,
               resolveLockResult -> null,
@@ -251,7 +251,6 @@ public class LockResolverClientV2 extends AbstractRegionStoreClient
               regionManager,
               this,
               this,
-              region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
               resp -> resp.hasError() ? resp.getError() : null,
               resolveLockResult -> null,

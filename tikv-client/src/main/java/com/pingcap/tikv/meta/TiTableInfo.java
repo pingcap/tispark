@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -354,7 +355,9 @@ public class TiTableInfo implements Serializable {
   }
 
   public TiTableInfo copyTableWithRowId() {
-    if (!isPkHandle()) {
+    // Support cluster index: need to exclude isPkHandle and isCommonHandle for they need not
+    // _tidb_rowid
+    if (!isPkHandle() && !isCommonHandle) {
       ImmutableList.Builder<TiColumnInfo> newColumns = ImmutableList.builder();
       for (TiColumnInfo col : getColumns(true)) {
         newColumns.add(copyColumn(col));

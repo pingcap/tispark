@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -72,7 +73,7 @@ public class TTLManager {
     this.kvClient = TiSession.getInstance(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
 
-    scheduler =
+    this.scheduler =
         new ScheduledThreadPoolExecutor(
             1,
             new BasicThreadFactory.Builder()
@@ -82,14 +83,16 @@ public class TTLManager {
   }
 
   public void keepAlive() {
-    if (state.compareAndSet(STATE_UNINITIALIZED, STATE_RUNNING)) {
-      scheduler.scheduleAtFixedRate(
-          this::doKeepAlive, SCHEDULER_INITIAL_DELAY, SCHEDULER_PERIOD, TimeUnit.MILLISECONDS);
-    } else {
-      LOG.warn(
-          "keepAlive failed state={} key={}",
-          state.get(),
-          LogDesensitization.hide(KeyUtils.formatBytes(primaryLock)));
+    synchronized (state) {
+      if (state.compareAndSet(STATE_UNINITIALIZED, STATE_RUNNING)) {
+        scheduler.scheduleAtFixedRate(
+            this::doKeepAlive, SCHEDULER_INITIAL_DELAY, SCHEDULER_PERIOD, TimeUnit.MILLISECONDS);
+      } else {
+        LOG.warn(
+            "keepAlive failed state={} key={}",
+            state.get(),
+            LogDesensitization.hide(KeyUtils.formatBytes(primaryLock)));
+      }
     }
   }
 
@@ -134,7 +137,7 @@ public class TTLManager {
                 String.format("sendTxnHeartBeat failed, regionId=%s", tiRegion.getId()),
                 result.getException()));
         this.regionManager.invalidateStore(store.getId());
-        this.regionManager.invalidateRegion(tiRegion.getId());
+        this.regionManager.invalidateRegion(tiRegion);
         // re-split keys and commit again.
         sendTxnHeartBeat(bo, ttl);
       } catch (GrpcException e) {
@@ -152,8 +155,10 @@ public class TTLManager {
   }
 
   public void close() throws InterruptedException {
-    if (state.compareAndSet(STATE_RUNNING, STATE_CLOSED)) {
-      scheduler.shutdown();
+    synchronized (state) {
+      if (state.compareAndSet(STATE_RUNNING, STATE_CLOSED)) {
+        scheduler.shutdown();
+      }
     }
   }
 }

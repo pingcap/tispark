@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -20,6 +21,22 @@ import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
+
+  //https://github.com/pingcap/tispark/issues/2268
+  test("show rowid in commonhandle") {
+    spark.sqlContext.setConf(TiConfigConst.SHOW_ROWID, "true")
+    val dbTable = "tispark_test.testrowid"
+    tidbStmt.execute(s"drop table if exists $dbTable")
+    tidbStmt.execute(
+      s"create table $dbTable(i varchar(64), s int,PRIMARY KEY (i)/*T![clustered_index] CLUSTERED */,unique key (s))")
+    tidbStmt.execute(s"insert into $dbTable values('0', 0),('1',1)")
+
+    val df = spark.sql(s"select * from $dbTable")
+
+    val row1 = Row("0", 0)
+    val row2 = Row("1", 1)
+    checkAnswer(df, Seq(row1, row2))
+  }
 
   test("test tiflash timestamp < 1970") {
     if (!enableTiFlashTest) {
@@ -45,18 +62,19 @@ class IssueTestSuite extends BaseTiSparkTest {
 
     tidbStmt.execute("drop table if exists `tispark_test`.`clustered0`")
 
-    createTableWithClusteredIndex("""
+    tidbStmt.execute("""
         CREATE TABLE `tispark_test`.`clustered0` (
-        |  `col_bit0` bit(1) not null,
-        |  `col_bit1` bit(1) not null,
+        |  `col_bigint` bigint(20) not null,
         |  `col_int0` int(11) not null,
         |  `col_int1` int(11) not null,
         |  UNIQUE KEY (`col_int0`),
-        |  PRIMARY KEY (`col_bit1`,`col_bit0`)
+        |  PRIMARY KEY (`col_bigint`) /*T![clustered_index] CLUSTERED */
         |  );
         |""".stripMargin)
 
-    tidbStmt.execute("INSERT INTO `tispark_test`.`clustered0` VALUES (b'1',b'0',-1,-1)")
+    tidbStmt.execute("""
+        |INSERT INTO `tispark_test`.`clustered0` VALUES (9223372036854775807,1,2);
+        |""".stripMargin)
     val sql = "select * from clustered0"
     spark.sql(s"explain $sql").show(200, false)
     spark.sql(s"$sql").show(200, false)
@@ -362,7 +380,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     judge("select count(1) from (select * from t order by a limit 10) e", checkLimit = false)
   }
 
-  test("Test sql with limit without order by") {
+  ignore("Test sql with limit without order by") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
     tidbStmt.execute("""CREATE TABLE `t` (
         |  `a` int(11) DEFAULT NULL,

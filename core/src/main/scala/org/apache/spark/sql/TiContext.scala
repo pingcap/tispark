@@ -9,17 +9,17 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
 package org.apache.spark.sql
 
-import java.lang
-
 import com.pingcap.tikv.tools.RegionUtils
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
+import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.TiUtil
@@ -33,19 +33,22 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import scalaj.http.Http
 
+import java.lang
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 class TiContext(val sparkSession: SparkSession) extends Serializable with Logging {
   final val version: String = TiSparkVersion.version
   final val conf: SparkConf = sparkSession.sparkContext.conf
-  final val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(conf)
+  lazy final val tiAuthorization: Option[TiAuthorization] = TiAuthorization.tiAuthorization
+  // If enableAuth, get PDAddress from TiDB else from spark conf
+  final val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(
+    conf,
+    if (TiAuthorization.enableAuth) {
+      Option(tiAuthorization.get.getPDAddress())
+    } else Option.empty)
   final val tiSession: TiSession = TiSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
-  lazy val tiConcreteCatalog: TiSessionCatalog =
-    new TiConcreteSessionCatalog(this)(new TiDirectExternalCatalog(this))
-  lazy val sessionCatalog: SessionCatalog = sqlContext.sessionState.catalog
-  lazy val tiCatalog: TiSessionCatalog = new TiCompositeSessionCatalog(this)
 
   sparkSession.sparkContext.addSparkListener(new SparkListener() {
     override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {
@@ -66,63 +69,6 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
   val debug: DebugTool = new DebugTool
-  val autoLoad: Boolean =
-    conf.getBoolean(TiConfigConst.ENABLE_AUTO_LOAD_STATISTICS, defaultValue = true)
-
-  // tidbMapTable does not do any check any meta information
-  // it just register table for later use
-  @Deprecated
-  def tidbMapTable(
-      dbName: String,
-      tableName: String,
-      dbNameAsPrefix: Boolean = false): DataFrame = {
-    val df = getDataFrame(dbName, tableName)
-    val viewName = getViewName(dbName, tableName, dbNameAsPrefix)
-    df.createOrReplaceTempView(viewName)
-    logInfo("Registered table [" + tableName + "] as [" + viewName + "]")
-    df
-  }
-
-  @Deprecated
-  def getDataFrame(dbName: String, tableName: String): DataFrame = {
-    val tiRelation =
-      TiDBRelation(tiSession, TiTableReference(dbName, tableName), meta)(sqlContext)
-    sqlContext.baseRelationToDataFrame(tiRelation)
-  }
-
-  @Deprecated
-  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean): Unit =
-    tidbMapDatabase(dbName, dbNameAsPrefix, autoLoad)
-
-  @Deprecated
-  def tidbMapDatabase(
-      dbName: String,
-      dbNameAsPrefix: Boolean = false,
-      autoLoadStatistics: Boolean = autoLoad): Unit =
-    for {
-      db <- meta.getDatabase(dbName)
-      table <- meta.getTables(db)
-    } {
-      var sizeInBytes = Long.MaxValue
-      val tableName = table.getName
-      if (autoLoadStatistics) {
-        StatisticsManager.loadStatisticsInfo(table)
-      }
-      sizeInBytes = StatisticsManager.estimateTableSize(table)
-
-      if (!sqlContext.sparkSession.catalog.tableExists("`" + tableName + "`")) {
-        val rel: TiDBRelation =
-          TiDBRelation(tiSession, TiTableReference(dbName, tableName, sizeInBytes), meta)(
-            sqlContext)
-
-        val viewName = getViewName(dbName, tableName, dbNameAsPrefix)
-        sqlContext.baseRelationToDataFrame(rel).createTempView(viewName)
-        logInfo("Registered table [" + tableName + "] as [" + viewName + "]")
-      } else {
-        logInfo(
-          "Duplicate table [" + tableName + "] exist in catalog, you might want to set dbNameAsPrefix = true")
-      }
-    }
 
   // add backtick for table name in case it contains, e.g., a minus sign
   private def getViewName(dbName: String, tableName: String, dbNameAsPrefix: Boolean): String =

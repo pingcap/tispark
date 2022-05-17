@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -68,7 +69,11 @@ public class Snapshot {
   }
 
   public ByteString get(ByteString key) {
-    try (KVClient client = new KVClient(session.getConf(), session.getRegionStoreClientBuilder())) {
+    try (KVClient client =
+        new KVClient(
+            session.getConf(),
+            session.getRegionStoreClientBuilder(),
+            session.getThreadPoolForBatchGet())) {
       return client.get(key, timestamp.getVersion());
     }
   }
@@ -78,7 +83,11 @@ public class Snapshot {
     for (byte[] key : keys) {
       list.add(ByteString.copyFrom(key));
     }
-    try (KVClient client = new KVClient(session.getConf(), session.getRegionStoreClientBuilder())) {
+    try (KVClient client =
+        new KVClient(
+            session.getConf(),
+            session.getRegionStoreClientBuilder(),
+            session.getThreadPoolForBatchGet())) {
       List<KvPair> kvPairList =
           client.batchGet(
               ConcreteBackOffer.newCustomBackOff(backOffer), list, timestamp.getVersion());
@@ -142,21 +151,6 @@ public class Snapshot {
    */
   public Iterator<Handle> indexHandleRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
     return getHandleIterator(dagRequest, tasks, session);
-  }
-
-  /**
-   * scan all keys after startKey, inclusive
-   *
-   * @param startKey start of keys
-   * @return iterator of kvPair
-   */
-  public Iterator<KvPair> scan(ByteString startKey) {
-    return new ConcreteScanIterator(
-        session.getConf(),
-        session.getRegionStoreClientBuilder(),
-        startKey,
-        timestamp.getVersion(),
-        Integer.MAX_VALUE);
   }
 
   /**

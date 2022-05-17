@@ -90,51 +90,6 @@ Fow how to use it with extensions enabled, see [code examples with extensions](h
       save()
     ```
 
-## Use Data Source API in SparkSQL
-
-1. Configure TiDB or PD addresses and enable write through SparkSQL in `conf/spark-defaults.conf` as follows:
-
-```
-spark.tispark.pd.addresses 127.0.0.1:2379
-spark.tispark.tidb.addr 127.0.0.1
-spark.tispark.tidb.port 4000
-spark.tispark.write.allow_spark_sql true
-```
-
-2. Create a new table using mysql-client:
-
-```
-CREATE TABLE tpch_test.TARGET_TABLE_CUSTOMER (
-  `C_CUSTKEY` int(11) NOT NULL,
-  `C_NAME` varchar(25) NOT NULL,
-  `C_ADDRESS` varchar(40) NOT NULL,
-  `C_NATIONKEY` int(11) NOT NULL,
-  `C_PHONE` char(15) NOT NULL,
-  `C_ACCTBAL` decimal(15,2) NOT NULL,
-  `C_MKTSEGMENT` char(10) NOT NULL,
-  `C_COMMENT` varchar(117) NOT NULL
-)
-```
-
-3. Register the TiDB table `tpch_test.TARGET_TABLE_CUSTOMER` to the Spark Catalog:
-
-```
-CREATE TABLE CUSTOMER_DST USING tidb OPTIONS (
-  tidb.user 'root',
-  tidb.password '',
-  database 'tpch_test',
-  table 'TARGET_TABLE_CUSTOMER'
-)
-```
-
-4. Write data to `tpch_test.TARGET_TABLE_CUSTOMER`:
-
-```
-INSERT INTO CUSTOMER_DST VALUES(1000, 'Customer#000001000', 'AnJ5lxtLjioClr2khl9pb8NLxG2', 9, '19-407-425-2584', 2209.81, 'AUTOMOBILE', '. even, express theodolites upo')
-
-INSERT INTO CUSTOMER_DST SELECT * FROM tpch_test.CUSTOMER
-```
-
 ## Writing to Multi-tables
 
 TiDB Connector supports writing data into multi-tables in one transaction using scala/java API.
@@ -168,21 +123,23 @@ TiBatchWrite.write(
 
 The following table shows the TiDB-specific options, which can be passed in through `TiDBOptions` or `SparkConf`.
 
-| Key                | Required | Default                | Description                                                                |
-| ------------------ | -------- | ---------------------- | -------------------------------------------------------------------------- |
-| pd.addresses       | true     | -                      | The addresses of PD clusters, split by comma                               |
-| tidb.addr          | true     | -                      | TiDB address, which currently only supports one instance                   |
-| tidb.port          | true     | -                      | TiDB Port                                                                  |
-| tidb.user          | true     | -                      | TiDB User                                                                  |
-| tidb.password      | true     | -                      | TiDB Password                                                              |
-| database           | true     | -                      | TiDB Database                                                              |
-| table              | true     | -                      | TiDB Table                                                                 |
-| replace            | false    | false                  | To define the behavior of append                                           |
-| useTableLock       | false    | true (3.x) false (4.x) | Whether to lock the table during writing                                   |
-| enableRegionSplit  | false    | true                   | To split Region to avoid hot Region during insertion                       |
-| scatterWaitMS      | false    | 300000                 | Max time to wait scatter region                                            |
-| writeThreadPerTask | false    | 1                      | Thread number each spark task use to write data to TiKV                    |
-| bytesPerRegion     | false    | 100663296 (96M)        | Decrease this parameter to split more regions (increase write concurrency) |
+| Key                         | Required | Default                | Description                                                                                                                   |
+| --------------------------- | -------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| pd.addresses                | true     | -                      | The addresses of PD clusters, split by comma                                                                                  |
+| tidb.addr                   | true     | -                      | TiDB address, which currently only supports one instance                                                                      |
+| tidb.port                   | true     | -                      | TiDB Port                                                                                                                     |
+| tidb.user                   | true     | -                      | TiDB User                                                                                                                     |
+| tidb.password               | true     | -                      | TiDB Password                                                                                                                 |
+| database                    | true     | -                      | TiDB Database                                                                                                                 |
+| table                       | true     | -                      | TiDB Table                                                                                                                    |
+| replace                     | false    | false                  | To define the behavior of append                                                                                              |
+| useTableLock                | false    | true (3.x) false (4.x) | Whether to lock the table during writing                                                                                      |
+| enableRegionSplit           | false    | true                   | To split Region to avoid hot Region during insertion                                                                          |
+| scatterWaitMS               | false    | 300000                 | Max time to wait scatter region                                                                                               |
+| writeThreadPerTask          | false    | 1                      | Thread number each spark task use to write data to TiKV                                                                       |
+| bytesPerRegion              | false    | 100663296 (96M)        | Decrease this parameter to split more regions (increase write concurrency)                                                    |
+| enableUpdateTableStatistics | false    | false                  | Update statistics in table `mysql.stats_meta` (`tidb.user` must own update privilege to table `mysql.stats_meta` if set true) |
+| deduplicate                 | false    | true                   | Deduplicate data in DataFrame according to primary key and unique key                                                         |
 
 ## TiDB Version
 
@@ -205,6 +162,15 @@ enable-table-lock: true
 # delay-clean-table-lock is used to control the time (milliseconds) of delay before unlocking the table in abnormal situations.
 delay-clean-table-lock: 60000
 ```
+
+## Supports and Limitations
+
+TiSpark (>= 2.4.2) supports writing data to clustered index tables, which is a new feature in TiDB-5.0.0.
+
+TiSpark does not support writing to the following tables:
+- tables with auto random column
+- partition table
+- tables with generated column
 
 ## Type Conversion for Write
 
@@ -249,49 +215,3 @@ The complete conversion metrics are as follows.
 | ENUM       | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
 | SET        | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                |
 | JSON       | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                |
-
-## Write Benchmark
-
-The following test report is based on 4 machines.
-
-```
-Intel(R) Xeon(R) CPU E5-2630 v4 @ 2.20GHz * 2 = 40Vu
-12 * 16G = 188G
-```
-
-`FIO` test result:
-
-```
-WRITE: bw=705MiB/s (740MB/s), 705MiB/s-705MiB/s (740MB/s-740MB/s), io=20.0GiB (21.5GB), run=29034-29034msec
-```
-
-The table schema is:
-
-```
-CREATE TABLE ORDERS  (O_ORDERKEY       INTEGER NOT NULL,
-                      O_CUSTKEY        INTEGER NOT NULL,
-                      O_ORDERSTATUS    CHAR(1) NOT NULL,
-                      O_TOTALPRICE     DECIMAL(15,2) NOT NULL,
-                      O_ORDERDATE      DATE NOT NULL,
-                      O_ORDERPRIORITY  CHAR(15) NOT NULL,
-                      O_CLERK          CHAR(15) NOT NULL,
-                      O_SHIPPRIORITY   INTEGER NOT NULL,
-                      O_COMMENT        VARCHAR(79) NOT NULL);
-
-```
-
-### TiSpark write benchmark
-
-| Count(*)    | Data Size | Parallel Number | Prepare(s) | Pre-write(s) | Commit(s) | Total(s) |
-| ----------- | --------- | --------------- | ---------- | ------------ | ---------- | --------- |
-| 1,500,000   | 165M      | 2               | 17         | 68           | 62         | 148       |
-| 15,000,000  | 1.7G      | 24              | 49         | 157          | 119        | 326       |
-| 150,000,000 | 17G       | 120             | 630        | 1236         | 1098       | 2964      |
-
-## Spark with JDBC Benchmark
-
-| Count(*)    | Data Size | Parallel Number | Spark JDBC Write(s) | Comments                            |
-| ----------- | --------- | --------------- | -------------------- | ----------------------------------- |
-| 1,500,000   | 165M      | 24              | 22                   |                                     |
-| 15,000,000  | 1.7G      | 24              | 411                  | Using 120 parallel causes `KV Busy`. |
-| 150,000,000 | 17G       | 24              | 2936                 | Using 120 parallel causes `KV Busy`. |

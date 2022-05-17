@@ -10,6 +10,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
@@ -23,10 +24,12 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
+import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
@@ -44,41 +47,32 @@ public class ConcreteScanIterator extends ScanIterator {
       TiConfiguration conf,
       RegionStoreClientBuilder builder,
       ByteString startKey,
-      long version,
-      int limit) {
-    // Passing endKey as ByteString.EMPTY means that endKey is +INF by default,
-    this(conf, builder, startKey, ByteString.EMPTY, version, limit);
-  }
-
-  public ConcreteScanIterator(
-      TiConfiguration conf,
-      RegionStoreClientBuilder builder,
-      ByteString startKey,
       ByteString endKey,
       long version) {
     // Passing endKey as ByteString.EMPTY means that endKey is +INF by default,
-    this(conf, builder, startKey, endKey, version, Integer.MAX_VALUE);
-  }
-
-  private ConcreteScanIterator(
-      TiConfiguration conf,
-      RegionStoreClientBuilder builder,
-      ByteString startKey,
-      ByteString endKey,
-      long version,
-      int limit) {
-    super(conf, builder, startKey, endKey, limit);
+    super(conf, builder, startKey, endKey, Integer.MAX_VALUE);
     this.version = version;
   }
 
   @Override
   TiRegion loadCurrentRegionToCache() throws GrpcException {
-    TiRegion region;
-    try (RegionStoreClient client = builder.build(startKey)) {
-      region = client.getRegion();
-      BackOffer backOffer = ConcreteBackOffer.newScannerNextMaxBackOff();
-      currentCache = client.scan(backOffer, startKey, version);
-      return region;
+    BackOffer backOffer = ConcreteBackOffer.newScannerNextMaxBackOff();
+    while (true) {
+      try (RegionStoreClient client = builder.build(startKey)) {
+        TiRegion region = client.getRegion();
+        if (limit <= 0) {
+          currentCache = null;
+        } else {
+          try {
+            int scanSize = Math.min(limit, conf.getScanBatchSize());
+            currentCache = client.scan(backOffer, startKey, scanSize, version);
+          } catch (final TiKVException e) {
+            backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
+            continue;
+          }
+        }
+        return region;
+      }
     }
   }
 
@@ -96,25 +90,39 @@ public class ConcreteScanIterator extends ScanIterator {
     }
   }
 
-  @Override
-  public boolean hasNext() {
-    Kvrpcpb.KvPair current;
-    // continue when cache is empty but not null
-    do {
-      current = getCurrent();
-      if (isCacheDrained() && cacheLoadFails()) {
-        endOfScan = true;
-        return false;
-      }
-    } while (currentCache != null && current == null);
-    // for last batch to be processed, we have to check if
-    return !processingLastBatch
-        || current == null
-        || (hasEndKey && Key.toRawKey(current.getKey()).compareTo(endKey) < 0);
+  /**
+   * Cache is drained when - no data extracted - scan limit was not defined - have read the last
+   * index of cache - index not initialized
+   *
+   * @return whether cache is drained
+   */
+  private boolean isCacheDrained() {
+    return currentCache == null || limit <= 0 || index >= currentCache.size() || index == -1;
+  }
+
+  private boolean notEndOfScan() {
+    return limit > 0
+        && !(processingLastBatch
+            && (index >= currentCache.size()
+                || Key.toRawKey(currentCache.get(index).getKey()).compareTo(endKey) >= 0));
   }
 
   @Override
-  public KvPair next() {
+  public boolean hasNext() {
+    if (isCacheDrained() && cacheLoadFails()) {
+      endOfScan = true;
+      return false;
+    }
+    // continue when cache is empty but not null
+    while (currentCache != null && currentCache.isEmpty()) {
+      if (isCacheDrained() && cacheLoadFails()) {
+        return false;
+      }
+    }
+    return notEndOfScan();
+  }
+
+  private Kvrpcpb.KvPair getCurrent() {
     --limit;
     KvPair current = currentCache.get(index++);
 
@@ -127,20 +135,8 @@ public class ConcreteScanIterator extends ScanIterator {
     return current;
   }
 
-  /**
-   * Cache is drained when - no data extracted - scan limit was not defined - have read the last
-   * index of cache - index not initialized
-   *
-   * @return whether cache is drained
-   */
-  private boolean isCacheDrained() {
-    return currentCache == null || limit <= 0 || index >= currentCache.size() || index == -1;
-  }
-
-  private Kvrpcpb.KvPair getCurrent() {
-    if (isCacheDrained()) {
-      return null;
-    }
-    return currentCache.get(index);
+  @Override
+  public Kvrpcpb.KvPair next() {
+    return getCurrent();
   }
 }

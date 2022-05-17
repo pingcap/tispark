@@ -9,25 +9,25 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
 package com.pingcap.tikv.event;
 
+import com.pingcap.tikv.region.TiRegion;
 import java.io.Serializable;
 
 public class CacheInvalidateEvent implements Serializable {
-  private final long regionId;
-  private final long storeId;
+  private final TiRegion region;
   private final CacheType cacheType;
   private boolean invalidateRegion;
   private boolean invalidateStore;
 
   public CacheInvalidateEvent(
-      long regionId, long storeId, boolean updateRegion, boolean updateStore, CacheType type) {
-    this.regionId = regionId;
-    this.storeId = storeId;
+      TiRegion region, boolean updateRegion, boolean updateStore, CacheType type) {
+    this.region = region;
     this.cacheType = type;
     if (updateRegion) {
       invalidateRegion();
@@ -38,12 +38,12 @@ public class CacheInvalidateEvent implements Serializable {
     }
   }
 
-  public long getRegionId() {
-    return regionId;
+  public TiRegion getRegion() {
+    return region;
   }
 
   public long getStoreId() {
-    return storeId;
+    return region.getLeader().getStoreId();
   }
 
   @Override
@@ -52,9 +52,7 @@ public class CacheInvalidateEvent implements Serializable {
       return true;
     } else if (obj instanceof CacheInvalidateEvent) {
       CacheInvalidateEvent event = (CacheInvalidateEvent) obj;
-      return event.getRegionId() == getRegionId()
-          && event.getStoreId() == getStoreId()
-          && event.getCacheType() == getCacheType();
+      return event.getRegion().equals(getRegion()) && event.getCacheType() == getCacheType();
     }
     return false;
   }
@@ -62,8 +60,7 @@ public class CacheInvalidateEvent implements Serializable {
   @Override
   public int hashCode() {
     int result = 1106;
-    result += result * 31 + getStoreId();
-    result += result * 31 + getRegionId();
+    result += result * 31 + getRegion().hashCode();
     result += result * 31 + getCacheType().name().hashCode();
     return result;
   }
@@ -90,7 +87,9 @@ public class CacheInvalidateEvent implements Serializable {
 
   @Override
   public String toString() {
-    return String.format("RegionId=%d,StoreId=%d,Type=%s", regionId, storeId, cacheType.name());
+    return String.format(
+        "RegionId=%d,StoreId=%d,Type=%s",
+        region.getId(), region.getLeader().getStoreId(), cacheType.name());
   }
 
   public enum CacheType implements Serializable {

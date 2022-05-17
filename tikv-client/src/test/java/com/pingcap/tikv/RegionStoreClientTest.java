@@ -9,15 +9,14 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
 package com.pingcap.tikv;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -27,14 +26,11 @@ import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.ExecType;
 import com.pingcap.tidb.tipb.Executor;
 import com.pingcap.tidb.tipb.SelectResponse;
+import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.junit.Test;
 import org.tikv.kvproto.Coprocessor;
@@ -72,6 +68,28 @@ public class RegionStoreClientTest extends MockServerTest {
     RegionStoreClient.RegionStoreClientBuilder builder = session.getRegionStoreClientBuilder();
 
     return builder.build(region, store);
+  }
+
+  @Test
+  public void preWriteWithKeyExceptionTest() {
+    doPreWriteWithKeyExceptionTest(createClientV2());
+    doPreWriteWithKeyExceptionTest(createClientV3());
+    doPreWriteWithKeyExceptionTest(createClientV4());
+  }
+
+  private void doPreWriteWithKeyExceptionTest(RegionStoreClient client) {
+    ByteString key = ByteString.copyFromUtf8("key1");
+    ByteString value = ByteString.copyFromUtf8("value1");
+    Kvrpcpb.Mutation mutation =
+        Kvrpcpb.Mutation.newBuilder().setKey(key).setValue(value).setOp(Kvrpcpb.Op.Put).build();
+    List<Kvrpcpb.Mutation> mutationList = Collections.singletonList(mutation);
+    server.putError("error1", KVMockServer.WRITE_CONFLICT);
+    try {
+      client.prewrite(defaultBackOff(), ByteString.copyFromUtf8("error1"), mutationList, 0, 0);
+    } catch (KeyException e) {
+      Kvrpcpb.KeyError ke = e.getKeyError();
+      assertNotNull(ke);
+    }
   }
 
   @Test
@@ -144,7 +162,15 @@ public class RegionStoreClientTest extends MockServerTest {
     server.put("key2", "value2");
     server.put("key4", "value4");
     server.put("key5", "value5");
-    List<Kvrpcpb.KvPair> kvs = client.scan(defaultBackOff(), ByteString.copyFromUtf8("key2"), 1);
+    List<Kvrpcpb.KvPair> kvs =
+        client.scan(defaultBackOff(), ByteString.copyFromUtf8("key2"), 100, 1);
+    assertEquals(3, kvs.size());
+    kvs.forEach(
+        kv ->
+            assertEquals(
+                kv.getKey().toStringUtf8().replace("key", "value"), kv.getValue().toStringUtf8()));
+
+    kvs = client.scan(defaultBackOff(), ByteString.copyFromUtf8("key1"), 3, 1);
     assertEquals(3, kvs.size());
     kvs.forEach(
         kv ->
@@ -153,7 +179,7 @@ public class RegionStoreClientTest extends MockServerTest {
 
     server.putError("error1", KVMockServer.ABORT);
     try {
-      client.scan(defaultBackOff(), ByteString.copyFromUtf8("error1"), 1);
+      client.scan(defaultBackOff(), ByteString.copyFromUtf8("error1"), 100, 1);
       fail();
     } catch (Exception e) {
       assertTrue(true);
@@ -218,7 +244,7 @@ public class RegionStoreClientTest extends MockServerTest {
     BackOffer backOffer = defaultBackOff();
     Queue<SelectResponse> responseQueue = new ArrayDeque<>();
 
-    client.coprocess(backOffer, request, ranges, responseQueue, 1);
+    client.coprocess(backOffer, request, client.getRegion(), ranges, responseQueue, 1);
 
     List<Chunk> resultChunk = new ArrayList<>();
     while (!responseQueue.isEmpty()) {

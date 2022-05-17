@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -95,7 +96,7 @@ public class CatalogTransaction {
       if (KeyUtils.hasPrefix(pair.first, ByteString.copyFromUtf8(MetaCodec.KEY_TABLE))) {
         try {
           TiTableInfo tableInfo = parseFromJson(pair.second, TiTableInfo.class);
-          if (!tableInfo.isSequence()) {
+          if (!tableInfo.isSequence() && !tableInfo.isView()) {
             builder.add(tableInfo);
           }
         } catch (TiClientInternalException e) {

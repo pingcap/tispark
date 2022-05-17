@@ -9,12 +9,14 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
 package com.pingcap.tispark
 
+import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
@@ -28,6 +30,71 @@ import org.apache.spark.sql.types.{
 }
 
 class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
+
+  test("deduplicate=false") {
+    jdbcUpdate(s"drop table if exists $table")
+    jdbcUpdate(s"""create table $table(
+                  |`id` varchar(36) COLLATE utf8_general_ci NOT NULL,
+                  |`name` varchar(36) COLLATE utf8_general_ci DEFAULT NULL,
+                  |`school` varchar(36) COLLATE utf8_general_ci NOT NULL,
+                  |PRIMARY KEY (`id`),
+                  |UNIQUE KEY `test_unique_1` (`name`,`school`)
+                  |)""".stripMargin)
+
+    val s = spark
+
+    import s.implicits._
+
+    val df = Seq(("10", "n5", "n10"), ("11", "n5", "n10")).toDF("id", "name", "school")
+
+    val caught = intercept[TiBatchWriteException] {
+      df.write
+        .format("tidb")
+        .options(tidbOptions)
+        .option("database", database)
+        .option("table", table)
+        .option("deduplicate", "false")
+        .mode("append")
+        .save()
+    }
+    assert(caught.getMessage.equals("duplicate unique key or primary key"))
+  }
+
+  ignore("stats_meta update modify_count") {
+    if (!supportBatchWrite) {
+      cancel()
+    }
+
+    jdbcUpdate(s"drop table if exists $table")
+    jdbcUpdate(s"create table $table(c1 int, c2 int, unique key(c2))")
+
+    jdbcUpdate(s"insert into $table values(111, 111)")
+
+    val tiTable = ti.meta.getTable(databaseWithPrefix, table).get
+
+    val schema: StructType =
+      StructType(List(StructField("c1", LongType), StructField("c2", LongType)))
+
+    val size = 6L
+    val rows = (1L to size).map(i => Row(i, i)).toList
+    val data: RDD[Row] = sc.makeRDD(rows)
+    val df = sqlContext.createDataFrame(data, schema)
+    df.write
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", database)
+      .option("table", table)
+      .option("replace", "true")
+      .option("enableUpdateTableStatistics", "true")
+      .mode("append")
+      .save()
+
+    val result = queryTiDBViaJDBC(
+      s"select modify_count, count from mysql.stats_meta where table_id = ${tiTable.getId}").head
+
+    assert(size.toString.equals(result(0).toString))
+    assert(size.toString.equals(result(1).toString))
+  }
 
   test("batch get retry test") {
     if (blockingRead) {
@@ -79,7 +146,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
     assert(22 == spark.sql(s"select c2 from $table where c1 = 2").collect().head.get(0))
   }
 
-  test("bigdecimal conversion test") {
+  ignore("bigdecimal conversion test") {
     jdbcUpdate(s"drop table if exists t")
     jdbcUpdate(s"create table t(a bigint unsigned)")
 
@@ -103,7 +170,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
     assert(queryTiDBViaJDBC(s"select * from $database.t").head.head.toString.equals("1"))
   }
 
-  test("integer conversion test") {
+  ignore("integer conversion test") {
     jdbcUpdate(s"drop table if exists t")
     jdbcUpdate(s"create table t(a int)")
 

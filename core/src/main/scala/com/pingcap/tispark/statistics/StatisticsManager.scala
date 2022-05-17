@@ -10,6 +10,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
@@ -276,9 +277,10 @@ object StatisticsManager {
     dbPrefix = tiSession.getConf.getDBPrefix
     // An estimator used to calculate table size.
     tableSizeEstimator = DefaultTableSizeEstimator
-    metaTable = catalog.getTable(s"${dbPrefix}mysql", "stats_meta")
-    histTable = catalog.getTable(s"${dbPrefix}mysql", "stats_histograms")
-    bucketTable = catalog.getTable(s"${dbPrefix}mysql", "stats_buckets")
+    val mysqlDB = catalog.getDatabaseFromCache(s"${dbPrefix}mysql")
+    metaTable = catalog.getTableFromCache(mysqlDB, "stats_meta")
+    histTable = catalog.getTableFromCache(mysqlDB, "stats_histograms")
+    bucketTable = catalog.getTableFromCache(mysqlDB, "stats_buckets")
     statisticsMap.invalidateAll()
   }
 

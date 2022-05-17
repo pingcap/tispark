@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -106,41 +107,6 @@ public class RegionManagerTest extends PDMockServerTest {
     Pair<TiRegion, Store> pair = mgr.getRegionStorePairByKey(searchKey);
     assertEquals(pair.first.getId(), regionId);
     assertEquals(pair.first.getId(), storeId);
-  }
-
-  @Test
-  public void getRegionById() {
-    ByteString startKey = ByteString.copyFrom(new byte[] {1});
-    ByteString endKey = ByteString.copyFrom(new byte[] {10});
-
-    int confVer = 1026;
-    int ver = 1027;
-    long regionId = 233;
-    pdServer.addGetRegionByIDResp(
-        GrpcUtils.makeGetRegionResponse(
-            pdServer.getClusterId(),
-            GrpcUtils.makeRegion(
-                regionId,
-                GrpcUtils.encodeKey(startKey.toByteArray()),
-                GrpcUtils.encodeKey(endKey.toByteArray()),
-                GrpcUtils.makeRegionEpoch(confVer, ver),
-                GrpcUtils.makePeer(1, 10),
-                GrpcUtils.makePeer(2, 20))));
-    TiRegion region = mgr.getRegionById(regionId);
-    assertEquals(region.getId(), regionId);
-
-    TiRegion regionToSearch = mgr.getRegionById(regionId);
-    assertEquals(region, regionToSearch);
-
-    mgr.invalidateRegion(regionId);
-
-    // This will in turn invoke rpc and results in an error
-    // since we set just one rpc response
-    try {
-      mgr.getRegionById(regionId);
-      fail();
-    } catch (Exception ignored) {
-    }
   }
 
   @Test

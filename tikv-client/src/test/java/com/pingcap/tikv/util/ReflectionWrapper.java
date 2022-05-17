@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -19,14 +20,27 @@ import java.lang.reflect.Method;
 
 public class ReflectionWrapper {
   private final Object obj;
+  private final Class<?>[] classes;
+  private static final IllegalArgumentException WRONG_NUMBER_OF_ARGS_EXCEPTION =
+      new IllegalArgumentException("wrong number of arguments");
 
-  public ReflectionWrapper(Object obj) {
+  public ReflectionWrapper(Object obj, Class<?>... classes) {
     this.obj = obj;
+    this.classes = classes;
   }
 
   public Object call(String methodName, Object... args) {
+    // mock call duration
     try {
-      Method method = obj.getClass().getDeclaredMethod(methodName);
+      Thread.sleep(1);
+    } catch (Exception ignored) {
+      // ignore
+    }
+    if (classes.length != args.length) {
+      throw WRONG_NUMBER_OF_ARGS_EXCEPTION;
+    }
+    try {
+      Method method = obj.getClass().getDeclaredMethod(methodName, classes);
       method.setAccessible(true);
       return method.invoke(obj, args);
     } catch (Exception e) {

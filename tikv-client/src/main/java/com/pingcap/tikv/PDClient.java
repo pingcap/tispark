@@ -9,6 +9,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -334,9 +335,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     if (tiflashReplicaService != null) {
       tiflashReplicaService.shutdownNow();
     }
-    if (channelFactory != null) {
-      channelFactory.close();
-    }
   }
 
   @VisibleForTesting
@@ -447,7 +445,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
               Long.parseLong(
                   kv.getKey().toString().substring(TIFLASH_TABLE_SYNC_PROGRESS_PATH.length()));
         } catch (Exception e) {
-          logger.info(
+          logger.debug(
               "invalid tiflash table replica sync progress key. key = " + kv.getKey().toString());
           continue;
         }
