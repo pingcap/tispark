@@ -116,8 +116,8 @@ trait SharedSQLContext
     }
     logger.info(s"Table $tableName found present in ${check.head.head}")
     for (_ <- 0 until 60) {
-      // check every 5 secs
-      Thread.sleep(5000)
+      // check every 2 secs
+      Thread.sleep(2000)
       val available = database match {
         case Some(db) =>
           queryTiDBViaJDBC(
@@ -131,7 +131,7 @@ trait SharedSQLContext
         return true
       }
     }
-    // timed out after 5 minutes
+    // timed out after 2 minutes
     false
   }
 
