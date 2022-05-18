@@ -21,6 +21,7 @@ import com.pingcap.tispark.TiSparkVersion
 import org.apache.spark.sql.SparkSession
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
+import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
 
 /**
@@ -32,6 +33,7 @@ object TiSparkTeleInfo {
   private val tispark_version: String = getTispark_version
   private val tidb_version: String = getPd_version
   private val spark_version: String = org.apache.spark.SPARK_VERSION
+  private val cluster_id: String = getCluster_id
 
   val tiSparkTeleInfo: Map[String, Any] = generateTiSparkTeleInfo()
 
@@ -46,7 +48,8 @@ object TiSparkTeleInfo {
     Map(
       "tispark_version" -> this.tispark_version,
       "tidb_version" -> this.tidb_version,
-      "spark_version" -> this.spark_version)
+      "spark_version" -> this.spark_version,
+      "tidb_cluster_id" -> this.cluster_id)
   }
 
   private def getTispark_version: String = {
@@ -59,26 +62,42 @@ object TiSparkTeleInfo {
   }
 
   private def getPd_version: String = {
+    val pDStatusOption = requestPD[PDStatus]("/pd/api/v1/status")
+    if (!pDStatusOption.isDefined)
+      "UNKNOWN"
+    else
+      pDStatusOption.get.version
+  }
+
+  private def getCluster_id: String = {
+    val clusterOption = requestPD[Cluster]("/pd/api/v1/cluster")
+    if (!clusterOption.isDefined)
+      "UNKNOWN"
+    else
+      clusterOption.get.id
+  }
+
+  private def requestPD[T: ClassTag](urlPattern: String): Option[T] = {
     try {
       val conf = SparkSession.active.sessionState.conf.clone()
       val pdAddr = conf.getConfString("spark.tispark.pd.addresses", "")
       if (pdAddr.equals("")) {
-        return "unknown"
+        return Option.empty[T]
       }
 
-      val url = "http://" + pdAddr + "/pd/api/v1/status"
+      val url = "http://" + pdAddr + urlPattern
 
       val httpClient = new HttpClientUtil
       val resp = httpClient.get(url)
 
       val mapper = new ObjectMapper
-      val pDStatus = mapper.readValue(resp.body, classOf[PDStatus])
+      val entry = mapper.readValue(resp.body, classTag[T].runtimeClass)
 
-      pDStatus.version
+      Option(entry.asInstanceOf[T])
     } catch {
       case e: Throwable =>
         logger.info("Failed to get PD version " + e.getMessage)
-        "unknown"
+        Option.empty[T]
     }
   }
 }
@@ -96,5 +115,17 @@ class PDStatus {
   def setBuild_ts(build_ts: String): Unit = this.build_ts = build_ts
   def setVersion(version: String): Unit = this.version = version
   def setGit_hash(git_hash: String): Unit = this.git_hash = git_hash
-  def setStart_timestamp(Start: String): Unit = this.start_timestamp = start_timestamp
+  def setStart_timestamp(start_timestamp: String): Unit = this.start_timestamp = start_timestamp
+}
+
+/**
+ * Cluster status data class type for HTTP request.
+ * Get request return a JSON that is explained by this class.
+ */
+class Cluster {
+  var id: String = _
+  var max_peer_count: Int = _
+
+  def setId(id: String): Unit = this.id = id
+  def setMax_peer_count(max_peer_count: Int): Unit = this.max_peer_count = max_peer_count
 }
