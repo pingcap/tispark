@@ -169,7 +169,8 @@ public class TiBlockColumnVector extends TiColumnVector {
   @Override
   public int getInt(int rowId) {
     if (type instanceof DateType) {
-      return (int) getTime(rowId);
+      int days = (int) getTime(rowId);
+      return DateType.toJulianGregorianCalendar(days);
     }
     return MemoryUtil.getInt(dataAddr + ((long) rowId << 2));
   }
