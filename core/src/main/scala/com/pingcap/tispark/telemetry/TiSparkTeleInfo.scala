@@ -20,6 +20,8 @@ import com.pingcap.tispark.utils.HttpClientUtil
 import com.pingcap.tispark.TiSparkVersion
 import org.apache.spark.sql.SparkSession
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.pingcap.tispark.auth.TiAuthorization
+import org.apache.spark.sql.internal.SQLConf
 import org.slf4j.LoggerFactory
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
@@ -30,10 +32,10 @@ import scala.util.matching.Regex
 object TiSparkTeleInfo {
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
+  private val pd_address: Option[String] = getPDAddress
   private val tispark_version: String = getTispark_version
   private val tidb_version: String = getPd_version
   private val spark_version: String = org.apache.spark.SPARK_VERSION
-  private val cluster_id: String = getCluster_id
 
   val tiSparkTeleInfo: Map[String, Any] = generateTiSparkTeleInfo()
 
@@ -48,16 +50,17 @@ object TiSparkTeleInfo {
     Map(
       "tispark_version" -> this.tispark_version,
       "tidb_version" -> this.tidb_version,
-      "spark_version" -> this.spark_version,
-      "tidb_cluster_id" -> this.cluster_id)
+      "spark_version" -> this.spark_version)
   }
+
+  def pdAddress: Option[String] = pd_address
 
   private def getTispark_version: String = {
     val pattern = new Regex("[0-9]\\.[0-9]\\.[0-9]-SNAPSHOT")
     val version = TiSparkVersion.version
     pattern.findFirstIn(version) match {
       case Some(s) => s
-      case None => "unknown"
+      case None => "UNKNOWN"
     }
   }
 
@@ -79,13 +82,11 @@ object TiSparkTeleInfo {
 
   private def requestPD[T: ClassTag](urlPattern: String): Option[T] = {
     try {
-      val conf = SparkSession.active.sessionState.conf.clone()
-      val pdAddr = conf.getConfString("spark.tispark.pd.addresses", "")
-      if (pdAddr.equals("")) {
+      if (!pd_address.isDefined) {
         return Option.empty[T]
       }
 
-      val url = "http://" + pdAddr + urlPattern
+      val url = "http://" + pd_address.get + urlPattern
 
       val httpClient = new HttpClientUtil
       val resp = httpClient.get(url)
@@ -98,6 +99,21 @@ object TiSparkTeleInfo {
       case e: Throwable =>
         logger.info("Failed to get PD version " + e.getMessage)
         Option.empty[T]
+    }
+  }
+
+  private def getPDAddress: Option[String] = {
+    try {
+      if (TiAuthorization.enableAuth) {
+        Option(TiAuthorization.tiAuthorization.get.getPDAddress())
+      } else {
+        val conf: SQLConf = SparkSession.active.sessionState.conf.clone()
+        Option(conf.getConfString("spark.tispark.pd.addresses"))
+      }
+    } catch {
+      case e: Throwable =>
+        logger.info("Failed to get PD Address" + e.getMessage)
+        Option.empty
     }
   }
 }
