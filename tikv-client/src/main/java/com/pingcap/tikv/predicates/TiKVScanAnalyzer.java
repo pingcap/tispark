@@ -30,10 +30,7 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.PartitionPruner;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
-import com.pingcap.tikv.key.IndexScanKeyRangeBuilder;
-import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.key.RowKey;
-import com.pingcap.tikv.key.TypedKey;
+import com.pingcap.tikv.key.*;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiDAGRequest.IndexScanType;
@@ -47,6 +44,8 @@ import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.types.MySQLType;
 import com.pingcap.tikv.util.Pair;
+
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -297,9 +296,10 @@ public class TiKVScanAnalyzer {
     }
   }
 
-  private Pair<Key, Key> buildTableScanKeyRangePerId(long id, IndexRange ir) {
-    Key startKey;
-    Key endKey;
+  private List<Pair<Key, Key>> buildTableScanKeyRangePerId(long id, IndexRange ir) {
+    List<Key> startKeys=new ArrayList<>(2);
+    List<Key> endKeys=new ArrayList<>(2);
+    List<Pair<Key,Key>> pairs=new ArrayList<>(2);
     if (ir.hasAccessKey()) {
       checkArgument(
           !ir.hasRange(), "Table scan must have one and only one access condition / point");
@@ -307,37 +307,103 @@ public class TiKVScanAnalyzer {
       Key key = ir.getAccessKey();
       checkArgument(key instanceof TypedKey, "Table scan key range must be typed key");
       TypedKey typedKey = (TypedKey) key;
-      startKey = RowKey.toRowKey(id, typedKey);
-      endKey = startKey.next();
+      Key startKey = RowKey.toRowKey(id, typedKey);
+      startKeys.add(startKey);
+      endKeys.add(startKey.next());
     } else if (ir.hasRange()) {
       checkArgument(
           !ir.hasAccessKey(), "Table scan must have one and only one access condition / point");
       Range<TypedKey> r = ir.getRange();
-
+      Boolean isDecimal=false;
       if (!r.hasLowerBound()) {
         // -INF
-        startKey = RowKey.createMin(id);
+        startKeys.add(RowKey.createMin(id));
       } else {
         // Comparison with null should be filtered since it yields unknown always
-        startKey = RowKey.toRowKey(id, r.lowerEndpoint());
-        if (r.lowerBoundType().equals(BoundType.OPEN)) {
-          startKey = startKey.next();
+        Object obj=r.lowerEndpoint().getValue();
+        if(obj instanceof  Long){
+          startKeys.add(RowKey.toRowKey(id,new IntHandle((long)obj)));
+          if(r.lowerBoundType().equals(BoundType.OPEN)){
+            startKeys.get(0).next();
+          }
+        }else if (obj instanceof BigDecimal){
+          isDecimal=true;
+          BigDecimal bigDecimal=(BigDecimal) obj;
+          BigDecimal max= new BigDecimal(Long.MAX_VALUE);
+          Key startKey1,startKey2;
+          if(bigDecimal.compareTo(max)>0){
+            startKey1=RowKey.toRowKey(id,new IntHandle(max.longValue()));
+            startKey2=RowKey.toRowKey(id,new IntHandle(bigDecimal.longValue()));
+            // since range is left-closed and right-open interval,
+            // we have to use next to exclusive Long.MAX_VALUE.
+            startKey1=startKey1.nextPrefix();
+            if (r.lowerBoundType().equals(BoundType.OPEN)) {
+              startKey2 = startKey2.nextPrefix();
+            }
+          }else{
+            startKey1=RowKey.toRowKey(id,new IntHandle(bigDecimal.longValue()));
+            startKey2=RowKey.toRowKey(id,new IntHandle(max.longValue()+1));
+            if (r.lowerBoundType().equals(BoundType.OPEN)) {
+              startKey1 = startKey1.nextPrefix();
+            }
+          }
+          startKeys.add(startKey1);
+          startKeys.add(startKey2);
         }
       }
 
       if (!r.hasUpperBound()) {
         // INF
-        endKey = RowKey.createBeyondMax(id);
+        if(!isDecimal){
+          endKeys.add(RowKey.createBeyondMax(id));
+        } else {
+          Key endKey1=RowKey.toRowKey(id,new IntHandle(Long.MAX_VALUE));
+          Key endKey2=RowKey.createBeyondMax(id);
+          // since range is left-closed and right-open interval,
+          // we have to use next to inclusive Long.MAX_VALUE.
+          endKey1=endKey1.nextPrefix();
+          endKeys.add(endKey1);
+          endKeys.add(endKey2);
+        }
       } else {
-        endKey = RowKey.toRowKey(id, r.upperEndpoint());
-        if (r.upperBoundType().equals(BoundType.CLOSED)) {
-          endKey = endKey.next();
+        Object obj=r.upperEndpoint().getValue();
+        if(obj instanceof  Long){
+          endKeys.add(RowKey.toRowKey(id,new IntHandle((long)obj)));
+          if(r.upperBoundType().equals(BoundType.CLOSED)){
+            endKeys.get(0).nextPrefix();
+          }
+        } else if (obj instanceof  BigDecimal) {
+          BigDecimal bigDecimal=(BigDecimal) obj;
+          BigDecimal max= new BigDecimal(Long.MAX_VALUE);
+          Key endKey1,endKey2;
+          if(bigDecimal.compareTo(max)>0){
+            endKey1=RowKey.toRowKey(id,new IntHandle(max.longValue()));
+            endKey2=RowKey.toRowKey(id,new IntHandle(bigDecimal.longValue()));
+            endKey1=endKey1.nextPrefix();
+            if (r.upperBoundType().equals(BoundType.CLOSED)) {
+              endKey2 = endKey2.nextPrefix();
+            }
+          }else {
+            endKey1=RowKey.toRowKey(id,new IntHandle(bigDecimal.longValue()));
+            endKey2=RowKey.toRowKey(id,new IntHandle(max.longValue()+1));
+            if (r.upperBoundType().equals(BoundType.CLOSED)) {
+              endKey1 = endKey1.nextPrefix();
+            }
+          }
+          if(!r.hasLowerBound()){
+            startKeys.add(RowKey.toRowKey(id,new IntHandle(max.longValue()+1)));
+          }
+          endKeys.add(endKey1);
+          endKeys.add(endKey2);
         }
       }
     } else {
       throw new TiClientInternalException("Empty access conditions");
     }
-    return new Pair<>(startKey, endKey);
+    for(int i=0;i<startKeys.size();i++){
+      pairs.add(new Pair<>(startKeys.get(i),endKeys.get(i)));
+    }
+    return pairs;
   }
 
   private Map<Long, List<KeyRange>> buildTableScanKeyRangeWithIds(
@@ -347,12 +413,14 @@ public class TiKVScanAnalyzer {
       List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
       indexRanges.forEach(
           (ir) -> {
-            Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(id, ir);
-            Key startKey = pairKey.first;
-            Key endKey = pairKey.second;
-            // This range only possible when < MIN or > MAX
-            if (!startKey.equals(endKey)) {
-              ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
+            List<Pair<Key, Key>> pairKeys = buildTableScanKeyRangePerId(id, ir);
+            for (Pair<Key,Key> pairKey: pairKeys) {
+              Key startKey = pairKey.first;
+              Key endKey = pairKey.second;
+              // This range only possible when < MIN or > MAX
+              if (!startKey.equals(endKey)) {
+                ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
+              }
             }
           });
 
