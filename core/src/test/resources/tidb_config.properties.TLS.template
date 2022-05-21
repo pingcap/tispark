@@ -2,14 +2,19 @@ spark.tispark.pd.addresses=https://pd:2379
 spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
 spark.sql.catalog.tidb_catalog.pd.addresses https://pd:2379
 
-# TLS
 spark.tispark.tikv.tls_enable=true
-spark.tispark.tikv.trust_cert_collection=config/cert/root.crt
-spark.tispark.tikv.key_cert_chain=config/cert/client.crt
-spark.tispark.tikv.key_file=config/cert/client-pkcs8.key
+spark.tispark.tikv.trust_cert_collection=/config/cert/root.crt
+spark.tispark.tikv.key_cert_chain=/config/cert/client.crt
+spark.tispark.tikv.key_file=/config/cert/client-pkcs8.key
+
+#spark.tispark.tikv.jks_enable=true
+#spark.tispark.tikv.jks_key_path=/config/cert/client-keystore
+#spark.tispark.tikv.jks_key_password=123456
+#spark.tispark.tikv.jks_trust_path=/config/cert/server-cert-store
+#spark.tispark.tikv.jks_trust_password=12345678
 
 spark.tispark.jdbc.tls_enable=true
-spark.tispark.jdbc.server_cert_store = /config/cert/server-cert-store
+spark.tispark.jdbc.server_cert_store = file:/config/cert/server-cert-store
 spark.tispark.jdbc.server_cert_password = 12345678
-spark.tispark.jdbc.client_cert_store = /config/cert/client-keystore
+spark.tispark.jdbc.client_cert_store = file:/config/cert/client-keystore
 spark.tispark.jdbc.client_cert_password = 123456
