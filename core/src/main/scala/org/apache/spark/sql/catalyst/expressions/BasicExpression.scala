@@ -19,16 +19,16 @@
 package org.apache.spark.sql.catalyst.expressions
 
 import java.sql.Timestamp
-import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
+import org.tikv.common.region.RegionStoreClient.RequestTypes
 import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
 
 object BasicExpression {
-  type TiDataType = com.pingcap.tikv.types.DataType
-  type TiExpression = com.pingcap.tikv.expression.Expression
-  type TiNot = com.pingcap.tikv.expression.Not
-  type TiIsNull = com.pingcap.tikv.expression.IsNull
+  type TiDataType = org.tikv.common.types.DataType
+  type TiExpression = org.tikv.common.expression.Expression
+  type TiNot = org.tikv.common.expression.Not
+  type TiIsNull = org.tikv.common.expression.IsNull
 
   def convertLiteral(value: Any, dataType: DataType): Any =
     // all types from literals are passed according to DataType's InternalType definition

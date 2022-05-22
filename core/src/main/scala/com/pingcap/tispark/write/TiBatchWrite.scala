@@ -16,7 +16,6 @@
 
 package com.pingcap.tispark.write
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv._
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler}
@@ -25,13 +24,18 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{DataFrame, SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
+import org.tikv.common.exception.TiBatchWriteException
+import org.tikv.common.row.Row
+import org.tikv.common.{StoreVersion, TiConfiguration, TiDBJDBCClient, TiSession}
+import org.tikv.common.types.DataType
+import org.tikv.txn.TTLManager
 
 import scala.collection.JavaConverters._
 
 object TiBatchWrite {
   type SparkRow = org.apache.spark.sql.Row
-  type TiRow = com.pingcap.tikv.row.Row
-  type TiDataType = com.pingcap.tikv.types.DataType
+  type TiRow = Row
+  type TiDataType = DataType
   // Milliseconds
   private val MIN_DELAY_CLEAN_TABLE_LOCK = 60000
   private val DELAY_CLEAN_TABLE_LOCK_AND_COMMIT_BACKOFF_DELTA = 30000

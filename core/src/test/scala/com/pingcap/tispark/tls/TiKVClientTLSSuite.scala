@@ -16,9 +16,9 @@
 
 package com.pingcap.tispark.tls
 
-import com.pingcap.tikv.{TiConfiguration, TiSession}
 import org.scalatest.FunSuite
 import org.scalatest.Matchers.{be, noException}
+import org.tikv.common.{TiConfiguration, TiSession}
 
 class TiKVClientTLSSuite extends FunSuite {
 

@@ -19,6 +19,7 @@ package com.pingcap.tispark.overflow
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
+import org.tikv.common.exception.ConvertOverflowException
 
 /**
  * BIT type include:
@@ -51,7 +52,7 @@ class BitOverflowSuite extends BaseBatchWriteTest("test_data_type_bit_overflow")
     val row = Row(2.toByte)
     val schema = StructType(List(StructField("c1", ByteType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorClass = classOf[ConvertOverflowException]
     val tidbErrorMsg = "value 2 > upperBound 2"
 
     compareTiDBWriteFailureWithJDBC(
@@ -81,7 +82,7 @@ class BitOverflowSuite extends BaseBatchWriteTest("test_data_type_bit_overflow")
     val row = Row(-1.toByte)
     val schema = StructType(List(StructField("c1", ByteType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorClass = classOf[ConvertOverflowException]
     val tidbErrorMsg = null
 
     compareTiDBWriteFailureWithJDBC(
@@ -111,7 +112,7 @@ class BitOverflowSuite extends BaseBatchWriteTest("test_data_type_bit_overflow")
     val row = Row(16.toByte)
     val schema = StructType(List(StructField("c1", ByteType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorClass = classOf[ConvertOverflowException]
     val tidbErrorMsg = "value 16 > upperBound 16"
 
     compareTiDBWriteFailureWithJDBC(
@@ -141,7 +142,7 @@ class BitOverflowSuite extends BaseBatchWriteTest("test_data_type_bit_overflow")
     val row = Row(-1.toByte)
     val schema = StructType(List(StructField("c1", ByteType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorClass = classOf[ConvertOverflowException]
     val tidbErrorMsg = null
 
     compareTiDBWriteFailureWithJDBC(
@@ -171,7 +172,7 @@ class BitOverflowSuite extends BaseBatchWriteTest("test_data_type_bit_overflow")
     val row = Row(256L)
     val schema = StructType(List(StructField("c1", LongType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorClass = classOf[ConvertOverflowException]
     val tidbErrorMsg = "value 256 > upperBound 256"
 
     compareTiDBWriteFailureWithJDBC(
@@ -193,7 +194,7 @@ class BitOverflowSuite extends BaseBatchWriteTest("test_data_type_bit_overflow")
     val row = Row(-1L)
     val schema = StructType(List(StructField("c1", LongType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorClass = classOf[ConvertOverflowException]
     val tidbErrorMsg = null
 
     compareTiDBWriteFailureWithJDBC(

@@ -17,13 +17,7 @@
 package org.apache.spark.sql.extensions
 
 import com.pingcap.tidb.tipb.EncodeType
-import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
-import com.pingcap.tikv.expression._
-import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
-import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
-import com.pingcap.tikv.region.TiStoreType
-import com.pingcap.tikv.statistics.TableStatistics
+import org.tikv.common.meta.TiDAGRequest.PushDownType
 import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
@@ -56,6 +50,13 @@ import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.internal.SQLConf
 import org.joda.time.{DateTime, DateTimeZone}
+import org.tikv.common.exception.IgnoreUnsupportedTypeException
+import org.tikv.common.expression
+import org.tikv.common.expression.{ColumnRef, ExpressionBlocklist, TypeBlocklist}
+import org.tikv.common.meta.{TiDAGRequest, TiTimestamp}
+import org.tikv.common.predicates.{PredicateUtils, TiKVScanAnalyzer}
+import org.tikv.common.region.TiStoreType
+import org.tikv.common.statistics.TableStatistics
 
 import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
@@ -88,8 +89,8 @@ object TiStrategy {
 case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
     extends Strategy
     with Logging {
-  type TiExpression = com.pingcap.tikv.expression.Expression
-  type TiColumnRef = com.pingcap.tikv.expression.ColumnRef
+  type TiExpression = expression.Expression
+  type TiColumnRef = ColumnRef
   private lazy val tiContext: TiContext = getOrCreateTiContext(sparkSession)
   private lazy val sqlContext = tiContext.sqlContext
   private lazy val sqlConf: SQLConf = sqlContext.conf

@@ -16,9 +16,9 @@
 
 package com.pingcap.tispark.tablelock
 
-import com.pingcap.tikv.TiDBJDBCClient
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.datasource.BaseDataSourceTest
+import org.tikv.common.TiDBJDBCClient
 
 class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
 

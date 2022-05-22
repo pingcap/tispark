@@ -18,7 +18,6 @@ package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
 import com.pingcap.tikv.columnar.TiColumnarBatchHelper
-import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.sql.SparkSession
@@ -27,6 +26,8 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 import org.slf4j.Logger
+import org.tikv.common.{TiConfiguration, TiSession}
+import org.tikv.common.meta.TiDAGRequest
 
 import scala.collection.JavaConversions._
 

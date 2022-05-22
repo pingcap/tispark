@@ -17,7 +17,6 @@
 package org.apache.spark.sql
 
 import com.pingcap.tikv.tools.RegionUtils
-import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.listener.CacheInvalidateListener
@@ -31,6 +30,7 @@ import org.json4s.DefaultFormats
 import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
+import org.tikv.common.{TiConfiguration, TiSession}
 import scalaj.http.Http
 
 import java.lang

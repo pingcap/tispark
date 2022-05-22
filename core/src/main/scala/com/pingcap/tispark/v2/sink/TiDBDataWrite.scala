@@ -16,12 +16,12 @@
 
 package com.pingcap.tispark.v2.sink
 
-import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tispark.write.TiDBOptions
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.connector.write.{DataWriter, WriterCommitMessage}
 import org.apache.spark.sql.types.StructType
+import org.tikv.common.TiConfiguration
 
 /**
  * Use V1WriteBuilder before turn to v2

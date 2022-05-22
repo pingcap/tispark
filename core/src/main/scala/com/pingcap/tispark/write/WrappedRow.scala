@@ -16,7 +16,7 @@
 
 package com.pingcap.tispark.write
 
-import com.pingcap.tikv.key.Handle
 import com.pingcap.tispark.write.TiBatchWrite.TiRow
+import org.tikv.common.key.Handle
 
 case class WrappedRow(row: TiRow, handle: Handle)

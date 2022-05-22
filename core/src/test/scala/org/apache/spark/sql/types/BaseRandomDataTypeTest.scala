@@ -16,7 +16,6 @@
 
 package org.apache.spark.sql.types
 
-import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tispark.test.RandomTest
 import com.pingcap.tispark.test.generator.DataGenerator.{
   generateRandomRows,
@@ -26,6 +25,7 @@ import com.pingcap.tispark.test.generator.DataGenerator.{
 import com.pingcap.tispark.test.generator.DataType.{BOOLEAN, ReflectedDataType, TINYINT}
 import com.pingcap.tispark.test.generator.{Schema, SchemaAndData}
 import org.apache.spark.sql.BaseTiSparkTest
+import org.tikv.common.row.ObjectRowImpl
 
 import scala.util.Random
 

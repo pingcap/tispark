@@ -18,8 +18,8 @@
 
 package org.apache.spark.sql.types
 
-import com.pingcap.tikv.types.Converter
 import org.apache.spark.sql.BaseTiSparkTest
+import org.tikv.common.types.Converter
 
 class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
   test("adding time type index test") {

@@ -18,44 +18,61 @@
 
 package com.pingcap.tispark.test.generator
 
-import java.util
+import org.tikv.common.meta.Collation
 
-import com.pingcap.tikv.meta.Collation
-import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder
+import java.util
+import org.tikv.common.meta.TiColumnInfo.InternalTypeHolder
+import org.tikv.common.types
+import org.tikv.common.types.{
+  BitType,
+  BytesType,
+  DataType,
+  DateTimeType,
+  DateType,
+  DecimalType,
+  EnumType,
+  IntegerType,
+  JsonType,
+  RealType,
+  SetType,
+  StringType,
+  TimeType,
+  TimestampType
+}
 
 object DataType extends Enumeration {
   type ReflectedDataType = Value
-  type TiDataType = com.pingcap.tikv.types.DataType
-  val BIT: Val = Val("bit", com.pingcap.tikv.types.BitType.BIT)
-  val BOOLEAN: Val = Val("boolean", com.pingcap.tikv.types.IntegerType.BOOLEAN)
-  val TINYINT: Val = Val("tinyint", com.pingcap.tikv.types.IntegerType.TINYINT)
-  val SMALLINT: Val = Val("smallint", com.pingcap.tikv.types.IntegerType.SMALLINT)
-  val MEDIUMINT: Val = Val("mediumint", com.pingcap.tikv.types.IntegerType.MEDIUMINT)
-  val INT: Val = Val("int", com.pingcap.tikv.types.IntegerType.INT)
-  val BIGINT: Val = Val("bigint", com.pingcap.tikv.types.IntegerType.BIGINT)
-  val DECIMAL: Val = Val("decimal", com.pingcap.tikv.types.DecimalType.DECIMAL)
-  val FLOAT: Val = Val("float", com.pingcap.tikv.types.RealType.FLOAT)
-  val DOUBLE: Val = Val("double", com.pingcap.tikv.types.RealType.DOUBLE)
-  val TIMESTAMP: Val = Val("timestamp", com.pingcap.tikv.types.TimestampType.TIMESTAMP)
-  val DATETIME: Val = Val("datetime", com.pingcap.tikv.types.DateTimeType.DATETIME)
-  val DATE: Val = Val("date", com.pingcap.tikv.types.DateType.DATE)
-  val TIME: Val = Val("time", com.pingcap.tikv.types.TimeType.TIME)
-  val YEAR: Val = Val("year", com.pingcap.tikv.types.IntegerType.YEAR)
-  val TEXT: Val = Val("text", com.pingcap.tikv.types.BytesType.TEXT)
-  val TINYTEXT: Val = Val("tinytext", com.pingcap.tikv.types.BytesType.TINY_BLOB)
-  val MEDIUMTEXT: Val = Val("mediumtext", com.pingcap.tikv.types.BytesType.MEDIUM_TEXT)
-  val LONGTEXT: Val = Val("longtext", com.pingcap.tikv.types.BytesType.LONG_TEXT)
-  val VARCHAR: Val = Val("varchar", com.pingcap.tikv.types.StringType.VARCHAR)
-  val CHAR: Val = Val("char", com.pingcap.tikv.types.StringType.CHAR)
-  val VARBINARY: Val = Val("varbinary", com.pingcap.tikv.types.StringType.VARCHAR)
-  val BINARY: Val = Val("binary", com.pingcap.tikv.types.StringType.CHAR)
-  val BLOB: Val = Val("blob", com.pingcap.tikv.types.BytesType.BLOB)
-  val TINYBLOB: Val = Val("tinyblob", com.pingcap.tikv.types.BytesType.TINY_BLOB)
-  val MEDIUMBLOB: Val = Val("mediumblob", com.pingcap.tikv.types.BytesType.MEDIUM_TEXT)
-  val LONGBLOB: Val = Val("longblob", com.pingcap.tikv.types.BytesType.LONG_TEXT)
-  val ENUM: Val = Val("enum", com.pingcap.tikv.types.EnumType.ENUM)
-  val SET: Val = Val("set", com.pingcap.tikv.types.SetType.SET)
-  val JSON: Val = Val("json", com.pingcap.tikv.types.JsonType.JSON)
+  type TiDataType = DataType
+  val BIT: Val = Val("bit", BitType.BIT)
+  val BOOLEAN: Val = Val("boolean", IntegerType.BOOLEAN)
+  val TINYINT: Val = Val("tinyint", types.IntegerType.TINYINT)
+  val SMALLINT: Val = Val("smallint", types.IntegerType.SMALLINT)
+  val MEDIUMINT: Val = Val("mediumint", types.IntegerType.MEDIUMINT)
+  val INT: Val = Val("int", types.IntegerType.INT)
+  val BIGINT: Val = Val("bigint", types.IntegerType.BIGINT)
+  val DECIMAL: Val = Val("decimal", DecimalType.DECIMAL)
+  val FLOAT: Val = Val("float", RealType.FLOAT)
+  val DOUBLE: Val = Val("double", types.RealType.DOUBLE)
+  val TIMESTAMP: Val = Val("timestamp", TimestampType.TIMESTAMP)
+  val DATETIME: Val = Val("datetime", DateTimeType.DATETIME)
+  val DATE: Val = Val("date", DateType.DATE)
+  val TIME: Val = Val("time", TimeType.TIME)
+  val YEAR: Val = Val("year", types.IntegerType.YEAR)
+  val TEXT: Val = Val("text", BytesType.TEXT)
+  val TINYTEXT: Val = Val("tinytext", types.BytesType.TINY_BLOB)
+  val MEDIUMTEXT: Val = Val("mediumtext", types.BytesType.MEDIUM_TEXT)
+  val LONGTEXT: Val = Val("longtext", types.BytesType.LONG_TEXT)
+  val VARCHAR: Val = Val("varchar", StringType.VARCHAR)
+  val CHAR: Val = Val("char", types.StringType.CHAR)
+  val VARBINARY: Val = Val("varbinary", types.StringType.VARCHAR)
+  val BINARY: Val = Val("binary", types.StringType.CHAR)
+  val BLOB: Val = Val("blob", types.BytesType.BLOB)
+  val TINYBLOB: Val = Val("tinyblob", types.BytesType.TINY_BLOB)
+  val MEDIUMBLOB: Val = Val("mediumblob", types.BytesType.MEDIUM_TEXT)
+  val LONGBLOB: Val = Val("longblob", types.BytesType.LONG_TEXT)
+  val ENUM: Val = Val("enum", EnumType.ENUM)
+  val SET: Val = Val("set", SetType.SET)
+  val JSON: Val = Val("json", JsonType.JSON)
 
   def getType(
       dataType: ReflectedDataType,

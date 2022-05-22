@@ -18,10 +18,10 @@
 
 package com.pingcap.tispark.test.generator
 
-import com.pingcap.tikv.meta.Collation
 import com.pingcap.tispark.test.generator.DataType._
 import com.pingcap.tispark.test.generator.GeneratorUtils._
 import com.pingcap.tispark.test.generator.DataGenerator._
+import org.tikv.common.meta.Collation
 
 import scala.collection.mutable
 import scala.util.Random
@@ -51,7 +51,7 @@ case class ColumnValueGenerator(
     defaultEnumValues
   }
   private val flag: Int = {
-    import com.pingcap.tikv.types.DataType._
+    import org.tikv.common.types.DataType._
     var ret = getBaseFlag(dataType)
     if (isPrimaryKey) {
       ret |= PriKeyFlag

@@ -206,7 +206,7 @@
                         <argument>com.pingcap.tikv.parser</argument>
                     </arguments>
                     <visitor>true</visitor>
-                    <sourceDirectory>./src/main/java/com/pingcap/tikv/parser</sourceDirectory>
+                    <sourceDirectory>src/main/java/org/tikv/common/parser</sourceDirectory>
                     <outputDirectory>./target/generated-sources/antlr4/java/com/pingcap/tikv/parser</outputDirectory>
                 </configuration>
             </plugin>

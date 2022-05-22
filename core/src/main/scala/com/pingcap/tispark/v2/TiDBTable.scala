@@ -16,10 +16,6 @@
 
 package com.pingcap.tispark.v2
 
-import com.pingcap.tikv.TiSession
-import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.key.Handle
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
 import com.pingcap.tispark.v2.sink.TiDBWriteBuilder
@@ -63,6 +59,10 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.sql.{SQLContext, execution}
 import org.slf4j.LoggerFactory
+import org.tikv.common.TiSession
+import org.tikv.common.exception.TiBatchWriteException
+import org.tikv.common.key.Handle
+import org.tikv.common.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 
 import java.sql.{Date, SQLException, Timestamp}
 import java.time.{Instant, LocalDate}

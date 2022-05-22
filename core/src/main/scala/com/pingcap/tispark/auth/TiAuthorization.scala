@@ -16,7 +16,6 @@
 
 package com.pingcap.tispark.auth
 
-import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.jdbc.JDBCClient
 import com.pingcap.tispark.auth.TiAuthorization.{
   logger,
@@ -27,6 +26,7 @@ import com.pingcap.tispark.write.TiDBOptions
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.internal.SQLConf
 import org.slf4j.LoggerFactory
+import org.tikv.common.TiConfiguration
 
 import java.sql.SQLException
 import java.util.Properties

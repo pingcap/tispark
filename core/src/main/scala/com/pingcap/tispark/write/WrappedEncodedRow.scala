@@ -16,8 +16,8 @@
 
 package com.pingcap.tispark.write
 
-import com.pingcap.tikv.key.Handle
 import com.pingcap.tispark.write.TiBatchWrite.TiRow
+import org.tikv.common.key.Handle
 
 case class WrappedEncodedRow(
     row: TiRow,

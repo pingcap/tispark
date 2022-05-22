@@ -18,14 +18,6 @@
 
 package org.apache.spark.sql.catalyst.expressions
 
-import com.pingcap.tikv.expression.{
-  ArithmeticBinaryExpression,
-  ColumnRef,
-  ComparisonBinaryExpression,
-  Constant,
-  LogicalBinaryExpression,
-  StringRegExpression
-}
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
 import org.apache.spark.sql.catalyst.expressions.BasicExpression.{
   TiExpression,
@@ -35,6 +27,14 @@ import org.apache.spark.sql.catalyst.expressions.BasicExpression.{
 }
 import org.apache.spark.sql.execution.TiConverter
 import org.apache.spark.sql.types.DecimalType
+import org.tikv.common.expression.{
+  ArithmeticBinaryExpression,
+  ColumnRef,
+  ComparisonBinaryExpression,
+  Constant,
+  LogicalBinaryExpression,
+  StringRegExpression
+}
 
 object TiBasicExpression {
 
