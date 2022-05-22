@@ -16,13 +16,13 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.sql.catalyst.analyzer.{TiAuthRuleFactory, TiAuthorizationRule}
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
 import org.apache.spark.sql.catalyst.parser.TiParserFactory
 import org.apache.spark.sql.catalyst.planner.TiStrategyFactory
 import org.slf4j.LoggerFactory
+import org.tikv.common.exception.TiInternalException
 
 import scala.collection.mutable
 

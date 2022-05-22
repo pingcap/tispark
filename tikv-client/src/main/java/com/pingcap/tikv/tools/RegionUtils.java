@@ -19,17 +19,17 @@ package com.pingcap.tikv.tools;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.meta.TiDAGRequest;
-import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
-import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.predicates.TiKVScanAnalyzer;
-import com.pingcap.tikv.util.RangeSplitter;
-import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.tikv.common.TiSession;
+import org.tikv.common.meta.TiDAGRequest;
+import org.tikv.common.meta.TiDAGRequest.PushDownType;
+import org.tikv.common.meta.TiTableInfo;
+import org.tikv.common.predicates.TiKVScanAnalyzer;
+import org.tikv.common.util.RangeSplitter;
+import org.tikv.common.util.RangeSplitter.RegionTask;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class RegionUtils {

@@ -16,10 +16,10 @@
 
 package org.apache.spark.sql.catalyst.plans
 
-import com.pingcap.tikv.meta.TiDAGRequest.IndexScanType
-import com.pingcap.tikv.meta.{TiDAGRequest, TiIndexInfo}
+import org.tikv.common.meta.TiDAGRequest.IndexScanType
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, ColumnarRegionTaskExec, SparkPlan}
 import org.apache.spark.sql.{BaseTiSparkTest, Dataset}
+import org.tikv.common.meta.{TiDAGRequest, TiIndexInfo}
 
 class BasePlanTest extends BaseTiSparkTest {
   val extractCoprocessorRDD: PartialFunction[SparkPlan, ColumnarCoprocessorRDD] = {

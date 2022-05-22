@@ -15,13 +15,13 @@
  */
 package org.apache.spark.sql.catalyst.analyzer
 
-import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.{SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
+import org.tikv.common.TiConfiguration
 
 class TiAuthRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Rule[LogicalPlan]) {

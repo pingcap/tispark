@@ -16,20 +16,20 @@
 
 package com.pingcap.tispark.utils
 
-import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
-import com.pingcap.tikv.exception.{
-  ConvertOverflowException,
-  TiBatchWriteException,
-  TiDBConvertException
-}
-import com.pingcap.tikv.key.{CommonHandle, Handle, IndexKey, IntHandle, RowKey}
-import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
-import com.pingcap.tikv.row.ObjectRowImpl
-import com.pingcap.tikv.types.DataType
 import com.pingcap.tispark.write.TiBatchWrite.{SparkRow, TiRow}
 import com.pingcap.tispark.write.{SerializableKey, WrappedEncodedRow, WrappedRow}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.tikv.common.codec.{CodecDataOutput, TableCodec}
+import org.tikv.common.exception.{
+  ConvertOverflowException,
+  TiBatchWriteException,
+  TiDBConvertException
+}
+import org.tikv.common.key.{CommonHandle, Handle, IndexKey, IntHandle, RowKey}
+import org.tikv.common.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
+import org.tikv.common.row.ObjectRowImpl
+import org.tikv.common.types.DataType
 
 import scala.collection.JavaConverters._
 

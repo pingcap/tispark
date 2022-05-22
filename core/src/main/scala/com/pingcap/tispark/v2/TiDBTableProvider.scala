@@ -16,7 +16,6 @@
 
 package com.pingcap.tispark.v2
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.{TiDBRelation, TiTableReference}
 import com.pingcap.tispark.write.{TiDBOptions, TiDBWriter}
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -26,6 +25,7 @@ import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.sources.{BaseRelation, CreatableRelationProvider, DataSourceRegister}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
+import org.tikv.common.exception.TiBatchWriteException
 
 import java.util
 import scala.collection.JavaConverters._

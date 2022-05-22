@@ -16,11 +16,7 @@
 
 package com.pingcap.tispark.utils
 
-import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.datatype.TypeMapping
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
-import com.pingcap.tikv.region.TiStoreType
-import com.pingcap.tikv.types._
 import com.pingcap.tispark._
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.InternalRow
@@ -29,6 +25,10 @@ import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{SparkConf, sql}
 import org.slf4j.LoggerFactory
+import org.tikv.common.TiConfiguration
+import org.tikv.common.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
+import org.tikv.common.region.TiStoreType
+import org.tikv.common.types.Converter
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import java.time.{Instant, LocalDate, ZoneId}

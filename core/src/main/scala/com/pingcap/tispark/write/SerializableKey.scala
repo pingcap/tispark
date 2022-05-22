@@ -17,10 +17,9 @@
 package com.pingcap.tispark.write
 
 import java.util
-
-import com.pingcap.tikv.codec.KeyUtils
-import com.pingcap.tikv.key.Key
-import com.pingcap.tikv.util.{FastByteComparisons, LogDesensitization}
+import org.tikv.common.codec.KeyUtils
+import org.tikv.common.key.Key
+import org.tikv.common.util.{FastByteComparisons, LogDesensitization}
 
 class SerializableKey(val bytes: Array[Byte])
     extends Comparable[SerializableKey]

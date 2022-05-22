@@ -18,14 +18,14 @@
 
 package com.pingcap.tispark.test.generator
 
-import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tispark.test.generator.DataType._
+import org.tikv.common.row.{ObjectRowImpl, Row}
 
 import scala.collection.mutable
 import scala.util.Random
 
 object DataGenerator {
-  type TiRow = com.pingcap.tikv.row.Row
+  type TiRow = org.tikv.common.row.Row
 
   val bits = List(BIT)
   val booleans = List(BOOLEAN)

@@ -16,8 +16,8 @@
 
 package com.pingcap.tispark.write
 
-import com.pingcap.tikv.key.Key
 import org.apache.spark.Partitioner
+import org.tikv.common.key.Key
 
 class TiReginSplitPartitioner(orderedSplitPoints: List[SerializableKey], maxWriteTaskNumber: Int)
     extends Partitioner {

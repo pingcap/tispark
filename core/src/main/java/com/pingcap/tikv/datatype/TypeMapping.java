@@ -16,23 +16,23 @@
 
 package com.pingcap.tikv.datatype;
 
-import static com.pingcap.tikv.types.MySQLType.TypeLonglong;
+import static org.tikv.common.types.MySQLType.TypeLonglong;
 
-import com.pingcap.tikv.types.AbstractDateTimeType;
-import com.pingcap.tikv.types.BytesType;
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DateType;
-import com.pingcap.tikv.types.DecimalType;
-import com.pingcap.tikv.types.EnumType;
-import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.JsonType;
-import com.pingcap.tikv.types.RealType;
-import com.pingcap.tikv.types.SetType;
-import com.pingcap.tikv.types.StringType;
-import com.pingcap.tikv.types.TimeType;
 import org.apache.spark.sql.types.DataTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.types.AbstractDateTimeType;
+import org.tikv.common.types.BytesType;
+import org.tikv.common.types.DataType;
+import org.tikv.common.types.DateType;
+import org.tikv.common.types.DecimalType;
+import org.tikv.common.types.EnumType;
+import org.tikv.common.types.IntegerType;
+import org.tikv.common.types.JsonType;
+import org.tikv.common.types.RealType;
+import org.tikv.common.types.SetType;
+import org.tikv.common.types.StringType;
+import org.tikv.common.types.TimeType;
 
 public class TypeMapping {
   private static final Logger logger = LoggerFactory.getLogger(TypeMapping.class.getName());

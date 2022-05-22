@@ -16,9 +16,9 @@
 
 package com.pingcap.tispark.write
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.TiDBUtils
 import org.apache.spark.sql._
+import org.tikv.common.exception.TiBatchWriteException
 
 object TiDBWriter {
 

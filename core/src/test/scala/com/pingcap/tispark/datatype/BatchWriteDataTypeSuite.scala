@@ -18,11 +18,10 @@ package com.pingcap.tispark.datatype
 
 import java.sql.{Date, Timestamp}
 import java.util.Calendar
-
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
+import org.tikv.common.exception.TiBatchWriteException
 
 class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test") {
 
