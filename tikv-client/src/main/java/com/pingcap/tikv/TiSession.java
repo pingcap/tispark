@@ -65,6 +65,8 @@ public class TiSession implements AutoCloseable {
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
   private boolean isClosed = false;
+  private volatile TiTimestamp snapshotTimestamp;
+  private volatile Catalog snapshotCatalog;
 
   private TiSession(TiConfiguration conf) {
     this.conf = conf;
@@ -139,6 +141,25 @@ public class TiSession implements AutoCloseable {
       }
     }
     return res;
+  }
+
+  public TiTimestamp getSnapshotTimestamp() {
+    return snapshotTimestamp == null ? getTimestamp() : snapshotTimestamp;
+  }
+
+  public Snapshot createSnapshotWithSnapshotTimestamp() {
+    return new Snapshot(snapshotTimestamp, conf);
+  }
+
+  public synchronized Catalog getOrCreateSnapShotCatalog(TiTimestamp ts) {
+    snapshotTimestamp = ts;
+    if (snapshotCatalog == null) {
+      snapshotCatalog =
+          new Catalog(
+              this::createSnapshotWithSnapshotTimestamp, conf.ifShowRowId(), conf.getDBPrefix());
+    }
+    snapshotCatalog.reloadCache(true);
+    return snapshotCatalog;
   }
 
   public Catalog getCatalog() {
@@ -442,6 +463,9 @@ public class TiSession implements AutoCloseable {
     }
     if (channelFactory != null) {
       channelFactory.close();
+    }
+    if (snapshotCatalog != null) {
+      snapshotCatalog.close();
     }
   }
 }
