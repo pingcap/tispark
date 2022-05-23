@@ -83,6 +83,14 @@ class BatchWritePkSuite
     val tableSchema = TiUtil.getSchemaFromTable(tiTblInfo)
     val data = generateRandomRows(schema, writeRowCount, r)
 
+    // check tiflash ready
+    if (enableTiFlashTest) {
+      if (!checkLoadTiFlashWithRetry(schema.tableName, Some(schema.database))) {
+        log.warn("TiFlash is not ready")
+        cancel()
+      }
+    }
+
     // gen data
     val rows = data.map(tiRowToSparkRow(_, tiColInfos))
     // insert data to tikv
