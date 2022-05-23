@@ -67,4 +67,7 @@ object TiConfigConst {
   val TIKV_JKS_KEY_PASSWORD: String = "spark.tispark.tikv.jks_key_password"
   val TIKV_JKS_TRUST_PATH: String = "spark.tispark.tikv.jks_trust_path"
   val TIKV_JKS_TRUST_PASSWORD: String = "spark.tispark.tikv.jks_trust_password"
+
+  val STALE_READ: String = "spark.tispark.stale_read"
+  val DEFAULT_STALE_READ: String = ""
 }

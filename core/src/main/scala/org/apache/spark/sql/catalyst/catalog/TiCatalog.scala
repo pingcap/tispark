@@ -39,7 +39,7 @@ object TiCatalog {
 
 class TiCatalog extends TableCatalog with SupportsNamespaces {
   private var tiSession: Option[TiSession] = None
-  private var meta: Option[MetaManager] = None
+  var meta: Option[MetaManager] = None
   private var _name: Option[String] = None
   private var _current_namespace: Option[Array[String]] = None
   private val logger = LoggerFactory.getLogger(getClass.getName)
@@ -206,4 +206,5 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     ???
 
   override def alterNamespace(namespace: Array[String], changes: NamespaceChange*): Unit = ???
+
 }
