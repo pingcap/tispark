@@ -44,7 +44,6 @@ import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.types.MySQLType;
 import com.pingcap.tikv.util.Pair;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;

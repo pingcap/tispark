@@ -611,7 +611,7 @@ class IssueTestSuite extends BaseTiSparkTest {
                        |  `a` BIGINT(20) UNSIGNED  NOT NULL AUTO_INCREMENT,
                        |  `b` varchar(255) NOT NULL,
                        |  `c` varchar(255) DEFAULT NULL,
-                       |  PRIMARY KEY (`id`)
+                       |  PRIMARY KEY (`a`)
                        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
     tidbStmt.execute("INSERT INTO t1 VALUES (1, 'aa', 'aa'),(2, 'aa', 'aa')")
     explainTestAndCollect("SELECT * FROM t1 WHERE a>= 0 LIMIT 10")
