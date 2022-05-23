@@ -51,6 +51,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -296,114 +297,106 @@ public class TiKVScanAnalyzer {
     }
   }
 
-  private List<Pair<Key, Key>> buildTableScanKeyRangePerId(long id, IndexRange ir) {
-    List<Key> startKeys=new ArrayList<>(2);
-    List<Key> endKeys=new ArrayList<>(2);
-    List<Pair<Key,Key>> pairs=new ArrayList<>(2);
+  private ScanRange buildTableScanKeyRangePerId(long id, IndexRange ir) {
+    boolean isDecimal=false;
+    ScanRange range=new ScanRange();
+    Key signedStartKey = null,signedEndKey=null,unsignedStartKey=null,unsignedEndKey=null;
     if (ir.hasAccessKey()) {
       checkArgument(
           !ir.hasRange(), "Table scan must have one and only one access condition / point");
-
       Key key = ir.getAccessKey();
       checkArgument(key instanceof TypedKey, "Table scan key range must be typed key");
-      TypedKey typedKey = (TypedKey) key;
-      Key startKey = RowKey.toRowKey(id, typedKey);
-      startKeys.add(startKey);
-      endKeys.add(startKey.next());
+      Object obj = ((TypedKey) key).getValue();
+      if(obj instanceof Long){
+        signedStartKey=RowKey.toRowKey(id,new IntHandle((long)obj));
+        signedEndKey=signedStartKey.next();
+      }else if (obj instanceof BigDecimal){
+        BigDecimal bigDecimal=(BigDecimal)obj;
+        signedStartKey=RowKey.toRowKey(id,new IntHandle(bigDecimal.longValue()));
+        signedEndKey=signedStartKey.nextPrefix();
+      }
     } else if (ir.hasRange()) {
       checkArgument(
           !ir.hasAccessKey(), "Table scan must have one and only one access condition / point");
       Range<TypedKey> r = ir.getRange();
-      Boolean isDecimal=false;
+      BigDecimal max= new BigDecimal(Long.MAX_VALUE);
       if (!r.hasLowerBound()) {
         // -INF
-        startKeys.add(RowKey.createMin(id));
+        signedStartKey=RowKey.createMin(id);
       } else {
         // Comparison with null should be filtered since it yields unknown always
         Object obj=r.lowerEndpoint().getValue();
         if(obj instanceof  Long){
-          startKeys.add(RowKey.toRowKey(id,new IntHandle((long)obj)));
+          signedStartKey=RowKey.toRowKey(id,new IntHandle((long)obj));
           if(r.lowerBoundType().equals(BoundType.OPEN)){
-            startKeys.get(0).next();
+            signedStartKey=signedStartKey.next();
           }
         }else if (obj instanceof BigDecimal){
           isDecimal=true;
           BigDecimal bigDecimal=(BigDecimal) obj;
-          BigDecimal max= new BigDecimal(Long.MAX_VALUE);
-          Key startKey1,startKey2;
+          // since range is left-closed and right-open interval,
+          // we have to use next to exclusive Long.MAX_VALUE.
+          signedStartKey=RowKey.toRowKey(id,new IntHandle(max.longValue())).nextPrefix();
+          unsignedStartKey=RowKey.toRowKey(id,new IntHandle(max.longValue()+1));
           if(bigDecimal.compareTo(max)>0){
-            startKey1=RowKey.toRowKey(id,new IntHandle(max.longValue()));
-            startKey2=RowKey.toRowKey(id,new IntHandle(bigDecimal.longValue()));
-            // since range is left-closed and right-open interval,
-            // we have to use next to exclusive Long.MAX_VALUE.
-            startKey1=startKey1.nextPrefix();
+            unsignedStartKey=RowKey.toRowKey(id,new IntHandle(bigDecimal.longValue()));
             if (r.lowerBoundType().equals(BoundType.OPEN)) {
-              startKey2 = startKey2.nextPrefix();
+              unsignedStartKey=unsignedStartKey.nextPrefix();
             }
           }else{
-            startKey1=RowKey.toRowKey(id,new IntHandle(bigDecimal.longValue()));
-            startKey2=RowKey.toRowKey(id,new IntHandle(max.longValue()+1));
+            signedStartKey=RowKey.toRowKey(id,new IntHandle(bigDecimal.longValue()));
             if (r.lowerBoundType().equals(BoundType.OPEN)) {
-              startKey1 = startKey1.nextPrefix();
+              signedStartKey=signedStartKey.nextPrefix();
             }
           }
-          startKeys.add(startKey1);
-          startKeys.add(startKey2);
         }
       }
 
       if (!r.hasUpperBound()) {
         // INF
         if(!isDecimal){
-          endKeys.add(RowKey.createBeyondMax(id));
+          signedEndKey=RowKey.createBeyondMax(id);
         } else {
-          Key endKey1=RowKey.toRowKey(id,new IntHandle(Long.MAX_VALUE));
-          Key endKey2=RowKey.createBeyondMax(id);
           // since range is left-closed and right-open interval,
           // we have to use next to inclusive Long.MAX_VALUE.
-          endKey1=endKey1.nextPrefix();
-          endKeys.add(endKey1);
-          endKeys.add(endKey2);
+          signedEndKey=RowKey.toRowKey(id,new IntHandle(max.longValue())).nextPrefix();
+          unsignedEndKey=RowKey.createBeyondMax(id);
         }
       } else {
         Object obj=r.upperEndpoint().getValue();
         if(obj instanceof  Long){
-          endKeys.add(RowKey.toRowKey(id,new IntHandle((long)obj)));
+          signedEndKey=RowKey.toRowKey(id,new IntHandle((long)obj));
           if(r.upperBoundType().equals(BoundType.CLOSED)){
-            endKeys.get(0).nextPrefix();
+            signedEndKey=signedEndKey.nextPrefix();
           }
         } else if (obj instanceof  BigDecimal) {
           BigDecimal bigDecimal=(BigDecimal) obj;
-          BigDecimal max= new BigDecimal(Long.MAX_VALUE);
-          Key endKey1,endKey2;
+          if(!r.hasLowerBound()){
+            unsignedStartKey=RowKey.toRowKey(id,new IntHandle(max.longValue()+1));
+          }
+          signedEndKey=RowKey.toRowKey(id,new IntHandle(max.longValue())).nextPrefix();
+          unsignedEndKey=RowKey.toRowKey(id,new IntHandle(max.longValue()+1));
           if(bigDecimal.compareTo(max)>0){
-            endKey1=RowKey.toRowKey(id,new IntHandle(max.longValue()));
-            endKey2=RowKey.toRowKey(id,new IntHandle(bigDecimal.longValue()));
-            endKey1=endKey1.nextPrefix();
+            unsignedEndKey=RowKey.toRowKey(id,new IntHandle(bigDecimal.longValue()));
             if (r.upperBoundType().equals(BoundType.CLOSED)) {
-              endKey2 = endKey2.nextPrefix();
+              unsignedEndKey=unsignedEndKey.nextPrefix();
             }
           }else {
-            endKey1=RowKey.toRowKey(id,new IntHandle(bigDecimal.longValue()));
-            endKey2=RowKey.toRowKey(id,new IntHandle(max.longValue()+1));
+            signedEndKey=RowKey.toRowKey(id,new IntHandle(bigDecimal.longValue()));
             if (r.upperBoundType().equals(BoundType.CLOSED)) {
-              endKey1 = endKey1.nextPrefix();
+              signedEndKey=signedEndKey.nextPrefix();
             }
           }
-          if(!r.hasLowerBound()){
-            startKeys.add(RowKey.toRowKey(id,new IntHandle(max.longValue()+1)));
-          }
-          endKeys.add(endKey1);
-          endKeys.add(endKey2);
         }
       }
     } else {
       throw new TiClientInternalException("Empty access conditions");
     }
-    for(int i=0;i<startKeys.size();i++){
-      pairs.add(new Pair<>(startKeys.get(i),endKeys.get(i)));
+    range.addSignedKeyRange(signedStartKey,signedEndKey);
+    if(isDecimal){
+      range.addSignedKeyRange(unsignedStartKey,unsignedEndKey);
     }
-    return pairs;
+    return range;
   }
 
   private Map<Long, List<KeyRange>> buildTableScanKeyRangeWithIds(
@@ -413,14 +406,17 @@ public class TiKVScanAnalyzer {
       List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
       indexRanges.forEach(
           (ir) -> {
-            List<Pair<Key, Key>> pairKeys = buildTableScanKeyRangePerId(id, ir);
-            for (Pair<Key,Key> pairKey: pairKeys) {
-              Key startKey = pairKey.first;
-              Key endKey = pairKey.second;
-              // This range only possible when < MIN or > MAX
-              if (!startKey.equals(endKey)) {
-                ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
-              }
+            ScanRange range = buildTableScanKeyRangePerId(id, ir);
+            Pair<Key,Key> signedKeyRange=range.signedKeyRange;
+            Optional<Pair<Key,Key>>unsignedKeyRange=range.unSignedKeyRange;
+            if(signedKeyRange.first.equals(signedKeyRange.second)){
+              ranges.add(makeCoprocRange(signedKeyRange.first.toByteString(),
+                  signedKeyRange.second.toByteString()));
+            }
+            if(unsignedKeyRange.isPresent()&&
+                (!unsignedKeyRange.get().first.equals(unsignedKeyRange.get().second))) {
+              Pair<Key,Key> pair=unsignedKeyRange.get();
+              ranges.add(makeCoprocRange(pair.first.toByteString(),pair.second.toByteString()));
             }
           });
 
@@ -738,7 +734,16 @@ public class TiKVScanAnalyzer {
       }
     }
   }
-
+  public static class ScanRange{
+    Pair<Key,Key> signedKeyRange;
+    Optional<Pair<Key,Key>> unSignedKeyRange=Optional.empty();
+    public void addSignedKeyRange(Key startKey,Key endKey){
+      signedKeyRange=new Pair<>(startKey,endKey);
+    }
+    public void addUnsignedKeyRange(Key startKey,Key endKey){
+      unSignedKeyRange=Optional.of(new Pair<>(startKey,endKey));
+    }
+  }
   private boolean supportIndexScan(TiIndexInfo index, TiTableInfo table) {
     // YEAR TYPE index scan is disabled, https://github.com/pingcap/tispark/issues/1789
     for (TiIndexColumn tiIndexColumn : index.getIndexColumns()) {
