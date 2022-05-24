@@ -11,16 +11,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distribution: [ 'zulu', 'temurin', 'adopt', 'corretto' ]
+    name: Java ${{ matrix.distribution }} sample
     steps:
 
       - name: checkout
         uses: actions/checkout@v2
 
       - name: set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
           java-version: '8'
-          distribution: 'zulu'
+          distribution: ${{ matrix.distribution }}
           cache: maven
 
       - name: add host and copy properties

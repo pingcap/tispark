@@ -29,8 +29,8 @@ class TiKVClientTLSSuite extends FunSuite {
     noException should be thrownBy {
       val conf = TiConfiguration.createDefault("pd:2379")
       conf.setTlsEnable(true)
-      conf.setTrustCertCollectionFile("/config/cert/root.crt")
-      conf.setKeyCertChainFile("/config/cert/client.crt")
+      conf.setTrustCertCollectionFile("/config/cert/root.pem")
+      conf.setKeyCertChainFile("/config/cert/client.pem")
       conf.setKeyFile("/config/cert/client-pkcs8.key")
       val session = TiSession.getInstance(conf)
       val pdClient = session.getPDClient

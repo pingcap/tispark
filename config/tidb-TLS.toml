@@ -4,10 +4,10 @@ store = "tikv"
 
 [security]
 auto-tls = true
-ssl-ca = "/config/cert/root.crt"
-ssl-cert = "/config/cert/tidb.crt"
+ssl-ca = "/config/cert/root.pem"
+ssl-cert = "/config/cert/tidb.pem"
 ssl-key = "/config/cert/tidb.key"
 
-cluster-ssl-ca = "/config/cert/root.crt"
-cluster-ssl-cert = "/config/cert/tidb.crt"
+cluster-ssl-ca = "/config/cert/root.pem"
+cluster-ssl-cert = "/config/cert/tidb.pem"
 cluster-ssl-key = "/config/cert/tidb.key"

@@ -1,4 +1,4 @@
 [security]
-ca-path = "/config/cert/root.crt"
-cert-path = "/config/cert/tikv.crt"
+ca-path = "/config/cert/root.pem"
+cert-path = "/config/cert/tikv.pem"
 key-path = "/config/cert/tikv.key"
