@@ -600,7 +600,24 @@ class IssueTestSuite extends BaseTiSparkTest {
     assert(df.count() >= size)
   }
 
-  override def afterAll(): Unit =
+  // https://github.com/pingcap/tispark/issues/2290
+  test("fix cannot encode row key with non-long type") {
+    if (enableTiFlashTest) {
+      cancel("ignored in tiflash test")
+    }
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    tidbStmt.execute("""
+                       |CREATE TABLE `t1` (
+                       |  `a` BIGINT(20) UNSIGNED  NOT NULL AUTO_INCREMENT,
+                       |  `b` varchar(255) NOT NULL,
+                       |  `c` varchar(255) DEFAULT NULL,
+                       |  PRIMARY KEY (`id`)
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    tidbStmt.execute("INSERT INTO t1 VALUES (1, 'aa', 'aa'),(2, 'aa', 'aa')")
+    explainTestAndCollect("SELECT * FROM t1 WHERE a>= 0 LIMIT 10")
+  }
+
+    override def afterAll(): Unit =
     try {
       tidbStmt.execute("DROP DATABASE IF EXISTS large_amount_tables")
       tidbStmt.execute("drop table if exists t")
