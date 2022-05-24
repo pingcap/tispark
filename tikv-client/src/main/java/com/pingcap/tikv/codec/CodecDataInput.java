@@ -281,19 +281,19 @@ public class CodecDataInput implements DataInput {
    */
   private static class UnSyncByteArrayInputStream extends InputStream {
     protected byte[] buf;
-    protected int pos;
+    protected long pos;
     protected int mark = 0;
     protected int count;
 
     UnSyncByteArrayInputStream(byte[] buf) {
       this.buf = buf;
-      this.pos = 0;
+      this.pos = 0L;
       this.count = buf.length;
     }
 
     @Override
     public int read() {
-      return (pos < count) ? (buf[pos++] & 0xff) : -1;
+      return (pos < count) ? (buf[Math.toIntExact(pos++)] & 0xff) : -1;
     }
 
     @Override
@@ -308,14 +308,14 @@ public class CodecDataInput implements DataInput {
         return -1;
       }
 
-      int avail = count - pos;
+      int avail = Math.toIntExact(count - pos);
       if (len > avail) {
         len = avail;
       }
       if (len <= 0) {
         return 0;
       }
-      System.arraycopy(buf, pos, b, off, len);
+      System.arraycopy(buf, Math.toIntExact(pos), b, off, len);
       pos += len;
       return len;
     }
@@ -333,7 +333,7 @@ public class CodecDataInput implements DataInput {
 
     @Override
     public int available() {
-      return count - pos;
+      return Math.toIntExact(count - pos);
     }
 
     @Override
@@ -343,7 +343,7 @@ public class CodecDataInput implements DataInput {
 
     @Override
     public void mark(int readAheadLimit) {
-      mark = pos;
+      mark = Math.toIntExact(pos);
     }
 
     @Override
