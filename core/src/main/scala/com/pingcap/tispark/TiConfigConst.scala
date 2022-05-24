@@ -62,4 +62,7 @@ object TiConfigConst {
   val TIKV_TRUST_CERT_COLLECTION: String = "spark.tispark.tikv.trust_cert_collection"
   val TIKV_KEY_CERT_CHAIN: String = "spark.tispark.tikv.key_cert_chain"
   val TIKV_KEY_FILE: String = "spark.tispark.tikv.key_file"
+
+  val STALE_READ: String = "spark.tispark.stale_read"
+  val DEFAULT_STALE_READ: String = ""
 }
