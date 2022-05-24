@@ -744,6 +744,7 @@ public class TiKVScanAnalyzer {
       unSignedKeyRange=Optional.of(new Pair<>(startKey,endKey));
     }
   }
+
   private boolean supportIndexScan(TiIndexInfo index, TiTableInfo table) {
     // YEAR TYPE index scan is disabled, https://github.com/pingcap/tispark/issues/1789
     for (TiIndexColumn tiIndexColumn : index.getIndexColumns()) {
