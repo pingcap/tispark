@@ -351,10 +351,21 @@
                                     <pattern>com.google.common</pattern>
                                     <shadedPattern>com.pingcap.com.google.common</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>com.github.oshi</pattern>
+                                    <shadedPattern>com.pingcap.com.github.oshi</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.scalaj</pattern>
+                                    <shadedPattern>com.pingcap.org.scalaj</shadedPattern>
+                                </relocation>
                             </relocations>
                             <artifactSet>
                                 <includes>
                                     <include>com.google.guava:*</include>
+                                    <include>com.github.oshi:*</include>
+                                    <include>net.java.dev.jna:*</include>
+                                    <include>org.scalaj:*</include>
                                 </includes>
                             </artifactSet>
                         </configuration>
