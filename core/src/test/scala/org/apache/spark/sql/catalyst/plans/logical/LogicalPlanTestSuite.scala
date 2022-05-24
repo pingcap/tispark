@@ -16,8 +16,12 @@
 
 package org.apache.spark.sql.catalyst.plans.logical
 
+import com.google.common.collect.ImmutableList
+import com.pingcap.tikv.expression.ComparisonBinaryExpression
 import com.pingcap.tikv.meta.TiTimestamp
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
+
+import scala.collection.immutable.List
 
 class LogicalPlanTestSuite extends BasePlanTest {
 
@@ -110,6 +114,48 @@ class LogicalPlanTestSuite extends BasePlanTest {
       }
 
     extractDAGRequests(df).map(_.getStartTs).foreach { checkTimestamp }
+  }
+
+  // https://github.com/pingcap/tispark/issues/2290
+  test("fix cannot encode row key with non-long type") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    tidbStmt.execute("""
+                       |CREATE TABLE `t1` (
+                       |  `a` BIGINT(20) UNSIGNED  NOT NULL AUTO_INCREMENT,
+                       |  `b` varchar(255) NOT NULL,
+                       |  `c` varchar(255) DEFAULT NULL,
+                       |  PRIMARY KEY (`a`)
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    tidbStmt.execute("INSERT INTO t1 VALUES (1, 'aa', 'aa'),(2, 'aa', 'aa')")
+    val situations: Map[String, List[String]] = Map(
+      "SELECT * FROM t1 WHERE a >= 0 and a <= 9223372036854775807" -> List[String](
+        "0",
+        "9223372036854775807"),
+      "SELECT * FROM t1 WHERE a >= 0 and a<= 9223372036854775808" -> List[String](
+        "0",
+        "9223372036854775808"),
+      "SELECT * FROM t1 WHERE a >= 0" -> List[String]("0"),
+      "SELECT * FROM t1 WHERE a >= 9223372036854775808 and a<=9223372036854775809" -> List[
+        String]("9223372036854775808", "9223372036854775809"),
+      "SELECT * FROM t1 WHERE a<=9223372036854775808" -> List[String]("9223372036854775808"),
+      "SELECT * FROM t1 WHERE a <= 9223372036854775807" -> List[String]("9223372036854775807"),
+      "SELECT * FROM t1 WHERE a <= 9223372036854775808" -> List[String]("9223372036854775808"))
+    situations.foreach((situation) => {
+      val sql = situation._1
+      val exception = situation._2
+      val df = spark.sql(sql)
+      val filter = extractDAGRequests(df).head.getDowngradeFilters
+      if (!filter.size().equals(exception.size)) {
+        fail("pushdown size is not same as except")
+      }
+      for (i <- 0 until filter.size) {
+        val binaryExpression = classOf[ComparisonBinaryExpression].cast(filter.get(i))
+        val value = binaryExpression.getRight.toString
+        if (!value.equals(exception(i))) {
+          fail("pushdown is not same as except")
+        }
+      }
+    })
   }
 
   // https://github.com/pingcap/tispark/issues/1498

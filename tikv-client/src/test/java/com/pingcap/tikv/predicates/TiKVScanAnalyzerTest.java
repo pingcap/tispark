@@ -128,37 +128,43 @@ public class TiKVScanAnalyzerTest {
     Expression eq1 =
         greaterThan(ColumnRef.create("c1", table), Constant.create(0, IntegerType.BIGINT));
     Expression eq2 =
-            lessThan(ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE, IntegerType.BIGINT));
-    List<Expression> situation1= ImmutableList.of(eq1,eq2);
-    byte[][] expectation1=new byte[][]{
-            RowKey.toRowKey(6,new IntHandle(0)).nextPrefix().getBytes(),
-            RowKey.toRowKey(6,new IntHandle(Long.MAX_VALUE)).getBytes(),
-    };
+        lessThan(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE, IntegerType.BIGINT));
+    List<Expression> situation1 = ImmutableList.of(eq1, eq2);
+    byte[][] expectation1 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(0)).nextPrefix().getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).getBytes(),
+        };
     situations.add(situation1);
     expectations.add(expectation1);
 
     // (0,Long.Max_VALUE+1)
     eq1 = greaterThan(ColumnRef.create("c1", table), Constant.create(0, IntegerType.BIGINT));
     eq2 =
-            lessThan(ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE+1, IntegerType.BIGINT));
-    List<Expression> situation2=ImmutableList.of(eq1,eq2);
-    byte[][] expectation2=new byte[][]{
-            RowKey.toRowKey(6,new IntHandle(0)).nextPrefix().getBytes(),
-            RowKey.toRowKey(6,new IntHandle(Long.MAX_VALUE)).nextPrefix().getBytes(),
-    };
+        lessThan(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE + 1, IntegerType.BIGINT));
+    List<Expression> situation2 = ImmutableList.of(eq1, eq2);
+    byte[][] expectation2 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(0)).nextPrefix().getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).nextPrefix().getBytes(),
+        };
     situations.add(situation2);
     expectations.add(expectation2);
 
     // [Long.Max_VALUE,INF]
     eq1 =
-            greaterEqual(ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE, IntegerType.BIGINT));
-    List<Expression> situation3=ImmutableList.of(eq1);
-    byte[][] expectation3=new byte[][]{
-            RowKey.toRowKey(6,new IntHandle(Long.MAX_VALUE)).getBytes(),
-            RowKey.toRowKey(6,new IntHandle(Long.MAX_VALUE)).nextPrefix().getBytes(),
-            RowKey.toRowKey(6,new IntHandle(Long.MAX_VALUE+1)).getBytes(),
-            RowKey.createBeyondMax(6).getBytes(),
-    };
+        greaterEqual(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE, IntegerType.BIGINT));
+    List<Expression> situation3 = ImmutableList.of(eq1);
+    byte[][] expectation3 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).nextPrefix().getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
+          RowKey.createBeyondMax(6).getBytes(),
+        };
     situations.add(situation3);
     expectations.add(expectation3);
 
@@ -167,12 +173,14 @@ public class TiKVScanAnalyzerTest {
         greaterEqual(
             ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE + 1, IntegerType.BIGINT));
     eq2 =
-            lessEqual(ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE+1, IntegerType.BIGINT));
-    List<Expression> situation4=ImmutableList.of(eq1,eq2);
-    byte[][] expectation4=new byte[][]{
-            RowKey.toRowKey(6,new IntHandle(Long.MAX_VALUE+1)).getBytes(),
-            RowKey.toRowKey(6,new IntHandle(Long.MAX_VALUE+1)).nextPrefix().getBytes(),
-    };
+        lessEqual(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE + 1, IntegerType.BIGINT));
+    List<Expression> situation4 = ImmutableList.of(eq1, eq2);
+    byte[][] expectation4 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).nextPrefix().getBytes(),
+        };
     situations.add(situation4);
     expectations.add(expectation4);
 
@@ -210,9 +218,9 @@ public class TiKVScanAnalyzerTest {
     byte[][] expectation7 =
         new byte[][] {
           RowKey.createMin(6).getBytes(),
-          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).next().getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).nextPrefix().getBytes(),
           RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
-          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).next().getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).nextPrefix().getBytes(),
         };
     situations.add(situation7);
     expectations.add(expectation7);
@@ -225,6 +233,19 @@ public class TiKVScanAnalyzerTest {
         };
     situations.add(situation8);
     expectations.add(expectation8);
+
+    eq2 =
+        equal(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE + 1, IntegerType.BIGINT));
+    List<Expression> situation9 = ImmutableList.of(eq2);
+    byte[][] expectation9 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).nextPrefix().getBytes(),
+        };
+    situations.add(situation7);
+    expectations.add(expectation7);
+
     for (int i = 0; i < situations.size(); i++) {
       List<Expression> situation = situations.get(i);
       byte[][] expectation = expectations.get(i);
