@@ -322,9 +322,9 @@ public class CodecDataInput implements DataInput {
 
     @Override
     public long skip(long n) {
-      long k = count - pos;
+      int k = count - pos;
       if (n < k) {
-        k = n < 0 ? 0 : n;
+        k = n < 0 ? 0 : (int) n;
       }
 
       pos += k;
