@@ -162,7 +162,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
       val expectation = situation._2
       val value = spark.sql(sql).collect()
       for (x <- 0 until value.length) {
-        assert(value(x)(0).toString.equals(exception(x)))
+        assert(value(x)(0).toString.equals(expectation(x)))
       }
     })
   }
