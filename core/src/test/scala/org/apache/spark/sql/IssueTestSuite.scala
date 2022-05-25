@@ -17,7 +17,6 @@
 package org.apache.spark.sql
 
 import com.pingcap.tispark.TiConfigConst
-import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.functions.{col, sum}
 
