@@ -46,7 +46,7 @@ class Telemetry {
       // Don't try again even if the message failed to be sent
       httpClient.postJSON(url, msg)
     } catch {
-      case e: Throwable => logger.info("Failed to report telemetry. " + e.getMessage)
+      case e: Throwable => logger.warn("Failed to report telemetry. " + e.getMessage)
     }
   }
 
