@@ -321,10 +321,11 @@ public class CodecDataInput implements DataInput {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public long skip(long n) {
-      int k = count - pos;
+      long k = count - pos;
       if (n < k) {
-        k = n < 0 ? 0 : (int) n;
+        k = n < 0 ? 0 : n;
       }
 
       pos += k;
