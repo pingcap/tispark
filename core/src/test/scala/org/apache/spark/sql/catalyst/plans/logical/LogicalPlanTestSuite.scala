@@ -66,37 +66,37 @@ class LogicalPlanTestSuite extends BasePlanTest {
     refreshConnections()
     val df =
       spark.sql("""
-                  |select t1.*, (
-                  |	select count(*)
-                  |	from test2
-                  |	where id > 1
-                  |), t1.c1, t2.c1, t3.*, t4.c3
-                  |from (
-                  |	select id, c1, c2
-                  |	from test1) t1
-                  |left join (
-                  |	select id, c1, c2, c1 + coalesce(c2 % 2) as c3
-                  |	from test2 where c1 + c2 > 3) t2
-                  |on t1.id = t2.id
-                  |left join (
-                  |	select max(id) as id, min(c1) + c2 as c1, c2, count(*) as c3
-                  |	from test3
-                  |	where c2 <= 3 and exists (
-                  |		select * from (
-                  |			select id as c1 from test3)
-                  |    where (
-                  |      select max(id) from test1) = 4)
-                  |	group by c2) t3
-                  |on t1.id = t3.id
-                  |left join (
-                  |	select max(id) as id, min(c1) as c1, max(c1) as c1, count(*) as c2, c2 as c3
-                  |	from test3
-                  |	where id not in (
-                  |		select id
-                  |		from test1
-                  |		where c2 > 2)
-                  |	group by c2) t4
-                  |on t1.id = t4.id
+          |select t1.*, (
+          |	select count(*)
+          |	from test2
+          |	where id > 1
+          |), t1.c1, t2.c1, t3.*, t4.c3
+          |from (
+          |	select id, c1, c2
+          |	from test1) t1
+          |left join (
+          |	select id, c1, c2, c1 + coalesce(c2 % 2) as c3
+          |	from test2 where c1 + c2 > 3) t2
+          |on t1.id = t2.id
+          |left join (
+          |	select max(id) as id, min(c1) + c2 as c1, c2, count(*) as c3
+          |	from test3
+          |	where c2 <= 3 and exists (
+          |		select * from (
+          |			select id as c1 from test3)
+          |    where (
+          |      select max(id) from test1) = 4)
+          |	group by c2) t3
+          |on t1.id = t3.id
+          |left join (
+          |	select max(id) as id, min(c1) as c1, max(c1) as c1, count(*) as c2, c2 as c3
+          |	from test3
+          |	where id not in (
+          |		select id
+          |		from test1
+          |		where c2 > 2)
+          |	group by c2) t4
+          |on t1.id = t4.id
       """.stripMargin)
 
     var v: TiTimestamp = null
@@ -113,47 +113,56 @@ class LogicalPlanTestSuite extends BasePlanTest {
         println("check ok " + v.getVersion)
       }
 
-    extractDAGRequests(df).map(_.getStartTs).foreach { checkTimestamp }
+    extractDAGRequests(df).map(_.getStartTs).foreach {
+      checkTimestamp
+    }
   }
 
   // https://github.com/pingcap/tispark/issues/2290
   test("fix cannot encode row key with non-long type") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     tidbStmt.execute("""
-                       |CREATE TABLE `t1` (
-                       |  `a` BIGINT(20) UNSIGNED  NOT NULL AUTO_INCREMENT,
-                       |  `b` varchar(255) NOT NULL,
-                       |  `c` varchar(255) DEFAULT NULL,
-                       |  PRIMARY KEY (`a`)
-                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
-    tidbStmt.execute("INSERT INTO t1 VALUES (1, 'aa', 'aa'),(2, 'aa', 'aa')")
+        |CREATE TABLE `t1` (
+        |  `a` BIGINT(20) UNSIGNED  NOT NULL,
+        |  `b` varchar(255) NOT NULL,
+        |  `c` varchar(255) DEFAULT NULL,
+        |  PRIMARY KEY (`a`)
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    tidbStmt.execute(
+      " INSERT INTO t1 VALUES(0, 'aa', 'aa'), ( 9223372036854775807, 'aa', 'aa'), ( 9223372036854775808, 'aa', 'aa'), ( 18446744073709551615, 'aa', 'aa')")
     val situations: Map[String, List[String]] = Map(
       "SELECT * FROM t1 WHERE a >= 0 and a <= 9223372036854775807" -> List[String](
         "0",
         "9223372036854775807"),
       "SELECT * FROM t1 WHERE a >= 0 and a<= 9223372036854775808" -> List[String](
         "0",
+        "9223372036854775807",
         "9223372036854775808"),
-      "SELECT * FROM t1 WHERE a >= 0" -> List[String]("0"),
+      "SELECT * FROM t1 WHERE a >= 0" -> List[String](
+        "0",
+        "9223372036854775807",
+        "9223372036854775808",
+        "18446744073709551615"),
       "SELECT * FROM t1 WHERE a >= 9223372036854775808 and a<=9223372036854775809" -> List[
-        String]("9223372036854775808", "9223372036854775809"),
-      "SELECT * FROM t1 WHERE a<=9223372036854775808" -> List[String]("9223372036854775808"),
-      "SELECT * FROM t1 WHERE a <= 9223372036854775807" -> List[String]("9223372036854775807"),
-      "SELECT * FROM t1 WHERE a <= 9223372036854775808" -> List[String]("9223372036854775808"))
+        String]("9223372036854775808"),
+      "SELECT * FROM t1 WHERE a<=9223372036854775808" -> List[String](
+        "0",
+        "9223372036854775807",
+        "9223372036854775808"),
+      "SELECT * FROM t1 WHERE a <= 9223372036854775807" -> List[String](
+        "0",
+        "9223372036854775807"),
+      "SELECT * FROM t1 " -> List[String](
+        "0",
+        "9223372036854775807",
+        "9223372036854775808",
+        "18446744073709551615"))
     situations.foreach((situation) => {
       val sql = situation._1
       val exception = situation._2
-      val df = spark.sql(sql)
-      val filter = extractDAGRequests(df).head.getDowngradeFilters
-      if (!filter.size().equals(exception.size)) {
-        fail("pushdown size is not same as except")
-      }
-      for (i <- 0 until filter.size) {
-        val binaryExpression = classOf[ComparisonBinaryExpression].cast(filter.get(i))
-        val value = binaryExpression.getRight.toString
-        if (!value.equals(exception(i))) {
-          fail("pushdown is not same as except")
-        }
+      val value = spark.sql(sql).collect()
+      for (x <- 0 until value.length) {
+        assert(value(x)(0).toString.equals(exception(x)))
       }
     })
   }

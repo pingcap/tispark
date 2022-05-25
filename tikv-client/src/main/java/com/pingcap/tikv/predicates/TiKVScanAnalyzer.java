@@ -58,6 +58,7 @@ import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class TiKVScanAnalyzer {
+
   private static final double INDEX_SCAN_COST_FACTOR = 1.2;
   private static final double TABLE_SCAN_COST_FACTOR = 1.0;
   private static final double DOUBLE_READ_COST_FACTOR = TABLE_SCAN_COST_FACTOR * 3;
@@ -319,26 +320,40 @@ public class TiKVScanAnalyzer {
       checkArgument(
           !ir.hasAccessKey(), "Table scan must have one and only one access condition / point");
       Range<TypedKey> r = ir.getRange();
-      BigDecimal max = new BigDecimal(Long.MAX_VALUE);
-      if (!r.hasLowerBound()) {
-        // -INF
-        signedStartKey = RowKey.createMin(id);
-      } else {
+      if ((r.hasLowerBound() && r.lowerEndpoint().getType().isUnsigned())
+          || (r.hasUpperBound() && r.upperEndpoint().getType().isUnsigned())) {
+        isUnsignedLong = true;
+      }
+      if (!isUnsignedLong) {
         // Comparison with null should be filtered since it yields unknown always
-        /** {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)} */
-        Object obj = r.lowerEndpoint().getValue();
-        if (obj instanceof Long) {
-          signedStartKey = RowKey.toRowKey(id, new IntHandle((long) obj));
+        if (!r.hasLowerBound()) {
+          // -INF
+          signedStartKey = RowKey.createMin(id);
+        } else {
+          signedStartKey = RowKey.toRowKey(id, r.lowerEndpoint());
           if (r.lowerBoundType().equals(BoundType.OPEN)) {
-            signedStartKey = signedStartKey.next();
+            signedStartKey = signedStartKey.nextPrefix();
           }
-        } else if (obj instanceof BigDecimal) {
-          isUnsignedLong = true;
-          BigDecimal bigDecimal = (BigDecimal) obj;
-          // since range is left-closed and right-open interval,
-          // we have to use next to exclusive Long.MAX_VALUE.
+        }
+        if (!r.hasUpperBound()) {
+          // -INF
+          signedEndKey = RowKey.createBeyondMax(id);
+        } else {
+          signedEndKey = RowKey.toRowKey(id, r.upperEndpoint());
+          if (r.lowerBoundType().equals(BoundType.CLOSED)) {
+            signedEndKey = signedEndKey.nextPrefix();
+          }
+        }
+      } else {
+        BigDecimal max = new BigDecimal(Long.MAX_VALUE);
+        if (!r.hasLowerBound()) {
+          signedStartKey = RowKey.toRowKey(id, new IntHandle(0));
+          unsignedStartKey = RowKey.toRowKey(id, new IntHandle(max.longValue() + 1));
+        } else {
           signedStartKey = RowKey.toRowKey(id, new IntHandle(max.longValue())).nextPrefix();
           unsignedStartKey = RowKey.toRowKey(id, new IntHandle(max.longValue() + 1));
+          /** {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)} */
+          BigDecimal bigDecimal = (BigDecimal) r.lowerEndpoint().getValue();
           if (bigDecimal.compareTo(max) > 0) {
             unsignedStartKey = RowKey.toRowKey(id, new IntHandle(bigDecimal.longValue()));
             if (r.lowerBoundType().equals(BoundType.OPEN)) {
@@ -351,34 +366,14 @@ public class TiKVScanAnalyzer {
             }
           }
         }
-      }
-
-      if (!r.hasUpperBound()) {
-        // INF
-        if (!isUnsignedLong) {
-          signedEndKey = RowKey.createBeyondMax(id);
-        } else {
-          // since range is left-closed and right-open interval,
-          // we have to use next to inclusive Long.MAX_VALUE.
+        if (!r.hasUpperBound()) {
           signedEndKey = RowKey.toRowKey(id, new IntHandle(max.longValue())).nextPrefix();
           unsignedEndKey = RowKey.createBeyondMax(id);
-        }
-      } else {
-        /** {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)} */
-        Object obj = r.upperEndpoint().getValue();
-        if (obj instanceof Long) {
-          signedEndKey = RowKey.toRowKey(id, new IntHandle((long) obj));
-          if (r.upperBoundType().equals(BoundType.CLOSED)) {
-            signedEndKey = signedEndKey.nextPrefix();
-          }
-        } else if (obj instanceof BigDecimal) {
-          isUnsignedLong = true;
-          BigDecimal bigDecimal = (BigDecimal) obj;
-          if (!r.hasLowerBound()) {
-            unsignedStartKey = RowKey.toRowKey(id, new IntHandle(max.longValue() + 1));
-          }
+        } else {
           signedEndKey = RowKey.toRowKey(id, new IntHandle(max.longValue())).nextPrefix();
           unsignedEndKey = RowKey.toRowKey(id, new IntHandle(max.longValue() + 1));
+          /** {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)} */
+          BigDecimal bigDecimal = (BigDecimal) r.upperEndpoint().getValue();
           if (bigDecimal.compareTo(max) > 0) {
             unsignedEndKey = RowKey.toRowKey(id, new IntHandle(bigDecimal.longValue()));
             if (r.upperBoundType().equals(BoundType.CLOSED)) {
@@ -523,6 +518,7 @@ public class TiKVScanAnalyzer {
   }
 
   public static class TiKVScanPlan {
+
     private final Map<Long, List<KeyRange>> keyRanges;
     private final Set<Expression> filters;
     private final double cost;
@@ -588,6 +584,7 @@ public class TiKVScanAnalyzer {
     }
 
     public static class Builder {
+
       private final String tableName;
       private final Logger logger = LoggerFactory.getLogger(getClass().getName());
       private Map<Long, List<KeyRange>> keyRanges;
@@ -740,6 +737,7 @@ public class TiKVScanAnalyzer {
   }
 
   public static class ScanRange {
+
     Pair<Key, Key> signedKeyRange;
     Optional<Pair<Key, Key>> unSignedKeyRange = Optional.empty();
 

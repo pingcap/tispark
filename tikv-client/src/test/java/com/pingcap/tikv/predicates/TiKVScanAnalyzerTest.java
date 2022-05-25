@@ -54,6 +54,7 @@ import org.junit.Test;
 import org.tikv.kvproto.Coprocessor;
 
 public class TiKVScanAnalyzerTest {
+
   private static TiTableInfo createTable() {
     return createTableWithIndex(1, 1);
   }
@@ -204,7 +205,7 @@ public class TiKVScanAnalyzerTest {
     List<Expression> situation6 = ImmutableList.of(eq2);
     byte[][] expectation6 =
         new byte[][] {
-          RowKey.createMin(6).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(0)).getBytes(),
           RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).getBytes(),
         };
     situations.add(situation6);
@@ -217,7 +218,7 @@ public class TiKVScanAnalyzerTest {
     List<Expression> situation7 = ImmutableList.of(eq2);
     byte[][] expectation7 =
         new byte[][] {
-          RowKey.createMin(6).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(0)).getBytes(),
           RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).nextPrefix().getBytes(),
           RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
           RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).nextPrefix().getBytes(),
@@ -504,6 +505,7 @@ public class TiKVScanAnalyzerTest {
     offsetMap.put("holder", 4);
 
     class test {
+
       private final String[] columnNames;
       private final String[] indexNames;
       private final int[] indexLens;
