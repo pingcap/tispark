@@ -25,7 +25,7 @@ Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](http
 - [Getting Started](https://github.com/pingcap/tispark/wiki/Getting-Started)
 - [User Guide](https://github.com/pingcap/tispark/blob/master/docs/userguide.md)
 - [Authorization and authentication](./docs/authorization_userguide.md)
-- [Configuration](https://github.com/pingcap/tispark/wiki/Configuration)
+- [Configuration](./docs/configuration.md)
 - [BenchMark](https://github.com/pingcap/tispark/wiki/TiSpark-Benchmark)
 - [Dev Guide](https://github.com/pingcap/tispark/wiki/Dev-Guide)
 - [Example Programs](https://github.com/pingcap/tispark-test/tree/master/tispark-examples)
