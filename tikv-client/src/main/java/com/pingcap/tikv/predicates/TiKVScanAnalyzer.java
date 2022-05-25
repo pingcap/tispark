@@ -26,7 +26,6 @@ import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tidb.tipb.EncodeType;
-import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.PartitionPruner;
@@ -306,9 +305,7 @@ public class TiKVScanAnalyzer {
           !ir.hasRange(), "Table scan must have one and only one access condition / point");
       Key key = ir.getAccessKey();
       checkArgument(key instanceof TypedKey, "Table scan key range must be typed key");
-      /**
-       * {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)}
-       */
+      /** {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)} */
       Object obj = ((TypedKey) key).getValue();
       if (obj instanceof Long) {
         signedStartKey = RowKey.toRowKey(id, new IntHandle((long) obj));
@@ -328,9 +325,7 @@ public class TiKVScanAnalyzer {
         signedStartKey = RowKey.createMin(id);
       } else {
         // Comparison with null should be filtered since it yields unknown always
-        /**
-         * {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)}
-         */
+        /** {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)} */
         Object obj = r.lowerEndpoint().getValue();
         if (obj instanceof Long) {
           signedStartKey = RowKey.toRowKey(id, new IntHandle((long) obj));
@@ -369,9 +364,7 @@ public class TiKVScanAnalyzer {
           unsignedEndKey = RowKey.createBeyondMax(id);
         }
       } else {
-        /**
-         * {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)}
-         */
+        /** {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)} */
         Object obj = r.upperEndpoint().getValue();
         if (obj instanceof Long) {
           signedEndKey = RowKey.toRowKey(id, new IntHandle((long) obj));
