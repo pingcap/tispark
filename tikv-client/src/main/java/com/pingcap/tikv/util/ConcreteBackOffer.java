@@ -128,7 +128,7 @@ public class ConcreteBackOffer implements BackOffer {
         backOffFunctionMap.computeIfAbsent(funcType, this::createBackOffFunc);
 
     // Back off will be done here
-    totalSleep += backOffFunction.doBackOff(maxSleepMs);
+    totalSleep = Math.toIntExact(totalSleep + backOffFunction.doBackOff(maxSleepMs));
     logger.debug(
         String.format(
             "%s, retry later(totalSleep %dms, maxSleep %dms)",
