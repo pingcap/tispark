@@ -21,6 +21,7 @@ TiSpark relies on the availability of TiKV clusters and PDs. You also need to se
 Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](https://github.com/pingcap/tispark/tree/master/tikv-client) library.
 
 ## Doc TOC
+
 - [Getting TiSpark](https://github.com/pingcap/tispark/wiki/Getting-TiSpark)
 - [Getting Started](https://github.com/pingcap/tispark/wiki/Getting-Started)
 - [User Guide](https://github.com/pingcap/tispark/blob/master/docs/userguide.md)
@@ -31,6 +32,7 @@ Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](http
 - [Example Programs](https://github.com/pingcap/tispark-test/tree/master/tispark-examples)
 
 ## Feature Support
+
 | Feature Support                   | TiSpark 2.4.x | TiSpark 2.5.x | TiSpark master |
 | --------------------------------- |---------------|---------------|----------------|
 | SQL select without tidb_catalog   | &#10004;      | &#10004;      |                |
