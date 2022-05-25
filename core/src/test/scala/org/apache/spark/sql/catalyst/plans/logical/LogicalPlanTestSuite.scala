@@ -159,7 +159,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
         "18446744073709551615"))
     situations.foreach((situation) => {
       val sql = situation._1
-      val expectation= situation._2
+      val expectation = situation._2
       val value = spark.sql(sql).collect()
       for (x <- 0 until value.length) {
         assert(value(x)(0).toString.equals(exception(x)))
