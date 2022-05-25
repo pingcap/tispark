@@ -321,7 +321,7 @@ public class CodecDataInput implements DataInput {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("lgtm[java/implicit-cast-in-compound-assignment]")
     public long skip(long n) {
       long k = count - pos;
       if (n < k) {
