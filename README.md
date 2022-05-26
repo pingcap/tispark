@@ -21,18 +21,19 @@ TiSpark relies on the availability of TiKV clusters and PDs. You also need to se
 Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](https://github.com/pingcap/tispark/tree/master/tikv-client) library.
 
 ## Doc TOC
+
 - [Getting TiSpark](https://github.com/pingcap/tispark/wiki/Getting-TiSpark)
 - [Getting Started](https://github.com/pingcap/tispark/wiki/Getting-Started)
 - [User Guide](https://github.com/pingcap/tispark/blob/master/docs/userguide.md)
 - [Authorization and authentication](./docs/authorization_userguide.md)
-- [Configuration](https://github.com/pingcap/tispark/wiki/Configuration)
+- [Configuration](./docs/configuration.md)
 - [BenchMark](https://github.com/pingcap/tispark/wiki/TiSpark-Benchmark)
 - [Dev Guide](https://github.com/pingcap/tispark/wiki/Dev-Guide)
 - [Example Programs](https://github.com/pingcap/tispark-test/tree/master/tispark-examples)
 - [Telemetry](./docs/telemetry.md)
 
-
 ## Feature Support
+
 | Feature Support                   | TiSpark 2.4.x | TiSpark 2.5.x | TiSpark master |
 | --------------------------------- |---------------|---------------|----------------|
 | SQL select without tidb_catalog   | &#10004;      | &#10004;      |                |
@@ -56,7 +57,6 @@ see [here](https://github.com/pingcap/tispark/wiki/Feature-Support-Detail) for m
 - The dependency `tispark-assembly` should not be packaged into `JAR of JARS` file (for example, build with spring-boot-maven-plugin), or you will get `ClassNotFoundException`. You can solve it by adding `spark-wrapper-spark-version` in your dependency or constructing another forms of jar file.
 
 - TiSpark doesn't support collations now. `new_collations_enabled_on_first_bootstrap` should not be set to `true`
-
 
 ## Follow us
 
