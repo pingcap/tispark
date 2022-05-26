@@ -198,6 +198,26 @@ object TiUtil {
       tiConf.setKeyFile(conf.get(TiConfigConst.TIKV_KEY_FILE))
     }
 
+    if (conf.contains(TiConfigConst.TIKV_JKS_ENABLE)) {
+      tiConf.setJksEnable(conf.get(TiConfigConst.TIKV_JKS_ENABLE).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_KEY_PATH)) {
+      tiConf.setJksKeyPath(conf.get(TiConfigConst.TIKV_JKS_KEY_PATH))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_KEY_PASSWORD)) {
+      tiConf.setJksKeyPassword(conf.get(TiConfigConst.TIKV_JKS_KEY_PASSWORD))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_TRUST_PATH)) {
+      tiConf.setJksTrustPath(conf.get(TiConfigConst.TIKV_JKS_TRUST_PATH))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_TRUST_PASSWORD)) {
+      tiConf.setJksTrustPassword(conf.get(TiConfigConst.TIKV_JKS_TRUST_PASSWORD))
+    }
+
     tiConf
   }
 
