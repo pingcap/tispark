@@ -16,21 +16,29 @@
 
 package org.tikv.common;
 
-import com.google.common.collect.ImmutableList;
+import static org.tikv.common.ConfigUtils.*;
+
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.joda.time.DateTimeZone;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tikv.common.ConfigUtils.*;
 import org.tikv.common.pd.PDUtils;
 import org.tikv.common.region.TiStoreType;
-import org.tikv.common.types.Converter;
 import org.tikv.kvproto.Kvrpcpb.CommandPri;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 
@@ -38,37 +46,116 @@ import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 @Setter
 @Accessors(chain = true)
 public class TiConfiguration implements Serializable {
-  private static final DateTimeZone DEF_TIMEZONE = Converter.getLocalTimezone();
-  private static final int DEF_TIMEOUT = 10;
-  private static final TimeUnit DEF_TIMEOUT_UNIT = TimeUnit.MINUTES;
-  private static final int DEF_SCAN_BATCH_SIZE = 10480;
-  private static final boolean DEF_IGNORE_TRUNCATE = true;
-  private static final boolean DEF_TRUNCATE_AS_WARNING = false;
-  private static final int DEF_MAX_FRAME_SIZE = 2147483647; // 2 GB
-  private static final int DEF_INDEX_SCAN_BATCH_SIZE = 20000;
-  private static final int DEF_REGION_SCAN_DOWNGRADE_THRESHOLD = 10000000;
-  // if keyRange size per request exceeds this limit, the request might be too large to be accepted
-  // by TiKV(maximum request size accepted by TiKV is around 1MB)
-  private static final int MAX_REQUEST_KEY_RANGE_SIZE = 20000;
-  private static final int DEF_INDEX_SCAN_CONCURRENCY = 5;
-  private static final int DEF_TABLE_SCAN_CONCURRENCY = 512;
-  private static final int DEF_BATCH_GET_CONCURRENCY = 20;
-  private static final int DEF_BATCH_PUT_CONCURRENCY = 20;
-  private static final int DEF_BATCH_DELETE_CONCURRENCY = 20;
-  private static final int DEF_BATCH_SCAN_CONCURRENCY = 5;
-  private static final int DEF_DELETE_RANGE_CONCURRENCY = 20;
-  private static final CommandPri DEF_COMMAND_PRIORITY = CommandPri.Low;
-  private static final IsolationLevel DEF_ISOLATION_LEVEL = IsolationLevel.SI;
-  private static final boolean DEF_SHOW_ROWID = false;
-  private static final String DEF_DB_PREFIX = "";
-  private static final boolean DEF_WRITE_ENABLE = true;
-  private static final boolean DEF_WRITE_ALLOW_SPARK_SQL = false;
-  private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
-  private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
-  private static final int DEF_PARTITION_PER_SPLIT = 10;
-  private static final int DEF_KV_CLIENT_CONCURRENCY = 10;
-  private static final List<TiStoreType> DEF_ISOLATION_READ_ENGINES =
-      ImmutableList.of(TiStoreType.TiKV, TiStoreType.TiFlash);
+  private static final Logger logger = LoggerFactory.getLogger(TiConfiguration.class);
+  private static final ConcurrentHashMap<String, String> settings = new ConcurrentHashMap<>();
+
+  static {
+    loadFromSystemProperties();
+    loadFromConfigurationFile();
+    loadFromDefaultProperties();
+    listAll();
+  }
+
+  public static void listAll() {
+    logger.info("static configurations are:" + new ArrayList<>(settings.entrySet()).toString());
+  }
+
+  private static void loadFromSystemProperties() {
+    for (Map.Entry<String, String> prop : Utils.getSystemProperties().entrySet()) {
+      if (prop.getKey().startsWith("tikv.")) {
+        set(prop.getKey(), prop.getValue());
+      }
+    }
+  }
+
+  private static void loadFromConfigurationFile() {
+    try (InputStream input =
+        TiConfiguration.class
+            .getClassLoader()
+            .getResourceAsStream(ConfigUtils.TIKV_CONFIGURATION_FILENAME)) {
+      Properties properties = new Properties();
+
+      if (input == null) {
+        logger.warn("Unable to find " + ConfigUtils.TIKV_CONFIGURATION_FILENAME);
+        return;
+      }
+
+      logger.info("loading " + ConfigUtils.TIKV_CONFIGURATION_FILENAME);
+      properties.load(input);
+      for (String key : properties.stringPropertyNames()) {
+        if (key.startsWith("tikv.")) {
+          String value = properties.getProperty(key);
+          setIfMissing(key, value);
+        }
+      }
+    } catch (IOException e) {
+      logger.error("load config file error", e);
+    }
+  }
+
+  private static void loadFromDefaultProperties() {
+    setIfMissing(TIKV_TIMEZONE, String.valueOf(DEF_TIMEZONE));
+    setIfMissing(TIKV_TIMEOUT, DEF_TIMEOUT);
+    setIfMissing(TIKV_TIMEOUT_UNIT, String.valueOf(DEF_TIMEOUT_UNIT));
+    setIfMissing(TIKV_SCAN_BATCH_SIZE, DEF_SCAN_BATCH_SIZE);
+    setIfMissing(TIKV_IGNORE_TRUNCATE, DEF_IGNORE_TRUNCATE);
+    setIfMissing(TIKV_TRUNCATE_AS_WARNING, DEF_TRUNCATE_AS_WARNING);
+    setIfMissing(TIKV_MAX_FRAME_SIZE, DEF_MAX_FRAME_SIZE);
+    setIfMissing(TIKV_INDEX_SCAN_BATCH_SIZE, DEF_INDEX_SCAN_BATCH_SIZE);
+    setIfMissing(TIKV_REGION_SCAN_DOWNGRADE_THRESHOLD, DEF_REGION_SCAN_DOWNGRADE_THRESHOLD);
+    setIfMissing(TIKV_MAX_REQUEST_KEY_RANGE_SIZE, MAX_REQUEST_KEY_RANGE_SIZE);
+    setIfMissing(TIKV_INDEX_SCAN_CONCURRENCY, DEF_INDEX_SCAN_CONCURRENCY);
+    setIfMissing(TIKV_TABLE_SCAN_CONCURRENCY, DEF_TABLE_SCAN_CONCURRENCY);
+    setIfMissing(TIKV_BATCH_GET_CONCURRENCY, DEF_BATCH_GET_CONCURRENCY);
+    setIfMissing(TIKV_BATCH_PUT_CONCURRENCY, DEF_BATCH_PUT_CONCURRENCY);
+    setIfMissing(TIKV_BATCH_DELETE_CONCURRENCY, DEF_BATCH_DELETE_CONCURRENCY);
+    setIfMissing(TIKV_BATCH_SCAN_CONCURRENCY, DEF_BATCH_SCAN_CONCURRENCY);
+
+    setIfMissing(TIKV_DELETE_RANGE_CONCURRENCY, DEF_DELETE_RANGE_CONCURRENCY);
+
+    setIfMissing(TIKV_COMMAND_PRIORITY, String.valueOf(DEF_COMMAND_PRIORITY));
+    setIfMissing(TIKV_ISOLATION_LEVEL, String.valueOf(DEF_ISOLATION_LEVEL));
+    setIfMissing(TIKV_SHOW_ROWID, DEF_SHOW_ROWID);
+
+    setIfMissing(TIKV_DB_PREFIX, DEF_DB_PREFIX);
+    setIfMissing(TIKV_WRITE_ENABLE, DEF_WRITE_ENABLE);
+    setIfMissing(TIKV_WRITE_ALLOW_SPARK_SQL, DEF_WRITE_ALLOW_SPARK_SQL);
+
+    setIfMissing(TIKV_WRITE_WITHOUT_LOCK_TABLE, DEF_WRITE_WITHOUT_LOCK_TABLE);
+    setIfMissing(TIKV_REGION_SPLIT_SIZE_IN_MB, DEF_TIKV_REGION_SPLIT_SIZE_IN_MB);
+    setIfMissing(TIKV_PARTITION_PER_SPLIT, DEF_PARTITION_PER_SPLIT);
+    setIfMissing(TIKV_KV_CLIENT_CONCURRENCY, DEF_KV_CLIENT_CONCURRENCY);
+
+    setIfMissing(TIKV_KV_CLIENT_CONCURRENCY, DEF_KV_CLIENT_CONCURRENCY);
+  }
+
+  private static void setIfMissing(String key, int value) {
+    setIfMissing(key, String.valueOf(value));
+  }
+
+  private static void setIfMissing(String key, boolean value) {
+    setIfMissing(key, String.valueOf(value));
+  }
+
+  private static void setIfMissing(String key, String value) {
+    if (key == null) {
+      throw new NullPointerException("null key");
+    }
+    if (value == null) {
+      throw new NullPointerException("null value for " + key);
+    }
+    settings.putIfAbsent(key, value);
+  }
+
+  private static void set(String key, String value) {
+    if (key == null) {
+      throw new NullPointerException("null key");
+    }
+    if (value == null) {
+      throw new NullPointerException("null value for " + key);
+    }
+    settings.put(key, value);
+  }
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
