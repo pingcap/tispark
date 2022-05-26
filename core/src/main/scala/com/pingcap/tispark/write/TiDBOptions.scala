@@ -141,20 +141,25 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // ------------------------------------------------------------
   var SSLParameters: String = getOrDefault(TIDB_ENABLE_JDBC_SSL, "false")
   if (SSLParameters.equals("true")) {
-    val clientCertStore = getOrDefault(TIDB_JDBC_CLIENT_CERT_STORE, "")
+    val FILE_PREFIX = "file:"
+    var clientCertStore = getOrDefault(TIDB_JDBC_CLIENT_CERT_STORE, "")
     val clientCertPassword = getOrDefault(TIDB_JDBC_CLIENT_CERT_PASSWORD, "")
-    val serverCertStore = getOrDefault(TIDB_JDBC_SERVER_CERT_STORE, "")
+    var serverCertStore = getOrDefault(TIDB_JDBC_SERVER_CERT_STORE, "")
     val serverCertPassword = getOrDefault(TIDB_JDBC_SERVER_CERT_PASSWORD, "")
     // Set up Server authentication
     if (serverCertStore.equals("")) {
       SSLParameters = "true&requireSSL=true&verifyServerCertificate=false"
     } else {
+      if (!serverCertStore.startsWith(FILE_PREFIX))
+        serverCertStore = FILE_PREFIX + serverCertStore
       SSLParameters =
         "true&requireSSL=true&verifyServerCertificate=true&trustCertificateKeyStoreUrl=" +
           serverCertStore + "&trustCertificateKeyStorePassword=" + serverCertPassword
     }
     // Setting up client authentication
     if (!clientCertStore.equals("")) {
+      if (!clientCertStore.startsWith(FILE_PREFIX))
+        clientCertStore = FILE_PREFIX + clientCertStore
       SSLParameters += "&clientCertificateKeyStoreUrl=" + clientCertStore +
         "&clientCertificateKeyStorePassword=" + clientCertPassword
     }
@@ -164,7 +169,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // Calculated parameters
   // ------------------------------------------------------------
   val url: String =
-    s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useSSL=$SSLParameters&rewriteBatchedStatements=true"
+    s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useSSL=$SSLParameters&rewriteBatchedStatements=true&enabledTLSProtocols=TLSv1.2,TLSv1.3"
       .replaceAll("%", "%25")
 
   def useTableLock(isV4: Boolean): Boolean = {
