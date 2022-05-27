@@ -18,9 +18,9 @@ package com.pingcap.tispark.telemetry
 
 import com.pingcap.tikv.util.ConcreteBackOffer
 import com.pingcap.tikv.{TiConfiguration, TiSession, TwoPhaseCommitter}
-import com.pingcap.tispark.TiConfigConst
-import com.pingcap.tispark.utils.SystemInfoUtil
+import com.pingcap.tispark.utils.{HttpClientUtil, SystemInfoUtil}
 import org.apache.spark.sql.SparkSession
+import org.slf4j.LoggerFactory
 import java.util.UUID
 
 /**
@@ -28,6 +28,7 @@ import java.util.UUID
  */
 class TeleMsg(sparkSession: SparkSession) {
 
+  private val logger = LoggerFactory.getLogger(getClass.getName)
   private final val TRACK_ID = "TiSparkTelemetryId"
   private final val pdAddr: Option[String] = TiSparkTeleInfo.pdAddress
   private final val APP_ID_PREFIX = "appid_"
@@ -43,7 +44,7 @@ class TeleMsg(sparkSession: SparkSession) {
   private def generateTrackId(): String = {
     try {
       val conf = TiConfiguration.createDefault(pdAddr.get)
-      getTLSParam(conf)
+      HttpClientUtil.getTLSParam(conf)
       val tiSession = TiSession.getInstance(conf)
       val snapShot = tiSession.createSnapshot()
       val value = snapShot.get(TRACK_ID.getBytes("UTF-8"))
@@ -55,7 +56,8 @@ class TeleMsg(sparkSession: SparkSession) {
       putKeyValue(TRACK_ID, uuid, conf, tiSession)
       uuid
     } catch {
-      case _: Throwable =>
+      case e: Throwable =>
+        logger.info("Failed to generated telemetry track ID", e.getMessage)
         APP_ID_PREFIX + sparkSession.sparkContext.applicationId
     }
   }
@@ -79,6 +81,7 @@ class TeleMsg(sparkSession: SparkSession) {
         tiSession.getTimestamp.getVersion)
     } catch {
       case e: Throwable =>
+        logger.info("Failed to set telemetry ID to TiKV.", e.getMessage)
         throw e
     }
   }
@@ -88,27 +91,18 @@ class TeleMsg(sparkSession: SparkSession) {
   }
 
   private def generateHardwareInfo(): Map[String, Any] = {
-    Map[String, Any](
-      "os" -> SystemInfoUtil.getOsFamily,
-      "version" -> SystemInfoUtil.getOsVersion,
-      "cpu" -> SystemInfoUtil.getCpu,
-      "memory" -> SystemInfoUtil.getMemoryInfo,
-      "disks" -> SystemInfoUtil.getDisks)
-  }
-
-  private def getTLSParam(conf: TiConfiguration): Unit = {
     try {
-      val sqlConf = sparkSession.sparkContext.getConf
-      val TLSEnable = sqlConf.get(TiConfigConst.TIKV_TLS_ENABLE, "false").toBoolean
-      if (TLSEnable) {
-        conf.setTlsEnable(true)
-        conf.setTrustCertCollectionFile(sqlConf.get(TiConfigConst.TIKV_TRUST_CERT_COLLECTION))
-        conf.setKeyCertChainFile(sqlConf.get(TiConfigConst.TIKV_KEY_CERT_CHAIN))
-        conf.setKeyFile(sqlConf.get(TiConfigConst.TIKV_KEY_FILE))
-      }
+      val hardwareInfo = Map[String, Any](
+        "os" -> SystemInfoUtil.getOsFamily,
+        "version" -> SystemInfoUtil.getOsVersion,
+        "cpu" -> SystemInfoUtil.getCpu,
+        "memory" -> SystemInfoUtil.getMemoryInfo,
+        "disks" -> SystemInfoUtil.getDisks)
+      hardwareInfo
     } catch {
       case e: Throwable =>
-        throw e
+        logger.info("Failed to get hardware information.", e.getMessage)
+        null
     }
   }
 }

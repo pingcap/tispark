@@ -20,9 +20,11 @@ import com.pingcap.tispark.utils.HttpClientUtil
 import com.pingcap.tispark.TiSparkVersion
 import org.apache.spark.sql.SparkSession
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tispark.auth.TiAuthorization
 import org.apache.spark.sql.internal.SQLConf
 import org.slf4j.LoggerFactory
+import scalaj.http.HttpResponse
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
 
@@ -85,11 +87,19 @@ object TiSparkTeleInfo {
       if (!pd_address.isDefined) {
         return Option.empty[T]
       }
-
-      val url = "http://" + pd_address.get + urlPattern
-
       val httpClient = new HttpClientUtil
-      val resp = httpClient.get(url)
+      var resp: HttpResponse[String] = null
+
+      val conf: TiConfiguration = new TiConfiguration
+      HttpClientUtil.getTLSParam(conf)
+
+      if (conf.isTlsEnable) {
+        val url = "https://" + pd_address.get + urlPattern
+        resp = httpClient.getHttps(url, conf)
+      } else {
+        val url = "http://" + pd_address.get + urlPattern
+        resp = httpClient.get(url)
+      }
 
       val mapper = new ObjectMapper
       val entry = mapper.readValue(resp.body, classTag[T].runtimeClass)

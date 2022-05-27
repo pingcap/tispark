@@ -16,6 +16,7 @@
 
 package com.pingcap.tispark.tls
 
+import com.pingcap.tispark.telemetry.TiSparkTeleInfo
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.apache.spark.sql.{BaseTiSparkTest, Row}
@@ -87,5 +88,10 @@ class TiSparkTLSSuite extends BaseTiSparkTest {
     assert(2 == df.collect().size)
     assert(2 == df.collect().head.get(0))
     assert("TiKV".equals(df.collect().head.get(1)))
+  }
+
+  test("test get TiDB version with HTTPS") {
+    val tiSparkTeleInfo = TiSparkTeleInfo.getTiSparkTeleInfo()
+    assert(!tiSparkTeleInfo.get("tidb_version").contains("UNKNOWN"))
   }
 }
