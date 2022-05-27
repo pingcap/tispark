@@ -378,7 +378,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   private boolean createLeaderWrapper(String leaderUrlStr) {
     try {
-      URI newLeader = PDUtils.addrToUrl(leaderUrlStr);
+      URI newLeader = PDUtils.addrToUri(leaderUrlStr);
       leaderUrlStr = newLeader.getHost() + ":" + newLeader.getPort();
       if (leaderWrapper != null && leaderUrlStr.equals(leaderWrapper.getLeaderInfo())) {
         return true;
