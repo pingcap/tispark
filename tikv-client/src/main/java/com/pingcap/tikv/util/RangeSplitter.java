@@ -250,7 +250,7 @@ public class RangeSplitter {
       this.ranges = ranges;
       String host = null;
       try {
-        host = PDUtils.addrToUrl(store.getAddress()).getHost();
+        host = PDUtils.addrToUri(store.getAddress()).getHost();
       } catch (Exception ignored) {
       }
       this.host = host;
