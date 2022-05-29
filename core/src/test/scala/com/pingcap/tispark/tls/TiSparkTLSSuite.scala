@@ -91,6 +91,9 @@ class TiSparkTLSSuite extends BaseTiSparkTest {
   }
 
   test("test get TiDB version with HTTPS") {
+    if (!TLSEnable) {
+      cancel
+    }
     val tiSparkTeleInfo = TiSparkTeleInfo.getTiSparkTeleInfo()
     assert(!tiSparkTeleInfo.get("tidb_version").contains("UNKNOWN"))
   }
