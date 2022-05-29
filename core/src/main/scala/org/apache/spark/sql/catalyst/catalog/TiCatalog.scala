@@ -90,6 +90,12 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
           conf.setKeyCertChainFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_CERT_CHAIN))
           conf.setKeyFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_FILE))
         }
+        val certReloadInterval = sqlConf.getConfString(TiConfigConst.TIKV_TLS_RELOAD_INTERVAL, "")
+        val connReloadTime = sqlConf.getConfString(TiConfigConst.TIKV_CONN_RECYCLE_TIME, "")
+        if (!certReloadInterval.equals(""))
+          conf.setCertReloadIntervalInSeconds(certReloadInterval.toLong)
+        if (!connReloadTime.equals(""))
+          conf.setConnRecycleTimeInSeconds(connReloadTime.toInt)
       }
     } catch {
       case e: IllegalStateException =>

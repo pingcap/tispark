@@ -63,6 +63,8 @@ public class TiConfiguration implements Serializable {
   private static final int DEF_KV_CLIENT_CONCURRENCY = 10;
   private static final List<TiStoreType> DEF_ISOLATION_READ_ENGINES =
       ImmutableList.of(TiStoreType.TiKV, TiStoreType.TiFlash);
+  private static final String DEF_TIKV_CONN_RECYCLE_TIME = "60s";
+  private static final String DEF_TIKV_TLS_RELOAD_INTERVAL = "0s";
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
@@ -105,6 +107,12 @@ public class TiConfiguration implements Serializable {
   private String jksKeyPassword;
   private String jksTrustPath;
   private String jksTrustPassword;
+  private long connRecycleTime = getTimeAsSeconds(DEF_TIKV_CONN_RECYCLE_TIME);
+  private long certReloadInterval = getTimeAsSeconds(DEF_TIKV_TLS_RELOAD_INTERVAL);
+
+  private static Long getTimeAsSeconds(String key) {
+    return Utils.timeStringAsSec(key);
+  }
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
@@ -440,5 +448,23 @@ public class TiConfiguration implements Serializable {
 
   public void setJksTrustPassword(String jksTrustPassword) {
     this.jksTrustPassword = jksTrustPassword;
+  }
+
+  public long getConnRecycleTimeInSeconds() {
+    return connRecycleTime;
+  }
+
+  public TiConfiguration setConnRecycleTimeInSeconds(int connRecycleTime) {
+    this.connRecycleTime = connRecycleTime;
+    return this;
+  }
+
+  public long getCertReloadIntervalInSeconds() {
+    return certReloadInterval;
+  }
+
+  public TiConfiguration setCertReloadIntervalInSeconds(long interval) {
+    this.certReloadInterval = interval;
+    return this;
   }
 }

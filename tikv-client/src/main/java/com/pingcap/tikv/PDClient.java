@@ -347,22 +347,33 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return leaderWrapper;
   }
 
-  private GetMembersResponse getMembers(URI url) {
-    try {
-      ManagedChannel probChan = channelFactory.getChannel(url.getHost() + ":" + url.getPort());
-      PDGrpc.PDBlockingStub stub = PDGrpc.newBlockingStub(probChan);
-      GetMembersRequest request =
-          GetMembersRequest.newBuilder().setHeader(RequestHeader.getDefaultInstance()).build();
-      GetMembersResponse resp = stub.getMembers(request);
-      // check if the response contains a valid leader
-      if (resp != null && resp.getLeader().getMemberId() == 0) {
-        return null;
+  private GetMembersResponse doGetMembers(BackOffer backOffer, URI url) {
+    while (true) {
+      try {
+        ManagedChannel probChan = channelFactory.getChannel(url.getHost() + ":" + url.getPort());
+        PDGrpc.PDBlockingStub stub = PDGrpc.newBlockingStub(probChan);
+        GetMembersRequest request =
+            GetMembersRequest.newBuilder().setHeader(RequestHeader.getDefaultInstance()).build();
+        GetMembersResponse resp = stub.getMembers(request);
+        // check if the response contains a valid leader
+        if (resp != null && resp.getLeader().getMemberId() == 0) {
+          return null;
+        }
+        return resp;
+      } catch (Exception e) {
+        logger.warn("failed to get member from pd server.", e);
+        backOffer.doBackOff(BackOffFuncType.BoPDRPC, e);
       }
-      return resp;
-    } catch (Exception e) {
-      logger.warn("failed to get member from pd server.", e);
     }
-    return null;
+  }
+
+  private GetMembersResponse getMembers(URI uri) {
+    BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(BackOffer.PD_INFO_BACKOFF);
+    try {
+      return doGetMembers(backOffer, uri);
+    } catch (Exception e) {
+      return null;
+    }
   }
 
   synchronized boolean switchLeader(List<String> leaderURLs) {
@@ -407,8 +418,13 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
       if (resp == null) {
         continue;
       }
+
+      String leaderUrlStr = resp.getLeader().getClientUrlsList().get(0);
+      URI leaderUrl = PDUtils.addrToUrl(leaderUrlStr);
+      leaderUrlStr = leaderUrl.getHost() + ":" + leaderUrl.getPort();
+
       // if leader is switched, just return.
-      if (switchLeader(resp.getLeader().getClientUrlsList())) {
+      if (checkHealth(leaderUrlStr) && switchLeader(resp.getLeader().getClientUrlsList())) {
         return;
       }
     }
