@@ -16,7 +16,7 @@
 
 package com.pingcap.tispark.telemetry
 
-import com.pingcap.tispark.utils.HttpClientUtil
+import com.pingcap.tispark.utils.{HttpClientUtil, TiUtil}
 import com.pingcap.tispark.TiSparkVersion
 import org.apache.spark.sql.SparkSession
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -91,14 +91,19 @@ object TiSparkTeleInfo {
       var resp: HttpResponse[String] = null
 
       val conf: TiConfiguration = new TiConfiguration
-      HttpClientUtil.getTLSParam(conf)
+      TiUtil.getTLSParam(conf)
 
       if (conf.isTlsEnable) {
         val url = "https://" + pd_address.get + urlPattern
-        resp = httpClient.getHttps(url, conf)
+        resp = httpClient.getHttpsWithTiConfiguration(url, conf)
       } else {
         val url = "http://" + pd_address.get + urlPattern
         resp = httpClient.get(url)
+      }
+
+      if (!resp.isSuccess) {
+        logger.warn("Failed to request PD version. " + resp.code + ": " + resp.body)
+        return Option.empty[T]
       }
 
       val mapper = new ObjectMapper
@@ -107,7 +112,7 @@ object TiSparkTeleInfo {
       Option(entry.asInstanceOf[T])
     } catch {
       case e: Throwable =>
-        logger.info("Failed to get PD version " + e.getMessage)
+        logger.warn("Failed to get PD version " + e.getMessage)
         Option.empty[T]
     }
   }
@@ -122,7 +127,7 @@ object TiSparkTeleInfo {
       }
     } catch {
       case e: Throwable =>
-        logger.info("Failed to get PD Address" + e.getMessage)
+        logger.warn("Failed to get PD Address" + e.getMessage)
         Option.empty
     }
   }

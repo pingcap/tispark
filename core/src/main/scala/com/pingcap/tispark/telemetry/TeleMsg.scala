@@ -18,7 +18,7 @@ package com.pingcap.tispark.telemetry
 
 import com.pingcap.tikv.util.ConcreteBackOffer
 import com.pingcap.tikv.{TiConfiguration, TiSession, TwoPhaseCommitter}
-import com.pingcap.tispark.utils.{HttpClientUtil, SystemInfoUtil}
+import com.pingcap.tispark.utils.{SystemInfoUtil, TiUtil}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -44,7 +44,7 @@ class TeleMsg(sparkSession: SparkSession) {
   private def generateTrackId(): String = {
     try {
       val conf = TiConfiguration.createDefault(pdAddr.get)
-      HttpClientUtil.getTLSParam(conf)
+      TiUtil.getTLSParam(conf)
       val tiSession = TiSession.getInstance(conf)
       val snapShot = tiSession.createSnapshot()
       val value = snapShot.get(TRACK_ID.getBytes("UTF-8"))
@@ -57,7 +57,7 @@ class TeleMsg(sparkSession: SparkSession) {
       uuid
     } catch {
       case e: Throwable =>
-        logger.info("Failed to generated telemetry track ID", e.getMessage)
+        logger.warn("Failed to generated telemetry track ID", e.getMessage)
         APP_ID_PREFIX + sparkSession.sparkContext.applicationId
     }
   }

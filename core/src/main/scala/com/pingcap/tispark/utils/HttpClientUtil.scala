@@ -62,6 +62,7 @@ class HttpClientUtil {
       resp
     } catch {
       case e: Throwable =>
+        logger.warn("Failed to send HTTP post request.")
         throw e
     }
   }
@@ -84,6 +85,7 @@ class HttpClientUtil {
       resp
     } catch {
       case e: Throwable =>
+        logger.warn("Failed to send HTTP get request.")
         throw e
     }
   }
@@ -98,7 +100,7 @@ class HttpClientUtil {
    * @param headers  HTTP header
    * @return HTTP response string
    */
-  def getHttps(
+  def getHttpsWithTiConfiguration(
       url: String,
       conf: TiConfiguration,
       headers: Map[String, String] = null): HttpResponse[String] = {
@@ -161,13 +163,14 @@ class HttpClientUtil {
       resp
     } catch {
       case e: Throwable =>
+        logger.warn("Failed to send HTTPS post request.")
         throw e
     }
   }
 
   private def checkResp(url: String, resp: HttpResponse[String]): Unit = {
     if (!resp.isSuccess) {
-      logger.info(
+      logger.warn(
         s"Failed to get HTTP request: ${url}, response: ${resp.body}, code ${resp.code}")
     }
   }
@@ -181,6 +184,7 @@ class HttpClientUtil {
       bufferedReader.lines.collect(Collectors.joining(System.lineSeparator))
     } catch {
       case e: Throwable =>
+        logger.warn("Failed to get content from input stream.")
         throw e
     } finally {
       if (inputStreamReader != null) inputStreamReader.close()
@@ -194,6 +198,7 @@ class HttpClientUtil {
       certificateFactory.generateCertificate(certificateStream)
     } catch {
       case e: Throwable =>
+        logger.warn("Failed to parase certificate.")
         throw e
     }
   }
@@ -209,34 +214,7 @@ class HttpClientUtil {
       keyFactory.generatePrivate(new PKCS8EncodedKeySpec(pkcs8EncodeKey))
     } catch {
       case e: Throwable =>
-        throw e
-    }
-  }
-}
-
-object HttpClientUtil {
-  def getTLSParam(conf: TiConfiguration): Unit = {
-    try {
-      val sqlConf = SparkSession.active.sessionState.conf.clone()
-      val TLSEnable = sqlConf.getConfString(TiConfigConst.TIKV_TLS_ENABLE, "false").toBoolean
-      if (TLSEnable) {
-        conf.setTlsEnable(true)
-        val jksEnable = sqlConf.getConfString(TiConfigConst.TIKV_JKS_ENABLE, "false").toBoolean
-        if (jksEnable) {
-          conf.setJksEnable(true)
-          conf.setJksKeyPath(sqlConf.getConfString(TiConfigConst.TIKV_JKS_KEY_PATH))
-          conf.setJksKeyPassword(sqlConf.getConfString(TiConfigConst.TIKV_JKS_KEY_PASSWORD))
-          conf.setJksTrustPath(sqlConf.getConfString(TiConfigConst.TIKV_JKS_TRUST_PATH))
-          conf.setJksTrustPassword(sqlConf.getConfString(TiConfigConst.TIKV_JKS_TRUST_PASSWORD))
-        } else {
-          conf.setTrustCertCollectionFile(
-            sqlConf.getConfString(TiConfigConst.TIKV_TRUST_CERT_COLLECTION))
-          conf.setKeyCertChainFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_CERT_CHAIN))
-          conf.setKeyFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_FILE))
-        }
-      }
-    } catch {
-      case e: Throwable =>
+        logger.warn("Failed to load PKCS#8 key.")
         throw e
     }
   }
