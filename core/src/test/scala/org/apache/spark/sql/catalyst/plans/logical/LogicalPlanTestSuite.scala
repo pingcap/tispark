@@ -43,7 +43,8 @@ class LogicalPlanTestSuite extends BasePlanTest {
 
   test("fix Residual Filter containing wrong info") {
     val df = spark
-      .sql("select * from full_data_type_table where tp_mediumint > 0 order by tp_int")
+      .sql("select * from full_data_type_table where tp_mediumint>0 ")
+    df.explain(true)
     if (extractDAGRequests(df).head.toString.contains("Residual Filters")) {
       fail("Residual Filters should not appear")
     }
@@ -126,43 +127,50 @@ class LogicalPlanTestSuite extends BasePlanTest {
         |  `a` BIGINT(20) UNSIGNED  NOT NULL,
         |  `b` varchar(255) NOT NULL,
         |  `c` varchar(255) DEFAULT NULL,
-        |  PRIMARY KEY (`a`)
+        |  PRIMARY KEY (`a`,`b`)
         |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
     tidbStmt.execute(
-      " INSERT INTO t1 VALUES(0, 'aa', 'aa'), ( 9223372036854775807, 'aa', 'aa'), ( 9223372036854775808, 'aa', 'aa'), ( 18446744073709551615, 'aa', 'aa')")
-    val situations: Map[String, List[String]] = Map(
-      "SELECT * FROM t1 WHERE a >= 0 and a <= 9223372036854775807" -> List[String](
-        "0",
-        "9223372036854775807"),
-      "SELECT * FROM t1 WHERE a >= 0 and a<= 9223372036854775808" -> List[String](
-        "0",
-        "9223372036854775807",
-        "9223372036854775808"),
-      "SELECT * FROM t1 WHERE a >= 0" -> List[String](
-        "0",
-        "9223372036854775807",
-        "9223372036854775808",
-        "18446744073709551615"),
+      " INSERT INTO t1 VALUES(0, 'aa', 'aa'), ( 9223372036854775807, 'bb', 'bb'), ( 9223372036854775808, 'cc', 'cc'), ( 18446744073709551615, 'dd', 'dd')")
+    val situations: Map[String, List[List[String]]] = Map(
+      "SELECT * FROM t1 WHERE a >= 0 and a <= 9223372036854775807" -> List[List[String]](
+        List[String]("0", "9223372036854775807"),
+        List[String]("0", "9223372036854775807")),
+      "SELECT * FROM t1 WHERE a >= 0 and a<= 9223372036854775808" -> List[List[String]](
+        List[String]("0", "9223372036854775808"),
+        List[String]("0", "9223372036854775807", "9223372036854775808")),
+      "SELECT * FROM t1 WHERE a >= 0" -> List[List[String]](
+        List[String]("0"),
+        List[String]("0", "9223372036854775807", "9223372036854775808", "18446744073709551615")),
       "SELECT * FROM t1 WHERE a >= 9223372036854775808 and a<=9223372036854775809" -> List[
-        String]("9223372036854775808"),
-      "SELECT * FROM t1 WHERE a<=9223372036854775808" -> List[String](
-        "0",
-        "9223372036854775807",
-        "9223372036854775808"),
-      "SELECT * FROM t1 WHERE a <= 9223372036854775807" -> List[String](
-        "0",
-        "9223372036854775807"),
-      "SELECT * FROM t1 " -> List[String](
-        "0",
-        "9223372036854775807",
-        "9223372036854775808",
-        "18446744073709551615"))
+        List[String]](
+        List[String]("9223372036854775808", "9223372036854775809"),
+        List[String]("9223372036854775808")),
+      "SELECT * FROM t1 WHERE a<=9223372036854775808" -> List[List[String]](
+        List[String]("9223372036854775808"),
+        List[String]("0", "9223372036854775807", "9223372036854775808")),
+      "SELECT * FROM t1 WHERE a <= 9223372036854775807" -> List[List[String]](
+        List[String]("9223372036854775807"),
+        List[String]("0", "9223372036854775807")),
+      "SELECT * FROM t1 " -> List[List[String]](
+        List[String](),
+        List[String]("0", "9223372036854775807", "9223372036854775808", "18446744073709551615")))
     situations.foreach((situation) => {
       val sql = situation._1
-      val expectation = situation._2
-      val value = spark.sql(sql).collect()
-      for (x <- 0 until value.length) {
-        assert(value(x)(0).toString.equals(expectation(x)))
+      val rangeExpection = situation._2.head.toSet
+      val valueExpectation = situation._2(1)
+      val df = spark.sql(sql)
+      val filter = extractDAGRequests(df).head.getDowngradeFilters
+      if (!filter.size().equals(rangeExpection.size)) {
+        fail("pushDown size is not same as expect")
+      }
+      for (i <- 0 until filter.size()) {
+        val downgradeFilter = classOf[ComparisonBinaryExpression].cast(filter.get(i))
+        val condition = downgradeFilter.getRight.toString
+        assert(rangeExpection.contains(condition))
+      }
+      val value = df.collect()
+      for (x <- value.indices) {
+        assert(value(x)(0).toString.equals(valueExpectation(x)))
       }
     })
   }

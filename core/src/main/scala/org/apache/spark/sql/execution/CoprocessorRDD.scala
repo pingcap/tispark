@@ -139,7 +139,7 @@ case class ColumnarRegionTaskExec(
   override def simpleString(maxFields: Int): String = verboseString(maxFields)
 
   override def verboseString(maxFields: Int): String =
-    s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
+    s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getDowngradeFilters}"
 
   private def inputRDD(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
