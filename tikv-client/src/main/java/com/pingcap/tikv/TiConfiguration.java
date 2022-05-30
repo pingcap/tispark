@@ -454,8 +454,8 @@ public class TiConfiguration implements Serializable {
     return connRecycleTime;
   }
 
-  public TiConfiguration setConnRecycleTimeInSeconds(int connRecycleTime) {
-    this.connRecycleTime = connRecycleTime;
+  public TiConfiguration setConnRecycleTimeInSeconds(String connRecycleTime) {
+    this.connRecycleTime = getTimeAsSeconds(connRecycleTime);
     return this;
   }
 
@@ -463,8 +463,8 @@ public class TiConfiguration implements Serializable {
     return certReloadInterval;
   }
 
-  public TiConfiguration setCertReloadIntervalInSeconds(long interval) {
-    this.certReloadInterval = interval;
+  public TiConfiguration setCertReloadIntervalInSeconds(String interval) {
+    this.certReloadInterval = getTimeAsSeconds(interval);
     return this;
   }
 }

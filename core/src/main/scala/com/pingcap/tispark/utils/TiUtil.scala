@@ -220,11 +220,11 @@ object TiUtil {
 
     if (conf.contains(TiConfigConst.TIKV_TLS_RELOAD_INTERVAL)) {
       tiConf.setCertReloadIntervalInSeconds(
-        conf.get(TiConfigConst.TIKV_TLS_RELOAD_INTERVAL).toLong)
+        conf.get(TiConfigConst.TIKV_TLS_RELOAD_INTERVAL))
     }
 
     if (conf.contains(TiConfigConst.TIKV_CONN_RECYCLE_TIME)) {
-      tiConf.setConnRecycleTimeInSeconds(conf.get(TiConfigConst.TIKV_CONN_RECYCLE_TIME).toInt)
+      tiConf.setConnRecycleTimeInSeconds(conf.get(TiConfigConst.TIKV_CONN_RECYCLE_TIME))
     }
 
     tiConf

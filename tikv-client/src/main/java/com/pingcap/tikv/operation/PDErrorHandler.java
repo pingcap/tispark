@@ -74,6 +74,7 @@ public class PDErrorHandler<RespT> implements ErrorHandler<RespT> {
   @Override
   public boolean handleRequestError(BackOffer backOffer, Exception e) {
     backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoPDRPC, e);
+    client.updateLeader();
     return true;
   }
 }
