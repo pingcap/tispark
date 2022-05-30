@@ -58,10 +58,10 @@ object TiSparkTeleInfo {
   def pdAddress: Option[String] = pd_address
 
   private def getTispark_version: String = {
-    val pattern = new Regex("[0-9]\\.[0-9]\\.[0-9]-SNAPSHOT")
+    val pattern = new Regex("[0-9]\\.[0-9]\\.[0-9].*\\n")
     val version = TiSparkVersion.version
     pattern.findFirstIn(version) match {
-      case Some(s) => s
+      case Some(s) => s.replace("\n", "")
       case None => "UNKNOWN"
     }
   }
