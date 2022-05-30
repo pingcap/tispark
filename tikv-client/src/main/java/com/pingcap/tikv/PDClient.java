@@ -432,6 +432,43 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         "already tried all address on file, but not leader found yet.");
   }
 
+  public synchronized void updateLeaderOrForwardFollower() {
+    for (URI url : this.pdAddrs) {
+      // since resp is null, we need update leader's address by walking through all pd server.
+      GetMembersResponse resp = getMembers(url);
+      if (resp == null) {
+        continue;
+      }
+      if (resp.getLeader().getClientUrlsList().isEmpty()) {
+        continue;
+      }
+
+      String leaderUrlStr = resp.getLeader().getClientUrlsList().get(0);
+      URI leaderUrl = PDUtils.addrToUrl(leaderUrlStr);
+      leaderUrlStr = leaderUrl.getHost() + ":" + leaderUrl.getPort();
+
+      if (!checkHealth(leaderUrlStr)) {
+        continue;
+      }
+
+      // create new Leader
+      try {
+        ManagedChannel clientChannel = channelFactory.getChannel(leaderUrlStr);
+        leaderWrapper =
+            new LeaderWrapper(
+                leaderUrlStr,
+                PDGrpc.newBlockingStub(clientChannel),
+                PDGrpc.newStub(clientChannel),
+                System.nanoTime());
+      } catch (IllegalArgumentException e) {
+        logger.error("Error updating leader. " + leaderUrlStr, e);
+        continue;
+      }
+      logger.info(String.format("Switched to new leader: %s", leaderWrapper));
+      return;
+    }
+  }
+
   public void updateTiFlashReplicaStatus() {
     ByteSequence prefix =
         ByteSequence.from(TIFLASH_TABLE_SYNC_PROGRESS_PATH, StandardCharsets.UTF_8);
