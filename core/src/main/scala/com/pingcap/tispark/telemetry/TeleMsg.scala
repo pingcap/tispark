@@ -44,7 +44,7 @@ class TeleMsg(sparkSession: SparkSession) {
   private def generateTrackId(): String = {
     try {
       val conf = TiConfiguration.createDefault(pdAddr.get)
-      TiUtil.getTLSParam(conf)
+      TiUtil.injectTLSParam(conf)
       val tiSession = TiSession.getInstance(conf)
       val snapShot = tiSession.createSnapshot()
       val value = snapShot.get(TRACK_ID.getBytes("UTF-8"))
@@ -81,7 +81,7 @@ class TeleMsg(sparkSession: SparkSession) {
         tiSession.getTimestamp.getVersion)
     } catch {
       case e: Throwable =>
-        logger.info("Failed to set telemetry ID to TiKV.", e.getMessage)
+        logger.warn("Failed to set telemetry ID to TiKV.", e.getMessage)
         throw e
     }
   }
@@ -101,7 +101,7 @@ class TeleMsg(sparkSession: SparkSession) {
       hardwareInfo
     } catch {
       case e: Throwable =>
-        logger.info("Failed to get hardware information.", e.getMessage)
+        logger.warn("Failed to get hardware information.", e.getMessage)
         null
     }
   }

@@ -37,7 +37,7 @@ case class TelemetryRule(sparkSession: SparkSession) extends (LogicalPlan => Uni
       telemetry.report(teleMsg)
     } catch {
       case e: Throwable =>
-        logger.info("Failed to send telemetry message. " + e.getMessage)
+        logger.warn("Failed to send telemetry message. " + e.getMessage)
     } finally {
       logger.info("Telemetry done")
     }

@@ -35,8 +35,8 @@ object TiSparkTeleInfo {
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
   private val pd_address: Option[String] = getPDAddress
-  private val tispark_version: String = getTispark_version
-  private val tidb_version: String = getPd_version
+  private val tispark_version: String = getTisparkVersion
+  private val tidb_version: String = getPdVersion
   private val spark_version: String = org.apache.spark.SPARK_VERSION
 
   val tiSparkTeleInfo: Map[String, Any] = generateTiSparkTeleInfo()
@@ -57,7 +57,7 @@ object TiSparkTeleInfo {
 
   def pdAddress: Option[String] = pd_address
 
-  private def getTispark_version: String = {
+  private def getTisparkVersion: String = {
     val pattern = new Regex("[0-9]\\.[0-9]\\.[0-9].*\\n")
     val version = TiSparkVersion.version
     pattern.findFirstIn(version) match {
@@ -66,7 +66,7 @@ object TiSparkTeleInfo {
     }
   }
 
-  private def getPd_version: String = {
+  private def getPdVersion: String = {
     val pDStatusOption = requestPD[PDStatus]("/pd/api/v1/status")
     if (!pDStatusOption.isDefined)
       "UNKNOWN"
@@ -74,7 +74,7 @@ object TiSparkTeleInfo {
       pDStatusOption.get.version
   }
 
-  private def getCluster_id: String = {
+  private def getClusterId: String = {
     val clusterOption = requestPD[Cluster]("/pd/api/v1/cluster")
     if (!clusterOption.isDefined)
       "UNKNOWN"
@@ -91,7 +91,7 @@ object TiSparkTeleInfo {
       var resp: HttpResponse[String] = null
 
       val conf: TiConfiguration = new TiConfiguration
-      TiUtil.getTLSParam(conf)
+      TiUtil.injectTLSParam(conf)
 
       if (conf.isTlsEnable) {
         val url = "https://" + pd_address.get + urlPattern

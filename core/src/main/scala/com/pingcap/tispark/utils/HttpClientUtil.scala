@@ -74,14 +74,10 @@ class HttpClientUtil {
    * @param headers  HTTP header
    * @return HTTP response string
    */
-  def get(url: String, headers: Map[String, String] = null): HttpResponse[String] = {
+  def get(url: String, headers: Map[String, String] = Map()): HttpResponse[String] = {
     try {
-      val header: Map[String, String] =
-        if (headers != null) headers else Map("Content-Type" -> "application/json")
-
-      val resp = Http(url).headers(header).asString
+      val resp = Http(url).headers(headers).asString
       checkResp(url, resp)
-
       resp
     } catch {
       case e: Throwable =>
@@ -103,10 +99,11 @@ class HttpClientUtil {
   def getHttpsWithTiConfiguration(
       url: String,
       conf: TiConfiguration,
-      headers: Map[String, String] = null): HttpResponse[String] = {
+      headers: Map[String, String] = Map()): HttpResponse[String] = {
     try {
-      val header: Map[String, String] =
-        if (headers != null) headers else Map("Content-Type" -> "application/json")
+      if (!conf.isTlsEnable) {
+        throw new IllegalArgumentException("TLS is not enabled in configuration.")
+      }
 
       val kmf: KeyManagerFactory =
         KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm)
@@ -130,18 +127,15 @@ class HttpClientUtil {
         val trustCertCollectionFilePath = conf.getTrustCertCollectionFile
         val keyCertChainFilePath = conf.getKeyCertChainFile
         val keyFilePath = conf.getKeyFile
-
         val key: String = getContent(new FileInputStream(keyFilePath))
-        val privatekey: PrivateKey = pemLoadPkcs8(key)
-
-        val trustCert = paraseCertificate(new FileInputStream(trustCertCollectionFilePath))
-
-        val keyCert = paraseCertificate(new FileInputStream(keyCertChainFilePath))
+        val privateKey: PrivateKey = pemLoadPkcs8(key)
+        val trustCert = parseCertificate(new FileInputStream(trustCertCollectionFilePath))
+        val keyCert = parseCertificate(new FileInputStream(keyCertChainFilePath))
 
         keyStore.load(null, null)
         keyStore.setKeyEntry(
           "key",
-          privatekey,
+          privateKey,
           "PASSWORD".toCharArray,
           Array[Certificate](keyCert))
         kmf.init(keyStore, "PASSWORD".toCharArray)
@@ -155,7 +149,7 @@ class HttpClientUtil {
       sslContext.init(kmf.getKeyManagers, tmf.getTrustManagers, null)
 
       val resp = Http(url)
-        .headers(header)
+        .headers(headers)
         .option(HttpOptions.sslSocketFactory(sslContext.getSocketFactory))
         .asString
       checkResp(url, resp)
@@ -192,7 +186,7 @@ class HttpClientUtil {
     }
   }
 
-  private def paraseCertificate(certificateStream: InputStream): Certificate = {
+  private def parseCertificate(certificateStream: InputStream): Certificate = {
     try {
       val certificateFactory: CertificateFactory = CertificateFactory.getInstance("X.509")
       certificateFactory.generateCertificate(certificateStream)
