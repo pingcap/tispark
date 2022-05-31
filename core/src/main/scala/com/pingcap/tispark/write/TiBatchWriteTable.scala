@@ -20,11 +20,11 @@ import java.util
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.exception.TiBatchWriteException
-
 import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta._
 import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient, TiSession}
 import com.pingcap.tispark.TiTableReference
+import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -354,6 +354,15 @@ class TiBatchWriteTable(
     if (tiTableInfo.hasGeneratedColumn) {
       throw new TiBatchWriteException(
         "tispark currently does not support write data to table with generated column!")
+    }
+  }
+
+  def checkAuthorization(tiAuthorization: Option[TiAuthorization], options: TiDBOptions): Unit = {
+    if (options.replace) {
+      TiAuthorization.authorizeForInsert(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
+      TiAuthorization.authorizeForUpdate(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
+    } else {
+      TiAuthorization.authorizeForInsert(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
     }
   }
 

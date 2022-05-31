@@ -16,8 +16,10 @@
 
 package com.pingcap.tispark.auth
 
-import org.apache.spark.sql.AnalysisException
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{AnalysisException, Row}
 import org.apache.spark.sql.test.SharedSQLContext
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.scalatest.Matchers.{
   an,
   be,
@@ -133,7 +135,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   test("Give privilege") {
-    tidbStmt.execute(f"GRANT UPDATE,SELECT on `$database`.`$table` TO '$user'@'%%';")
+    tidbStmt.execute(f"GRANT SELECT on `$database`.`$table` TO '$user'@'%%';")
 
     Thread.sleep((TiAuthorization.refreshIntervalSecond + 5) * 1000)
   }
@@ -194,4 +196,94 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     Thread.sleep((TiAuthorization.refreshIntervalSecond + 2) * 1000)
     noException should be thrownBy spark.sql(s"delete from $dbtable where i = 3")
   }
+
+  test("Update without UPDATE & INSERT privilege should not be passed") {
+    val schema = StructType(List(StructField("i", IntegerType), StructField("s", StringType)))
+    val row = Row(4, "UpdateWithoutPrivilege")
+    val data: RDD[Row] = sc.makeRDD(List(row))
+    val df = sqlContext.createDataFrame(data, schema)
+    the[SQLException] thrownBy {
+      df.write
+        .format("tidb")
+        .options(tidbOptions)
+        .option("database", database)
+        .option("table", table)
+        .option("replace", "true")
+        .mode("append")
+        .save()
+    } should have message s"INSERT command denied to user $user@% for table $dbtable"
+  }
+
+  test("Insert without INSERT privilege should not be passed") {
+    val schema = StructType(List(StructField("i", IntegerType), StructField("s", StringType)))
+    val row = Row(4, "InsertWithoutPrivilege")
+    val data: RDD[Row] = sc.makeRDD(List(row))
+    val df = sqlContext.createDataFrame(data, schema)
+
+    the[SQLException] thrownBy {
+      df.write
+        .format("tidb")
+        .options(tidbOptions)
+        .option("database", database)
+        .option("table", table)
+        .mode("append")
+        .save()
+    } should have message s"INSERT command denied to user $user@% for table $dbtable"
+  }
+
+  test("Insert with INSERT privilege should be passed") {
+    tidbStmt.execute(f"GRANT INSERT on `$database`.`$table` TO '$user'@'%%';")
+    Thread.sleep((TiAuthorization.refreshIntervalSecond + 2) * 1000)
+    val schema = StructType(List(StructField("i", IntegerType), StructField("s", StringType)))
+    val row = Row(4, "InsertWithPrivilege")
+    val data: RDD[Row] = sc.makeRDD(List(row))
+    val df = sqlContext.createDataFrame(data, schema)
+
+    noException should be thrownBy {
+      df.write
+        .format("tidb")
+        .options(tidbOptions)
+        .option("database", database)
+        .option("table", table)
+        .mode("append")
+        .save()
+    }
+  }
+
+  test("Update without UPDATE privilege should not be passed") {
+    val schema = StructType(List(StructField("i", IntegerType), StructField("s", StringType)))
+    val row = Row(4, "UpdateWithoutPrivilege")
+    val data: RDD[Row] = sc.makeRDD(List(row))
+    val df = sqlContext.createDataFrame(data, schema)
+    the[SQLException] thrownBy {
+      df.write
+        .format("tidb")
+        .options(tidbOptions)
+        .option("database", database)
+        .option("table", table)
+        .option("replace", "true")
+        .mode("append")
+        .save()
+    } should have message s"UPDATE command denied to user $user@% for table $dbtable"
+  }
+
+  test("Update with UPDATE & INSERT privilege should not be passed") {
+    tidbStmt.execute(f"GRANT UPDATE on `$database`.`$table` TO '$user'@'%%';")
+    Thread.sleep((TiAuthorization.refreshIntervalSecond + 2) * 1000)
+    val schema = StructType(List(StructField("i", IntegerType), StructField("s", StringType)))
+    val row = Row(4, "UpdateWithPrivilege")
+    val data: RDD[Row] = sc.makeRDD(List(row))
+    val df = sqlContext.createDataFrame(data, schema)
+    noException should be thrownBy {
+      df.write
+        .format("tidb")
+        .options(tidbOptions)
+        .option("database", database)
+        .option("table", table)
+        .option("replace", "true")
+        .mode("append")
+        .save()
+    }
+  }
+
 }
