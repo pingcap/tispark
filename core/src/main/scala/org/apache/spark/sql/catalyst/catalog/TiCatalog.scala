@@ -39,7 +39,7 @@ object TiCatalog {
 
 class TiCatalog extends TableCatalog with SupportsNamespaces {
   private var tiSession: Option[TiSession] = None
-  private var meta: Option[MetaManager] = None
+  var meta: Option[MetaManager] = None
   private var _name: Option[String] = None
   private var _current_namespace: Option[Array[String]] = None
   private val logger = LoggerFactory.getLogger(getClass.getName)
@@ -74,20 +74,29 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   def getTLSParam(conf: TiConfiguration) {
     try {
       val sqlConf = SparkSession.active.sqlContext.conf
-      val TLSEnable = sqlConf.getConfString(TiConfigConst.TIKV_TLS_ENABLE, "false").toBoolean
-      if (TLSEnable) {
+      val tlsEnable = sqlConf.getConfString(TiConfigConst.TIKV_TLS_ENABLE, "false").toBoolean
+      if (tlsEnable) {
         conf.setTlsEnable(true)
-        conf.setTrustCertCollectionFile(
-          sqlConf.getConfString(TiConfigConst.TIKV_TRUST_CERT_COLLECTION))
-        conf.setKeyCertChainFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_CERT_CHAIN))
-        conf.setKeyFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_FILE))
+        val jksEnable = sqlConf.getConfString(TiConfigConst.TIKV_JKS_ENABLE, "false").toBoolean
+        if (jksEnable) {
+          conf.setJksEnable(true)
+          conf.setJksKeyPath(sqlConf.getConfString(TiConfigConst.TIKV_JKS_KEY_PATH))
+          conf.setJksKeyPassword(sqlConf.getConfString(TiConfigConst.TIKV_JKS_KEY_PASSWORD))
+          conf.setJksTrustPath(sqlConf.getConfString(TiConfigConst.TIKV_JKS_TRUST_PATH))
+          conf.setJksTrustPassword(sqlConf.getConfString(TiConfigConst.TIKV_JKS_TRUST_PASSWORD))
+        } else {
+          conf.setTrustCertCollectionFile(
+            sqlConf.getConfString(TiConfigConst.TIKV_TRUST_CERT_COLLECTION))
+          conf.setKeyCertChainFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_CERT_CHAIN))
+          conf.setKeyFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_FILE))
+        }
       }
     } catch {
       case e: IllegalStateException =>
         logger.error("Failed to activate Spark session", e)
         throw e
       case e: IllegalArgumentException =>
-        logger.error("Wrong tikv.tls_enable config", e)
+        logger.error("Wrong TLS configuration", e)
         throw e
       case e: Throwable =>
         logger.warn("TiCatalog can't get TLS cert", e)
@@ -197,4 +206,5 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     ???
 
   override def alterNamespace(namespace: Array[String], changes: NamespaceChange*): Unit = ???
+
 }

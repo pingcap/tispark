@@ -100,6 +100,11 @@ public class TiConfiguration implements Serializable {
   private String trustCertCollectionFile;
   private String keyCertChainFile;
   private String keyFile;
+  private boolean jksEnable = false;
+  private String jksKeyPath;
+  private String jksKeyPassword;
+  private String jksTrustPath;
+  private String jksTrustPassword;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
@@ -395,5 +400,45 @@ public class TiConfiguration implements Serializable {
 
   public void setKeyFile(String keyFile) {
     this.keyFile = keyFile;
+  }
+
+  public boolean isJksEnable() {
+    return jksEnable;
+  }
+
+  public void setJksEnable(boolean jksEnable) {
+    this.jksEnable = jksEnable;
+  }
+
+  public String getJksKeyPath() {
+    return jksKeyPath;
+  }
+
+  public void setJksKeyPath(String jksKeyPath) {
+    this.jksKeyPath = jksKeyPath;
+  }
+
+  public String getJksKeyPassword() {
+    return jksKeyPassword;
+  }
+
+  public void setJksKeyPassword(String jksKeyPassword) {
+    this.jksKeyPassword = jksKeyPassword;
+  }
+
+  public String getJksTrustPath() {
+    return jksTrustPath;
+  }
+
+  public void setJksTrustPath(String jksTrustPath) {
+    this.jksTrustPath = jksTrustPath;
+  }
+
+  public String getJksTrustPassword() {
+    return jksTrustPassword;
+  }
+
+  public void setJksTrustPassword(String jksTrustPassword) {
+    this.jksTrustPassword = jksTrustPassword;
   }
 }

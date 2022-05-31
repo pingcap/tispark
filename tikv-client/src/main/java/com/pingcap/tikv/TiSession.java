@@ -65,17 +65,31 @@ public class TiSession implements AutoCloseable {
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
   private boolean isClosed = false;
+  private volatile TiTimestamp snapshotTimestamp;
+  private volatile Catalog snapshotCatalog;
 
   private TiSession(TiConfiguration conf) {
     this.conf = conf;
-    this.channelFactory =
-        conf.isTlsEnable()
-            ? new ChannelFactory(
+    if (conf.isTlsEnable()) {
+      if (conf.isJksEnable()) {
+        this.channelFactory =
+            new ChannelFactory(
+                conf.getMaxFrameSize(),
+                conf.getJksKeyPath(),
+                conf.getJksKeyPassword(),
+                conf.getJksTrustPath(),
+                conf.getJksTrustPassword());
+      } else {
+        this.channelFactory =
+            new ChannelFactory(
                 conf.getMaxFrameSize(),
                 conf.getTrustCertCollectionFile(),
                 conf.getKeyCertChainFile(),
-                conf.getKeyFile())
-            : new ChannelFactory(conf.getMaxFrameSize());
+                conf.getKeyFile());
+      }
+    } else {
+      this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
+    }
     this.regionManager = null;
     this.clientBuilder = null;
   }
@@ -139,6 +153,25 @@ public class TiSession implements AutoCloseable {
       }
     }
     return res;
+  }
+
+  public TiTimestamp getSnapshotTimestamp() {
+    return snapshotTimestamp == null ? getTimestamp() : snapshotTimestamp;
+  }
+
+  public Snapshot createSnapshotWithSnapshotTimestamp() {
+    return new Snapshot(snapshotTimestamp, conf);
+  }
+
+  public synchronized Catalog getOrCreateSnapShotCatalog(TiTimestamp ts) {
+    snapshotTimestamp = ts;
+    if (snapshotCatalog == null) {
+      snapshotCatalog =
+          new Catalog(
+              this::createSnapshotWithSnapshotTimestamp, conf.ifShowRowId(), conf.getDBPrefix());
+    }
+    snapshotCatalog.reloadCache(true);
+    return snapshotCatalog;
   }
 
   public Catalog getCatalog() {
@@ -442,6 +475,9 @@ public class TiSession implements AutoCloseable {
     }
     if (channelFactory != null) {
       channelFactory.close();
+    }
+    if (snapshotCatalog != null) {
+      snapshotCatalog.close();
     }
   }
 }

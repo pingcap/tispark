@@ -18,15 +18,17 @@ package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.datatype.TypeMapping
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tikv.region.TiStoreType
 import com.pingcap.tikv.types._
 import com.pingcap.tispark._
+import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{SparkConf, sql}
+import org.slf4j.LoggerFactory
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import java.time.{Instant, LocalDate, ZoneId}
@@ -35,6 +37,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.NANOSECONDS
 
 object TiUtil {
+  private final val logger = LoggerFactory.getLogger(getClass.getName)
   val MICROS_PER_MILLIS = 1000L
   val MICROS_PER_SECOND = 1000000L
 
@@ -195,6 +198,26 @@ object TiUtil {
       tiConf.setKeyFile(conf.get(TiConfigConst.TIKV_KEY_FILE))
     }
 
+    if (conf.contains(TiConfigConst.TIKV_JKS_ENABLE)) {
+      tiConf.setJksEnable(conf.get(TiConfigConst.TIKV_JKS_ENABLE).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_KEY_PATH)) {
+      tiConf.setJksKeyPath(conf.get(TiConfigConst.TIKV_JKS_KEY_PATH))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_KEY_PASSWORD)) {
+      tiConf.setJksKeyPassword(conf.get(TiConfigConst.TIKV_JKS_KEY_PASSWORD))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_TRUST_PATH)) {
+      tiConf.setJksTrustPath(conf.get(TiConfigConst.TIKV_JKS_TRUST_PATH))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_TRUST_PASSWORD)) {
+      tiConf.setJksTrustPassword(conf.get(TiConfigConst.TIKV_JKS_TRUST_PASSWORD))
+    }
+
     tiConf
   }
 
@@ -255,5 +278,37 @@ object TiUtil {
     }
 
     mutableRow
+  }
+
+  def getTiDBSnapshot(sparkSession: SparkSession): Option[TiTimestamp] = {
+    val staleReadTs =
+      sparkSession.conf.get(TiConfigConst.STALE_READ, TiConfigConst.DEFAULT_STALE_READ)
+    logger.info(s"${TiConfigConst.STALE_READ} = $staleReadTs")
+    if (staleReadTs.isEmpty) {
+      Option.empty
+    } else {
+      Some(parseTimestamp(staleReadTs))
+    }
+  }
+
+  private def parseTimestamp(str: String): TiTimestamp = {
+    if (!isValidTimestampMill(str)) {
+      throw new IllegalArgumentException(
+        "Invalid value of " + TiConfigConst.STALE_READ + ": " + str)
+    } else {
+      try {
+        val ts = java.lang.Long.parseLong(str)
+        new TiTimestamp(ts, 0L)
+      } catch {
+        case e: Throwable =>
+          throw new IllegalArgumentException(
+            "Fail to Parse " + TiConfigConst.STALE_READ + ": " + str,
+            e)
+      }
+    }
+  }
+
+  private def isValidTimestampMill(str: String): Boolean = {
+    !StringUtils.isBlank(str) && StringUtils.isNumeric(str)
   }
 }
