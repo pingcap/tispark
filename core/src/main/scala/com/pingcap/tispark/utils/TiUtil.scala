@@ -248,6 +248,16 @@ object TiUtil {
           conf.setKeyCertChainFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_CERT_CHAIN))
           conf.setKeyFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_FILE))
         }
+
+        if (sqlConf.contains(TiConfigConst.TIKV_TLS_RELOAD_INTERVAL)) {
+          conf.setCertReloadIntervalInSeconds(
+            sqlConf.getConfString(TiConfigConst.TIKV_TLS_RELOAD_INTERVAL))
+        }
+
+        if (sqlConf.contains(TiConfigConst.TIKV_CONN_RECYCLE_TIME)) {
+          conf.setConnRecycleTimeInSeconds(
+            sqlConf.getConfString(TiConfigConst.TIKV_CONN_RECYCLE_TIME))
+        }
       }
       conf
     } catch {

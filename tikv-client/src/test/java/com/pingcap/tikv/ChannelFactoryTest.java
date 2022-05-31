@@ -32,10 +32,10 @@ import org.junit.Test;
 
 public class ChannelFactoryTest {
   private final AtomicLong ts = new AtomicLong(System.currentTimeMillis());
-  private final String tlsPath = "src/test/resources/tls/";
-  private final String caPath = tlsPath + "ca.crt";
-  private final String clientCertPath = tlsPath + "client.crt";
-  private final String clientKeyPath = tlsPath + "client.pem";
+  private final String tlsPath = "../config/cert/pem/";
+  private final String caPath = tlsPath + "root.pem";
+  private final String clientCertPath = tlsPath + "client.pem";
+  private final String clientKeyPath = tlsPath + "client-pkcs8.key";
 
   private ChannelFactory createFactory() {
     int v = 1024;

@@ -127,7 +127,7 @@ public class ChannelFactory implements AutoCloseable {
 
     @Override
     public SslContextBuilder createSslContextBuilder() {
-      SslContextBuilder builder = GrpcSslContexts.forClient();
+      SslContextBuilder builder = GrpcSslContexts.forClient().protocols("TLSv1.2", "TLSv1.3");
       try {
         if (keyPath != null && keyPassword != null) {
           KeyStore keyStore = KeyStore.getInstance("JKS");
@@ -165,7 +165,7 @@ public class ChannelFactory implements AutoCloseable {
 
     @Override
     public SslContextBuilder createSslContextBuilder() {
-      SslContextBuilder builder = GrpcSslContexts.forClient();
+      SslContextBuilder builder = GrpcSslContexts.forClient().protocols("TLSv1.2", "TLSv1.3");
       if (trustPath != null) {
         builder.trustManager(new File(trustPath));
       }
