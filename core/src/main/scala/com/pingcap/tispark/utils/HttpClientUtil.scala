@@ -157,7 +157,9 @@ class HttpClientUtil {
     }
   }
 
-  private def handleResp(url: String, resp: HttpResponse[String]): Option[HttpResponse[String]] = {
+  private def handleResp(
+      url: String,
+      resp: HttpResponse[String]): Option[HttpResponse[String]] = {
     if (!resp.isSuccess) {
       logger.warn(
         s"Failed to get HTTP request: ${url}, response: ${resp.body}, code ${resp.code}")
