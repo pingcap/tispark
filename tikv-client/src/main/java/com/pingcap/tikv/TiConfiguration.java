@@ -64,7 +64,7 @@ public class TiConfiguration implements Serializable {
   private static final List<TiStoreType> DEF_ISOLATION_READ_ENGINES =
       ImmutableList.of(TiStoreType.TiKV, TiStoreType.TiFlash);
   private static final String DEF_TIKV_CONN_RECYCLE_TIME = "60s";
-  private static final String DEF_TIKV_TLS_RELOAD_INTERVAL = "0s";
+  private static final String DEF_TIKV_TLS_RELOAD_INTERVAL = "10s";
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
