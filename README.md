@@ -30,6 +30,7 @@ Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](http
 - [BenchMark](https://github.com/pingcap/tispark/wiki/TiSpark-Benchmark)
 - [Dev Guide](https://github.com/pingcap/tispark/wiki/Dev-Guide)
 - [Example Programs](https://github.com/pingcap/tispark-test/tree/master/tispark-examples)
+- [Telemetry](./docs/telemetry.md)
 
 ## Feature Support
 
