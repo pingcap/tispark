@@ -57,7 +57,7 @@ class HttpClientUtil {
         if (headers != null) headers else Map("Content-Type" -> "application/json")
 
       val resp = Http(url).postData(msgString).headers(header).asString
-      checkResp(url, resp)
+      handleResp(url, resp)
     } catch {
       case e: Throwable =>
         logger.warn("Failed to send HTTP post request.")
@@ -75,7 +75,7 @@ class HttpClientUtil {
   def get(url: String, headers: Map[String, String] = Map()): Option[HttpResponse[String]] = {
     try {
       val resp = Http(url).headers(headers).asString
-      checkResp(url, resp)
+      handleResp(url, resp)
     } catch {
       case e: Throwable =>
         logger.warn("Failed to send HTTP get request.")
@@ -149,7 +149,7 @@ class HttpClientUtil {
         .headers(headers)
         .option(HttpOptions.sslSocketFactory(sslContext.getSocketFactory))
         .asString
-      checkResp(url, resp)
+      handleResp(url, resp)
     } catch {
       case e: Throwable =>
         logger.warn("Failed to send HTTPS post request.")
@@ -157,7 +157,7 @@ class HttpClientUtil {
     }
   }
 
-  private def checkResp(url: String, resp: HttpResponse[String]): Option[HttpResponse[String]] = {
+  private def handleResp(url: String, resp: HttpResponse[String]): Option[HttpResponse[String]] = {
     if (!resp.isSuccess) {
       logger.warn(
         s"Failed to get HTTP request: ${url}, response: ${resp.body}, code ${resp.code}")
