@@ -45,7 +45,7 @@ class TelemetrySuite extends SharedSQLContext {
   test("test http post") {
     val httpClient = new HttpClientUtil
     val resp = httpClient.postJSON("http://127.0.0.1:8091/test", "msg")
-    assert(resp.body.equals("test telemetry"))
+    assert(resp.get.body.equals("test telemetry"))
   }
 
   test("test telemetry") {

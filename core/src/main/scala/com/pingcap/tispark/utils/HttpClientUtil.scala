@@ -46,7 +46,7 @@ class HttpClientUtil {
   def postJSON(
       url: String,
       msg: Object,
-      headers: Map[String, String] = null): HttpResponse[String] = {
+      headers: Map[String, String] = null): Option[HttpResponse[String]] = {
     try {
       val mapper = new ObjectMapper()
         .registerModule(DefaultScalaModule)
@@ -58,8 +58,6 @@ class HttpClientUtil {
 
       val resp = Http(url).postData(msgString).headers(header).asString
       checkResp(url, resp)
-
-      resp
     } catch {
       case e: Throwable =>
         logger.warn("Failed to send HTTP post request.")
@@ -74,11 +72,10 @@ class HttpClientUtil {
    * @param headers  HTTP header
    * @return HTTP response string
    */
-  def get(url: String, headers: Map[String, String] = Map()): HttpResponse[String] = {
+  def get(url: String, headers: Map[String, String] = Map()): Option[HttpResponse[String]] = {
     try {
       val resp = Http(url).headers(headers).asString
       checkResp(url, resp)
-      resp
     } catch {
       case e: Throwable =>
         logger.warn("Failed to send HTTP get request.")
@@ -99,7 +96,7 @@ class HttpClientUtil {
   def getHttpsWithTiConfiguration(
       url: String,
       conf: TiConfiguration,
-      headers: Map[String, String] = Map()): HttpResponse[String] = {
+      headers: Map[String, String] = Map()): Option[HttpResponse[String]] = {
     try {
       if (!conf.isTlsEnable) {
         throw new IllegalArgumentException("TLS is not enabled in configuration.")
@@ -153,8 +150,6 @@ class HttpClientUtil {
         .option(HttpOptions.sslSocketFactory(sslContext.getSocketFactory))
         .asString
       checkResp(url, resp)
-
-      resp
     } catch {
       case e: Throwable =>
         logger.warn("Failed to send HTTPS post request.")
@@ -162,11 +157,13 @@ class HttpClientUtil {
     }
   }
 
-  private def checkResp(url: String, resp: HttpResponse[String]): Unit = {
+  private def checkResp(url: String, resp: HttpResponse[String]): Option[HttpResponse[String]] = {
     if (!resp.isSuccess) {
       logger.warn(
         s"Failed to get HTTP request: ${url}, response: ${resp.body}, code ${resp.code}")
+      return Option.empty
     }
+    Option(resp)
   }
 
   private def getContent(inputStream: InputStream): String = {

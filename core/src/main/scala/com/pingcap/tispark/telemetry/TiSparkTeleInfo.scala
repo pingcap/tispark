@@ -88,7 +88,7 @@ object TiSparkTeleInfo {
         return Option.empty[T]
       }
       val httpClient = new HttpClientUtil
-      var resp: HttpResponse[String] = null
+      var resp: Option[HttpResponse[String]] = null
 
       val conf: TiConfiguration = new TiConfiguration
       TiUtil.injectTLSParam(conf)
@@ -101,13 +101,13 @@ object TiSparkTeleInfo {
         resp = httpClient.get(url)
       }
 
-      if (!resp.isSuccess) {
-        logger.warn("Failed to request PD version. " + resp.code + ": " + resp.body)
+      if (resp == null || !resp.isDefined) {
+        logger.warn("Failed to request PD version. ")
         return Option.empty[T]
       }
 
       val mapper = new ObjectMapper
-      val entry = mapper.readValue(resp.body, classTag[T].runtimeClass)
+      val entry = mapper.readValue(resp.get.body, classTag[T].runtimeClass)
 
       Option(entry.asInstanceOf[T])
     } catch {
