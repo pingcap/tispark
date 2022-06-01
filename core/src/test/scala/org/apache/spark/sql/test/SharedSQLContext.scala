@@ -469,6 +469,8 @@ trait SharedSQLContext
       } else {
         conf.set("spark.sql.auth.enable", "false")
       }
+
+      conf.set("spark.tispark.telemetry.enable", "false")
     }
 
   private class TiContextCache {
