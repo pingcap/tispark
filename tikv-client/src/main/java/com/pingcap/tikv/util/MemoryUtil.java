@@ -485,7 +485,7 @@ public class MemoryUtil {
       long size = (count > UNSAFE_COPY_THRESHOLD) ? UNSAFE_COPY_THRESHOLD : count;
       unsafe.copyMemory(src, BYTE_ARRAY_BASE_OFFSET + offset, null, trg, size);
       count -= size;
-      offset += size;
+      offset = Math.toIntExact(size + offset);
       trg += size;
     }
   }

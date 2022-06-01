@@ -117,8 +117,8 @@ trait SharedSQLContext
     }
     logger.info(s"Table $tableName found present in ${check.head.head}")
     for (_ <- 0 until 60) {
-      // check every 5 secs
-      Thread.sleep(5000)
+      // check every 2 secs
+      Thread.sleep(2000)
       val available = database match {
         case Some(db) =>
           queryTiDBViaJDBC(
@@ -132,7 +132,7 @@ trait SharedSQLContext
         return true
       }
     }
-    // timed out after 5 minutes
+    // timed out after 2 minutes
     false
   }
 
@@ -348,7 +348,8 @@ trait SharedSQLContext
 
     var SSLPara = "false"
     if (conf.contains("jdbc.tls_enable") && conf.get("jdbc.tls_enable").equals("true")) {
-      SSLPara = "true&verifyServerCertificate=false&requireSSL=true"
+      SSLPara =
+        "true&verifyServerCertificate=false&requireSSL=true&enabledTLSProtocols=TLSv1.2,TLSv1.3"
     }
 
     jdbcUrl =
@@ -468,6 +469,8 @@ trait SharedSQLContext
       } else {
         conf.set("spark.sql.auth.enable", "false")
       }
+
+      conf.set("spark.tispark.telemetry.enable", "false")
     }
 
   private class TiContextCache {

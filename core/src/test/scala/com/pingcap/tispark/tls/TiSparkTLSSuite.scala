@@ -16,6 +16,7 @@
 
 package com.pingcap.tispark.tls
 
+import com.pingcap.tispark.telemetry.TiSparkTeleInfo
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.apache.spark.sql.{BaseTiSparkTest, Row}
@@ -75,11 +76,25 @@ class TiSparkTLSSuite extends BaseTiSparkTest {
       .options(tidbOptions)
       .option("database", "TLS_TEST")
       .option("table", "tls_test_table")
+      .option("tikv.tls_enable", "true")
+      .option("jdbc.tls_enable", "true")
+      .option("jdbc.server_cert_store", "file:/config/cert/jks/server-cert-store")
+      .option("jdbc.server_cert_password", "12345678")
+      .option("jdbc.client_cert_store", "file:/config/cert/jks/client-keystore")
+      .option("jdbc.client_cert_password", "123456")
       .mode("append")
       .save()
     df = spark.sql("SELECT * FROM `TLS_TEST`.`tls_test_table`")
     assert(2 == df.collect().size)
     assert(2 == df.collect().head.get(0))
     assert("TiKV".equals(df.collect().head.get(1)))
+  }
+
+  test("test get TiDB version with HTTPS") {
+    if (!TLSEnable) {
+      cancel
+    }
+    val tiSparkTeleInfo = TiSparkTeleInfo.getTiSparkTeleInfo()
+    assert(!tiSparkTeleInfo.get("tidb_version").contains("UNKNOWN"))
   }
 }

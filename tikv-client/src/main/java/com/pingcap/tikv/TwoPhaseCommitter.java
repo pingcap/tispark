@@ -455,9 +455,9 @@ public class TwoPhaseCommitter {
       int sizeInBytes = 0;
       for (end = start; end < len && sizeInBytes < commitBatchSize; end++) {
         if (sizeIncludeValue) {
-          sizeInBytes += this.keyValueSize(keys.get(end), mutations);
+          sizeInBytes = Math.toIntExact(sizeInBytes + this.keyValueSize(keys.get(end), mutations));
         } else {
-          sizeInBytes += this.keySize(keys.get(end));
+          sizeInBytes = Math.toIntExact(sizeInBytes + this.keySize(keys.get(end)));
         }
       }
       BatchKeys batchKeys = new BatchKeys(tiRegion, keys.subList(start, end), sizeInBytes);
