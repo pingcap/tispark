@@ -185,7 +185,7 @@ object TiExprUtils {
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
             .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))
-      case SumNotNullable(_) | PromotedSum(_) | Min(_) | Max(_) =>
+      case CountSum(_) | PromotedSum(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
             .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))

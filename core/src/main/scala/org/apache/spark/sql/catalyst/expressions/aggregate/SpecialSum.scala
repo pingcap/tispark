@@ -48,7 +48,7 @@ object PromotedSum {
     }
 }
 
-object SumNotNullable {
+object CountSum {
   def apply(child: Expression): SpecialSum = {
     // Use LongType because the push down count always return IntegerType.BIGINT
     // IntegerType.BIGINT will convert to SparkType LongType
