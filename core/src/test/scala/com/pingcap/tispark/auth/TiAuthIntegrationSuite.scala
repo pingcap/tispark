@@ -191,15 +191,9 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     } should have message s"DELETE command denied to user $user@% for table $dbtable"
   }
 
-  test("Delete with DELETE & SELECT privilege should be passed") {
-    tidbStmt.execute(f"GRANT DELETE on `$database`.`$table` TO '$user'@'%%';")
-    Thread.sleep((TiAuthorization.refreshIntervalSecond + 2) * 1000)
-    noException should be thrownBy spark.sql(s"delete from $dbtable where i = 3")
-  }
-
-  test("Update without UPDATE & INSERT privilege should not be passed") {
+  test("Replace without DELETE & INSERT privilege should not be passed") {
     val schema = StructType(List(StructField("i", IntegerType), StructField("s", StringType)))
-    val row = Row(4, "UpdateWithoutPrivilege")
+    val row = Row(4, "ReplaceWithoutPrivilege")
     val data: RDD[Row] = sc.makeRDD(List(row))
     val df = sqlContext.createDataFrame(data, schema)
     the[SQLException] thrownBy {
@@ -212,6 +206,12 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
         .mode("append")
         .save()
     } should have message s"INSERT command denied to user $user@% for table $dbtable"
+  }
+
+  test("Delete with DELETE & SELECT privilege should be passed") {
+    tidbStmt.execute(f"GRANT DELETE on `$database`.`$table` TO '$user'@'%%';")
+    Thread.sleep((TiAuthorization.refreshIntervalSecond + 2) * 1000)
+    noException should be thrownBy spark.sql(s"delete from $dbtable where i = 3")
   }
 
   test("Insert without INSERT privilege should not be passed") {
@@ -250,28 +250,10 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     }
   }
 
-  test("Update without UPDATE privilege should not be passed") {
-    val schema = StructType(List(StructField("i", IntegerType), StructField("s", StringType)))
-    val row = Row(4, "UpdateWithoutPrivilege")
-    val data: RDD[Row] = sc.makeRDD(List(row))
-    val df = sqlContext.createDataFrame(data, schema)
-    the[SQLException] thrownBy {
-      df.write
-        .format("tidb")
-        .options(tidbOptions)
-        .option("database", database)
-        .option("table", table)
-        .option("replace", "true")
-        .mode("append")
-        .save()
-    } should have message s"UPDATE command denied to user $user@% for table $dbtable"
-  }
-
-  test("Update with UPDATE & INSERT privilege should not be passed") {
-    tidbStmt.execute(f"GRANT UPDATE on `$database`.`$table` TO '$user'@'%%';")
+  test("Replace with DELETE & INSERT privilege should be passed") {
     Thread.sleep((TiAuthorization.refreshIntervalSecond + 2) * 1000)
     val schema = StructType(List(StructField("i", IntegerType), StructField("s", StringType)))
-    val row = Row(4, "UpdateWithPrivilege")
+    val row = Row(4, "ReplaceWithPrivilege")
     val data: RDD[Row] = sc.makeRDD(List(row))
     val df = sqlContext.createDataFrame(data, schema)
     noException should be thrownBy {

@@ -360,7 +360,7 @@ class TiBatchWriteTable(
   def checkAuthorization(tiAuthorization: Option[TiAuthorization], options: TiDBOptions): Unit = {
     if (options.replace) {
       TiAuthorization.authorizeForInsert(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
-      TiAuthorization.authorizeForUpdate(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
+      TiAuthorization.authorizeForDelete(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
     } else {
       TiAuthorization.authorizeForInsert(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
     }

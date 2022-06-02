@@ -59,8 +59,11 @@ Currently, Supported statements are as follows:
 | SHOW COLUMNS    | ❌ | ❌ |
 | DESCRIBE COLUMN | ❌ | ❌ |
 
+## Compatibility with Data Source API
+
+We only support authorization check in write currently.
+
 ## limitations
 
 - Can't work with other datasource except TiDB
 - Not supported with role-based privileges
-- Not supported with TiDB Data Source API, such as TiBatchWrite

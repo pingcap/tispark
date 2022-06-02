@@ -84,7 +84,7 @@ class TiBatchWrite(
   @transient private var startMS: Long = _
   private var startTs: Long = _
   private var twoPhaseCommitHepler: TwoPhaseCommitHepler = _
-  @transient private var tiAuthorization: Option[TiAuthorization] = _
+  private val tiAuthorization: Option[TiAuthorization] = tiContext.tiAuthorization
 
   private def write(): Unit = {
     try {
@@ -143,7 +143,6 @@ class TiBatchWrite(
     isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
     lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
     tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
-    tiAuthorization = tiContext.tiAuthorization
 
     // init tiBatchWriteTables
     tiBatchWriteTables = {
@@ -163,7 +162,9 @@ class TiBatchWrite(
     tiBatchWriteTables.foreach(_.checkUnsupported())
 
     // check authorization
-    tiBatchWriteTables.foreach(_.checkAuthorization(tiAuthorization, options))
+    if (TiAuthorization.enableAuth) {
+      tiBatchWriteTables.foreach(_.checkAuthorization(tiAuthorization, options))
+    }
 
     // cache data
     tiBatchWriteTables.foreach(_.persist())
