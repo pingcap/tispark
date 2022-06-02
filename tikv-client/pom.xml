@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.pingcap.tispark</groupId>
         <artifactId>tispark-parent</artifactId>
-        <version>2.5.0-SNAPSHOT</version>
+        <version>${revision}</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -30,7 +30,11 @@
         <joda-convert.version>1.9.2</joda-convert.version>
         <proto.folder>${basedir}/proto</proto.folder>
         <mockito.version>2.28.2</mockito.version>
-        <netty.tcnative.version>2.0.34.Final</netty.tcnative.version>
+        <netty.tcnative.version>2.0.30.Final</netty.tcnative.version>
+        <classesShadedDir>${project.build.directory}/classes-shaded</classesShadedDir>
+        <classesShadedNativeDir>${classesShadedDir}/META-INF/native</classesShadedNativeDir>
+        <shadingPackagePrefix>shade</shadingPackagePrefix>
+        <shadingFilePrefix>shade</shadingFilePrefix>
     </properties>
 
     <dependencies>
@@ -159,6 +163,11 @@
             <artifactId>mockito-core</artifactId>
             <version>${mockito.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-handler</artifactId>
+            <version>4.1.48.Final</version>
         </dependency>
     </dependencies>
     <build>
@@ -394,6 +403,34 @@
                                     <shadedPattern>shade.com.google.gson</shadedPattern>
                                 </relocation>
                             </relocations>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>unpack-jar-features</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <unzip dest="${classesShadedDir}/">
+                                    <fileset dir="${project.build.directory}/">
+                                        <include name="${project.build.finalName}.${project.packaging}"/>
+                                    </fileset>
+                                </unzip>
+                                <move file="${classesShadedNativeDir}/libnetty_tcnative_linux_x86_64.so" tofile="${classesShadedNativeDir}/lib${shadingFilePrefix}_netty_tcnative_linux_x86_64.so"/>
+                                <move file="${classesShadedNativeDir}/libnetty_tcnative_osx_x86_64.jnilib" tofile="${classesShadedNativeDir}/lib${shadingFilePrefix}_netty_tcnative_osx_x86_64.jnilib"/>
+                                <move file="${classesShadedNativeDir}/netty_tcnative_windows_x86_64.dll" tofile="${classesShadedNativeDir}/${shadingFilePrefix}_netty_tcnative_windows_x86_64.dll"/>
+                                <jar destfile="${project.build.directory}/${project.build.finalName}.${project.packaging}" basedir="${classesShadedDir}"/>
+                                <delete dir="${classesShadedDir}"/>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>

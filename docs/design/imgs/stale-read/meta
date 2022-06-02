@@ -1,0 +1,18 @@
+@startuml
+group every SQL
+TiParser -> CatalogManager: get TiCatalog's meta
+CatalogManager -> TiCatalog: get TiCatalog from cache
+TiCatalog -> TiParser: return TiCatalog's meta
+TiParser -> TiUtil: get TSO
+TiUtil -> TiUtil: parse ts according\nto the  configuration
+TiUtil -> TiParser: return TSO
+
+TiParser -> TiSession: get snapShotCatalog with TSO
+TiSession -> TiSession : update snapshotTimestamp\nand cache snapShotCatalog
+TiSession -> TiParser: return snapShotCatalog
+
+TiParser -> MetaManager: update meta's catalog
+MetaManager -> MetaManager: update catalog if\nit has been changed
+end
+
+@enduml

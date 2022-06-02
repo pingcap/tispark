@@ -82,7 +82,7 @@ API v2 has plenty of differences from v1
 
 The main APIs are described in the picture:
 
-![image alt text](imgs/dsv2.png)
+![image alt text](imgs/dsv2-support/dsv2.png)
 
 We will extend SupportsRead and SupportsWrite.
 - As for SupportsRead, we just extend it for the schema. the read logical and push down logical are in TiStrategy.
@@ -100,7 +100,7 @@ Now, the main write step in TiSpark
 
 The detail is as follows:
 
-![image alt text](imgs/write.png)
+![image alt text](imgs/dsv2-support/write.png)
 
 
 Original write runs on spark driver, it relies heavily on RDD, and it needs TiConext which contains SparkSession and TiSession. 
@@ -115,7 +115,7 @@ So, writing codes need to be changed a lot:
    - Pre-write secondary key Once the data reaches the max batch number
 4. After all data have been pre-write, commit primary key
 
-![image alt text](imgs/new_write.png)
+![image alt text](imgs/dsv2-support/new_write.png)
 
 We don't implement it temporarily for two reasons
 - we need to change the API expose to the user because we have to deal with the global data in advance

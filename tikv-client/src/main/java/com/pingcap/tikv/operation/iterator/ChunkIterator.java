@@ -93,7 +93,7 @@ public abstract class ChunkIterator<T> implements Iterator<T> {
       return;
     }
     Chunk c = chunks.get(chunkIndex);
-    bufOffset += c.getRowsMeta(metaIndex++).getLength();
+    bufOffset = Math.toIntExact(bufOffset + c.getRowsMeta(metaIndex++).getLength());
     if (metaIndex >= c.getRowsMetaCount()) {
       if (seekNextNonEmptyChunk()) {
         metaIndex = 0;
