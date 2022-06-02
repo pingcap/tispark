@@ -165,4 +165,14 @@ public class TiConfiguration implements Serializable {
     }
     this.maxRequestKeyRangeSize = maxRequestKeyRangeSize;
   }
+
+  public TiConfiguration setConnRecycleTimeInSeconds(String connRecycleTime) {
+    this.connRecycleTime = getTimeAsSeconds(connRecycleTime);
+    return this;
+  }
+
+  public TiConfiguration setCertReloadIntervalInSeconds(String interval) {
+    this.certReloadInterval = getTimeAsSeconds(interval);
+    return this;
+  }
 }
