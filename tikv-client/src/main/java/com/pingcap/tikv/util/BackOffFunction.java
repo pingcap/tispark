@@ -86,6 +86,7 @@ public class BackOffFunction {
     BoUpdateLeader,
     BoServerBusy,
     BoTxnNotFound,
-    BoCheckHealth
+    BoCheckHealth,
+    BoJdbcConn
   }
 }

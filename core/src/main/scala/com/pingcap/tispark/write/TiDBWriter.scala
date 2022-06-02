@@ -17,8 +17,11 @@
 package com.pingcap.tispark.write
 
 import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tikv.util.{BackOffFunction, BackOffer, ConcreteBackOffer}
 import com.pingcap.tispark.TiDBUtils
 import org.apache.spark.sql._
+import java.sql.Connection
+import scala.util.control.Breaks.{break, breakable}
 
 object TiDBWriter {
 
@@ -32,10 +35,25 @@ object TiDBWriter {
     options.checkWriteRequired()
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
-        val conn = TiDBUtils.createConnectionFactory(options.url)()
+        var conn: Connection = null
 
         try {
-          val tableExists = TiDBUtils.tableExists(conn, options)
+          var tableExists: Boolean = false
+          val bo: BackOffer = ConcreteBackOffer.newCustomBackOff(10 * 1000)
+          breakable {
+            while (true) {
+              try {
+                conn = TiDBUtils.createConnectionFactory(options.url)()
+                tableExists = TiDBUtils.tableExists(conn, options)
+                break()
+              } catch {
+                case e: Exception =>
+                  conn.close()
+                  bo.doBackOff(BackOffFunction.BackOffFuncType.BoJdbcConn, e)
+              }
+            }
+          }
+
           if (tableExists) {
             saveMode match {
               case SaveMode.Append =>
@@ -52,7 +70,8 @@ object TiDBWriter {
             // TiDBUtils.saveTable(tiContext, df, Some(df.schema), options)
           }
         } finally {
-          conn.close()
+          if (conn != null)
+            conn.close()
         }
       case None => throw new TiBatchWriteException("TiExtensions is disable!")
     }
