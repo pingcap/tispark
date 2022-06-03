@@ -323,7 +323,7 @@ class TiBatchWriteTable(
 
   def lockTable(): Unit = {
     if (!tableLocked) {
-      tiDBJDBCClient.lockTableWriteLocal(options.database, options.table)
+      tiDBJDBCClient.lockTableWriteLocalWithRetry(options.database, options.table)
       tableLocked = true
     } else {
       logger.warn("table already locked!")
@@ -332,7 +332,7 @@ class TiBatchWriteTable(
 
   def unlockTable(): Unit = {
     if (tableLocked) {
-      tiDBJDBCClient.unlockTables()
+      tiDBJDBCClient.unlockTablesWithRetry()
       tableLocked = false
     }
   }
@@ -373,7 +373,11 @@ class TiBatchWriteTable(
   // update table statistics: modify_count & count
   def updateTableStatistics(startTs: Long): Unit = {
     try {
-      tiDBJDBCClient.updateTableStatistics(startTs, tiTableInfo.getId, deltaCount, modifyCount)
+      tiDBJDBCClient.updateTableStatisticsWithRetry(
+        startTs,
+        tiTableInfo.getId,
+        deltaCount,
+        modifyCount)
     } catch {
       case e: Throwable => logger.warn("updateTableStatistics error!", e)
     }

@@ -18,8 +18,14 @@ package com.pingcap.tikv;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mysql.jdbc.exceptions.jdbc4.CommunicationsException;
+import com.pingcap.tikv.operation.ErrorHandler;
+import com.pingcap.tikv.operation.JDBCErrorHandler;
+import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -28,6 +34,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.Callable;
+import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,13 +52,20 @@ public class TiDBJDBCClient implements AutoCloseable {
   private static final int TIDB_ROW_FORMAT_VERSION_DEFAULT = 1;
   private static final String ALTER_PRIMARY_KEY_KEY = "alter-primary-key";
   private static final Boolean ALTER_PRIMARY_KEY_DEFAULT = false;
+  private static final String TIDB_DRIVER_CLASS = "com.mysql.jdbc.Driver";
 
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
 
-  private final Connection connection;
+  private volatile Connection connection;
+  private final String jdbc_url;
 
-  public TiDBJDBCClient(Connection connection) {
+  public TiDBJDBCClient(Connection connection, String jdbc_url) {
     this.connection = connection;
+    this.jdbc_url = jdbc_url;
+  }
+
+  public TiDBJDBCClient(String jdbc_url) {
+    this.jdbc_url = jdbc_url;
   }
 
   public boolean isEnableAlterPrimaryKey() throws IOException, SQLException {
@@ -95,7 +111,7 @@ public class TiDBJDBCClient implements AutoCloseable {
    */
   public int getRowFormatVersion() {
     try {
-      List<List<Object>> result = queryTiDBViaJDBC(TIDB_ROW_FORMAT_VERSION_SQL);
+      List<List<Object>> result = queryTiDBViaJDBCWithRetry(TIDB_ROW_FORMAT_VERSION_SQL);
       if (result.isEmpty()) {
         // default set to 1
         return TIDB_ROW_FORMAT_VERSION_DEFAULT;
@@ -122,6 +138,10 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
   }
 
+  public boolean lockTableWriteLocalWithRetry(String databaseName, String tableName) {
+    return executeSQLWithRetry(() -> lockTableWriteLocal(databaseName, tableName));
+  }
+
   public boolean unlockTables() throws SQLException {
     try (Statement tidbStmt = connection.createStatement()) {
       int result = tidbStmt.executeUpdate(UNLOCK_TABLES_SQL);
@@ -129,11 +149,19 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
   }
 
+  public boolean unlockTablesWithRetry() throws SQLException {
+    return executeSQLWithRetry(() -> unlockTables());
+  }
+
   public boolean dropTable(String databaseName, String tableName) throws SQLException {
     try (Statement tidbStmt = connection.createStatement()) {
       String sql = "drop table if exists `" + databaseName + "`.`" + tableName + "`";
       return tidbStmt.execute(sql);
     }
+  }
+
+  public boolean dropTableWithRetry(String databaseName, String tableName) throws SQLException {
+    return executeSQLWithRetry(() -> dropTable(databaseName, tableName));
   }
 
   public void updateTableStatistics(long startTS, long tableId, long delta, long count)
@@ -157,8 +185,16 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
   }
 
+  public void updateTableStatisticsWithRetry(long startTS, long tableId, long delta, long count) {
+    executeSQLWithRetry(
+        () -> {
+          updateTableStatistics(startTS, tableId, delta, count);
+          return null;
+        });
+  }
+
   private Map<String, Object> readConfMapFromTiDB() throws SQLException, IOException {
-    String configJSON = (String) queryTiDBViaJDBC(SELECT_TIDB_CONFIG_SQL).get(0).get(0);
+    String configJSON = (String) queryTiDBViaJDBCWithRetry(SELECT_TIDB_CONFIG_SQL).get(0).get(0);
     ObjectMapper objectMapper = new ObjectMapper();
     TypeReference<HashMap<String, Object>> typeRef =
         new TypeReference<HashMap<String, Object>>() {};
@@ -172,7 +208,7 @@ public class TiDBJDBCClient implements AutoCloseable {
 
   @Override
   public void close() throws Exception {
-    connection.close();
+    if (connection != null) connection.close();
   }
 
   private List<List<Object>> queryTiDBViaJDBC(String query) throws SQLException {
@@ -192,5 +228,45 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
 
     return result;
+  }
+
+  public List<List<Object>> queryTiDBViaJDBCWithRetry(String query) throws SQLException {
+    return executeSQLWithRetry(() -> queryTiDBViaJDBC(query));
+  }
+
+  @SneakyThrows
+  public synchronized void updateConnection() {
+    if (connection != null && connection.isValid(1)) return;
+
+    Driver driver =
+        (Driver) Class.forName(TIDB_DRIVER_CLASS).getDeclaredConstructor().newInstance();
+    this.close();
+    connection = driver.connect(jdbc_url, new Properties());
+  }
+
+  @SneakyThrows
+  public <RespT> RespT executeSQLWithRetry(Callable<RespT> callable) {
+    while (true) {
+      BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(10 * 1000);
+      ErrorHandler errorHandler = new JDBCErrorHandler(this);
+      while (true) {
+        RespT result = null;
+        try {
+          if (connection == null || !connection.isValid(1)) {
+            this.updateConnection();
+          }
+          result = callable.call();
+        } catch (CommunicationsException e) {
+          // only retry when CommunicationsException happened
+          boolean retry = errorHandler.handleRequestError(backOffer, e);
+          if (retry) {
+            continue;
+          }
+        } catch (Exception e) {
+          throw e;
+        }
+        return result;
+      }
+    }
   }
 }

@@ -140,7 +140,7 @@ class TiBatchWrite(
     val isTiDBV4 = StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient)
     isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
     lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
-    tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
+    tiDBJDBCClient = new TiDBJDBCClient(options.url)
 
     // init tiBatchWriteTables
     tiBatchWriteTables = {

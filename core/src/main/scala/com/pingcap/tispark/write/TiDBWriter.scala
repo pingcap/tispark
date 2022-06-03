@@ -16,13 +16,11 @@
 
 package com.pingcap.tispark.write
 
-import com.mysql.jdbc.exceptions.jdbc4.{CommunicationsException, MySQLSyntaxErrorException}
+import com.pingcap.tikv.TiSession
+import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.util.{BackOffFunction, BackOffer, ConcreteBackOffer}
-import com.pingcap.tispark.TiDBUtils
+import com.pingcap.tikv.meta.TiTableInfo
 import org.apache.spark.sql._
-import java.sql.Connection
-import scala.util.control.Breaks.{break, breakable}
 
 object TiDBWriter {
 
@@ -36,48 +34,27 @@ object TiDBWriter {
     options.checkWriteRequired()
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
-        var conn: Connection = null
+        var tableExists: Boolean = false
+        val tiSession: TiSession = tiContext.tiSession
+        val catalog: Catalog = tiSession.getCatalog
+        val table: TiTableInfo = catalog.getTable(options.database, options.table)
+        if (table != null)
+          tableExists = true
 
-        try {
-          var tableExists: Boolean = false
-          val bo: BackOffer = ConcreteBackOffer.newCustomBackOff(10 * 1000)
-          breakable {
-            while (true) {
-              try {
-                conn = TiDBUtils.createConnectionFactory(options.url)()
-                tableExists = TiDBUtils.tableExists(conn, options)
-                break()
-              } catch {
-                case e: CommunicationsException =>
-                  if (conn != null)
-                    conn.close()
-                  bo.doBackOff(BackOffFunction.BackOffFuncType.BoJdbcConn, e)
-                case _: MySQLSyntaxErrorException =>
-                  break()
-                case e: Throwable =>
-                  throw e
-              }
-            }
+        if (tableExists) {
+          saveMode match {
+            case SaveMode.Append =>
+              TiBatchWrite.write(df, tiContext, options)
+
+            case _ =>
+              throw new TiBatchWriteException(
+                s"SaveMode: $saveMode is not supported. TiSpark only support SaveMode.Append.")
           }
-
-          if (tableExists) {
-            saveMode match {
-              case SaveMode.Append =>
-                TiBatchWrite.write(df, tiContext, options)
-
-              case _ =>
-                throw new TiBatchWriteException(
-                  s"SaveMode: $saveMode is not supported. TiSpark only support SaveMode.Append.")
-            }
-          } else {
-            throw new TiBatchWriteException(
-              s"table `${options.database}`.`${options.table}` does not exists!")
-            // TiDBUtils.createTable(conn, df, options, tiContext)
-            // TiDBUtils.saveTable(tiContext, df, Some(df.schema), options)
-          }
-        } finally {
-          if (conn != null)
-            conn.close()
+        } else {
+          throw new TiBatchWriteException(
+            s"table `${options.database}`.`${options.table}` does not exists!")
+          // TiDBUtils.createTable(conn, df, options, tiContext)
+          // TiDBUtils.saveTable(tiContext, df, Some(df.schema), options)
         }
       case None => throw new TiBatchWriteException("TiExtensions is disable!")
     }

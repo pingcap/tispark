@@ -18,28 +18,10 @@ package com.pingcap.tispark
 
 import java.sql.{Connection, Driver, DriverManager}
 import java.util.Properties
-
-import com.pingcap.tispark.write.TiDBOptions
 import org.apache.spark.sql.execution.datasources.jdbc.{DriverRegistry, DriverWrapper}
-
-import scala.util.Try
 
 object TiDBUtils {
   val TIDB_DRIVER_CLASS = "com.mysql.jdbc.Driver"
-
-  /**
-   * Returns true if the table already exists in the TiDB.
-   */
-  def tableExists(conn: Connection, options: TiDBOptions): Boolean = {
-    val sql = s"SELECT * FROM `${options.database}`.`${options.table}` WHERE 1=0"
-    val statement = conn.prepareStatement(sql)
-    try {
-      statement.executeQuery()
-      true
-    } finally {
-      statement.close()
-    }
-  }
 
   /**
    * Returns a factory for creating connections to the given TiDB URL.
