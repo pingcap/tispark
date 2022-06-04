@@ -14,18 +14,12 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv;
+package com.pingcap.tikv.jdbc;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mysql.jdbc.exceptions.jdbc4.CommunicationsException;
-import com.pingcap.tikv.operation.ErrorHandler;
-import com.pingcap.tikv.operation.JDBCErrorHandler;
-import com.pingcap.tikv.util.BackOffer;
-import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -34,13 +28,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.Callable;
-import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TiDBJDBCClient implements AutoCloseable {
+public class TiDBJDBCClient extends AbstractJDBCClient implements AutoCloseable {
 
   private static final String UNLOCK_TABLES_SQL = "unlock tables";
   private static final String SELECT_TIDB_CONFIG_SQL = "select @@tidb_config";
@@ -56,16 +47,12 @@ public class TiDBJDBCClient implements AutoCloseable {
 
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
 
-  private volatile Connection connection;
-  private final String jdbc_url;
-
-  public TiDBJDBCClient(Connection connection, String jdbc_url) {
-    this.connection = connection;
-    this.jdbc_url = jdbc_url;
+  public TiDBJDBCClient(Connection connection, String jdbcUrl) {
+    super(connection, jdbcUrl);
   }
 
-  public TiDBJDBCClient(String jdbc_url) {
-    this.jdbc_url = jdbc_url;
+  public TiDBJDBCClient(String jdbcUrl) {
+    super(jdbcUrl);
   }
 
   public boolean isEnableAlterPrimaryKey() throws IOException, SQLException {
@@ -138,8 +125,9 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
   }
 
-  public boolean lockTableWriteLocalWithRetry(String databaseName, String tableName) {
-    return executeSQLWithRetry(() -> lockTableWriteLocal(databaseName, tableName));
+  public boolean lockTableWriteLocalWithRetry(String databaseName, String tableName)
+      throws SQLException {
+    return executeWithUpdateConnRetry(() -> lockTableWriteLocal(databaseName, tableName));
   }
 
   public boolean unlockTables() throws SQLException {
@@ -150,7 +138,7 @@ public class TiDBJDBCClient implements AutoCloseable {
   }
 
   public boolean unlockTablesWithRetry() throws SQLException {
-    return executeSQLWithRetry(() -> unlockTables());
+    return executeWithUpdateConnRetry(() -> unlockTables());
   }
 
   public boolean dropTable(String databaseName, String tableName) throws SQLException {
@@ -161,7 +149,7 @@ public class TiDBJDBCClient implements AutoCloseable {
   }
 
   public boolean dropTableWithRetry(String databaseName, String tableName) throws SQLException {
-    return executeSQLWithRetry(() -> dropTable(databaseName, tableName));
+    return executeWithUpdateConnRetry(() -> dropTable(databaseName, tableName));
   }
 
   public void updateTableStatistics(long startTS, long tableId, long delta, long count)
@@ -185,8 +173,9 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
   }
 
-  public void updateTableStatisticsWithRetry(long startTS, long tableId, long delta, long count) {
-    executeSQLWithRetry(
+  public void updateTableStatisticsWithRetry(long startTS, long tableId, long delta, long count)
+      throws SQLException {
+    executeWithUpdateConnRetry(
         () -> {
           updateTableStatistics(startTS, tableId, delta, count);
           return null;
@@ -231,42 +220,6 @@ public class TiDBJDBCClient implements AutoCloseable {
   }
 
   public List<List<Object>> queryTiDBViaJDBCWithRetry(String query) throws SQLException {
-    return executeSQLWithRetry(() -> queryTiDBViaJDBC(query));
-  }
-
-  @SneakyThrows
-  public synchronized void updateConnection() {
-    if (connection != null && connection.isValid(1)) return;
-
-    Driver driver =
-        (Driver) Class.forName(TIDB_DRIVER_CLASS).getDeclaredConstructor().newInstance();
-    this.close();
-    connection = driver.connect(jdbc_url, new Properties());
-  }
-
-  @SneakyThrows
-  public <RespT> RespT executeSQLWithRetry(Callable<RespT> callable) {
-    while (true) {
-      BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(10 * 1000);
-      ErrorHandler errorHandler = new JDBCErrorHandler(this);
-      while (true) {
-        RespT result = null;
-        try {
-          if (connection == null || !connection.isValid(1)) {
-            this.updateConnection();
-          }
-          result = callable.call();
-        } catch (CommunicationsException e) {
-          // only retry when CommunicationsException happened
-          boolean retry = errorHandler.handleRequestError(backOffer, e);
-          if (retry) {
-            continue;
-          }
-        } catch (Exception e) {
-          throw e;
-        }
-        return result;
-      }
-    }
+    return executeWithUpdateConnRetry(() -> queryTiDBViaJDBC(query));
   }
 }

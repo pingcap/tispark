@@ -156,4 +156,28 @@ public class ConcreteBackOffer implements BackOffer {
       throw new GrpcException("retry is exhausted.", err);
     }
   }
+
+  public void doBackOffForJDBC(BackOffFunction.BackOffFuncType funcType, Exception err) {
+    BackOffFunction backOffFunction =
+        backOffFunctionMap.computeIfAbsent(funcType, this::createBackOffFunc);
+
+    // Back off will be done here
+    totalSleep = Math.toIntExact(totalSleep + backOffFunction.doBackOff(-1));
+    errors.add(err);
+    if (maxSleep > 0 && totalSleep >= maxSleep) {
+      StringBuilder errMsg =
+          new StringBuilder(
+              String.format("BackOffer.maxSleep %dms is exceeded, errors:", maxSleep));
+      for (int i = 0; i < errors.size(); i++) {
+        Exception curErr = errors.get(i);
+        // Print only last 3 errors for non-DEBUG log levels.
+        if (logger.isDebugEnabled() || i >= errors.size() - 3) {
+          errMsg.append("\n").append(i).append(".").append(curErr.toString());
+        }
+      }
+      logger.warn(errMsg.toString());
+      // Use the last backoff type to generate an exception
+      throw new RuntimeException("retry is exhausted.", err);
+    }
+  }
 }

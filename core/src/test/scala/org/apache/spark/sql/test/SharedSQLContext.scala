@@ -18,10 +18,11 @@
 
 package org.apache.spark.sql.test
 
+import com.pingcap.tikv.jdbc.TiDBJDBCClient
 import java.io.File
 import java.sql.{Connection, Date, Statement}
 import java.util.{Locale, Properties, TimeZone}
-import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient, Version}
+import com.pingcap.tikv.{StoreVersion, Version}
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
