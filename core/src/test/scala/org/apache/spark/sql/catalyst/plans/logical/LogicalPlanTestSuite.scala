@@ -17,8 +17,12 @@
 package org.apache.spark.sql.catalyst.plans.logical
 
 import com.google.common.collect.ImmutableList
+import com.pingcap.tikv.codec.KeyUtils
 import com.pingcap.tikv.expression.ComparisonBinaryExpression
+import com.pingcap.tikv.key
+import com.pingcap.tikv.key.{IntHandle, RowKey}
 import com.pingcap.tikv.meta.TiTimestamp
+import org.apache.derby.iapi.sql.ResultSet
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 
 import scala.collection.immutable.List
@@ -43,7 +47,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
 
   test("fix Residual Filter containing wrong info") {
     val df = spark
-      .sql("select * from full_data_type_table where tp_mediumint>0 ")
+      .sql("select * from full_data_type_table where tp_mediumint>0 order by tp_int")
     df.explain(true)
     if (extractDAGRequests(df).head.toString.contains("Residual Filters")) {
       fail("Residual Filters should not appear")
@@ -127,52 +131,126 @@ class LogicalPlanTestSuite extends BasePlanTest {
         |  `a` BIGINT(20) UNSIGNED  NOT NULL,
         |  `b` varchar(255) NOT NULL,
         |  `c` varchar(255) DEFAULT NULL,
-        |  PRIMARY KEY (`a`,`b`)
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+        |  PRIMARY KEY (`a`) CLUSTERED
+        |  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    val rs = tidbStmt.executeQuery(
+      "select tidb_table_id from information_schema.tables where  table_name='t1'")
+    if (!rs.next()) {
+      fail("fail to find table id of t1")
+    }
+    val tableId = rs.getLong("tidb_table_id")
     tidbStmt.execute(
       " INSERT INTO t1 VALUES(0, 'aa', 'aa'), ( 9223372036854775807, 'bb', 'bb'), ( 9223372036854775808, 'cc', 'cc'), ( 18446744073709551615, 'dd', 'dd')")
     val situations: Map[String, List[List[String]]] = Map(
-      "SELECT * FROM t1 WHERE a >= 0 and a <= 9223372036854775807" -> List[List[String]](
-        List[String]("0", "9223372036854775807"),
-        List[String]("0", "9223372036854775807")),
-      "SELECT * FROM t1 WHERE a >= 0 and a<= 9223372036854775808" -> List[List[String]](
-        List[String]("0", "9223372036854775808"),
-        List[String]("0", "9223372036854775807", "9223372036854775808")),
-      "SELECT * FROM t1 WHERE a >= 0" -> List[List[String]](
-        List[String]("0"),
-        List[String]("0", "9223372036854775807", "9223372036854775808", "18446744073709551615")),
-      "SELECT * FROM t1 WHERE a >= 9223372036854775808 and a<=9223372036854775809" -> List[
+      "SELECT a FROM t1 WHERE a >= 0 and a <= 9223372036854775807 order by a" -> List[
         List[String]](
-        List[String]("9223372036854775808", "9223372036854775809"),
-        List[String]("9223372036854775808")),
-      "SELECT * FROM t1 WHERE a<=9223372036854775808" -> List[List[String]](
-        List[String]("9223372036854775808"),
-        List[String]("0", "9223372036854775807", "9223372036854775808")),
-      "SELECT * FROM t1 WHERE a <= 9223372036854775807" -> List[List[String]](
-        List[String]("9223372036854775807"),
+        List[String](
+          KeyUtils.formatBytesUTF8(RowKey.toRowKey(tableId, new IntHandle(0)).getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue)).nextPrefix().getBytes)),
         List[String]("0", "9223372036854775807")),
-      "SELECT * FROM t1 " -> List[List[String]](
-        List[String](),
+      "SELECT a FROM t1 WHERE a >= 0 and a<= 9223372036854775808 order by a" -> List[
+        List[String]](
+        List[String](
+          KeyUtils.formatBytesUTF8(RowKey.toRowKey(tableId, new IntHandle(0)).getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue)).nextPrefix().getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue + 1)).getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue + 1)).nextPrefix().getBytes)),
+        List[String]("0", "9223372036854775807", "9223372036854775808")),
+      "SELECT a FROM t1 WHERE a >= 0 order by a" -> List[List[String]](
+        List[String](
+          KeyUtils.formatBytesUTF8(RowKey.toRowKey(tableId, new IntHandle(0)).getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue)).nextPrefix().getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue + 1)).getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(0xffffffffffffffffL)).nextPrefix().getBytes)),
+        List[String]("0", "9223372036854775807", "9223372036854775808", "18446744073709551615")),
+      "SELECT a FROM t1 WHERE a >= 9223372036854775807 and a<=9223372036854775808 order by a" -> List[
+        List[String]](
+        List[String](
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue)).getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue)).nextPrefix().getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue + 1)).getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue + 1)).nextPrefix().getBytes)),
+        List[String]("9223372036854775807", "9223372036854775808")),
+      "SELECT a FROM t1 WHERE a<=9223372036854775808 order by a" -> List[List[String]](
+        List[String](
+          KeyUtils.formatBytesUTF8(RowKey.toRowKey(tableId, new IntHandle(0)).getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue)).nextPrefix().getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue + 1)).getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue + 1)).nextPrefix().getBytes)),
+        List[String]("0", "9223372036854775807", "9223372036854775808")),
+      "SELECT a FROM t1 WHERE a <= 9223372036854775807 order by a" -> List[List[String]](
+        List[String](
+          KeyUtils.formatBytesUTF8(RowKey.toRowKey(tableId, new IntHandle(0)).getBytes),
+          KeyUtils.formatBytesUTF8(
+            RowKey.toRowKey(tableId, new IntHandle(Long.MaxValue)).nextPrefix().getBytes)),
+        List[String]("0", "9223372036854775807")),
+      "SELECT a FROM t1 order by a" -> List[List[String]](
+        List[String](
+          KeyUtils.formatBytesUTF8(RowKey.createMin(tableId).getBytes),
+          KeyUtils.formatBytesUTF8(RowKey.createBeyondMax(tableId).getBytes)),
         List[String]("0", "9223372036854775807", "9223372036854775808", "18446744073709551615")))
+
     situations.foreach((situation) => {
       val sql = situation._1
-      val rangeExpection = situation._2.head.toSet
+      val rangeExpection = situation._2.head
       val valueExpectation = situation._2(1)
       val df = spark.sql(sql)
-      val filter = extractDAGRequests(df).head.getDowngradeFilters
-      if (!filter.size().equals(rangeExpection.size)) {
-        fail("pushDown size is not same as expect")
-      }
-      for (i <- 0 until filter.size()) {
-        val downgradeFilter = classOf[ComparisonBinaryExpression].cast(filter.get(i))
-        val condition = downgradeFilter.getRight.toString
-        assert(rangeExpection.contains(condition))
-      }
       val value = df.collect()
+      val range = extractDAGRequests(df).head.getRangesMaps.get(tableId)
+      for (x <- 0 until (range.size())) {
+        val startKey = KeyUtils.formatBytesUTF8(range.get(x).getStart.toByteArray)
+        val endKey = KeyUtils.formatBytesUTF8(range.get(x).getEnd.toByteArray)
+        assert(startKey.equals(rangeExpection(2 * x)))
+        assert(endKey.equals(rangeExpection(2 * x + 1)))
+      }
       for (x <- value.indices) {
         assert(value(x)(0).toString.equals(valueExpectation(x)))
       }
     })
+  }
+
+  // https://github.com/pingcap/tispark/issues/2290
+  test("fix cannot encode row key with non-long type1") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    tidbStmt.execute("DROP TABLE IF EXISTS `t2`")
+    tidbStmt.execute("""
+        |CREATE TABLE `t1` (
+        |  `a` BIGINT(20) UNSIGNED  NOT NULL,
+        |  `b` varchar(255) NOT NULL,
+        |  `c` varchar(255) DEFAULT NULL,
+        |  PRIMARY KEY (`a`) CLUSTERED
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    tidbStmt.execute("""
+        |CREATE TABLE `t2` (
+        |  `a` BIGINT(20) UNSIGNED  NOT NULL,
+        |  `b` varchar(255) NOT NULL,
+        |  `c` varchar(255) DEFAULT NULL,
+        |  PRIMARY KEY (`a`,`b`)
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    tidbStmt.execute(
+      " INSERT INTO t1 VALUES(0, 'aa', 'aa'), ( 9223372036854775807, 'bb', 'bb'), ( 9223372036854775808, 'cc', 'cc'), ( 18446744073709551615, 'dd', 'dd')")
+    tidbStmt.execute(
+      " INSERT INTO t2 VALUES(0, 'aa', 'aa'), ( 9223372036854775807, 'bb', 'bb'), ( 9223372036854775808, 'cc', 'cc'), ( 18446744073709551615, 'dd', 'dd')")
+    tidbStmt.execute("split table t2 between (0) and (9223888888) regions 16")
+    val situation = "SELECT * FROM t1"
+    val df = spark.sql(situation)
+    df.show
+    df.explain(true)
+
   }
 
   // https://github.com/pingcap/tispark/issues/1498

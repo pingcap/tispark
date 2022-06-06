@@ -168,7 +168,7 @@ public class TiKVScanAnalyzerTest {
           RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).getBytes(),
           RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).nextPrefix().getBytes(),
           RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
-          RowKey.createBeyondMax(6).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(0xffffffffffffffffL)).nextPrefix().getBytes(),
         };
     situations.add(situation3);
     expectations.add(expectation3);
@@ -197,7 +197,7 @@ public class TiKVScanAnalyzerTest {
     byte[][] expectation5 =
         new byte[][] {
           RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
-          RowKey.createBeyondMax(6).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(0xffffffffffffffffL)).nextPrefix().getBytes(),
         };
     situations.add(situation5);
     expectations.add(expectation5);

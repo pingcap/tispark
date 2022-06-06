@@ -336,7 +336,7 @@ public class TiKVScanAnalyzer {
         } else {
           signedStartKey = RowKey.toRowKey(id, r.lowerEndpoint());
           if (r.lowerBoundType().equals(BoundType.OPEN)) {
-            signedStartKey = signedStartKey.nextPrefix();
+            signedStartKey = signedStartKey.next();
           }
         }
         if (!r.hasUpperBound()) {
@@ -345,7 +345,7 @@ public class TiKVScanAnalyzer {
         } else {
           signedEndKey = RowKey.toRowKey(id, r.upperEndpoint());
           if (r.lowerBoundType().equals(BoundType.CLOSED)) {
-            signedEndKey = signedEndKey.nextPrefix();
+            signedEndKey = signedEndKey.next();
           }
         }
       } else {
@@ -372,7 +372,8 @@ public class TiKVScanAnalyzer {
         }
         if (!r.hasUpperBound()) {
           signedEndKey = RowKey.toRowKey(id, new IntHandle(max.longValue())).nextPrefix();
-          unsignedEndKey = RowKey.createBeyondMax(id);
+          // unsinged_max=0xffffffffffffffffL
+          unsignedEndKey = RowKey.toRowKey(id, new IntHandle(0xffffffffffffffffL)).nextPrefix();
         } else {
           signedEndKey = RowKey.toRowKey(id, new IntHandle(max.longValue())).nextPrefix();
           unsignedEndKey = RowKey.toRowKey(id, new IntHandle(max.longValue() + 1));
