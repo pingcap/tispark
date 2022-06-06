@@ -179,7 +179,7 @@ trait SharedSQLContext
 
   protected def supportClusteredIndex: Boolean = {
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
-    val tiDBJDBCClient = new TiDBJDBCClient(conn, jdbcUrl)
+    val tiDBJDBCClient = new TiDBJDBCClient(conn)
     tiDBJDBCClient.supportClusteredIndex
   }
 

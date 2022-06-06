@@ -119,13 +119,13 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected def isEnableAlterPrimaryKey: Boolean = {
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
-    val tiDBJDBCClient = new TiDBJDBCClient(conn, jdbcUrl)
+    val tiDBJDBCClient = new TiDBJDBCClient(conn)
     tiDBJDBCClient.isEnableAlterPrimaryKey
   }
 
   protected def isEnableTableLock: Boolean = {
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
-    val tiDBJDBCClient = new TiDBJDBCClient(conn, jdbcUrl)
+    val tiDBJDBCClient = new TiDBJDBCClient(conn)
     tiDBJDBCClient.isEnableTableLock
   }
 

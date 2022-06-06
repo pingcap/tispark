@@ -180,11 +180,6 @@
             <artifactId>netty-handler</artifactId>
             <version>4.1.48.Final</version>
         </dependency>
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>${mysql.connector.version}</version>
-        </dependency>
     </dependencies>
     <build>
         <resources>

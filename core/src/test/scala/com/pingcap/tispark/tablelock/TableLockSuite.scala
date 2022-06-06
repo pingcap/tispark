@@ -34,7 +34,7 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
   override def afterAll(): Unit = {
     try {
       if (!tiDBJDBCClient.isClosed) {
-        tiDBJDBCClient.unlockTablesWithRetry()
+        tiDBJDBCClient.unlockTables()
       }
     } catch {
       case _: Throwable =>
@@ -56,12 +56,12 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
   }
 
   override protected def dropTable(): Unit = {
-    tiDBJDBCClient.dropTableWithRetry(database, table)
+    tiDBJDBCClient.dropTable(database, table)
   }
 
   test("Test TiDBJDBCClient Close") {
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
-    tiDBJDBCClient = new TiDBJDBCClient(conn, jdbcUrl)
+    tiDBJDBCClient = new TiDBJDBCClient(conn)
     tiDBJDBCClient.close()
     assert(conn.isClosed)
   }
@@ -73,14 +73,14 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
 
     // init
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
-    tiDBJDBCClient = new TiDBJDBCClient(conn, jdbcUrl)
+    tiDBJDBCClient = new TiDBJDBCClient(conn)
     createTable()
 
     // lock table
-    assert(tiDBJDBCClient.lockTableWriteLocalWithRetry(database, table))
+    assert(tiDBJDBCClient.lockTableWriteLocal(database, table))
 
     // unlock tables
-    assert(tiDBJDBCClient.unlockTablesWithRetry())
+    assert(tiDBJDBCClient.unlockTables())
 
     // drop table
     dropTable()
@@ -97,11 +97,11 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
 
     // init
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
-    tiDBJDBCClient = new TiDBJDBCClient(conn, jdbcUrl)
+    tiDBJDBCClient = new TiDBJDBCClient(conn)
     createTable()
 
     // lock table
-    assert(tiDBJDBCClient.lockTableWriteLocalWithRetry(database, table))
+    assert(tiDBJDBCClient.lockTableWriteLocal(database, table))
 
     // fail write in another jdbc session
     val caught = intercept[java.sql.SQLException] {
@@ -110,7 +110,7 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
     assert(caught.getMessage.startsWith(s"Table '$table' was locked in WRITE LOCAL by server"))
 
     // unlock tables
-    assert(tiDBJDBCClient.unlockTablesWithRetry())
+    assert(tiDBJDBCClient.unlockTables())
 
     // insert data
     tidbStmt.execute(s"insert into $dbtable values(1),(2),(3),(4),(null)")
@@ -130,17 +130,17 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
 
     // init
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
-    tiDBJDBCClient = new TiDBJDBCClient(conn, jdbcUrl)
+    tiDBJDBCClient = new TiDBJDBCClient(conn)
     createTable()
 
     // lock table
-    assert(tiDBJDBCClient.lockTableWriteLocalWithRetry(database, table))
+    assert(tiDBJDBCClient.lockTableWriteLocal(database, table))
 
     // read data
     tidbStmt.executeQuery(s"select * from $dbtable")
 
     // unlock tables
-    assert(tiDBJDBCClient.unlockTablesWithRetry())
+    assert(tiDBJDBCClient.unlockTables())
 
     // drop table
     dropTable()
