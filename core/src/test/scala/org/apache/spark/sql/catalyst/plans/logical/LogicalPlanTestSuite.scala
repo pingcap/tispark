@@ -223,36 +223,6 @@ class LogicalPlanTestSuite extends BasePlanTest {
     })
   }
 
-  // https://github.com/pingcap/tispark/issues/2290
-  test("fix cannot encode row key with non-long type1") {
-    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    tidbStmt.execute("DROP TABLE IF EXISTS `t2`")
-    tidbStmt.execute("""
-        |CREATE TABLE `t1` (
-        |  `a` BIGINT(20) UNSIGNED  NOT NULL,
-        |  `b` varchar(255) NOT NULL,
-        |  `c` varchar(255) DEFAULT NULL,
-        |  PRIMARY KEY (`a`) CLUSTERED
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
-    tidbStmt.execute("""
-        |CREATE TABLE `t2` (
-        |  `a` BIGINT(20) UNSIGNED  NOT NULL,
-        |  `b` varchar(255) NOT NULL,
-        |  `c` varchar(255) DEFAULT NULL,
-        |  PRIMARY KEY (`a`,`b`)
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
-    tidbStmt.execute(
-      " INSERT INTO t1 VALUES(0, 'aa', 'aa'), ( 9223372036854775807, 'bb', 'bb'), ( 9223372036854775808, 'cc', 'cc'), ( 18446744073709551615, 'dd', 'dd')")
-    tidbStmt.execute(
-      " INSERT INTO t2 VALUES(0, 'aa', 'aa'), ( 9223372036854775807, 'bb', 'bb'), ( 9223372036854775808, 'cc', 'cc'), ( 18446744073709551615, 'dd', 'dd')")
-    tidbStmt.execute("split table t2 between (0) and (9223888888) regions 16")
-    val situation = "SELECT * FROM t1"
-    val df = spark.sql(situation)
-    df.show
-    df.explain(true)
-
-  }
-
   // https://github.com/pingcap/tispark/issues/1498
   test("test index scan failed to push down varchar") {
     tidbStmt.execute("drop table if exists t")
