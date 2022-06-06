@@ -21,6 +21,7 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.util.{BackOffFunction, BackOffer, ConcreteBackOffer}
 import com.pingcap.tispark.TiDBUtils
 import org.apache.spark.sql._
+
 import java.sql.Connection
 import scala.util.control.Breaks.{break, breakable}
 
@@ -52,7 +53,8 @@ object TiDBWriter {
                   if (conn != null)
                     conn.close()
                   bo.doBackOff(BackOffFunction.BackOffFuncType.BoJdbcConn, e)
-                case _: MySQLSyntaxErrorException =>
+                case e: MySQLSyntaxErrorException =>
+                  tableExists = false
                   break()
                 case e: Throwable =>
                   throw e
