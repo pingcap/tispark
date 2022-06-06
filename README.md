@@ -56,7 +56,9 @@ see [here](https://github.com/pingcap/tispark/wiki/Feature-Support-Detail) for m
 
 - The dependency `tispark-assembly` should not be packaged into `JAR of JARS` file (for example, build with spring-boot-maven-plugin), or you will get `ClassNotFoundException`. You can solve it by adding `spark-wrapper-spark-version` in your dependency or constructing another forms of jar file.
 
-- TiSpark doesn't support collations now. `new_collations_enabled_on_first_bootstrap` should not be set to `true`
+- TiSpark doesn't support collations now. `new_collations_enabled_on_first_bootstrap` should not be set to `true`.
+
+- If `spark.sql.ansi.enabled` is false an overflow of sum(bigint) will not cause an error but “wrap” the result, or you can cast bigint to decimal to avoid the overflow.
 
 ## Follow us
 
