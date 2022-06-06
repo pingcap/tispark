@@ -20,10 +20,10 @@ import java.util
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.jdbc.TiDBJDBCClient
+
 import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta._
-import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiSession}
+import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient, TiSession}
 import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
 import org.apache.spark.rdd.RDD

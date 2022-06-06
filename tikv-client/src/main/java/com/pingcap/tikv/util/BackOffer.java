@@ -51,14 +51,6 @@ public interface BackOffer {
   void doBackOffWithMaxSleep(
       BackOffFunction.BackOffFuncType funcType, long maxSleepMs, Exception err);
 
-  /**
-   * This is only used in JDBC execution.
-   *
-   * @param boJdbcConn BackOffFuncType.boJdbcConn @Param e
-   * @return Throw a RuntimeException when retrying time is exhaust.
-   */
-  void doBackOffForJDBC(BackOffFunction.BackOffFuncType boJdbcConn, Exception e);
-
   // Back off strategies
   enum BackOffStrategy {
     // NoJitter makes the backoff sequence strict exponential.

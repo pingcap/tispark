@@ -16,7 +16,7 @@
 
 package com.pingcap.tispark.tablelock
 
-import com.pingcap.tikv.jdbc.TiDBJDBCClient
+import com.pingcap.tikv.TiDBJDBCClient
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 

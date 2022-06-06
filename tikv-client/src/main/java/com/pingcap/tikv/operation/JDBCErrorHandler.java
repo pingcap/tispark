@@ -16,10 +16,16 @@
 
 package com.pingcap.tikv.operation;
 
+import com.pingcap.tikv.TiDBJDBCClient;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 
 public class JDBCErrorHandler<RespT> implements ErrorHandler<RespT> {
+  private final TiDBJDBCClient tiDBJDBCClient;
+
+  public JDBCErrorHandler(TiDBJDBCClient tiDBJDBCClient) {
+    this.tiDBJDBCClient = tiDBJDBCClient;
+  }
 
   @Override
   public boolean handleResponseError(BackOffer backOffer, RespT resp) {
@@ -28,7 +34,7 @@ public class JDBCErrorHandler<RespT> implements ErrorHandler<RespT> {
 
   @Override
   public boolean handleRequestError(BackOffer backOffer, Exception e) {
-    backOffer.doBackOffForJDBC(BackOffFunction.BackOffFuncType.BoJdbcConn, e);
+    backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoJdbcConn, e);
     return true;
   }
 }

@@ -31,7 +31,7 @@ import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JDBCClient extends AbstractJDBCClient {
+public class JDBCClient {
 
   public static final String SQL_SHOW_GRANTS = "SHOW GRANTS";
   public static final String GET_PD_ADDRESS =
@@ -41,19 +41,21 @@ public class JDBCClient extends AbstractJDBCClient {
   private static final String SELECT_CURRENT_USER = "SELECT CURRENT_USER()";
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
 
+  private final String url;
+
   private final Driver driver;
 
   private final Properties properties;
 
-  public JDBCClient(String jdbcUrl, Properties properties) {
-    super(jdbcUrl);
+  public JDBCClient(String url, Properties properties) {
+    this.url = url;
     this.properties = properties;
     this.driver = createDriver();
   }
 
   public List<String> showGrants() {
     try {
-      return queryWithRetry(SQL_SHOW_GRANTS, (rs, rowNum) -> rs.getString(1));
+      return query(SQL_SHOW_GRANTS, (rs, rowNum) -> rs.getString(1));
     } catch (SQLException e) {
       return Collections.emptyList();
     }
@@ -74,7 +76,7 @@ public class JDBCClient extends AbstractJDBCClient {
     }
     String statement = builder.deleteCharAt(builder.length() - 1).toString();
 
-    try (Connection connection = driver.connect(jdbcUrl, properties);
+    try (Connection connection = driver.connect(url, properties);
         PreparedStatement tidbStmt = connection.prepareStatement(statement)) {
       List<String> result = new ArrayList<>();
       for (int i = 0; i < roles.size(); i++) {
@@ -95,24 +97,16 @@ public class JDBCClient extends AbstractJDBCClient {
     }
   }
 
-  public List<String> showGrantsUsingRoleWithRetry(List<String> roles) throws SQLException {
-    return executeWithRetry(() -> showGrantsUsingRole(roles));
-  }
-
   private <T> List<T> query(String sql, RowMapper<T> rowMapper) throws SQLException {
-    try (Connection connection = driver.connect(jdbcUrl, properties);
+    try (Connection connection = driver.connect(url, properties);
         Statement tidbStmt = connection.createStatement();
         ResultSet resultSet = tidbStmt.executeQuery(sql)) {
       return extractData(resultSet, rowMapper);
     }
   }
 
-  private <T> List<T> queryWithRetry(String sql, RowMapper<T> rowMapper) throws SQLException {
-    return executeWithRetry(() -> query(sql, rowMapper));
-  }
-
   private <T> T queryForObject(String sql, RowMapper<T> rowMapper) throws SQLException {
-    List<T> result = queryWithRetry(sql, rowMapper);
+    List<T> result = query(sql, rowMapper);
     if (result.size() != 1) {
       throw new IllegalArgumentException(
           "queryForObject() result size: expected 1, acctually " + result.size());

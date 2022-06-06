@@ -18,7 +18,6 @@ package com.pingcap.tispark.write
 
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv._
-import com.pingcap.tikv.jdbc.TiDBJDBCClient
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler}
 import org.apache.spark.SparkConf
