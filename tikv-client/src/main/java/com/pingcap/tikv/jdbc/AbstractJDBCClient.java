@@ -28,10 +28,9 @@ import java.util.Properties;
 import java.util.concurrent.Callable;
 import lombok.SneakyThrows;
 
-public abstract class AbstractJDBCClient {
+public class AbstractJDBCClient {
 
   private static final String TIDB_DRIVER_CLASS = "com.mysql.jdbc.Driver";
-  private static final int CONNECTION_VALID_TIMEOUT = 1;
 
   protected volatile Connection connection;
   protected final String jdbcUrl;
@@ -47,7 +46,7 @@ public abstract class AbstractJDBCClient {
 
   @SneakyThrows
   public synchronized void updateConnection() {
-    if (connection != null && connection.isValid(CONNECTION_VALID_TIMEOUT)) return;
+    if (connection != null && connection.isValid(1)) return;
 
     Driver driver =
         (Driver) Class.forName(TIDB_DRIVER_CLASS).getDeclaredConstructor().newInstance();
@@ -63,7 +62,7 @@ public abstract class AbstractJDBCClient {
     JDBCRetryPolicy<RespT> retryPolicy = new JDBCRetryPolicy<>(errorHandler, backOffer);
     return retryPolicy.executeWithRetry(
         () -> {
-          if (connection == null || !connection.isValid(CONNECTION_VALID_TIMEOUT)) {
+          if (connection == null || !connection.isValid(1)) {
             this.updateConnection();
           }
           return method.call();
@@ -76,7 +75,7 @@ public abstract class AbstractJDBCClient {
     JDBCRetryPolicy<RespT> retryPolicy = new JDBCRetryPolicy<>(errorHandler, backOffer);
     return retryPolicy.executeWithRetry(
         () -> {
-          if (connection == null || !connection.isValid(CONNECTION_VALID_TIMEOUT)) {
+          if (connection == null || !connection.isValid(1)) {
             this.updateConnection();
           }
           return method.call();
@@ -87,7 +86,13 @@ public abstract class AbstractJDBCClient {
       Callable<RespT> method, BackOffer backOffer, ErrorHandler<RespT> errorHandler)
       throws SQLException {
     JDBCRetryPolicy<RespT> retryPolicy = new JDBCRetryPolicy<>(errorHandler, backOffer);
-    return retryPolicy.executeWithRetry(() -> method.call());
+    return retryPolicy.executeWithRetry(
+        () -> {
+          if (connection == null || !connection.isValid(1)) {
+            this.updateConnection();
+          }
+          return method.call();
+        });
   }
 
   public <RespT> RespT executeWithRetry(Callable<RespT> method) throws SQLException {
