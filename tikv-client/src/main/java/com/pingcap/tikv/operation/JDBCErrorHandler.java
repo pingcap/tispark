@@ -21,6 +21,7 @@ import com.pingcap.tikv.util.BackOffer;
 
 public class JDBCErrorHandler<RespT> implements ErrorHandler<RespT> {
 
+  /** JDBCErrorHandler would not handle response error. Don't do backoff and just return false. */
   @Override
   public boolean handleResponseError(BackOffer backOffer, RespT resp) {
     return false;

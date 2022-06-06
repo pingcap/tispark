@@ -91,7 +91,7 @@ object TiSparkTeleInfo {
       var resp: Option[HttpResponse[String]] = null
 
       val conf: TiConfiguration = new TiConfiguration
-      TiUtil.injectTLSParam(conf)
+      TiUtil.sparkConfToTiConfWithoutPD(SparkSession.active.sparkContext.getConf, conf)
 
       if (conf.isTlsEnable) {
         val url = "https://" + pd_address.get + urlPattern
