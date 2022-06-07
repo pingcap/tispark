@@ -372,6 +372,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     try {
       return doGetMembers(backOffer, uri);
     } catch (Exception e) {
+      // The exception message has been logged in doBackOff(). We should not report here again.
       return null;
     }
   }
