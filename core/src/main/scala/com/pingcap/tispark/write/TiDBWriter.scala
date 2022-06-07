@@ -32,9 +32,8 @@ object TiDBWriter {
     options.checkWriteRequired()
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
-        val catalog = tiContext.tiSession.getCatalog
         val tableExists =
-          if (catalog.getTable(options.database, options.table) == null) false else true
+          tiContext.tiSession.getCatalog.getTable(options.database, options.table) != null
 
         if (tableExists) {
           saveMode match {
