@@ -11,21 +11,26 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distribution: [ 'zulu', 'temurin', 'adopt', 'corretto' ]
+    name: Java ${{ matrix.distribution }} sample
     steps:
 
       - name: checkout
         uses: actions/checkout@v2
 
       - name: set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
           java-version: '8'
-          distribution: 'adopt'
+          distribution: ${{ matrix.distribution }}
           cache: maven
 
       - name: add host and copy properties
-        run: | 
+        run: |
           echo -e "127.0.0.1   pd \n127.0.0.1   tikv" | sudo tee -a /etc/hosts
+          sudo cp -r config /config
           cp core/src/test/resources/tidb_config.properties.TLS.template core/src/test/resources/tidb_config.properties
 
       - name: build docker
@@ -34,5 +39,11 @@ jobs:
       - name: build
         run: mvn clean package -Dmaven.test.skip=true -B
 
-      - name: test
-        run: mvn test -Dtest=moo -DwildcardSuites=JDBCTLSSuite,TiKVClientTLSSuite,TiSparkTLSSuite -DfailIfNoTests=false
+      - name: test TLS
+        run: mvn test -am -pl core -Dtest=moo -DwildcardSuites=com.pingcap.tispark.tls.JDBCTLSSuite,com.pingcap.tispark.tls.TiKVClientTLSSuite,com.pingcap.tispark.tls.TiSparkTLSSuite -DfailIfNoTests=false
+
+      - name: make JKS configuration
+        run: sed -i 's/^#//' core/src/test/resources/tidb_config.properties
+
+      - name: test JKS
+        run: mvn test -am -pl core -Dtest=moo -DwildcardSuites=com.pingcap.tispark.tls.JDBCTLSSuite,com.pingcap.tispark.tls.TiKVClientTLSSuite,com.pingcap.tispark.tls.TiSparkTLSSuite -DfailIfNoTests=false

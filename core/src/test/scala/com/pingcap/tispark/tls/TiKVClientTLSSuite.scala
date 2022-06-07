@@ -29,9 +29,29 @@ class TiKVClientTLSSuite extends FunSuite {
     noException should be thrownBy {
       val conf = TiConfiguration.createDefault("pd:2379")
       conf.setTlsEnable(true)
-      conf.setTrustCertCollectionFile("config/cert/root.crt")
-      conf.setKeyCertChainFile("config/cert/client.crt")
-      conf.setKeyFile("config/cert/client-pkcs8.key")
+      conf.setTrustCertCollectionFile("/config/cert/pem/root.pem")
+      conf.setKeyCertChainFile("/config/cert/pem/client.pem")
+      conf.setKeyFile("/config/cert/pem/client-pkcs8.key")
+      val session = TiSession.getInstance(conf)
+      val pdClient = session.getPDClient
+      pdClient.updateLeader()
+      session.getCatalog()
+      session.createSnapshot()
+    }
+  }
+
+  test("test client-java TLS JKS connection") {
+    if (!CheckTLSEnable.isEnableTest()) {
+      cancel
+    }
+    noException should be thrownBy {
+      val conf = TiConfiguration.createDefault("pd:2379")
+      conf.setTlsEnable(true)
+      conf.setJksEnable(true)
+      conf.setJksKeyPath("/config/cert/jks/client-keystore")
+      conf.setJksKeyPassword("123456")
+      conf.setJksTrustPath("/config/cert/jks/server-cert-store")
+      conf.setJksTrustPassword("12345678")
       val session = TiSession.getInstance(conf)
       val pdClient = session.getPDClient
       pdClient.updateLeader()

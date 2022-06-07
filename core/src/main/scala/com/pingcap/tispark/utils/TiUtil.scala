@@ -198,7 +198,61 @@ object TiUtil {
       tiConf.setKeyFile(conf.get(TiConfigConst.TIKV_KEY_FILE))
     }
 
+    if (conf.contains(TiConfigConst.TIKV_JKS_ENABLE)) {
+      tiConf.setJksEnable(conf.get(TiConfigConst.TIKV_JKS_ENABLE).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_KEY_PATH)) {
+      tiConf.setJksKeyPath(conf.get(TiConfigConst.TIKV_JKS_KEY_PATH))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_KEY_PASSWORD)) {
+      tiConf.setJksKeyPassword(conf.get(TiConfigConst.TIKV_JKS_KEY_PASSWORD))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_TRUST_PATH)) {
+      tiConf.setJksTrustPath(conf.get(TiConfigConst.TIKV_JKS_TRUST_PATH))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_TRUST_PASSWORD)) {
+      tiConf.setJksTrustPassword(conf.get(TiConfigConst.TIKV_JKS_TRUST_PASSWORD))
+    }
+
     tiConf
+  }
+
+  def injectTLSParam(conf: TiConfiguration): TiConfiguration = {
+    try {
+      val sqlConf = SparkSession.active.sessionState.conf.clone()
+      val tlsEnable = sqlConf.getConfString(TiConfigConst.TIKV_TLS_ENABLE, "false").toBoolean
+      if (tlsEnable) {
+        conf.setTlsEnable(true)
+        val jksEnable = sqlConf.getConfString(TiConfigConst.TIKV_JKS_ENABLE, "false").toBoolean
+        if (jksEnable) {
+          conf.setJksEnable(true)
+          conf.setJksKeyPath(sqlConf.getConfString(TiConfigConst.TIKV_JKS_KEY_PATH))
+          conf.setJksKeyPassword(sqlConf.getConfString(TiConfigConst.TIKV_JKS_KEY_PASSWORD))
+          conf.setJksTrustPath(sqlConf.getConfString(TiConfigConst.TIKV_JKS_TRUST_PATH))
+          conf.setJksTrustPassword(sqlConf.getConfString(TiConfigConst.TIKV_JKS_TRUST_PASSWORD))
+        } else {
+          conf.setTrustCertCollectionFile(
+            sqlConf.getConfString(TiConfigConst.TIKV_TRUST_CERT_COLLECTION))
+          conf.setKeyCertChainFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_CERT_CHAIN))
+          conf.setKeyFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_FILE))
+        }
+      }
+      conf
+    } catch {
+      case e: IllegalStateException =>
+        logger.error("Failed to activate Spark session", e)
+        throw e
+      case e: IllegalArgumentException =>
+        logger.error("Wrong TLS configuration", e)
+        throw e
+      case e: Throwable =>
+        logger.warn("Failed to get TLS cert", e)
+        conf
+    }
   }
 
   private def getIsolationReadEnginesFromString(str: String): List[TiStoreType] = {

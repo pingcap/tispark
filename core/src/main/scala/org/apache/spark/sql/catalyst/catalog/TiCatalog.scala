@@ -17,8 +17,9 @@
 package org.apache.spark.sql.catalyst.catalog
 
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{MetaManager, TiConfigConst, TiTableReference}
+import com.pingcap.tispark.{MetaManager, TiTableReference}
 import com.pingcap.tispark.auth.TiAuthorization
+import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{NoSuchNamespaceException, NoSuchTableException}
@@ -65,33 +66,10 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
     logger.info(s"Initialize TiCatalog with name: $name, pd address: $pdAddress")
     val conf = TiConfiguration.createDefault(pdAddress)
-    getTLSParam(conf)
+    TiUtil.injectTLSParam(conf)
     val session = TiSession.getInstance(conf)
     meta = Some(new MetaManager(session.getCatalog))
     tiSession = Some(session)
-  }
-
-  def getTLSParam(conf: TiConfiguration) {
-    try {
-      val sqlConf = SparkSession.active.sqlContext.conf
-      val TLSEnable = sqlConf.getConfString(TiConfigConst.TIKV_TLS_ENABLE, "false").toBoolean
-      if (TLSEnable) {
-        conf.setTlsEnable(true)
-        conf.setTrustCertCollectionFile(
-          sqlConf.getConfString(TiConfigConst.TIKV_TRUST_CERT_COLLECTION))
-        conf.setKeyCertChainFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_CERT_CHAIN))
-        conf.setKeyFile(sqlConf.getConfString(TiConfigConst.TIKV_KEY_FILE))
-      }
-    } catch {
-      case e: IllegalStateException =>
-        logger.error("Failed to activate Spark session", e)
-        throw e
-      case e: IllegalArgumentException =>
-        logger.error("Wrong tikv.tls_enable config", e)
-        throw e
-      case e: Throwable =>
-        logger.warn("TiCatalog can't get TLS cert", e)
-    }
   }
 
   override def name(): String = _name.get
