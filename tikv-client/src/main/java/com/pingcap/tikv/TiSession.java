@@ -75,6 +75,8 @@ public class TiSession implements AutoCloseable {
         this.channelFactory =
             new ChannelFactory(
                 conf.getMaxFrameSize(),
+                conf.getConnRecycleTime(),
+                conf.getCertReloadInterval(),
                 conf.getJksKeyPath(),
                 conf.getJksKeyPassword(),
                 conf.getJksTrustPath(),
@@ -83,6 +85,8 @@ public class TiSession implements AutoCloseable {
         this.channelFactory =
             new ChannelFactory(
                 conf.getMaxFrameSize(),
+                conf.getConnRecycleTime(),
+                conf.getCertReloadInterval(),
                 conf.getTrustCertCollectionFile(),
                 conf.getKeyCertChainFile(),
                 conf.getKeyFile());
