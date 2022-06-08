@@ -273,7 +273,13 @@ For more details about the test, see [here](./core/src/test/Readme.md).
 
 6. TiSpark doesn't support collations now. `new_collations_enabled_on_first_bootstrap` should not be set to `true`.
 
+<<<<<<< HEAD
 7. TiSpark doesn't support TLS now. You can't connect TiDB with TLS.
+=======
+- TiSpark doesn't support collations now. `new_collations_enabled_on_first_bootstrap` should not be set to `true`.
+
+- If `spark.sql.ansi.enabled` is false an overflow of sum(bigint) will not cause an error but “wrap” the result, or you can cast bigint to decimal to avoid the overflow.
+>>>>>>> 2c88c9d81 (fix aggregation not push down (#2314))
 
 ## Follow us
 
