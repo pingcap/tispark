@@ -75,7 +75,7 @@
         <spark.version.release>3.0</spark.version.release>
         <scala.binary.version>2.12</scala.binary.version>
         <scala.version>2.12.10</scala.version>
-        <scala.version.release>2.12.10</scala.version.release>
+        <scala.version.release>2.12</scala.version.release>
         <!-- for now, not running scalafmt as part of default verify pipeline -->
         <scalafmt.skip>true</scalafmt.skip>
         <scalatest.version>3.0.8</scalatest.version>
