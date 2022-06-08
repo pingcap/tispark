@@ -24,20 +24,21 @@ import org.apache.spark.sql.catalyst.plans.logical.{
   SubqueryAlias
 }
 import org.apache.spark.sql.catalyst.rules.Rule
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
 import org.apache.spark.sql.{SparkSession, TiContext}
 
 /**
  * Only work for table v2(catalog plugin)
  */
 case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
-    sparkSession: SparkSession)
-    extends Rule[LogicalPlan] {
+  sparkSession: SparkSession)
+  extends Rule[LogicalPlan] {
 
   protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
   private lazy val tiAuthorization: Option[TiAuthorization] = tiContext.tiAuthorization
 
   protected def checkForAuth: PartialFunction[LogicalPlan, LogicalPlan] = {
-    case dt @ DeleteFromTable(SubqueryAlias(identifier, _), _) =>
+    case dt@DeleteFromTable(SubqueryAlias(identifier, _), _) =>
       if (identifier.qualifier.nonEmpty) {
         TiAuthorization.authorizeForDelete(
           identifier.name,
@@ -45,7 +46,7 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
           tiAuthorization)
       }
       dt
-    case sa @ SubqueryAlias(identifier, child) =>
+    case sa@SubqueryAlias(identifier, child) =>
       if (identifier.qualifier.nonEmpty) {
         TiAuthorization.authorizeForSelect(
           identifier.name,
@@ -53,12 +54,22 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
           tiAuthorization)
       }
       sa
-    case sd @ SetCatalogAndNamespace(catalogManager, catalogName, namespace) =>
+    case sd@SetCatalogAndNamespace(catalogManager, catalogName, namespace) =>
       if (namespace.isDefined) {
         namespace.get
           .foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
       }
       sd
+    case dr@DataSourceV2Relation(table, output, catalog, identifier, options) =>
+      if (table.name().nonEmpty) {
+        val tb_name = table.name().split("\\.")
+        TiAuthorization.authorizeForSelect(
+          tb_name(1),
+          tb_name(0),
+          tiAuthorization
+        )
+      }
+      dr
   }
 
   override def apply(plan: LogicalPlan): LogicalPlan =

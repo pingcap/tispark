@@ -104,6 +104,18 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     Thread.sleep((TiAuthorization.refreshIntervalSecond + 2) * 1000)
   }
 
+  test("Read Without SELECT privilege should not be passed") {
+    the[SQLException] thrownBy {
+      sqlContext.read
+        .format("tidb")
+        .option("database", database)
+        .option("table", table)
+        .options(tidbOptions)
+        .load()
+        .collect()
+    } should have message s"SELECT command denied to user $user@% for table $dbtable"
+  }
+
   test("Select without privilege should not be passed") {
     the[SQLException] thrownBy {
       spark.sql(s"select * from `$databaseWithPrefix`.`$table`")
@@ -138,6 +150,18 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     tidbStmt.execute(f"GRANT SELECT on `$database`.`$table` TO '$user'@'%%';")
 
     Thread.sleep((TiAuthorization.refreshIntervalSecond + 5) * 1000)
+  }
+
+  test("Read with SELECT privilege should be passed") {
+    noException should be thrownBy {
+      sqlContext.read
+        .format("tidb")
+        .option("database", database)
+        .option("table", table)
+        .options(tidbOptions)
+        .load()
+        .collect()
+    }
   }
 
   test("Select with privilege should be passed") {

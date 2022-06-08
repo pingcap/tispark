@@ -61,7 +61,14 @@ Currently, Supported statements are as follows:
 
 ## Compatibility with Data Source API
 
-We only support authorization check in write currently.
+We support authorization check in both read and write, but we don't recommend to use read.
+We will do authorization check as follows:
+
+| Operation | Option            | Required Privilege | 
+|-----------|-------------------|-------------------|
+| Write     | Replace is enable | Insert and Delete |   
+| Write     | Replace is unable | Insert            |
+| Read      |                   | Select            |
 
 ## limitations
 
