@@ -9,7 +9,7 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>spark-wrapper-spark-3.2_${spark.version.release}</artifactId>
+    <artifactId>spark-wrapper-spark-3.2_${scala.version.release}</artifactId>
     <packaging>jar</packaging>
     <name>TiSpark Project Spark Wrapper Spark-3.2</name>
     <url>http://github.copm/pingcap/tispark</url>
