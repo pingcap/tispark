@@ -183,7 +183,7 @@
             <properties>
                 <spark.version.compile>3.1.1</spark.version.compile>
                 <spark.version.test>3.1.1</spark.version.test>
-                <spark.version.test>3.1</spark.version.test>
+                <spark.version.release>3.1</spark.version.release>
             </properties>
         </profile>
         <profile>
@@ -194,7 +194,7 @@
             <properties>
                 <spark.version.compile>3.2.1</spark.version.compile>
                 <spark.version.test>3.2.1</spark.version.test>
-                <spark.version.test>3.2</spark.version.test>
+                <spark.version.release>3.2</spark.version.release>
             </properties>
         </profile>
         <profile>
