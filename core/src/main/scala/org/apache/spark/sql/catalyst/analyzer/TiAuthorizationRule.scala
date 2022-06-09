@@ -46,14 +46,6 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
           tiAuthorization)
       }
       dt
-    case sa @ SubqueryAlias(identifier, child) =>
-      if (identifier.qualifier.nonEmpty) {
-        TiAuthorization.authorizeForSelect(
-          identifier.name,
-          identifier.qualifier.last,
-          tiAuthorization)
-      }
-      sa
     case sd @ SetCatalogAndNamespace(catalogManager, catalogName, namespace) =>
       if (namespace.isDefined) {
         namespace.get

@@ -62,6 +62,8 @@ Currently, Supported statements are as follows:
 ## Compatibility with Data Source API
 
 We support authorization check in both read and write, but we don't recommend to use read.
+Spark SQL is recommended to read data.
+
 We will do authorization check as follows:
 
 | Operation | Option            | Required Privilege | 
