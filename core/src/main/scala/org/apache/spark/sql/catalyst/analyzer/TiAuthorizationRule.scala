@@ -26,6 +26,7 @@ import org.apache.spark.sql.catalyst.plans.logical.{
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
 import org.apache.spark.sql.{SparkSession, TiContext}
+import com.pingcap.tispark.v2.TiDBTable
 
 /**
  * Only work for table v2(catalog plugin)
@@ -52,10 +53,18 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
           .foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
       }
       sd
-    case dr @ DataSourceV2Relation(table, output, catalog, identifier, options) =>
-      if (table.name().nonEmpty) {
-        val tb_name = table.name().split("\\.")
-        TiAuthorization.authorizeForSelect(tb_name(1), tb_name(0), tiAuthorization)
+    case dr @ DataSourceV2Relation(
+          TiDBTable(_, tableRef, _, _, _),
+          output,
+          catalog,
+          identifier,
+          options) =>
+      if (tableRef.tableName.nonEmpty) {
+        println("check " + tableRef.tableName + " " + tableRef.databaseName)
+        TiAuthorization.authorizeForSelect(
+          tableRef.tableName,
+          tableRef.databaseName,
+          tiAuthorization)
       }
       dr
   }

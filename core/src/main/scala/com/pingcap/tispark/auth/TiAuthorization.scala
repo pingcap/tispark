@@ -395,6 +395,7 @@ object TiAuthorization {
       tiAuth.get.checkPrivs(database, table, MySQLPriv.InsertPriv, "INSERT")
     }
   }
+
   def authorizeForUpdate(
       table: String,
       database: String,
