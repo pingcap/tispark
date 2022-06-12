@@ -59,7 +59,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
         tiAuthorization.get.getPDAddress()
       } else {
         if (!options.containsKey("pd.addresses") && !options.containsKey("pd.address")) {
-          throw new Exception("missing configuration spark.sql.catalog.tidb_catalog.pd.addresses")
+          throw new Exception(s"missing configuration spark.sql.catalog.$name.pd.addresses")
         }
         options.getOrDefault("pd.addresses", options.get("pd.address"))
       }
