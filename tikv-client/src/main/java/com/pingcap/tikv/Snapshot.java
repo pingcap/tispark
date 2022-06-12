@@ -25,7 +25,6 @@ import com.pingcap.tikv.columnar.TiChunk;
 import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiDAGRequest;
-import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
 import com.pingcap.tikv.operation.iterator.IndexScanIterator;
 import com.pingcap.tikv.row.Row;
@@ -37,6 +36,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 
 public class Snapshot {

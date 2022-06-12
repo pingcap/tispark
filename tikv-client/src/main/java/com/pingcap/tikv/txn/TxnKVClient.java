@@ -24,7 +24,6 @@ import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiKVException;
-import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
@@ -36,6 +35,7 @@ import io.grpc.StatusRuntimeException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Metapb;
 

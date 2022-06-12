@@ -30,13 +30,13 @@ import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
+import org.tikv.common.meta.TiTimestamp;
 
 public class SchemaInferTest {
   private final String table29 =

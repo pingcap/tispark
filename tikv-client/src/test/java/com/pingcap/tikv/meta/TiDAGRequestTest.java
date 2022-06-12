@@ -41,6 +41,7 @@ import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Test;
+import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Coprocessor;
 
 public class TiDAGRequestTest {

@@ -20,7 +20,7 @@ import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
 import com.pingcap.tikv.columnar.{TiChunk, TiColumnarBatchHelper}
 import com.pingcap.tikv.key.Handle
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
+import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.operation.iterator.CoprocessorIterator
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
@@ -36,6 +36,7 @@ import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
 import org.apache.spark.sql.tispark.TiRDD
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.slf4j.LoggerFactory
+import org.tikv.common.meta.TiTimestamp
 import org.tikv.kvproto.Coprocessor.KeyRange
 
 import scala.collection.JavaConversions._

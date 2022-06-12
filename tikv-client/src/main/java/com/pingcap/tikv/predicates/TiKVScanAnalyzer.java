@@ -41,7 +41,6 @@ import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiPartitionDef;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
@@ -56,6 +55,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class TiKVScanAnalyzer {
