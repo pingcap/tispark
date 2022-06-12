@@ -68,7 +68,7 @@ object TiExtensions {
    * Catalog for tidb is necessary now.
    * @param sparkSession
    */
-  def validateCatalog(sparkSession: SparkSession): Unit = {
+  def validateCatalog(sparkSession: SparkSession): String = {
     sparkSession.sparkContext.conf
       .getAllWithPrefix("spark.sql.catalog.")
       .toSeq
@@ -77,7 +77,7 @@ object TiExtensions {
         logger.error("TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
         throw new TiInternalException(
           "TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
-      case _ =>
+      case Some(pair) => pair._1
     }
   }
 
