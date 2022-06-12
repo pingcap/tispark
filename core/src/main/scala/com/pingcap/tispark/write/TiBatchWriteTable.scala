@@ -31,6 +31,7 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{TiContext, _}
 import org.slf4j.LoggerFactory
+import org.tikv.common.meta.TiTimestamp
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable

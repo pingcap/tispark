@@ -24,7 +24,6 @@ import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
@@ -44,6 +43,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Metapb;
 
 public class TiSession implements AutoCloseable {

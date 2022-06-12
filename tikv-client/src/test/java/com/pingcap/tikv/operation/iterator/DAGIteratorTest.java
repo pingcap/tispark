@@ -32,7 +32,6 @@ import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.IntegerType;
@@ -40,6 +39,7 @@ import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.List;
 import org.junit.Test;
+import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Metapb;
 

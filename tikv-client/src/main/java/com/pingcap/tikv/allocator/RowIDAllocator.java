@@ -32,7 +32,6 @@ import com.pingcap.tikv.codec.MetaCodec;
 import com.pingcap.tikv.exception.AllocateRowIDOverflowException;
 import com.pingcap.tikv.exception.TiBatchWriteException;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
@@ -46,6 +45,7 @@ import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.meta.TiTimestamp;
 
 /**
  * RowIDAllocator read current start from TiKV and write back 'start+step' back to TiKV. It designs
