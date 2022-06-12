@@ -93,7 +93,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private List<URI> pdAddrs;
   private Client etcdClient;
   private ConcurrentMap<Long, Double> tiflashReplicaMap;
-  private final org.tikv.common.PDClient upstreamPDClient;
+  private final org.tikv.common.ReadOnlyPDClient upstreamPDClient;
 
   private PDClient(TiConfiguration conf, ChannelFactory channelFactory) {
     super(conf, channelFactory);
@@ -101,9 +101,8 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     this.blockingStub = getBlockingStub();
     this.asyncStub = getAsyncStub();
     this.upstreamPDClient =
-        (org.tikv.common.PDClient)
-            org.tikv.common.PDClient.create(
-                convertTiConfiguration(conf), convertChannelFactory(conf, channelFactory));
+        org.tikv.common.PDClient.create(
+            convertTiConfiguration(conf), convertChannelFactory(conf, channelFactory));
   }
 
   org.tikv.common.TiConfiguration convertTiConfiguration(com.pingcap.tikv.TiConfiguration conf) {
