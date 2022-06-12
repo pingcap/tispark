@@ -28,7 +28,6 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import org.tikv.common.meta.TiTimestamp;
 import com.pingcap.tikv.operation.NoopHandler;
 import com.pingcap.tikv.operation.PDErrorHandler;
 import com.pingcap.tikv.pd.PDUtils;
@@ -58,6 +57,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
@@ -192,7 +192,19 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   @Override
   public TiTimestamp getTimestamp(BackOffer backOffer) {
-    return upstreamPDClient.getTimestamp(backOffer);
+    return upstreamPDClient.getTimestamp(
+        (org.tikv.common.util.BackOffer) ConcreteBackOffer.newCopNextMaxBackOff());
+    //    Supplier<TsoRequest> request = () -> tsoReq;
+    //
+    //    PDErrorHandler<TsoResponse> handler =
+    //        new PDErrorHandler<>(
+    //            r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) :
+    // null,
+    //            this);
+    //
+    //    TsoResponse resp = callWithRetry(backOffer, PDGrpc.getTsoMethod(), request, handler);
+    //    Timestamp timestamp = resp.getTimestamp();
+    //    return new TiTimestamp(timestamp.getPhysical(), timestamp.getLogical());
   }
 
   /**
@@ -282,7 +294,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     CodecDataOutput cdo = new CodecDataOutput();
     BytesCodec.writeBytes(cdo, key.toByteArray());
     ByteString encodedKey = cdo.toByteString();
-
     Supplier<GetRegionRequest> request =
         () -> GetRegionRequest.newBuilder().setHeader(header).setRegionKey(encodedKey).build();
 
