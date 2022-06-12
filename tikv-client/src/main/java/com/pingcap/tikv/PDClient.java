@@ -28,7 +28,7 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.meta.TiTimestamp;
+import org.tikv.common.meta.TiTimestamp;
 import com.pingcap.tikv.operation.NoopHandler;
 import com.pingcap.tikv.operation.PDErrorHandler;
 import com.pingcap.tikv.pd.PDUtils;
@@ -79,9 +79,7 @@ import org.tikv.kvproto.Pdpb.RequestHeader;
 import org.tikv.kvproto.Pdpb.ResponseHeader;
 import org.tikv.kvproto.Pdpb.ScatterRegionRequest;
 import org.tikv.kvproto.Pdpb.ScatterRegionResponse;
-import org.tikv.kvproto.Pdpb.Timestamp;
 import org.tikv.kvproto.Pdpb.TsoRequest;
-import org.tikv.kvproto.Pdpb.TsoResponse;
 
 public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     implements ReadOnlyPDClient {
@@ -95,12 +93,93 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private List<URI> pdAddrs;
   private Client etcdClient;
   private ConcurrentMap<Long, Double> tiflashReplicaMap;
+  private final org.tikv.common.PDClient upstreamPDClient;
 
   private PDClient(TiConfiguration conf, ChannelFactory channelFactory) {
     super(conf, channelFactory);
     initCluster();
     this.blockingStub = getBlockingStub();
     this.asyncStub = getAsyncStub();
+    this.upstreamPDClient =
+        (org.tikv.common.PDClient)
+            org.tikv.common.PDClient.create(
+                convertTiConfiguration(conf), convertChannelFactory(conf, channelFactory));
+  }
+
+  org.tikv.common.TiConfiguration convertTiConfiguration(com.pingcap.tikv.TiConfiguration conf) {
+    org.tikv.common.TiConfiguration tikvConf = new org.tikv.common.TiConfiguration();
+    //  private int kvClientConcurrency = DEF_KV_CLIENT_CONCURRENCY;
+    //  private IsolationLevel isolationLevel = DEF_ISOLATION_LEVEL;
+    //    private CommandPri commandPriority = DEF_COMMAND_PRIORITY;
+    tikvConf.setKvClientConcurrency(conf.getKvClientConcurrency());
+    tikvConf.setIsolationLevel(conf.getIsolationLevel());
+    tikvConf.setCommandPriority(conf.getCommandPriority());
+    return tikvConf;
+  }
+
+  org.tikv.common.util.ChannelFactory convertChannelFactory(
+      com.pingcap.tikv.TiConfiguration conf, com.pingcap.tikv.util.ChannelFactory factory) {
+    org.tikv.common.util.ChannelFactory tikvFactory = null;
+    if (conf.isTlsEnable()) {
+      if (conf.isJksEnable()) {
+        tikvFactory =
+            new org.tikv.common.util.ChannelFactory(
+                conf.getMaxFrameSize(),
+                Math.toIntExact(conf.getCertReloadInterval()),
+                3,
+                Math.toIntExact(conf.getConnRecycleTime()),
+                conf.getJksKeyPath(),
+                conf.getJksKeyPassword(),
+                conf.getJksTrustPath(),
+                conf.getJksTrustPassword());
+      } else {
+        tikvFactory =
+            new org.tikv.common.util.ChannelFactory(
+                conf.getMaxFrameSize(),
+                Math.toIntExact(conf.getCertReloadInterval()),
+                3,
+                Math.toIntExact(conf.getConnRecycleTime()),
+                conf.getTrustCertCollectionFile(),
+                conf.getKeyCertChainFile(),
+                conf.getKeyFile());
+      }
+    } else {
+      tikvFactory =
+          new org.tikv.common.util.ChannelFactory(
+              conf.getMaxFrameSize(),
+              Math.toIntExact(conf.getCertReloadInterval()),
+              3,
+              Math.toIntExact(conf.getConnRecycleTime()));
+    }
+    //  public static final int DEF_TIKV_GRPC_KEEPALIVE_TIME = 10;
+    //  public static final int DEF_TIKV_GRPC_KEEPALIVE_TIMEOUT = 3;
+    //  public static final int DEF_TIKV_GRPC_IDLE_TIMEOUT = 60;
+
+    //    if (conf.isTlsEnable()) {
+    //      if (conf.isJksEnable()) {
+    //        this.channelFactory =
+    //            new ChannelFactory(
+    //                conf.getMaxFrameSize(),
+    //                conf.getConnRecycleTime(),//60
+    //                conf.getCertReloadInterval(),//10
+    //                conf.getJksKeyPath(),
+    //                conf.getJksKeyPassword(),
+    //                conf.getJksTrustPath(),
+    //                conf.getJksTrustPassword());
+    //      } else {
+    //        this.channelFactory =
+    //            new ChannelFactory(
+    //                conf.getMaxFrameSize(),
+    //                conf.getConnRecycleTime(),
+    //                conf.getCertReloadInterval(),
+    //                conf.getTrustCertCollectionFile(),
+    //                conf.getKeyCertChainFile(),
+    //                conf.getKeyFile());
+    //      }
+    //    } else {
+    //      this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
+    //    }
+    return tikvFactory;
   }
 
   public static ReadOnlyPDClient create(TiConfiguration conf, ChannelFactory channelFactory) {
@@ -113,16 +192,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   @Override
   public TiTimestamp getTimestamp(BackOffer backOffer) {
-    Supplier<TsoRequest> request = () -> tsoReq;
-
-    PDErrorHandler<TsoResponse> handler =
-        new PDErrorHandler<>(
-            r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
-            this);
-
-    TsoResponse resp = callWithRetry(backOffer, PDGrpc.getTsoMethod(), request, handler);
-    Timestamp timestamp = resp.getTimestamp();
-    return new TiTimestamp(timestamp.getPhysical(), timestamp.getLogical());
+    return upstreamPDClient.getTimestamp(backOffer);
   }
 
   /**
