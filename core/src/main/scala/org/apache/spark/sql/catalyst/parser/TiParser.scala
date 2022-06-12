@@ -56,7 +56,8 @@ case class TiParser(
 
   def getOrElseInitTiCatalog: TiCatalog = {
     val catalogManager = sparkSession.sessionState.catalogManager
-    catalogManager.catalog("tidb_catalog").asInstanceOf[TiCatalog]
+    val catalogName = TiExtensions.validateCatalog(sparkSession).split("\\.").last
+    catalogManager.catalog(catalogName).asInstanceOf[TiCatalog]
   }
 
   def updateMetaCatalog: Unit = {
