@@ -1,7 +1,8 @@
 name: On release published
 on:
   release:
-    types: [published,released]
+    types: [published]
+  workflow_dispatch:
 
 jobs:
   changelog_master:
