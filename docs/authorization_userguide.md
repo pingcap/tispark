@@ -61,16 +61,15 @@ Currently, Supported statements are as follows:
 
 ## Compatibility with Data Source API
 
-We support authorization check in both read and write, but we don't recommend to use read.
-Spark SQL is recommended to read data.
+We support authorization check in both read and write, but we recommend using spark SQL instead of Datasource API to read data from TiDB
 
 We will do authorization check as follows:
 
-| Operation | Option            | Required Privilege | 
-|-----------|-------------------|-------------------|
-| Write     | Replace is enable | Insert and Delete |   
-| Write     | Replace is unable | Insert            |
-| Read      |                   | Select            |
+| Operation | Option             | Required Privilege | 
+|-----------|--------------------|-------------------|
+| Write     | Replace is enable  | Insert and Delete |   
+| Write     | Replace is disable | Insert            |
+| Read      |                    | Select            |
 
 ## limitations
 
