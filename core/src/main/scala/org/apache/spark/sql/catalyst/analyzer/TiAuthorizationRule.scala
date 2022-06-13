@@ -60,7 +60,6 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
           identifier,
           options) =>
       if (tableRef.tableName.nonEmpty) {
-        println("check " + tableRef.tableName + " " + tableRef.databaseName)
         TiAuthorization.authorizeForSelect(
           tableRef.tableName,
           tableRef.databaseName,
