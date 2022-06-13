@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.log.SlowLog;
+import org.tikv.common.util.BackOffFunction.BackOffFuncType;
 
 public class ConcreteBackOffer implements BackOffer {
   private static final Logger logger = LoggerFactory.getLogger(ConcreteBackOffer.class);
@@ -35,7 +37,11 @@ public class ConcreteBackOffer implements BackOffer {
   private final List<Exception> errors;
   private int totalSleep;
 
+  private final org.tikv.common.util.ConcreteBackOffer upstreamConcreteBackOffer;
+
   private ConcreteBackOffer(int maxSleep) {
+    this.upstreamConcreteBackOffer =
+        org.tikv.common.util.ConcreteBackOffer.newCustomBackOff(maxSleep);
     Preconditions.checkArgument(maxSleep >= 0, "Max sleep time cannot be less than 0.");
     this.maxSleep = maxSleep;
     this.errors = Collections.synchronizedList(new ArrayList<>());
@@ -43,6 +49,8 @@ public class ConcreteBackOffer implements BackOffer {
   }
 
   private ConcreteBackOffer(ConcreteBackOffer source) {
+    this.upstreamConcreteBackOffer =
+        org.tikv.common.util.ConcreteBackOffer.newCustomBackOff(source.maxSleep);
     this.maxSleep = source.maxSleep;
     this.totalSleep = source.totalSleep;
     this.errors = source.errors;
@@ -54,27 +62,27 @@ public class ConcreteBackOffer implements BackOffer {
   }
 
   public static ConcreteBackOffer newScannerNextMaxBackOff() {
-    return new ConcreteBackOffer(SCANNER_NEXT_MAX_BACKOFF);
+    return new ConcreteBackOffer(BackOffer.SCANNER_NEXT_MAX_BACKOFF);
   }
 
   public static ConcreteBackOffer newBatchGetMaxBackOff() {
-    return new ConcreteBackOffer(BATCH_GET_MAX_BACKOFF);
+    return new ConcreteBackOffer(BackOffer.BATCH_GET_MAX_BACKOFF);
   }
 
   public static ConcreteBackOffer newCopNextMaxBackOff() {
-    return new ConcreteBackOffer(COP_NEXT_MAX_BACKOFF);
+    return new ConcreteBackOffer(BackOffer.COP_NEXT_MAX_BACKOFF);
   }
 
   public static ConcreteBackOffer newGetBackOff() {
-    return new ConcreteBackOffer(GET_MAX_BACKOFF);
+    return new ConcreteBackOffer(BackOffer.GET_MAX_BACKOFF);
   }
 
   public static ConcreteBackOffer newRawKVBackOff() {
-    return new ConcreteBackOffer(RAWKV_MAX_BACKOFF);
+    return new ConcreteBackOffer(BackOffer.RAWKV_MAX_BACKOFF);
   }
 
   public static ConcreteBackOffer newTsoBackOff() {
-    return new ConcreteBackOffer(TSO_MAX_BACKOFF);
+    return new ConcreteBackOffer(BackOffer.TSO_MAX_BACKOFF);
   }
 
   public static ConcreteBackOffer create(BackOffer source) {
@@ -89,31 +97,32 @@ public class ConcreteBackOffer implements BackOffer {
     BackOffFunction backOffFunction = null;
     switch (funcType) {
       case BoUpdateLeader:
-        backOffFunction = BackOffFunction.create(1, 10, BackOffStrategy.NoJitter);
+        backOffFunction = BackOffFunction.create(1, 10, BackOffer.BackOffStrategy.NoJitter);
         break;
       case BoTxnLockFast:
-        backOffFunction = BackOffFunction.create(100, 3000, BackOffStrategy.EqualJitter);
+        backOffFunction = BackOffFunction.create(100, 3000, BackOffer.BackOffStrategy.EqualJitter);
         break;
       case BoServerBusy:
-        backOffFunction = BackOffFunction.create(2000, 10000, BackOffStrategy.EqualJitter);
+        backOffFunction =
+            BackOffFunction.create(2000, 10000, BackOffer.BackOffStrategy.EqualJitter);
         break;
       case BoRegionMiss:
-        backOffFunction = BackOffFunction.create(100, 500, BackOffStrategy.NoJitter);
+        backOffFunction = BackOffFunction.create(100, 500, BackOffer.BackOffStrategy.NoJitter);
         break;
       case BoTxnLock:
-        backOffFunction = BackOffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
+        backOffFunction = BackOffFunction.create(200, 3000, BackOffer.BackOffStrategy.EqualJitter);
         break;
       case BoPDRPC:
-        backOffFunction = BackOffFunction.create(500, 3000, BackOffStrategy.EqualJitter);
+        backOffFunction = BackOffFunction.create(500, 3000, BackOffer.BackOffStrategy.EqualJitter);
         break;
       case BoTiKVRPC:
-        backOffFunction = BackOffFunction.create(100, 2000, BackOffStrategy.EqualJitter);
+        backOffFunction = BackOffFunction.create(100, 2000, BackOffer.BackOffStrategy.EqualJitter);
         break;
       case BoTxnNotFound:
-        backOffFunction = BackOffFunction.create(2, 500, BackOffStrategy.NoJitter);
+        backOffFunction = BackOffFunction.create(2, 500, BackOffer.BackOffStrategy.NoJitter);
         break;
       case BoCheckHealth:
-        backOffFunction = BackOffFunction.create(100, 600, BackOffStrategy.EqualJitter);
+        backOffFunction = BackOffFunction.create(100, 600, BackOffer.BackOffStrategy.EqualJitter);
         break;
     }
     return backOffFunction;
@@ -152,5 +161,30 @@ public class ConcreteBackOffer implements BackOffer {
       // Use the last backoff type to generate an exception
       throw new GrpcException("retry is exhausted.", err);
     }
+  }
+
+  @Override
+  public void doBackOff(BackOffFuncType funcType, Exception err) {
+    upstreamConcreteBackOffer.doBackOff(funcType, err);
+  }
+
+  @Override
+  public void checkTimeout() {
+    upstreamConcreteBackOffer.checkTimeout();
+  }
+
+  @Override
+  public boolean canRetryAfterSleep(BackOffFuncType funcType) {
+    return upstreamConcreteBackOffer.canRetryAfterSleep(funcType);
+  }
+
+  @Override
+  public void doBackOffWithMaxSleep(BackOffFuncType funcType, long maxSleepMs, Exception err) {
+    upstreamConcreteBackOffer.doBackOffWithMaxSleep(funcType, maxSleepMs, err);
+  }
+
+  @Override
+  public SlowLog getSlowLog() {
+    return upstreamConcreteBackOffer.getSlowLog();
   }
 }
