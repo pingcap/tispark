@@ -107,9 +107,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   org.tikv.common.TiConfiguration convertTiConfiguration(com.pingcap.tikv.TiConfiguration conf) {
     org.tikv.common.TiConfiguration tikvConf = new org.tikv.common.TiConfiguration();
-    //  private int kvClientConcurrency = DEF_KV_CLIENT_CONCURRENCY;
-    //  private IsolationLevel isolationLevel = DEF_ISOLATION_LEVEL;
-    //    private CommandPri commandPriority = DEF_COMMAND_PRIORITY;
     tikvConf.setKvClientConcurrency(conf.getKvClientConcurrency());
     tikvConf.setIsolationLevel(conf.getIsolationLevel());
     tikvConf.setCommandPriority(conf.getCommandPriority());
@@ -191,19 +188,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   @Override
   public TiTimestamp getTimestamp(BackOffer backOffer) {
-    return upstreamPDClient.getTimestamp(
-        (org.tikv.common.util.BackOffer) ConcreteBackOffer.newCopNextMaxBackOff());
-    //    Supplier<TsoRequest> request = () -> tsoReq;
-    //
-    //    PDErrorHandler<TsoResponse> handler =
-    //        new PDErrorHandler<>(
-    //            r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) :
-    // null,
-    //            this);
-    //
-    //    TsoResponse resp = callWithRetry(backOffer, PDGrpc.getTsoMethod(), request, handler);
-    //    Timestamp timestamp = resp.getTimestamp();
-    //    return new TiTimestamp(timestamp.getPhysical(), timestamp.getLogical());
+    return upstreamPDClient.getTimestamp(backOffer);
   }
 
   /**

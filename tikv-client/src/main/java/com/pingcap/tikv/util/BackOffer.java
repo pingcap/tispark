@@ -18,48 +18,32 @@
 
 package com.pingcap.tikv.util;
 
-public interface BackOffer {
-  // Back off types.
-  int seconds = 1000;
+import com.pingcap.tikv.util.BackOffFunction.BackOffFuncType;
+
+public interface BackOffer extends org.tikv.common.util.BackOffer {
+
   int COP_BUILD_TASK_MAX_BACKOFF = 5 * seconds;
-  int TSO_MAX_BACKOFF = 5 * seconds;
-  int SCANNER_NEXT_MAX_BACKOFF = 40 * seconds;
-  int BATCH_GET_MAX_BACKOFF = 40 * seconds;
-  int COP_NEXT_MAX_BACKOFF = 40 * seconds;
-  int GET_MAX_BACKOFF = 40 * seconds;
   int PREWRITE_MAX_BACKOFF = 20 * seconds;
   int CLEANUP_MAX_BACKOFF = 20 * seconds;
   int GC_ONE_REGION_MAX_BACKOFF = 20 * seconds;
   int GC_RESOLVE_LOCK_MAX_BACKOFF = 100 * seconds;
   int GC_DELETE_RANGE_MAX_BACKOFF = 100 * seconds;
+  int BATCH_COMMIT_BACKOFF = 10 * seconds;
+  int ROW_ID_ALLOCATOR_BACKOFF = 40 * seconds;
+
+  //  TODO:different from org.tikv.common.util.BackOffer default value
   int RAWKV_MAX_BACKOFF = 40 * seconds;
   int SPLIT_REGION_BACKOFF = 20 * seconds;
-  int BATCH_COMMIT_BACKOFF = 10 * seconds;
-  int PD_INFO_BACKOFF = 5 * seconds;
-  int ROW_ID_ALLOCATOR_BACKOFF = 40 * seconds;
 
   /**
    * doBackOff sleeps a while base on the BackOffType and records the error message. Will stop until
    * max back off time exceeded and throw an exception to the caller.
    */
-  void doBackOff(BackOffFunction.BackOffFuncType funcType, Exception err);
+  void doBackOff(BackOffFuncType funcType, Exception err);
 
   /**
    * BackoffWithMaxSleep sleeps a while base on the backoffType and records the error message and
    * never sleep more than maxSleepMs for each sleep.
    */
-  void doBackOffWithMaxSleep(
-      BackOffFunction.BackOffFuncType funcType, long maxSleepMs, Exception err);
-
-  // Back off strategies
-  enum BackOffStrategy {
-    // NoJitter makes the backoff sequence strict exponential.
-    NoJitter,
-    // FullJitter applies random factors to strict exponential.
-    FullJitter,
-    // EqualJitter is also randomized, but prevents very short sleeps.
-    EqualJitter,
-    // DecorrJitter increases the maximum jitter based on the last random value.
-    DecorrJitter
-  }
+  void doBackOffWithMaxSleep(BackOffFuncType funcType, long maxSleepMs, Exception err);
 }
