@@ -4,7 +4,7 @@ on:
     types: [published,released]
 
 jobs:
-  changelog:
+  changelog_master:
     name: Update master changelog
     runs-on: ubuntu-latest
     steps:
