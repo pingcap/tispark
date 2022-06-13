@@ -77,9 +77,15 @@ public class ChannelFactory implements AutoCloseable {
           this::tryReload, pollInterval, pollInterval, TimeUnit.SECONDS);
     }
 
+    // If any execution of the task encounters an exception, subsequent executions are suppressed.
     private void tryReload() {
-      if (needReload()) {
-        onChange.run();
+      // Add exception handling to avoid schedule stop.
+      try {
+        if (needReload()) {
+          onChange.run();
+        }
+      } catch (Exception e) {
+        logger.error("Failed to reload cert!" + e);
       }
     }
 
@@ -166,11 +172,16 @@ public class ChannelFactory implements AutoCloseable {
     @Override
     public SslContextBuilder createSslContextBuilder() {
       SslContextBuilder builder = GrpcSslContexts.forClient().protocols("TLSv1.2", "TLSv1.3");
-      if (trustPath != null) {
-        builder.trustManager(new File(trustPath));
-      }
-      if (chainPath != null && keyPath != null) {
-        builder.keyManager(new File(chainPath), new File(keyPath));
+      try {
+        if (trustPath != null) {
+          builder.trustManager(new File(trustPath));
+        }
+        if (chainPath != null && keyPath != null) {
+          builder.keyManager(new File(chainPath), new File(keyPath));
+        }
+      } catch (Exception e) {
+        logger.error("PEM SSL context builder failed!", e);
+        throw new IllegalArgumentException(e);
       }
       return builder;
     }
