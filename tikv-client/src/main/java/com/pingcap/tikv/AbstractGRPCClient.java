@@ -23,12 +23,19 @@ import com.pingcap.tikv.operation.ErrorHandler;
 import com.pingcap.tikv.policy.RetryMaxMs.Builder;
 import com.pingcap.tikv.policy.RetryPolicy;
 import com.pingcap.tikv.streaming.StreamingResponse;
+import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
+import com.pingcap.tikv.util.ConcreteBackOffer;
+import io.grpc.ManagedChannel;
 import io.grpc.MethodDescriptor;
+import io.grpc.health.v1.HealthCheckRequest;
+import io.grpc.health.v1.HealthCheckResponse;
+import io.grpc.health.v1.HealthGrpc;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.ClientCalls;
 import io.grpc.stub.StreamObserver;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,9 +48,11 @@ public abstract class AbstractGRPCClient<
   protected TiConfiguration conf;
   protected BlockingStubT blockingStub;
   protected StubT asyncStub;
+  protected long timeout;
 
   protected AbstractGRPCClient(TiConfiguration conf, ChannelFactory channelFactory) {
     this.conf = conf;
+    this.timeout = conf.getTimeout();
     this.channelFactory = channelFactory;
   }
 
@@ -53,6 +62,7 @@ public abstract class AbstractGRPCClient<
       BlockingStubT blockingStub,
       StubT asyncStub) {
     this.conf = conf;
+    this.timeout = conf.getTimeout();
     this.channelFactory = channelFactory;
     this.blockingStub = blockingStub;
     this.asyncStub = asyncStub;
@@ -161,4 +171,33 @@ public abstract class AbstractGRPCClient<
   protected abstract BlockingStubT getBlockingStub();
 
   protected abstract StubT getAsyncStub();
+
+  public long getTimeout() {
+    return this.timeout;
+  }
+
+  private boolean doCheckHealth(BackOffer backOffer, String addressStr) {
+    while (true) {
+      try {
+        ManagedChannel channel = channelFactory.getChannel(addressStr);
+        HealthGrpc.HealthBlockingStub stub =
+            HealthGrpc.newBlockingStub(channel).withDeadlineAfter(getTimeout(), TimeUnit.MINUTES);
+        HealthCheckRequest req = HealthCheckRequest.newBuilder().build();
+        HealthCheckResponse resp = stub.check(req);
+        return resp.getStatus() == HealthCheckResponse.ServingStatus.SERVING;
+      } catch (Exception e) {
+        logger.warn("check health failed.", e);
+        backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoCheckHealth, e);
+      }
+    }
+  }
+
+  protected boolean checkHealth(String addressStr) {
+    BackOffer backOffer = ConcreteBackOffer.newCustomBackOff((int) (timeout * 2));
+    try {
+      return doCheckHealth(backOffer, addressStr);
+    } catch (Exception e) {
+      return false;
+    }
+  }
 }
