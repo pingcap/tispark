@@ -218,6 +218,14 @@ object TiUtil {
       tiConf.setJksTrustPassword(conf.get(TiConfigConst.TIKV_JKS_TRUST_PASSWORD))
     }
 
+    if (conf.contains(TiConfigConst.TIKV_TLS_RELOAD_INTERVAL)) {
+      tiConf.setCertReloadIntervalInSeconds(conf.get(TiConfigConst.TIKV_TLS_RELOAD_INTERVAL))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_CONN_RECYCLE_TIME)) {
+      tiConf.setConnRecycleTimeInSeconds(conf.get(TiConfigConst.TIKV_CONN_RECYCLE_TIME))
+    }
+
     tiConf
   }
 

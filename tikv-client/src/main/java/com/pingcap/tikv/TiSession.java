@@ -75,6 +75,8 @@ public class TiSession implements AutoCloseable {
         this.channelFactory =
             new ChannelFactory(
                 conf.getMaxFrameSize(),
+                conf.getConnRecycleTime(),
+                conf.getCertReloadInterval(),
                 conf.getJksKeyPath(),
                 conf.getJksKeyPassword(),
                 conf.getJksTrustPath(),
@@ -83,6 +85,8 @@ public class TiSession implements AutoCloseable {
         this.channelFactory =
             new ChannelFactory(
                 conf.getMaxFrameSize(),
+                conf.getConnRecycleTime(),
+                conf.getCertReloadInterval(),
                 conf.getTrustCertCollectionFile(),
                 conf.getKeyCertChainFile(),
                 conf.getKeyFile());
@@ -168,7 +172,7 @@ public class TiSession implements AutoCloseable {
     if (snapshotCatalog == null) {
       snapshotCatalog =
           new Catalog(
-              this::createSnapshotWithSnapshotTimestamp, conf.ifShowRowId(), conf.getDBPrefix());
+              this::createSnapshotWithSnapshotTimestamp, conf.isShowRowId(), conf.getDBPrefix());
     }
     snapshotCatalog.reloadCache(true);
     return snapshotCatalog;
@@ -179,7 +183,7 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (catalog == null) {
-          catalog = new Catalog(this::createSnapshot, conf.ifShowRowId(), conf.getDBPrefix());
+          catalog = new Catalog(this::createSnapshot, conf.isShowRowId(), conf.getDBPrefix());
         }
         res = catalog;
       }

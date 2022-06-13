@@ -9,7 +9,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>tispark-assembly</artifactId>
+    <artifactId>tispark-assembly-${spark.version.release}_${scala.version.release}</artifactId>
     <packaging>pom</packaging>
     <name>TiSpark Project Assembly</name>
     <url>http://github.copm/pingcap/tispark</url>

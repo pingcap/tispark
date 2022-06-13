@@ -32,28 +32,25 @@ object TiDBWriter {
     options.checkWriteRequired()
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
-        val conn = TiDBUtils.createConnectionFactory(options.url)()
+        val tableExists =
+          tiContext.tiSession.getCatalog.getTable(options.database, options.table) != null
 
-        try {
-          val tableExists = TiDBUtils.tableExists(conn, options)
-          if (tableExists) {
-            saveMode match {
-              case SaveMode.Append =>
-                TiBatchWrite.write(df, tiContext, options)
+        if (tableExists) {
+          saveMode match {
+            case SaveMode.Append =>
+              TiBatchWrite.write(df, tiContext, options)
 
-              case _ =>
-                throw new TiBatchWriteException(
-                  s"SaveMode: $saveMode is not supported. TiSpark only support SaveMode.Append.")
-            }
-          } else {
-            throw new TiBatchWriteException(
-              s"table `${options.database}`.`${options.table}` does not exists!")
-            // TiDBUtils.createTable(conn, df, options, tiContext)
-            // TiDBUtils.saveTable(tiContext, df, Some(df.schema), options)
+            case _ =>
+              throw new TiBatchWriteException(
+                s"SaveMode: $saveMode is not supported. TiSpark only support SaveMode.Append.")
           }
-        } finally {
-          conn.close()
+        } else {
+          throw new TiBatchWriteException(
+            s"table `${options.database}`.`${options.table}` does not exists!")
+          // TiDBUtils.createTable(conn, df, options, tiContext)
+          // TiDBUtils.saveTable(tiContext, df, Some(df.schema), options)
         }
+
       case None => throw new TiBatchWriteException("TiExtensions is disable!")
     }
 
