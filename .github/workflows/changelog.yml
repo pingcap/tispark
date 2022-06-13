@@ -1,0 +1,17 @@
+name: On release published
+on:
+  release:
+    types: [published,released]
+
+jobs:
+  changelog:
+    name: Update master changelog
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: master
+      - uses: rhysd/changelog-from-release/action@v2
+        with:
+          file: CHANGELOG.md
+          github_token: ${{ secrets.GITHUB_TOKEN }}
