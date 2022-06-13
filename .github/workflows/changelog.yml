@@ -9,9 +9,7 @@ jobs:
     name: Update master changelog
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: master
+      - uses: actions/checkout@v3
       - uses: rhysd/changelog-from-release/action@v2
         with:
           file: CHANGELOG.md
