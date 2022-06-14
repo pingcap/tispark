@@ -85,7 +85,7 @@ public class ChannelFactory implements AutoCloseable {
           onChange.run();
         }
       } catch (Exception e) {
-        logger.error("Failed to reload cert!" + e);
+        logger.error("Failed to reload cert!", e);
       }
     }
 
@@ -180,7 +180,7 @@ public class ChannelFactory implements AutoCloseable {
           builder.keyManager(new File(chainPath), new File(keyPath));
         }
       } catch (Exception e) {
-        logger.error("PEM SSL context builder failed!", e);
+        logger.error("Failed to create ssl context builder", e);
         throw new IllegalArgumentException(e);
       }
       return builder;
