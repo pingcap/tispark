@@ -1,9 +1,9 @@
-name: On release published
+name: Update changelog manually
 on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'branch'
+        description: 'branch name'
         required: true
         default: 'master'
 
@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref:  ${{ inputs.branch }}
+          ref: ${{ inputs.branch }}
       - uses: rhysd/changelog-from-release/action@v2
         with:
           file: CHANGELOG.md
