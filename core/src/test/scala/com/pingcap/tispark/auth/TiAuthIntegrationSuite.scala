@@ -15,8 +15,10 @@
 
 package com.pingcap.tispark.auth
 
-import org.apache.spark.sql.AnalysisException
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{AnalysisException, Row}
 import org.apache.spark.sql.test.SharedSQLContext
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.scalatest.Matchers.{
   an,
   be,
@@ -91,6 +93,18 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     }
   }
 
+  test("Read Without SELECT privilege should not be passed") {
+    the[SQLException] thrownBy {
+      sqlContext.read
+        .format("tidb")
+        .option("database", database)
+        .option("table", table)
+        .options(tidbOptions)
+        .load()
+        .collect()
+    } should have message s"SELECT command denied to user $user@% for table $dbtable"
+  }
+
   test("Select without privilege should not be passed") {
     the[SQLException] thrownBy {
       spark.sql(s"select * from `$databaseWithPrefix`.`$table`")
@@ -138,9 +152,21 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   test("Give privilege") {
-    tidbStmt.execute(f"GRANT UPDATE,SELECT on `$database`.`$table` TO '$user'@'%%';")
+    tidbStmt.execute(f"GRANT SELECT on `$database`.`$table` TO '$user'@'%%';")
 
     Thread.sleep((TiAuthorization.refreshIntervalSecond + 5) * 1000)
+  }
+
+  test("Read with SELECT privilege should be passed") {
+    noException should be thrownBy {
+      sqlContext.read
+        .format("tidb")
+        .option("database", database)
+        .option("table", table)
+        .options(tidbOptions)
+        .load()
+        .collect()
+    }
   }
 
   test("Select with privilege should be passed") {
@@ -199,6 +225,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     }
   }
 
+<<<<<<< HEAD
   //Describing columns is not supported for v2 tables.
   test(f"DESCRIBE COLUMN should not success with invisible table") {
     if (!catalogPluginMode) {
@@ -219,5 +246,83 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     }
 
     tidbStmt.execute(s"drop table if exsit `$database`.`${table}1`")
+=======
+  test("Replace without DELETE & INSERT privilege should not be passed") {
+    val schema = StructType(List(StructField("i", IntegerType), StructField("s", StringType)))
+    val row = Row(4, "ReplaceWithoutPrivilege")
+    val data: RDD[Row] = sc.makeRDD(List(row))
+    val df = sqlContext.createDataFrame(data, schema)
+    the[SQLException] thrownBy {
+      df.write
+        .format("tidb")
+        .options(tidbOptions)
+        .option("database", database)
+        .option("table", table)
+        .option("replace", "true")
+        .mode("append")
+        .save()
+    } should have message s"INSERT command denied to user $user@% for table $dbtable"
   }
+
+  test("Delete with DELETE & SELECT privilege should be passed") {
+    tidbStmt.execute(f"GRANT DELETE on `$database`.`$table` TO '$user'@'%%';")
+    Thread.sleep((TiAuthorization.refreshIntervalSecond + 2) * 1000)
+    noException should be thrownBy spark.sql(s"delete from $dbtable where i = 3")
+>>>>>>> 02098beda (add authorization check for datasource api (#2366))
+  }
+
+  test("Insert without INSERT privilege should not be passed") {
+    val schema = StructType(List(StructField("i", IntegerType), StructField("s", StringType)))
+    val row = Row(4, "InsertWithoutPrivilege")
+    val data: RDD[Row] = sc.makeRDD(List(row))
+    val df = sqlContext.createDataFrame(data, schema)
+
+    the[SQLException] thrownBy {
+      df.write
+        .format("tidb")
+        .options(tidbOptions)
+        .option("database", database)
+        .option("table", table)
+        .mode("append")
+        .save()
+    } should have message s"INSERT command denied to user $user@% for table $dbtable"
+  }
+
+  test("Insert with INSERT privilege should be passed") {
+    tidbStmt.execute(f"GRANT INSERT on `$database`.`$table` TO '$user'@'%%';")
+    Thread.sleep((TiAuthorization.refreshIntervalSecond + 2) * 1000)
+    val schema = StructType(List(StructField("i", IntegerType), StructField("s", StringType)))
+    val row = Row(4, "InsertWithPrivilege")
+    val data: RDD[Row] = sc.makeRDD(List(row))
+    val df = sqlContext.createDataFrame(data, schema)
+
+    noException should be thrownBy {
+      df.write
+        .format("tidb")
+        .options(tidbOptions)
+        .option("database", database)
+        .option("table", table)
+        .mode("append")
+        .save()
+    }
+  }
+
+  test("Replace with DELETE & INSERT privilege should be passed") {
+    Thread.sleep((TiAuthorization.refreshIntervalSecond + 2) * 1000)
+    val schema = StructType(List(StructField("i", IntegerType), StructField("s", StringType)))
+    val row = Row(4, "ReplaceWithPrivilege")
+    val data: RDD[Row] = sc.makeRDD(List(row))
+    val df = sqlContext.createDataFrame(data, schema)
+    noException should be thrownBy {
+      df.write
+        .format("tidb")
+        .options(tidbOptions)
+        .option("database", database)
+        .option("table", table)
+        .option("replace", "true")
+        .mode("append")
+        .save()
+    }
+  }
+
 }

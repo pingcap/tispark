@@ -377,6 +377,36 @@ object TiAuthorization {
         f"SELECT command denied to user ${tiAuth.get.user} for table $database.$table")
   }
 
+<<<<<<< HEAD
+=======
+  def authorizeForDelete(
+      table: String,
+      database: String,
+      tiAuth: Option[TiAuthorization]): Unit = {
+    if (enableAuth) {
+      tiAuth.get.checkPrivs(database, table, MySQLPriv.DeletePriv, "DELETE")
+    }
+  }
+
+  def authorizeForInsert(
+      table: String,
+      database: String,
+      tiAuth: Option[TiAuthorization]): Unit = {
+    if (enableAuth) {
+      tiAuth.get.checkPrivs(database, table, MySQLPriv.InsertPriv, "INSERT")
+    }
+  }
+
+  def authorizeForUpdate(
+      table: String,
+      database: String,
+      tiAuth: Option[TiAuthorization]): Unit = {
+    if (enableAuth) {
+      tiAuth.get.checkPrivs(database, table, MySQLPriv.UpdatePriv, "UPDATE")
+    }
+  }
+
+>>>>>>> 02098beda (add authorization check for datasource api (#2366))
   def checkVisible(db: String, table: String, tiAuth: Option[TiAuthorization]): Boolean = {
     !enableAuth || tiAuth.get.visible(db, table)
   }

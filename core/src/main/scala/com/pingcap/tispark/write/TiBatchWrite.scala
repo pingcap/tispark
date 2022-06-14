@@ -19,7 +19,12 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.util.ConcreteBackOffer
 import com.pingcap.tikv._
 import com.pingcap.tispark.TiDBUtils
+<<<<<<< HEAD
 import com.pingcap.tispark.utils.TiUtil
+=======
+import com.pingcap.tispark.auth.TiAuthorization
+import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler}
+>>>>>>> 02098beda (add authorization check for datasource api (#2366))
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -82,6 +87,11 @@ class TiBatchWrite(
   @transient private var tiBatchWriteTables: List[TiBatchWriteTable] = _
   @transient private var startMS: Long = _
   private var startTs: Long = _
+<<<<<<< HEAD
+=======
+  private var twoPhaseCommitHepler: TwoPhaseCommitHepler = _
+  private val tiAuthorization: Option[TiAuthorization] = tiContext.tiAuthorization
+>>>>>>> 02098beda (add authorization check for datasource api (#2366))
 
   private def write(): Unit = {
     try {
@@ -159,6 +169,11 @@ class TiBatchWrite(
 
     // check unsupported
     tiBatchWriteTables.foreach(_.checkUnsupported())
+
+    // check authorization
+    if (TiAuthorization.enableAuth) {
+      tiBatchWriteTables.foreach(_.checkAuthorization(tiAuthorization, options))
+    }
 
     // cache data
     tiBatchWriteTables.foreach(_.persist())

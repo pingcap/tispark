@@ -17,6 +17,7 @@ package com.pingcap.tispark.write
 
 import java.util
 import com.pingcap.tikv.allocator.RowIDAllocator
+<<<<<<< HEAD
 import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
 import com.pingcap.tikv.exception.{
   ConvertOverflowException,
@@ -24,14 +25,24 @@ import com.pingcap.tikv.exception.{
   TiDBConvertException
 }
 import com.pingcap.tikv.key.{CommonHandle, Handle, IndexKey, IntHandle, RowKey}
+=======
+import com.pingcap.tikv.codec.TableCodec
+import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
+>>>>>>> 02098beda (add authorization check for datasource api (#2366))
 import com.pingcap.tikv.meta._
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType.{COLUMN_VERSION_FLAG, EncodeType}
 import com.pingcap.tikv.types.{DataType, IntegerType}
 import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient, TiSession}
 import com.pingcap.tispark.TiTableReference
+<<<<<<< HEAD
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkContext
+=======
+import com.pingcap.tispark.auth.TiAuthorization
+import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
+>>>>>>> 02098beda (add authorization check for datasource api (#2366))
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions._
@@ -355,6 +366,15 @@ class TiBatchWriteTable(
     if (tiTableInfo.hasGeneratedColumn) {
       throw new TiBatchWriteException(
         "tispark currently does not support write data to table with generated column!")
+    }
+  }
+
+  def checkAuthorization(tiAuthorization: Option[TiAuthorization], options: TiDBOptions): Unit = {
+    if (options.replace) {
+      TiAuthorization.authorizeForInsert(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
+      TiAuthorization.authorizeForDelete(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
+    } else {
+      TiAuthorization.authorizeForInsert(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
     }
   }
 

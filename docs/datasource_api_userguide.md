@@ -31,11 +31,12 @@ In addition, if `replace` is true, data to be inserted is duplicated before the 
 
     - if the primary key or unique index exists in the table, data is updated.
     - if no same primary key or unique index exists, data is inserted.
-
+    - if enable authorization check, users need insert and delete privilege to write.
 + If `replace` is `false`:
 
     - if the primary key or unique index exists in the database, data with conflicts expects an exception.
     - if no same primary key or unique index exists, data is inserted.
+    - if enable authorization check, users need insert privilege to write.
 
 ## Use Spark connector
 
