@@ -26,7 +26,10 @@ import io.grpc.ManagedChannel;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.Test;
 
@@ -56,6 +59,36 @@ public class ChannelFactoryTest {
     new ChannelFactory.CertWatcher(2, ImmutableList.of(a, b, c), () -> changed.set(true));
     Thread.sleep(5000);
     assertTrue(changed.get());
+  }
+
+  @Test
+  public void testCertWatcherWithExceptionTask() throws InterruptedException {
+    AtomicInteger timesOfReloadTask = new AtomicInteger(0);
+    AtomicInteger timesOfFakeTask = new AtomicInteger(0);
+
+    Executors.newSingleThreadScheduledExecutor()
+        .scheduleAtFixedRate(
+            () -> {
+              timesOfFakeTask.getAndIncrement();
+              throw new RuntimeException("Mock exception in fake task");
+            },
+            1,
+            1,
+            TimeUnit.SECONDS);
+
+    new ChannelFactory.CertWatcher(
+        1,
+        ImmutableList.of(new File(caPath), new File(clientCertPath), new File(clientKeyPath)),
+        () -> {
+          timesOfReloadTask.getAndIncrement();
+          touchCert();
+          throw new RuntimeException("Mock exception in reload task");
+        });
+
+    Thread.sleep(5000);
+
+    assertTrue(timesOfFakeTask.get() == 1);
+    assertTrue(timesOfReloadTask.get() > 1);
   }
 
   @Test
