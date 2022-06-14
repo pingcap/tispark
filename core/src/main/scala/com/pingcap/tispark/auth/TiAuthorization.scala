@@ -392,6 +392,24 @@ object TiAuthorization {
     }
   }
 
+  def authorizeForInsert(
+      table: String,
+      database: String,
+      tiAuth: Option[TiAuthorization]): Unit = {
+    if (enableAuth) {
+      tiAuth.get.checkPrivs(database, table, MySQLPriv.InsertPriv, "INSERT")
+    }
+  }
+
+  def authorizeForUpdate(
+      table: String,
+      database: String,
+      tiAuth: Option[TiAuthorization]): Unit = {
+    if (enableAuth) {
+      tiAuth.get.checkPrivs(database, table, MySQLPriv.UpdatePriv, "UPDATE")
+    }
+  }
+
   def checkVisible(db: String, table: String, tiAuth: Option[TiAuthorization]): Boolean = {
     !enableAuth || tiAuth.get.visible(db, table)
   }

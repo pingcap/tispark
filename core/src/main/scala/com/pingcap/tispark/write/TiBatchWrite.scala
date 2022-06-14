@@ -19,6 +19,7 @@ package com.pingcap.tispark.write
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv._
 import com.pingcap.tispark.TiDBUtils
+import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler}
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
@@ -83,6 +84,7 @@ class TiBatchWrite(
   @transient private var startMS: Long = _
   private var startTs: Long = _
   private var twoPhaseCommitHepler: TwoPhaseCommitHepler = _
+  private val tiAuthorization: Option[TiAuthorization] = tiContext.tiAuthorization
 
   private def write(): Unit = {
     try {
@@ -158,6 +160,11 @@ class TiBatchWrite(
 
     // check unsupported
     tiBatchWriteTables.foreach(_.checkUnsupported())
+
+    // check authorization
+    if (TiAuthorization.enableAuth) {
+      tiBatchWriteTables.foreach(_.checkAuthorization(tiAuthorization, options))
+    }
 
     // cache data
     tiBatchWriteTables.foreach(_.persist())

@@ -27,6 +27,7 @@ import org.apache.spark.sql.catalyst.plans.logical.{
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
 import org.apache.spark.sql.{SparkSession, TiContext}
+import com.pingcap.tispark.v2.TiDBTable
 
 /**
  * Only work for table v2(catalog plugin)
