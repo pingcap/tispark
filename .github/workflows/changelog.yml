@@ -1,53 +1,20 @@
 name: On release published
 on:
-  release:
-    types: [published]
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'branch'
+        required: true
+        default: 'master'
 
 jobs:
-  changelog_master:
-    name: Update master changelog
+  changelog:
+    name: update changelog
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: master
-      - uses: rhysd/changelog-from-release/action@v2
-        with:
-          file: CHANGELOG.md
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-  changelog_2_4:
-    name: Update release-2.4 changelog
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: release-2.4
-      - uses: rhysd/changelog-from-release/action@v2
-        with:
-          file: CHANGELOG.md
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-  changelog_2_5:
-    name: Update release-2.5 changelog
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: release-2.5
-      - uses: rhysd/changelog-from-release/action@v2
-        with:
-          file: CHANGELOG.md
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-  changelog_3_0:
-    name: Update release-3.0 changelog
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: release-3.0
+          ref:  ${{ inputs.branch }}
       - uses: rhysd/changelog-from-release/action@v2
         with:
           file: CHANGELOG.md
