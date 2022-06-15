@@ -68,18 +68,22 @@ object TiExtensions {
    * Catalog for tidb is necessary now.
    * @param sparkSession
    */
-  def validateCatalog(sparkSession: SparkSession): String = {
-    sparkSession.sparkContext.conf
-      .getAllWithPrefix("spark.sql.catalog.")
-      .toSeq
-      .find(pair => TiCatalog.className.equals(pair._2)) match {
+  def validateCatalog(sparkSession: SparkSession): Unit = {
+    getCatalogConf(sparkSession) match {
       case None =>
         logger.error("TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
         throw new TiInternalException(
           "TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
-      case Some(pair) => pair._1
+      case _ => 
     }
   }
+  
+  def getCatalogConf(sparkSession: SparkSession): Option[(String,String)] = {
+    sparkSession.sparkContext.conf
+      .getAllWithPrefix("spark.sql.catalog.")
+      .toSeq
+      .find(pair => TiCatalog.className.equals(pair._2))
+  } 
 
   /**
    * Use TiAuthorizationRule to judge if TiExtensions is enable.
