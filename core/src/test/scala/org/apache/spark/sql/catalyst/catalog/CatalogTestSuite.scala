@@ -25,7 +25,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
     spark.conf.set("spark.sql.catalog.test_tidb", "org.apache.spark.sql.catalyst.catalog.TiCatalog")
     spark.conf.set("spark.sql.catalog.test_tidb.pd.addresses", "127.0.0.1:2379")
     spark.sql("use online_tidb")
-    spark.sql("show databases").show()
+    spark.sql("show databases").show(false)
     spark.sql("use test_tidb")
     spark.sql("show databases").show(false)
   }
