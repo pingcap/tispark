@@ -25,7 +25,7 @@ All notable changes to this project will be documented in this file.
 - Upgrade guava from 26.0-android to 29.0-android [#2340](https://github.com/pingcap/tispark/pull/2340)
 - Upgrade mysql-connector-java from 5.1.44 to 5.1.49 [#2367](https://github.com/pingcap/tispark/pull/2367)
 
-### Doc
+### Documents
 - Update communication channels [#2228](https://github.com/pingcap/tispark/pull/2228)
 - Add limitation: new collations are not supported [#2238](https://github.com/pingcap/tispark/pull/2238)
 
