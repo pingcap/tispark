@@ -16,20 +16,20 @@
 
 package org.apache.spark.sql.catalyst.catalog
 
-import org.apache.spark.sql.{AnalysisException, BaseTiSparkTest}
+import org.apache.spark.sql.BaseTiSparkTest
 
 class CatalogTestSuite extends BaseTiSparkTest {
   test("test arbitrary catalog name") {
-    spark.conf.set("spark.sql.catalog.online_tidb","org.apache.spark.sql.catalyst.catalog.TiCatalog")
-    spark.conf.set("spark.sql.catalog.online_tidb.pd.addresses","127.0.0.1:2379")
-    spark.conf.set("spark.sql.catalog.test_tidb","org.apache.spark.sql.catalyst.catalog.TiCatalog")
-    spark.conf.set("spark.sql.catalog.test_tidb.pd.addresses","127.0.0.1:2379")
+    spark.conf.set("spark.sql.catalog.online_tidb", "org.apache.spark.sql.catalyst.catalog.TiCatalog")
+    spark.conf.set("spark.sql.catalog.online_tidb.pd.addresses", "127.0.0.1:2379")
+    spark.conf.set("spark.sql.catalog.test_tidb", "org.apache.spark.sql.catalyst.catalog.TiCatalog")
+    spark.conf.set("spark.sql.catalog.test_tidb.pd.addresses", "127.0.0.1:2379")
     spark.sql("use online_tidb")
     spark.sql("show databases").show(false)
     spark.sql("use test_tidb")
     spark.sql("show databases").show(false)
   }
-  
+
   test("test show databases/tables") {
     spark.sql("show databases").show(false)
     spark.sql(s"show databases like '$dbPrefix*'").show(false)
@@ -155,116 +155,119 @@ class CatalogTestSuite extends BaseTiSparkTest {
     refreshConnections(isHiveEnabled = true)
 
     val df =
-      spark.sql("""
-                  |select t1.*, (
-                  |	select count(*)
-                  |	from test2
-                  |	where id > 1
-                  |) count, t1.c1 t1_c1, t2.c1 t2_c1, t3.id t3_id,
-                  | t3.c1 t3_c1, t3.c2 t3_c2, t4.c3 t4_c3, t5.c2 t5_c2
-                  |from (
-                  |	select id, c1, c2
-                  |	from test1) t1
-                  |left join (
-                  |	select id, c1, c2, c1 + coalesce(c2 % 2) as c3
-                  |	from test2 where c1 + c2 > 3) t2
-                  |on t1.id = t2.id
-                  |left join (
-                  |	select max(id) as id, min(c1) + c2 as c1, c2, count(*) as c3
-                  |	from test3
-                  |	where c2 <= 3 and exists (
-                  |		select * from (
-                  |			select id as c1 from test3)
-                  |    where (
-                  |      select max(id) from test1) = 4)
-                  |	group by c2) t3
-                  |on t1.id = t3.id
-                  |left join (
-                  |	select max(id) as id, min(c1) as c1,
-                  |  max(c1) as c1, count(*) as c2, c2 as c3
-                  |	from test3
-                  |	where id not in (
-                  |		select id
-                  |		from test1
-                  |		where c2 > 2)
-                  |	group by c2) t4
-                  |on t1.id = t4.id
-                  |left join (
-                  |	select * from test4
-                  |	where c2 = (
-                  |		select max(c2)
-                  |		from test3
-                  |		where c2 < 2)) t5
-                  |on t1.id = t5.id
+      spark.sql(
+        """
+          |select t1.*, (
+          |	select count(*)
+          |	from test2
+          |	where id > 1
+          |) count, t1.c1 t1_c1, t2.c1 t2_c1, t3.id t3_id,
+          | t3.c1 t3_c1, t3.c2 t3_c2, t4.c3 t4_c3, t5.c2 t5_c2
+          |from (
+          |	select id, c1, c2
+          |	from test1) t1
+          |left join (
+          |	select id, c1, c2, c1 + coalesce(c2 % 2) as c3
+          |	from test2 where c1 + c2 > 3) t2
+          |on t1.id = t2.id
+          |left join (
+          |	select max(id) as id, min(c1) + c2 as c1, c2, count(*) as c3
+          |	from test3
+          |	where c2 <= 3 and exists (
+          |		select * from (
+          |			select id as c1 from test3)
+          |    where (
+          |      select max(id) from test1) = 4)
+          |	group by c2) t3
+          |on t1.id = t3.id
+          |left join (
+          |	select max(id) as id, min(c1) as c1,
+          |  max(c1) as c1, count(*) as c2, c2 as c3
+          |	from test3
+          |	where id not in (
+          |		select id
+          |		from test1
+          |		where c2 > 2)
+          |	group by c2) t4
+          |on t1.id = t4.id
+          |left join (
+          |	select * from test4
+          |	where c2 = (
+          |		select max(c2)
+          |		from test3
+          |		where c2 < 2)) t5
+          |on t1.id = t5.id
                 """.stripMargin)
     df.createOrReplaceTempView("testTempView1")
 
-    val df2 = spark.sql("""
-                          |select t1.id t1_id,
-                          | if (t1.c1 = 2,
-                          |  t2.c1,
-                          |  if (t1.c1 = 3, t3.c1, t1.c1)
-                          | ) r_c1, t2.id t2_id, t3.id t3_id, t3.c2 t3_c2
-                          |from (
-                          |	select id, c2, c1
-                          |	from test4) t1
-                          |left join (
-                          |	select if (c2 = 2, c2, if (c2 = 3, 30, 0)) id, id c1
-                          |	from test4) t2
-                          |on t1.id = t2.id
-                          |left join (
-                          | select
-                          |  id, c1,
-                          |  CASE c2
-                          |   WHEN 1 THEN 100
-                          |   WHEN 2 THEN 200
-                          |   WHEN 3 THEN 300
-                          |   ELSE 0
-                          |  END c2
-                          | from test4) t3
-                          |on t1.id = t3.id
-                          |where IF(
-                          | t3.id in (
-                          |  select max(t4.id)
-                          |  from test4 t4
-                          |	 where c2 <> (
-                          |		select count(*)
-                          |		from test4
-                          |		where c2 < 2)
-                          |  group by c2), true, ISNULL(t3.id))
+    val df2 = spark.sql(
+      """
+        |select t1.id t1_id,
+        | if (t1.c1 = 2,
+        |  t2.c1,
+        |  if (t1.c1 = 3, t3.c1, t1.c1)
+        | ) r_c1, t2.id t2_id, t3.id t3_id, t3.c2 t3_c2
+        |from (
+        |	select id, c2, c1
+        |	from test4) t1
+        |left join (
+        |	select if (c2 = 2, c2, if (c2 = 3, 30, 0)) id, id c1
+        |	from test4) t2
+        |on t1.id = t2.id
+        |left join (
+        | select
+        |  id, c1,
+        |  CASE c2
+        |   WHEN 1 THEN 100
+        |   WHEN 2 THEN 200
+        |   WHEN 3 THEN 300
+        |   ELSE 0
+        |  END c2
+        | from test4) t3
+        |on t1.id = t3.id
+        |where IF(
+        | t3.id in (
+        |  select max(t4.id)
+        |  from test4 t4
+        |	 where c2 <> (
+        |		select count(*)
+        |		from test4
+        |		where c2 < 2)
+        |  group by c2), true, ISNULL(t3.id))
       """.stripMargin)
     df2.createOrReplaceTempView("testTempView2")
 
-    val df3 = spark.sql("""
-                          |select t1.id t1_id, t1.c1 t1_c1, t2.id t2_id, t2.c1 t2_c1,
-                          |       t3.id t3_id, t3.c1 t3_c1, t3.c2 t3_c2
-                          |from (
-                          |	select t1_id id, t2_id c1, t3_c2 c2
-                          |	from testTempView2) t1
-                          |left join (
-                          |	select if (t3_c2 < 2, t3_c2, if (t3_c2 > 3, 30, 0)) id, t3_id c1
-                          |	from testTempView2) t2
-                          |on t1.id = t2.id
-                          |left join (
-                          | select
-                          |  t2_id id, r_c1 c1,
-                          |  CASE t3_c2
-                          |   WHEN 1 THEN 100
-                          |   WHEN 2 THEN 200
-                          |   WHEN 3 THEN 300
-                          |   ELSE 0
-                          |  END c2
-                          | from testTempView2) t3
-                          |on t1.id = t3.id
-                          |where IF(
-                          | t3.id in (
-                          |  select max(t3_id)
-                          |  from testTempView2 t4
-                          |	 where t2_id <> (
-                          |		select count(*)
-                          |		from testTempView2
-                          |		where t2_id < 2)
-                          |  group by t2_id), true, ISNULL(t3.id))
+    val df3 = spark.sql(
+      """
+        |select t1.id t1_id, t1.c1 t1_c1, t2.id t2_id, t2.c1 t2_c1,
+        |       t3.id t3_id, t3.c1 t3_c1, t3.c2 t3_c2
+        |from (
+        |	select t1_id id, t2_id c1, t3_c2 c2
+        |	from testTempView2) t1
+        |left join (
+        |	select if (t3_c2 < 2, t3_c2, if (t3_c2 > 3, 30, 0)) id, t3_id c1
+        |	from testTempView2) t2
+        |on t1.id = t2.id
+        |left join (
+        | select
+        |  t2_id id, r_c1 c1,
+        |  CASE t3_c2
+        |   WHEN 1 THEN 100
+        |   WHEN 2 THEN 200
+        |   WHEN 3 THEN 300
+        |   ELSE 0
+        |  END c2
+        | from testTempView2) t3
+        |on t1.id = t3.id
+        |where IF(
+        | t3.id in (
+        |  select max(t3_id)
+        |  from testTempView2 t4
+        |	 where t2_id <> (
+        |		select count(*)
+        |		from testTempView2
+        |		where t2_id < 2)
+        |  group by t2_id), true, ISNULL(t3.id))
       """.stripMargin)
     df3.createOrReplaceTempView("testTempView3")
 
