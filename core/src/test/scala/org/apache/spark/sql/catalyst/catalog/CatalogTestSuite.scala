@@ -19,6 +19,17 @@ package org.apache.spark.sql.catalyst.catalog
 import org.apache.spark.sql.{AnalysisException, BaseTiSparkTest}
 
 class CatalogTestSuite extends BaseTiSparkTest {
+  test("test arbitrary catalog name") {
+    spark.conf.set("spark.sql.catalog.online_tidb","org.apache.spark.sql.catalyst.catalog.TiCatalog")
+    spark.conf.set("spark.sql.catalog.online_tidb.pd.addresses","127.0.0.1:2379")
+    spark.conf.set("spark.sql.catalog.test_tidb","org.apache.spark.sql.catalyst.catalog.TiCatalog")
+    spark.conf.set("spark.sql.catalog.test_tidb.pd.addresses","127.0.0.1:2379")
+    spark.sql("use online_tidb")
+    spark.sql("show databases").show(false)
+    spark.sql("use test_tidb")
+    spark.sql("show databases").show(false)
+  }
+  
   test("test show databases/tables") {
     spark.sql("show databases").show(false)
     spark.sql(s"show databases like '$dbPrefix*'").show(false)
