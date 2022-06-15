@@ -22,7 +22,7 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.types.{DataType, StructType}
-import org.apache.spark.sql.{SparkSession, TiContext}
+import org.apache.spark.sql.{SparkSession, TiContext, TiExtensions}
 
 case class TiParser(
     getOrCreateTiContext: SparkSession => TiContext,
