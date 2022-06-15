@@ -16,6 +16,7 @@
 
 package org.apache.spark.sql.catalyst.parser
 
+import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
 import org.apache.spark.sql.catalyst.expressions.Expression
@@ -56,7 +57,12 @@ case class TiParser(
 
   def getOrElseInitTiCatalog: TiCatalog = {
     val catalogManager = sparkSession.sessionState.catalogManager
-    val catalogName = TiExtensions.validateCatalog(sparkSession).split("\\.").last
+    val catalogName = TiExtensions.getCatalogConf(sparkSession) match {
+      case Some(pair) => pair._1.split("\\.").last
+      case None =>
+        throw new TiInternalException(
+          "TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
+    }
     catalogManager.catalog(catalogName).asInstanceOf[TiCatalog]
   }
 
