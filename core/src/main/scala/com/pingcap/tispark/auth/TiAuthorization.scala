@@ -53,10 +53,15 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
     new AtomicReference(Map.empty)
 
   val task: Runnable = () => {
-    val privs = getPrivileges
-    globalPrivs.set(privs.globalPriv)
-    databasePrivs.set(privs.databasePrivs)
-    tablePrivs.set(privs.tablePrivs)
+    try {
+      val privs = getPrivileges
+      globalPrivs.set(privs.globalPriv)
+      databasePrivs.set(privs.databasePrivs)
+      tablePrivs.set(privs.tablePrivs)
+    } catch {
+      case e: Throwable =>
+        logger.error("Failed to refresh privileges", e)
+    }
   }
 
   /**
