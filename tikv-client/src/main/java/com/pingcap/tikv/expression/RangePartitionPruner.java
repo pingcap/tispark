@@ -119,15 +119,6 @@ public class RangePartitionPruner {
     return partExprs;
   }
 
-  /**
-   * When table is a partition table and its type is range. We use this method to do the pruning.
-   * Range partition has two types: 1. range 2. range column. If it is the first case,
-   * pruneRangeNormalPart will be called. Otherwise pruneRangeColPart will be called. For now, we
-   * simply skip range column partition case.
-   *
-   * @param filters is where condition belong to a select statement.
-   * @return a pruned partition for scanning.
-   */
   public List<TiPartitionDef> prune(List<Expression> filters) {
     filters = extractLogicalOrComparisonExpr(filters);
     Expression cnfExpr = PredicateUtils.mergeCNFExpressions(filters);
