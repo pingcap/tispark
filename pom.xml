@@ -92,7 +92,7 @@
         <scalaj.version>2.3.0</scalaj.version>
         <lombok.version>1.18.22</lombok.version>
         <someModule.test.excludes></someModule.test.excludes>
-        <revision>3.0.1</revision>
+        <revision>3.0.1-snapshot</revision>
     </properties>
     <repositories>
         <repository>
