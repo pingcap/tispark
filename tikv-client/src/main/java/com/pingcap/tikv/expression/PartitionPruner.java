@@ -36,26 +36,36 @@ public class PartitionPruner {
     return filteredFilters;
   }
 
+  /**
+   * When table is a partition table and its type is range. We use this method to do the pruning.
+   * Range partition has two types: 1. RANGE partitioning 2. RANGE COLUMNS partitioning
+   * https://dev.mysql.com/doc/mysql-partitioning-excerpt/5.7/en/partitioning-range.html
+   * https://dev.mysql.com/doc/mysql-partitioning-excerpt/5.7/en/partitioning-columns-range.html
+   * @param filters is where condition belong to a select statement.
+   * @return a pruned partition for scanning.
+   */
   public static List<TiPartitionDef> prune(TiTableInfo tableInfo, List<Expression> filters) {
     PartitionType type = tableInfo.getPartitionInfo().getType();
     if (!tableInfo.isPartitionEnabled()) {
       return tableInfo.getPartitionInfo().getDefs();
     }
 
-    boolean isRangeCol =
+    boolean isRangeColPartitioning =
         Objects.requireNonNull(tableInfo.getPartitionInfo().getColumns()).size() > 0;
 
     switch (type) {
       case RangePartition:
-        if (!isRangeCol) {
-          // TiDB only supports partition pruning on range partition on single column
-          // If we meet range partition on multiple columns, we simply return all parts.
+        if (!isRangeColPartitioning) {
+          RangePartitionPruner pruner = new RangePartitionPruner(tableInfo);
+          return pruner.prune(filters);
+        } else {
+          // For a table partitioned by RANGE COLUMNS, currently TiDB only supports using a single partitioning column.
+          // So currently we only support prune with a single partitioning column.
+          // If we meet range partition on multiple columns(maybe TiDB support in future), we simply return all parts.
           if (tableInfo.getPartitionInfo().getColumns().size() > 1) {
             return tableInfo.getPartitionInfo().getDefs();
           }
-          RangePartitionPruner prunner = new RangePartitionPruner(tableInfo);
-          return prunner.prune(filters);
-        } else {
+
           RangeColumnPartitionPruner pruner = new RangeColumnPartitionPruner(tableInfo);
           return pruner.prune(filters);
         }
