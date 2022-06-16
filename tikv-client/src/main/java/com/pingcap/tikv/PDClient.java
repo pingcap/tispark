@@ -347,22 +347,34 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return leaderWrapper;
   }
 
-  private GetMembersResponse getMembers(URI url) {
-    try {
-      ManagedChannel probChan = channelFactory.getChannel(url.getHost() + ":" + url.getPort());
-      PDGrpc.PDBlockingStub stub = PDGrpc.newBlockingStub(probChan);
-      GetMembersRequest request =
-          GetMembersRequest.newBuilder().setHeader(RequestHeader.getDefaultInstance()).build();
-      GetMembersResponse resp = stub.getMembers(request);
-      // check if the response contains a valid leader
-      if (resp != null && resp.getLeader().getMemberId() == 0) {
-        return null;
+  private GetMembersResponse doGetMembers(BackOffer backOffer, URI url) {
+    while (true) {
+      try {
+        ManagedChannel probChan = channelFactory.getChannel(url.getHost() + ":" + url.getPort());
+        PDGrpc.PDBlockingStub stub = PDGrpc.newBlockingStub(probChan);
+        GetMembersRequest request =
+            GetMembersRequest.newBuilder().setHeader(RequestHeader.getDefaultInstance()).build();
+        GetMembersResponse resp = stub.getMembers(request);
+        // check if the response contains a valid leader
+        if (resp != null && resp.getLeader().getMemberId() == 0) {
+          return null;
+        }
+        return resp;
+      } catch (Exception e) {
+        logger.warn("failed to get member from pd server.", e);
+        backOffer.doBackOff(BackOffFuncType.BoPDRPC, e);
       }
-      return resp;
-    } catch (Exception e) {
-      logger.warn("failed to get member from pd server.", e);
     }
-    return null;
+  }
+
+  private GetMembersResponse getMembers(URI uri) {
+    BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(BackOffer.PD_INFO_BACKOFF);
+    try {
+      return doGetMembers(backOffer, uri);
+    } catch (Exception e) {
+      // The exception message has been logged in doBackOff(). We should not report here again.
+      return null;
+    }
   }
 
   synchronized boolean switchLeader(List<String> leaderURLs) {
@@ -407,13 +419,55 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
       if (resp == null) {
         continue;
       }
+
+      String leaderUrlStr = resp.getLeader().getClientUrlsList().get(0);
+      URI leaderUrl = PDUtils.addrToUrl(leaderUrlStr);
+      leaderUrlStr = leaderUrl.getHost() + ":" + leaderUrl.getPort();
+
       // if leader is switched, just return.
-      if (switchLeader(resp.getLeader().getClientUrlsList())) {
+      if (checkHealth(leaderUrlStr) && switchLeader(resp.getLeader().getClientUrlsList())) {
         return;
       }
     }
     throw new TiClientInternalException(
         "already tried all address on file, but not leader found yet.");
+  }
+
+  public synchronized void updateLeaderOrForwardFollower() {
+    for (URI url : this.pdAddrs) {
+      // since resp is null, we need update leader's address by walking through all pd server.
+      GetMembersResponse resp = getMembers(url);
+      if (resp == null) {
+        continue;
+      }
+      if (resp.getLeader().getClientUrlsList().isEmpty()) {
+        continue;
+      }
+
+      String leaderUrlStr = resp.getLeader().getClientUrlsList().get(0);
+      URI leaderUrl = PDUtils.addrToUrl(leaderUrlStr);
+      leaderUrlStr = leaderUrl.getHost() + ":" + leaderUrl.getPort();
+
+      if (!checkHealth(leaderUrlStr)) {
+        continue;
+      }
+
+      // create new Leader
+      try {
+        ManagedChannel clientChannel = channelFactory.getChannel(leaderUrlStr);
+        leaderWrapper =
+            new LeaderWrapper(
+                leaderUrlStr,
+                PDGrpc.newBlockingStub(clientChannel),
+                PDGrpc.newStub(clientChannel),
+                System.nanoTime());
+      } catch (IllegalArgumentException e) {
+        logger.error("Error updating leader. " + leaderUrlStr, e);
+        continue;
+      }
+      logger.info(String.format("Switched to new leader: %s", leaderWrapper));
+      return;
+    }
   }
 
   public void updateTiFlashReplicaStatus() {

@@ -176,6 +176,7 @@ object TiExprUtils {
       tiDBRelation: TiDBTable,
       blocklist: ExpressionBlocklist): Boolean =
     aggExpr.aggregateFunction match {
+      // Average will not push down because Count can't push down
       case _: Average =>
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
@@ -184,7 +185,7 @@ object TiExprUtils {
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
             .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))
-      case SumNotNullable(_) | PromotedSum(_) | Min(_) | Max(_) =>
+      case CountSum(_) | PromotedSum(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
             .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))

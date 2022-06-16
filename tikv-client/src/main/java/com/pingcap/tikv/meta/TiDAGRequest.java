@@ -1038,9 +1038,14 @@ public class TiDAGRequest implements Serializable {
       sb.append("]");
     }
 
-    if (!getPushDownFilters().isEmpty()) {
-      sb.append(", Aggregates: ");
+    if (!getPushDownAggregates().isEmpty()) {
+      sb.append(", PushDownAggregates: ");
       Joiner.on(", ").skipNulls().appendTo(sb, getPushDownAggregates());
+    }
+
+    if (!getAggregates().isEmpty()) {
+      sb.append(", Aggregates: ");
+      Joiner.on(", ").skipNulls().appendTo(sb, getAggregates());
     }
 
     if (!getGroupByItems().isEmpty()) {
