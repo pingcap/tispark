@@ -1,6 +1,47 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 3.0.0] 2022-06-15
+### Compatibility Changes
+- TiSpark without catalog plugin is no more supported. You must configure catalog configs and use tidb_catalog now [#2252](https://github.com/pingcap/tispark/pull/2252)
+- TiSpark's jar has a new naming rule like `tispark-assembly-{$spark_version}_{$scala_version}-{$tispark_verison}` [#2370](https://github.com/pingcap/tispark/pull/2370)
+
+### New Feature
+- Support DELETE statement [#2276](https://github.com/pingcap/tispark/pull/2276)
+- Support Spark 3.2 [#2287](https://github.com/pingcap/tispark/pull/2287)
+- Support telemetry to collect information [#2316](https://github.com/pingcap/tispark/pull/2316)
+- Support stale read to read historical versions of data [#2322](https://github.com/pingcap/tispark/pull/2322)
+- Support TLS with reload capability [#2306](https://github.com/pingcap/tispark/pull/2306) [#2349](https://github.com/pingcap/tispark/pull/2349) [#2365](https://github.com/pingcap/tispark/pull/2349) [#2377](https://github.com/pingcap/tispark/pull/2377)
+
+### Fixes
+- Fix the wrong result of _tidb_rowid when set `spark.tispark.show_rowid=true` [#2270](https://github.com/pingcap/tispark/pull/2270)
+- Fix sum not push down bug [#2314](https://github.com/pingcap/tispark/pull/2314)
+- Fix limit not push down bug [#2329](https://github.com/pingcap/tispark/pull/2329)
+- Avoid NoSuchElementException when setting catalog [#2220](https://github.com/pingcap/tispark/pull/2220)
+- Avoid ClassCastException when cluster index with type Timestamp and Date [#2319](https://github.com/pingcap/tispark/pull/2319)
+- Improve retry logic in write so that it will not retry in some scenarios which needn't retry [#2279](https://github.com/pingcap/tispark/pull/2279)
+- Delete unused configuration `spark.tispark.statistics.auto_load` [#2300](https://github.com/pingcap/tispark/pull/2300)
+- Upgrade jackson-databind from 2.9.10.8 to 2.12.6.1 [#2285](https://github.com/pingcap/tispark/pull/2285)
+- Upgrade guava from 26.0-android to 29.0-android [#2340](https://github.com/pingcap/tispark/pull/2340)
+- Upgrade mysql-connector-java from 5.1.44 to 5.1.49 [#2367](https://github.com/pingcap/tispark/pull/2367)
+
+### Documents
+- Update communication channels [#2228](https://github.com/pingcap/tispark/pull/2228)
+- Add limitation: new collations are not supported [#2238](https://github.com/pingcap/tispark/pull/2238)
+
+## [TiSpark 2.5.1] 2022-05-16
+### Fixes
+- Fix limit not push down bug [#2335](https://github.com/pingcap/tispark/pull/2335)
+- Fix ClassCastException when cluster index with type Timestamp and Date [#2323](https://github.com/pingcap/tispark/pull/2323)
+- Upgrade jackson-databind from 2.9.10.8 to 2.12.6.1 [#2288](https://github.com/pingcap/tispark/pull/2288)
+- Fix the wrong result of _tidb_rowid [#2278](https://github.com/pingcap/tispark/pull/2278)
+- Fix set catalog throw NoSuchElementException [#2254](https://github.com/pingcap/tispark/pull/2254)
+
+### Documents
+- Add limitation: TLS is not supported [#2281](https://github.com/pingcap/tispark/pull/2281)
+- Add limitation: new collations are not supported [#2251](https://github.com/pingcap/tispark/pull/2251)
+- Update communication channels [#2244](https://github.com/pingcap/tispark/pull/2244)
+
 ## [TiSpark 2.5.0] 2022-01-25
 ### New feature
 - Support Spark 3.1.x and 3.0.x version.
