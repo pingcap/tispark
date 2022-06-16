@@ -34,13 +34,13 @@ Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](http
 
 ## Feature Support
 
-| Feature Support                   | TiSpark 2.4.x | TiSpark 2.5.x | TiSpark master |
-| --------------------------------- |---------------|---------------|----------------|
-| SQL select without tidb_catalog   | &#10004;      | &#10004;      |                |
-| SQL select with tidb_catalog      |               | &#10004;      | &#10004;       |
-| SQL delete from with tidb_catalog |               |               | &#10004;       |
-| DataFrame append                  | &#10004;      | &#10004;      | &#10004;       |
-| DataFrame reads                   | &#10004;      | &#10004;      | &#10004;       |
+| Feature Support                   | TiSpark 2.4.x | TiSpark 2.5.x | TiSpark 3.0.x  | TiSpark master |
+| --------------------------------- |---------------|---------------|----------------|-----------------
+| SQL select without tidb_catalog   | &#10004;      | &#10004;      |                |                |
+| SQL select with tidb_catalog      |               | &#10004;      | &#10004;       | &#10004;       |
+| SQL delete from with tidb_catalog |               |               | &#10004;       | &#10004;       |
+| DataFrame append                  | &#10004;      | &#10004;      | &#10004;       | &#10004;       |
+| DataFrame reads                   | &#10004;      | &#10004;      | &#10004;       | &#10004;       |
 
 see [here](https://github.com/pingcap/tispark/wiki/Feature-Support-Detail) for more detail.
 
