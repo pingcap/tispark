@@ -40,6 +40,7 @@ public class PartitionPruner {
    * Range partition has two types: 1. RANGE partitioning 2. RANGE COLUMNS partitioning
    * https://dev.mysql.com/doc/mysql-partitioning-excerpt/5.7/en/partitioning-range.html
    * https://dev.mysql.com/doc/mysql-partitioning-excerpt/5.7/en/partitioning-columns-range.html
+   *
    * @param filters is where condition belong to a select statement.
    * @return a pruned partition for scanning.
    */
@@ -58,9 +59,11 @@ public class PartitionPruner {
           RangePartitionPruner pruner = new RangePartitionPruner(tableInfo);
           return pruner.prune(filters);
         } else {
-          // For a table partitioned by RANGE COLUMNS, currently TiDB only supports using a single partitioning column.
+          // For a table partitioned by RANGE COLUMNS, currently TiDB only supports using a single
+          // partitioning column.
           // So currently we only support prune with a single partitioning column.
-          // If we meet range partition on multiple columns(maybe TiDB support in future), we simply return all parts.
+          // If we meet range partition on multiple columns(maybe TiDB support in future), we simply
+          // return all parts.
           if (tableInfo.getPartitionInfo().getColumns().size() > 1) {
             return tableInfo.getPartitionInfo().getDefs();
           }
