@@ -1,7 +1,7 @@
 # TiSpark Design Documents
 
 - Author(s): [Author Name](http://github.com/your-github-id), [Co-Author Name](http://github.com/your-github-id), ...
-- Tracking Issue: https://github.com/pingcap/tidb/issues/XXX
+- Tracking Issue: https://github.com/pingcap/tispark/issues/2385
 
 ## Table of Contents
 
