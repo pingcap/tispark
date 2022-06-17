@@ -18,13 +18,13 @@
 
 package com.pingcap.tikv.txn;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.ResolveLockException;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class AsyncResolveData {
   private static final Logger LOG = LoggerFactory.getLogger(AsyncResolveData.class);

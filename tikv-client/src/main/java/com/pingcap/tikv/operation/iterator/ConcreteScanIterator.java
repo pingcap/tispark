@@ -20,7 +20,6 @@ package com.pingcap.tikv.operation.iterator;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
@@ -38,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.kvproto.Metapb;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class ConcreteScanIterator extends ScanIterator {
   private final long version;

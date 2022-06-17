@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.util;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
@@ -34,6 +33,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class ClientUtils {
   /**

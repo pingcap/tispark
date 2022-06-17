@@ -18,7 +18,6 @@ package com.pingcap.tikv.operation.iterator;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -28,6 +27,7 @@ import com.pingcap.tikv.region.TiRegion;
 import java.util.Iterator;
 import java.util.List;
 import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
   protected final TiConfiguration conf;

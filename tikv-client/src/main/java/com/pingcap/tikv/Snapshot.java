@@ -20,7 +20,6 @@ import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getHandleI
 import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getRowIterator;
 import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getTiChunkIterator;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.columnar.TiChunk;
 import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.Key;
@@ -38,6 +37,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class Snapshot {
   private final TiTimestamp timestamp;

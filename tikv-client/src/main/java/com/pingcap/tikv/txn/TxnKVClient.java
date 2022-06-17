@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.txn;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.GrpcException;
@@ -38,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Metapb;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 /** KV client of transaction APIs for GET/PUT/DELETE/SCAN */
 public class TxnKVClient implements AutoCloseable {

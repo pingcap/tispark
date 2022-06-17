@@ -20,7 +20,6 @@ package com.pingcap.tikv.operation;
 
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.GrpcException;
@@ -45,6 +44,7 @@ import org.tikv.kvproto.Errorpb;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.kvproto.Kvrpcpb.ScanResponse;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 // TODO: consider refactor to Builder mode
 // TODO: KVErrorHandler should resolve locks if it could.

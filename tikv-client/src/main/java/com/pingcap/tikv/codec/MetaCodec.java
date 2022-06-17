@@ -18,7 +18,6 @@ package com.pingcap.tikv.codec;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
@@ -31,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class MetaCodec {
   protected static final Logger logger = LoggerFactory.getLogger(MetaCodec.class);
