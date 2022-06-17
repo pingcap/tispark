@@ -121,9 +121,9 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         tikvFactory =
             new org.tikv.common.util.ChannelFactory(
                 conf.getMaxFrameSize(),
-                Math.toIntExact(conf.getCertReloadInterval()),
+                10,
                 3,
-                Math.toIntExact(conf.getConnRecycleTime()),
+                60,
                 conf.getJksKeyPath(),
                 conf.getJksKeyPassword(),
                 conf.getJksTrustPath(),
@@ -132,9 +132,9 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         tikvFactory =
             new org.tikv.common.util.ChannelFactory(
                 conf.getMaxFrameSize(),
-                Math.toIntExact(conf.getCertReloadInterval()),
+                10,
                 3,
-                Math.toIntExact(conf.getConnRecycleTime()),
+                60,
                 conf.getTrustCertCollectionFile(),
                 conf.getKeyCertChainFile(),
                 conf.getKeyFile());
@@ -143,10 +143,12 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
       tikvFactory =
           new org.tikv.common.util.ChannelFactory(
               conf.getMaxFrameSize(),
-              Math.toIntExact(conf.getCertReloadInterval()),
+              10,
               3,
-              Math.toIntExact(conf.getConnRecycleTime()));
+              60);
     }
+    // TODO: add more configs
+
     //  public static final int DEF_TIKV_GRPC_KEEPALIVE_TIME = 10;
     //  public static final int DEF_TIKV_GRPC_KEEPALIVE_TIMEOUT = 3;
     //  public static final int DEF_TIKV_GRPC_IDLE_TIMEOUT = 60;
