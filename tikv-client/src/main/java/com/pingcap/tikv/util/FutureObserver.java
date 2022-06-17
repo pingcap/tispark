@@ -17,8 +17,8 @@
 package com.pingcap.tikv.util;
 
 import com.google.common.util.concurrent.SettableFuture;
-import io.grpc.stub.StreamObserver;
 import java.util.concurrent.Future;
+import org.tikv.shade.io.grpc.stub.StreamObserver;
 
 public class FutureObserver<Value, RespT> implements StreamObserver<RespT> {
   private final SettableFuture<Value> resultFuture;

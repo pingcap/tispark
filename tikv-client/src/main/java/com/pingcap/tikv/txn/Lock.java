@@ -18,9 +18,9 @@
 
 package com.pingcap.tikv.txn;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
 import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class Lock {
   private static final long DEFAULT_LOCK_TTL = 3000;

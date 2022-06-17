@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiBatchWriteException;
@@ -38,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Metapb;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 /**
  * see funcionts `keepAlive` `close` `sendTxnHeartBeat` in

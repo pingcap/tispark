@@ -18,11 +18,6 @@ package com.pingcap.tikv.util;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.exception.TiKVException;
-import io.grpc.ManagedChannel;
-import io.grpc.netty.GrpcSslContexts;
-import io.grpc.netty.NettyChannelBuilder;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 import java.io.File;
 import java.io.FileInputStream;
 import java.net.URI;
@@ -42,6 +37,11 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.shade.io.grpc.ManagedChannel;
+import org.tikv.shade.io.grpc.netty.GrpcSslContexts;
+import org.tikv.shade.io.grpc.netty.NettyChannelBuilder;
+import org.tikv.shade.io.netty.handler.ssl.SslContext;
+import org.tikv.shade.io.netty.handler.ssl.SslContextBuilder;
 
 public class ChannelFactory implements AutoCloseable {
   private static final Logger logger = LoggerFactory.getLogger(ChannelFactory.class);

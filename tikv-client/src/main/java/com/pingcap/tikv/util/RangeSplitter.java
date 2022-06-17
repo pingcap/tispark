@@ -21,7 +21,6 @@ import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
 import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.pd.PDUtils;
@@ -40,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Metapb;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class RangeSplitter {
   private final RegionManager regionManager;

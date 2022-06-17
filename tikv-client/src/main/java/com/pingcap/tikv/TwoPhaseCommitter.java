@@ -19,7 +19,6 @@ package com.pingcap.tikv;
 import static com.pingcap.tikv.util.ClientUtils.groupKeysByRegion;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiBatchWriteException;
@@ -48,6 +47,7 @@ import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.Op;
 import org.tikv.kvproto.Metapb;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class TwoPhaseCommitter {
 

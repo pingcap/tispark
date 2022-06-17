@@ -17,10 +17,10 @@
 package com.pingcap.tikv.codec;
 
 import com.google.common.primitives.UnsignedBytes;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.TextFormat;
 import com.pingcap.tikv.key.Key;
 import org.tikv.kvproto.Coprocessor;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class KeyUtils {
 

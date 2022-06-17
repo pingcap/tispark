@@ -16,8 +16,8 @@
 
 package com.pingcap.tikv;
 
-import static io.grpc.stub.ClientCalls.asyncBidiStreamingCall;
-import static io.grpc.stub.ClientCalls.blockingServerStreamingCall;
+import static org.tikv.shade.io.grpc.stub.ClientCalls.asyncBidiStreamingCall;
+import static org.tikv.shade.io.grpc.stub.ClientCalls.blockingServerStreamingCall;
 
 import com.pingcap.tikv.operation.ErrorHandler;
 import com.pingcap.tikv.policy.RetryMaxMs.Builder;
@@ -27,21 +27,21 @@ import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import io.grpc.ManagedChannel;
-import io.grpc.MethodDescriptor;
-import io.grpc.health.v1.HealthCheckRequest;
-import io.grpc.health.v1.HealthCheckResponse;
-import io.grpc.health.v1.HealthGrpc;
-import io.grpc.stub.AbstractStub;
-import io.grpc.stub.ClientCalls;
-import io.grpc.stub.StreamObserver;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.shade.io.grpc.ManagedChannel;
+import org.tikv.shade.io.grpc.MethodDescriptor;
+import org.tikv.shade.io.grpc.health.v1.HealthCheckRequest;
+import org.tikv.shade.io.grpc.health.v1.HealthCheckResponse;
+import org.tikv.shade.io.grpc.health.v1.HealthGrpc;
+import org.tikv.shade.io.grpc.stub.AbstractStub;
+import org.tikv.shade.io.grpc.stub.ClientCalls;
+import org.tikv.shade.io.grpc.stub.StreamObserver;
 
 public abstract class AbstractGRPCClient<
-    // FutureStubT extends AbstractFutureStub<FutureStubT>
+        // FutureStubT extends AbstractFutureStub<FutureStubT>
         BlockingStubT extends AbstractStub<BlockingStubT>, StubT extends AbstractStub<StubT>>
     implements AutoCloseable {
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());

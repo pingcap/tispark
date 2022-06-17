@@ -19,7 +19,6 @@ package com.pingcap.tikv;
 import static com.pingcap.tikv.util.ClientUtils.groupKeysByRegion;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.TiKVException;
@@ -45,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Metapb;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class TiSession implements AutoCloseable {
   private static final Logger logger = LoggerFactory.getLogger(TiSession.class);
