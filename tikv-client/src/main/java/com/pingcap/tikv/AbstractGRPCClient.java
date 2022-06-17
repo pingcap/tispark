@@ -41,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public abstract class AbstractGRPCClient<
+    // FutureStubT extends AbstractFutureStub<FutureStubT>
         BlockingStubT extends AbstractStub<BlockingStubT>, StubT extends AbstractStub<StubT>>
     implements AutoCloseable {
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -48,6 +49,7 @@ public abstract class AbstractGRPCClient<
   protected TiConfiguration conf;
   protected BlockingStubT blockingStub;
   protected StubT asyncStub;
+  //  protected FutureStubT asyncStub;
   protected long timeout;
 
   protected AbstractGRPCClient(TiConfiguration conf, ChannelFactory channelFactory) {
