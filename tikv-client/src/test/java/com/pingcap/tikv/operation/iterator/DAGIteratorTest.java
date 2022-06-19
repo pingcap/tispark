@@ -19,7 +19,6 @@ package com.pingcap.tikv.operation.iterator;
 import static junit.framework.TestCase.assertEquals;
 
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.GrpcUtils;
 import com.pingcap.tikv.KVMockServer;
 import com.pingcap.tikv.MockServerTest;
@@ -42,6 +41,7 @@ import org.junit.Test;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Metapb;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class DAGIteratorTest extends MockServerTest {
 

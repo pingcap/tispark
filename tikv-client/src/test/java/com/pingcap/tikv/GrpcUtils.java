@@ -17,7 +17,6 @@
 package com.pingcap.tikv;
 
 import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import java.util.Arrays;
@@ -34,6 +33,7 @@ import org.tikv.kvproto.Pdpb.Member;
 import org.tikv.kvproto.Pdpb.ResponseHeader;
 import org.tikv.kvproto.Pdpb.Timestamp;
 import org.tikv.kvproto.Pdpb.TsoResponse;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class GrpcUtils {
   private static ResponseHeader makeDefaultHeader(long clusterId) {

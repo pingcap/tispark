@@ -20,7 +20,6 @@ package com.pingcap.tikv.operation;
 
 import static org.junit.Assert.assertEquals;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.RowMeta;
 import com.pingcap.tikv.codec.CodecDataInput;
@@ -34,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class ChunkIteratorTest {
   private final List<Chunk> chunks = new ArrayList<>();

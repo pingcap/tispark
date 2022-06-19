@@ -20,7 +20,6 @@ import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertTrue;
 import static junit.framework.TestCase.fail;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.StoreVersion;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
@@ -47,6 +46,7 @@ import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.Mutation;
 import org.tikv.kvproto.Kvrpcpb.Op;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 abstract class LockResolverTest {
   protected static final long LARGE_LOCK_TTL = BackOffer.GET_MAX_BACKOFF + 2 * 1000;
@@ -371,7 +371,8 @@ abstract class LockResolverTest {
     try {
       RegionStoreClient client = getRegionStoreClient(key);
       BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(CHECK_TTL_BACKOFF);
-      // In SI mode, a lock <key, value2> is read. Try resolve it, but failed, cause TTL not
+      // In SI mode, a lock <key, value2> is read. Try resolve it, but failed, cause
+      // TTL not
       // expires.
       client.get(backOffer, ByteString.copyFromUtf8(key), session.getTimestamp().getVersion());
       fail();

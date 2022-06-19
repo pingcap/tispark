@@ -20,7 +20,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.Pair;
@@ -30,6 +29,7 @@ import org.junit.Test;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.Metapb.StoreState;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class RegionManagerTest extends PDMockServerTest {
   private RegionManager mgr;
