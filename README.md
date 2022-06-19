@@ -1,8 +1,6 @@
 # TiSpark
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.pingcap.tispark/tispark-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.pingcap.tispark/tispark-core)
-[![Javadocs](http://javadoc.io/badge/com.pingcap.tispark/tispark-core.svg)](http://javadoc.io/doc/com.pingcap.tispark/tispark-core)
-[![codecov.io](https://codecov.io/gh/pingcap/tispark/coverage.svg?branch=master)](https://codecov.io/gh/pingcap/tispark?branch=master)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.pingcap.tispark/tispark-parent/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.pingcap.tispark/tispark-parent)
 [![License](https://img.shields.io/github/license/pingcap/tispark.svg)](https://github.com/pingcap/tispark/blob/master/LICENSE)
 
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer complex OLAP queries. It enjoys the merits of both the Spark platform and the distributed clusters of TiKV while seamlessly integrated to TiDB, a distributed OLTP database, to provide one-stop Hybrid Transactional/Analytical Processing (HTAP) solutions for online transactions and analyses.
@@ -34,13 +32,13 @@ Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](http
 
 ## Feature Support
 
-| Feature Support                   | TiSpark 2.4.x | TiSpark 2.5.x | TiSpark master |
-| --------------------------------- |---------------|---------------|----------------|
-| SQL select without tidb_catalog   | &#10004;      | &#10004;      |                |
-| SQL select with tidb_catalog      |               | &#10004;      | &#10004;       |
-| SQL delete from with tidb_catalog |               |               | &#10004;       |
-| DataFrame append                  | &#10004;      | &#10004;      | &#10004;       |
-| DataFrame reads                   | &#10004;      | &#10004;      | &#10004;       |
+| Feature Support                   | TiSpark 2.4.x | TiSpark 2.5.x | TiSpark 3.0.x  | TiSpark master |
+| --------------------------------- |---------------|---------------|----------------|-----------------
+| SQL select without tidb_catalog   | &#10004;      | &#10004;      |                |                |
+| SQL select with tidb_catalog      |               | &#10004;      | &#10004;       | &#10004;       |
+| SQL delete from with tidb_catalog |               |               | &#10004;       | &#10004;       |
+| DataFrame append                  | &#10004;      | &#10004;      | &#10004;       | &#10004;       |
+| DataFrame reads                   | &#10004;      | &#10004;      | &#10004;       | &#10004;       |
 
 see [here](https://github.com/pingcap/tispark/wiki/Feature-Support-Detail) for more detail.
 
