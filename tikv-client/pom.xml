@@ -255,26 +255,6 @@
                             <outputDirectory>${proto.folder}</outputDirectory>
                             <resources>
                                 <resource>
-                                    <directory>${basedir}/kvproto/include</directory>
-                                    <includes>
-                                        <include>**/gogoproto/**</include>
-                                    </includes>
-                                </resource>
-                                <resource>
-                                    <directory>${basedir}/kvproto/include</directory>
-                                    <includes>
-                                        <include>*.proto</include>
-                                    </includes>
-                                </resource>
-                                <resource>
-                                    <directory>${basedir}/kvproto/proto</directory>
-                                    <filtering>true</filtering>
-                                </resource>
-                                <resource>
-                                    <directory>${basedir}/raft-rs/proto/proto</directory>
-                                    <filtering>true</filtering>
-                                </resource>
-                                <resource>
                                     <directory>${basedir}/tipb/proto</directory>
                                     <filtering>true</filtering>
                                 </resource>

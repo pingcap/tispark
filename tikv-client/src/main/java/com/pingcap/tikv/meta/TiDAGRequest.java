@@ -367,11 +367,11 @@ public class TiDAGRequest implements Serializable {
 
       indexScanBuilder.setTableId(id).setIndexId(indexInfo.getId());
 
-      if (tableInfo.isCommonHandle()) {
-        for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
-          indexScanBuilder.addPrimaryColumnIds(tableInfo.getColumn(col.getName()).getId());
-        }
-      }
+      //      if (tableInfo.isCommonHandle()) {
+      //        for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
+      //          indexScanBuilder.addPrimaryColumnIds(tableInfo.getColumn(col.getName()).getId());
+      //        }
+      //      }
 
       dagRequestBuilder.addExecutors(executorBuilder.setIdxScan(indexScanBuilder).build());
     } else {
@@ -379,11 +379,11 @@ public class TiDAGRequest implements Serializable {
       executorBuilder.setTp(ExecType.TypeTableScan);
       tblScanBuilder.setTableId(id);
 
-      if (tableInfo.isCommonHandle()) {
-        for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
-          tblScanBuilder.addPrimaryColumnIds(tableInfo.getColumn(col.getName()).getId());
-        }
-      }
+      //      if (tableInfo.isCommonHandle()) {
+      //        for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
+      //          tblScanBuilder.addPrimaryColumnIds(tableInfo.getColumn(col.getName()).getId());
+      //        }
+      //      }
 
       // Step1. Add columns to first executor
       int lastOffset = 0;

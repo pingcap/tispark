@@ -24,9 +24,6 @@ import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.region.TiRegion;
-import io.grpc.Server;
-import io.grpc.ServerBuilder;
-import io.grpc.Status;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.*;
@@ -38,8 +35,13 @@ import org.tikv.kvproto.Errorpb.NotLeader;
 import org.tikv.kvproto.Errorpb.ServerIsBusy;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.Context;
+import org.tikv.kvproto.Kvrpcpb.RawGetResponse;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.shade.com.google.protobuf.ByteString;
+import org.tikv.shade.io.grpc.Server;
+import org.tikv.shade.io.grpc.ServerBuilder;
+import org.tikv.shade.io.grpc.Status;
+import org.tikv.shade.io.grpc.stub.StreamObserver;
 
 public class KVMockServer extends TikvGrpc.TikvImplBase {
 
@@ -102,7 +104,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   @Override
   public void rawGet(
       org.tikv.kvproto.Kvrpcpb.RawGetRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.RawGetResponse> responseObserver) {
+      StreamObserver<RawGetResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       ByteString key = request.getKey();
@@ -126,7 +128,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   /** */
   public void rawPut(
       org.tikv.kvproto.Kvrpcpb.RawPutRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.RawPutResponse> responseObserver) {
+      StreamObserver<org.tikv.kvproto.Kvrpcpb.RawPutResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       ByteString key = request.getKey();
@@ -169,7 +171,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   /** */
   public void rawDelete(
       org.tikv.kvproto.Kvrpcpb.RawDeleteRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.RawDeleteResponse> responseObserver) {
+      StreamObserver<org.tikv.kvproto.Kvrpcpb.RawDeleteResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       ByteString key = request.getKey();
@@ -191,7 +193,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   @Override
   public void kvGet(
       org.tikv.kvproto.Kvrpcpb.GetRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.GetResponse> responseObserver) {
+      StreamObserver<org.tikv.kvproto.Kvrpcpb.GetResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       if (request.getVersion() == 0) {
@@ -223,7 +225,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   @Override
   public void kvScan(
       org.tikv.kvproto.Kvrpcpb.ScanRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.ScanResponse> responseObserver) {
+      StreamObserver<org.tikv.kvproto.Kvrpcpb.ScanResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       if (request.getVersion() == 0) {
@@ -264,7 +266,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   @Override
   public void kvBatchGet(
       org.tikv.kvproto.Kvrpcpb.BatchGetRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.BatchGetResponse> responseObserver) {
+      StreamObserver<org.tikv.kvproto.Kvrpcpb.BatchGetResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       if (request.getVersion() == 0) {
@@ -299,7 +301,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   @Override
   public void coprocessor(
       org.tikv.kvproto.Coprocessor.Request requestWrap,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Coprocessor.Response> responseObserver) {
+      StreamObserver<org.tikv.kvproto.Coprocessor.Response> responseObserver) {
     try {
       verifyContext(requestWrap.getContext());
 
@@ -347,7 +349,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   @Override
   public void kvPrewrite(
       org.tikv.kvproto.Kvrpcpb.PrewriteRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.PrewriteResponse> responseObserver) {
+      StreamObserver<org.tikv.kvproto.Kvrpcpb.PrewriteResponse> responseObserver) {
     Kvrpcpb.PrewriteResponse.Builder builder = Kvrpcpb.PrewriteResponse.newBuilder();
     ByteString key = request.getPrimaryLock();
     Integer errorCode = errorMap.remove(key);

@@ -371,8 +371,7 @@ abstract class LockResolverTest {
     try {
       RegionStoreClient client = getRegionStoreClient(key);
       BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(CHECK_TTL_BACKOFF);
-      // In SI mode, a lock <key, value2> is read. Try resolve it, but failed, cause
-      // TTL not
+      // In SI mode, a lock <key, value2> is read. Try resolve it, but failed, cause TTL not
       // expires.
       client.get(backOffer, ByteString.copyFromUtf8(key), session.getTimestamp().getVersion());
       fail();
