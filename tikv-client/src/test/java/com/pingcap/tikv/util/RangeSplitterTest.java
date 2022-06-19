@@ -20,7 +20,6 @@ import static com.pingcap.tikv.GrpcUtils.encodeKey;
 import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.key.Handle;
@@ -42,6 +41,7 @@ import org.tikv.kvproto.Kvrpcpb.CommandPri;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Peer;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class RangeSplitterTest {
   private static KeyRange keyRange(Long s, Long e) {
@@ -165,7 +165,7 @@ public class RangeSplitterTest {
                 keyRangeByHandle(tableId, 10L, Status.GREATER, 50L, Status.EQUAL),
                 keyRangeByHandle(tableId, 50L, Status.EQUAL, 100L, Status.GREATER),
                 keyRangeByHandle(tableId, 100L, Status.GREATER, 9000L, Status.LESS),
-                keyRangeByHandle(tableId, 0x2300L /*8960*/, Status.LESS, 16000L, Status.EQUAL),
+                keyRangeByHandle(tableId, 0x2300L /* 8960 */, Status.LESS, 16000L, Status.EQUAL),
                 keyRangeByHandle(tableId, 16000L, Status.EQUAL, null, Status.EQUAL)));
 
     RangeSplitter s = RangeSplitter.newSplitter(mgr);
@@ -256,7 +256,7 @@ public class RangeSplitterTest {
                 keyRangeByHandle(tableId, 10L, Status.GREATER, 50L, Status.EQUAL),
                 keyRangeByHandle(tableId, 50L, Status.EQUAL, 100L, Status.GREATER),
                 keyRangeByHandle(tableId, 100L, Status.GREATER, 9000L, Status.LESS),
-                keyRangeByHandle(tableId, 0x2300L /*8960*/, Status.LESS, 16000L, Status.EQUAL),
+                keyRangeByHandle(tableId, 0x2300L /* 8960 */, Status.LESS, 16000L, Status.EQUAL),
                 keyRangeByHandle(tableId, 16000L, Status.EQUAL, null, Status.EQUAL)));
 
     TLongObjectHashMap<List<Handle>> result = new TLongObjectHashMap<>();

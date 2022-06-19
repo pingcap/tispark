@@ -16,13 +16,13 @@
 
 package com.pingcap.tikv.txn.type;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.Pair;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.tikv.kvproto.Metapb;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class GroupKeyResult {
 

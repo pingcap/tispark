@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Expr;
 import com.pingcap.tikv.expression.AggregateFunction;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
@@ -43,6 +42,7 @@ import java.util.Map;
 import org.junit.Test;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Coprocessor;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class TiDAGRequestTest {
   private static TiTableInfo createTable() {

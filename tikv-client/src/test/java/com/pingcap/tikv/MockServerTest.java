@@ -16,12 +16,12 @@
 
 package com.pingcap.tikv;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.region.TiRegion;
 import java.io.IOException;
 import org.junit.Before;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Pdpb;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class MockServerTest extends PDMockServerTest {
   public KVMockServer server;
