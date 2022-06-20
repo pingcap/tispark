@@ -1,6 +1,6 @@
 # TiSpark Design Documents
 
-- Author(s): [Author Name](http://github.com/your-github-id), [Co-Author Name](http://github.com/your-github-id), ...
+- Author(s): [qidi1](https://github.com/qidi1)
 - Tracking Issue: https://github.com/pingcap/tispark/issues/2385
 
 ## Table of Contents
@@ -12,7 +12,15 @@
 
 ## Introduction
 
-The physical plan is the physical execution plan in TiSpark. When we use explain in Spark which run with TiSpark, The process of physical plan will be displayed in the terminal if we use `explain` in Spark which run with TiSpark. The current physical plan which is  displayed in the terminal has problems such as outputting multiple filters  which not should show together in the same time,unclear representation of the execution process and obscure push-down conditions. The displayed of physical plan need to be improved. 
+The physical plan is the physical execution plan in TiSpark. When we use explain in Spark which run with TiSpark, The process of physical plan will be displayed in the terminal .but now this display about how the plan execute has some problem.
+
+* outputting multiple filters  which not should show together in the same time
+
+* unclear representation of the execution process
+
+* obscure push-down conditions.
+
+The displayed of physical plan need to be improved.
 
 ## Motivation or Background
 
@@ -118,101 +126,144 @@ In the original design, Residual Filter represents operators that cannot be down
    +- TiKV CoprocessorRDD{[table: t2] CoveringIndexScan[Index: primary(a,b)] , Columns: a@UNSIGNED LONG, b@VARCHAR(255), Residual Filter: [b@VARCHAR(255) GREATER_THAN "aa"], PushDown Filter: [b@VARCHAR(255) GREATER_THAN "aa"], KeyRange: [([t\200\000\000\000\000\000\005z_i\200\000\000\000\000\000\000\001\000], [t\200\000\000\000\000\000\005z_i\200\000\000\000\000\000\000\001\372])], Aggregates: , startTs: 433789855560368130}
    ```
 
-
 ## Detailed Design
 
-### Table Scan:
+### Design Overview
+
+* **TableRangeScan**: Table scans with the specified range, We consider full table scan as a special case of TableRangeScan, so full table scan is also called TableRangeScan
+
+* **TableRowIDScan**: Scans the table data based on the RowID. Usually follows an index read operation to retrieve the matching data rows.
+
+* **IndexRangeScan**: Index scans with the specified range.We consider full index scan as a special case of IndexRangeScan, so full index scan is also called IndexRangeScan
+
+* **RangeFilter**: RangeFilter indicates which conditions the range is made up of. If RangeFilter is empty, it indicates a full table scan or full index scan.RangeFilter generally appears when the query involves an index range，When selection sql The expressions in the RangeFilter form the scanned range from left to right.
+
+  For Example
+
+  ```sql
+  CREATE TABLE `t3` (
+    `a` BIGINT(20) NOT NULL,
+    `b` varchar(255) NOT NULL,
+    `c` varchar(255) DEFAULT NULL,
+    PRIMARY KEY (a,b) clustered
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+  ```
+
+  ```sql
+  SELECT * FROM t3 where a=0,b>'aa'
+  ```
+
+  The RangeFilter will be `{a=0,b>'aa'}`,Range will be `{t_0 _aa ,t__0_inf}`.
+
+### Output we expect
+#### Table Scan:
 
 * Add TableRangeScan;
-* Remove  Residual Filter 
+* Remove  Residual Filter
 * Renamed PushDown Filter to Selection;
 * Add RangeFliter indicating which conditions are used to build Range.If RangeFilter is empty, it means the scan range is all, otherwise the scan range consists of the conditions in RangeFilter.
 
 ```SQL
 CREATE TABLE `t1` (
-  `a` BIGINT(20) UNSIGNED  NOT NULL,
+  `a` BIGINT(20) NOT NULL,
   `b` varchar(255) NOT NULL,
   `c` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
 ```
 
 ```sql
-SELECT * FROM t1 where a>9223372036854775807
+SELECT * FROM t1 where a>0
 ```
 
 **Before:**
-
-
-
-**After:**
 
 ```
 == Physical Plan ==
 *(1) ColumnarToRow
-+- TiKV CoprocessorRDD{[table: t1] TableScan, Columns: a@UNSIGNED LONG, b@VARCHAR(255), c@VARCHAR(255): { TableRangeScan: { KeyRange: { RangeFliter: {}, Range: [([t\200\000\000\000\000\000\000\200_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\000\200_s\000\000\000\000\000\000\000\000])], Selection: [a@UNSIGNED LONG GREATER_THAN 9223372036854775807] } }, startTs: 433926806617194497}
++- TiKV CoprocessorRDD{[table: t1] TableScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255), Residual Filter: [a@LONG GREATER_THAN 0], PushDown Filter: [a@LONG GREATER_THAN 0], KeyRange: [([t\200\000\000\000\000\000\002\376_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\002\376_s\000\000\000\000\000\000\000\000])], startTs: 433995142104612867}
 ```
-
-```sql
-CREATE TABLE `t3` (
-  `a` BIGINT(20) UNSIGNED NOT NULL,
-  `b` varchar(255) NOT NULL,
-  `c` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`a`) clustered
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
-```
-
-```sql
-SELECT * FROM t3 where a>9223372036854775807
-```
-
-**Before:**
-
-
 
 **After:**
 
 ```
 = Physical Plan ==
 *(1) ColumnarToRow
-+- TiKV CoprocessorRDD{[table: t3] TableScan, Columns: a@UNSIGNED LONG, b@VARCHAR(255), c@VARCHAR(255): { TableRangeScan: { KeyRange: { RangeFliter: {[a@UNSIGNED LONG GREATER_THAN 9223372036854775807], [a@UNSIGNED LONG GREATER_THAN 9223372036854775807]}, Range: [([t\200\000\000\000\000\000\000\237_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\000\237_r\200\000\000\000\000\000\000\000])] } }, startTs: 433927358731517954}
++- TiKV CoprocessorRDD{[table: t1] TableScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): { TableRangeScan: { KeyRange: { RangeFliter: {}, Range: [([t\200\000\000\000\000\000\003A_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\003A_s\000\000\000\000\000\000\000\000])], Selection: [a@LONG GREATER_THAN 0] } }, startTs: 433995460281892865}
 ```
 
-### IndexScan:
 
-* The Downgrade Filter on RegionTaskExec is retained.
-* The output IndexScan of FetchHandleRDD is further refined to IndexRangeScan and TableRowIDScan, indicating that after the IndexScan there is a TableScan for the RowID is scanned after IndexScan.
-* Delete the original Downgrade Fliter content and add Selection to indicate the Selection condition executed in the normal execution process. 
-* Add the description information of Index.
-* Add RangeFliter in Range, indicating which conditions are used to build Range.If RangeFilter is empty, it means the scan range is all, otherwise the scan range consists of the conditions in RangeFilter.
 
-``` sql
-CREATE TABLE `t2` (
-  `a` BIGINT(20) UNSIGNED  NOT NULL,
+```sql
+CREATE TABLE `t3` (
+  `a` BIGINT(20) NOT NULL,
   `b` varchar(255) NOT NULL,
   `c` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`a`,`b`)
+  PRIMARY KEY (a) clustered
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
 ```
 
-```SQL
-SELECT * FROM t2 where a>9223372036854775807 and b>'aa'
+```sql
+SELECT * FROM t3 where a>0
 ```
 
 **Before:**
 
-
+```
+== Physical Plan ==
+*(1) ColumnarToRow
++- TiKV CoprocessorRDD{[table: t3] TableScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255), KeyRange: [([t\200\000\000\000\000\000\003\022_r\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\003\022_s\000\000\000\000\000\000\000\000])], startTs: 433995273490923521}
+```
 
 **After:**
 
 ```
 == Physical Plan ==
 *(1) ColumnarToRow
-+- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[[b@VARCHAR(255) GREATER_THAN "aa"], [a@UNSIGNED LONG GREATER_THAN 9223372036854775807]]
-   +- RowToColumnar
-      +- TiKV FetchHandleRDD{[table: t2] IndexScan, Columns: a@UNSIGNED LONG, b@VARCHAR(255), c@VARCHAR(255): { IndexRangeScan: [Index: primary (a,b)]: { KeyRange: { RangeFliter: {[a@UNSIGNED LONG GREATER_THAN 9223372036854775807]}, Range: [([t\200\000\000\000\000\000\000\213_i\200\000\000\000\000\000\000\001\004\200\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\000\213_i\200\000\000\000\000\000\000\001\372])], Selection: [b@VARCHAR(255) GREATER_THAN "aa"] }, TableRowIDScan:{ Selection: [b@VARCHAR(255) GREATER_THAN "aa"] } }, startTs: 433926839385194497}
++- TiKV CoprocessorRDD{[table: t3] TableScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): { TableRangeScan: { KeyRange: { RangeFliter: {[a@LONG GREATER_THAN 0]}, Range: [([t\200\000\000\000\000\000\003U_r\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\003U_s\000\000\000\000\000\000\000\000])] } }, startTs: 433995476849393665}
 ```
 
-### CoveringIndexScan
+#### IndexScan:
+
+* The Downgrade Filter on RegionTaskExec is retained.
+* The output IndexScan of FetchHandleRDD is further refined to IndexRangeScan and TableRowIDScan, indicating that after the IndexScan there is a TableScan for the RowID is scanned after IndexScan.
+* Delete the original Downgrade Fliter content and add Selection to indicate the Selection condition executed in the normal execution process.
+* Add the description information of Index.
+* Add RangeFliter in Range, indicating which conditions are used to build Range.If RangeFilter is empty, it means the scan range is all, otherwise the scan range consists of the conditions in RangeFilter.
+
+``` sql
+CREATE TABLE `t2` (
+  `a` BIGINT(20) NOT NULL,
+  `b` varchar(255) NOT NULL,
+  `c` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`a`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+```
+
+```SQL
+SELECT * FROM t2 where a>0
+```
+
+**Before:**
+
+```
+== Physical Plan ==
+*(1) ColumnarToRow
++- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[]
+   +- RowToColumnar
+      +- TiKV FetchHandleRDD{[table: t2] IndexScan[Index: primary] , Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255), Downgrade Filter: [a@LONG GREATER_THAN 0], KeyRange: [([t\200\000\000\000\000\000\003 _i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\003 _i\200\000\000\000\000\000\000\001\372])], startTs: 433995306940497921}
+```
+
+**After:**
+
+```
+== Physical Plan ==
+*(1) ColumnarToRow
++- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[]
+   +- RowToColumnar
+      +- TiKV FetchHandleRDD{[table: t2] IndexScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): { IndexRangeScan: [Index: primary (a)]: { KeyRange: { RangeFliter: {[a@LONG GREATER_THAN 0]}, Range: [([t\200\000\000\000\000\000\003s_i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\003s_i\200\000\000\000\000\000\000\001\372])] }, TableRowIDScan:{  } }, startTs: 433995556016619522}
+```
+
+#### CoveringIndexScan
 
 * Remove Residual Filter
 * Rename PushDown Filter to Selection.
@@ -229,178 +280,277 @@ CREATE TABLE `t2` (
 ```
 
 ```SQL 
-SELECT a FROM t2 where a>9223372036854775807 and b>'aa'
+SELECT a,b FROM t2 where a>0 and b>'aa'
 ```
 
 **Before:**
 
-
+```
+== Physical Plan ==
+*(1) ColumnarToRow
++- TiKV CoprocessorRDD{[table: t2] CoveringIndexScan[Index: primary] , Columns: a@LONG, b@VARCHAR(255), Residual Filter: [b@VARCHAR(255) GREATER_THAN "aa"], PushDown Filter: [b@VARCHAR(255) GREATER_THAN "aa"], KeyRange: [([t\200\000\000\000\000\000\0033_i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\0033_i\200\000\000\000\000\000\000\001\372])], startTs: 433995356695429121}
+```
 
 **After:**
 
 ```
 == Physical Plan ==
-*(1) Project [a#163]
-+- *(1) ColumnarToRow
-   +- TiKV CoprocessorRDD{[table: t2] CoveringIndexScan, Columns: a@UNSIGNED LONG, b@VARCHAR(255): { IndexRangeScan: [Index: primary (a,b)]: { KeyRange: { RangeFliter: {[a@UNSIGNED LONG GREATER_THAN 9223372036854775807], [a@UNSIGNED LONG GREATER_THAN 9223372036854775807]}, Range: [([t\200\000\000\000\000\000\000\224_i\200\000\000\000\000\000\000\001\004\200\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\000\224_i\200\000\000\000\000\000\000\001\372])], Selection: [b@VARCHAR(255) GREATER_THAN "aa"] } }, startTs: 433926993158864898}
+*(1) ColumnarToRow
++- TiKV CoprocessorRDD{[table: t2] CoveringIndexScan, Columns: a@LONG, b@VARCHAR(255): { IndexRangeScan: [Index: primary (a,b)]: { KeyRange: { RangeFliter: {[a@LONG GREATER_THAN 0]}, Range: [([t\200\000\000\000\000\000\003\223_i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\003\223_i\200\000\000\000\000\000\000\001\372])], Selection: [b@VARCHAR(255) GREATER_THAN "aa"] } }, startTs: 433995598326923265}
 ```
+
+### Code Design
+
+1. We first determine the type of Scan, and here we will classify the Scan into three types
+
+   * Scan on Index first, then on Table, called IndexScan.
+
+   * Scan only for Index, called CoveringIndexScan.
+
+   * Scan for Table only, called TableScan.
+
+   For Scan type CoveringIndexScan and IndexScan set isIndexScan to true.
+
+   ```java
+    switch (getIndexScanType()) {
+      case INDEX_SCAN:
+        sb.append("IndexScan");
+        isIndexScan = true;
+        break;
+      case COVERING_INDEX_SCAN:
+        sb.append("CoveringIndexScan");
+        isIndexScan = true;
+        break;
+      case TABLE_SCAN:
+        sb.append("TableScan");
+    }
+   ```
+
+2. Get the columns in projection and predicates.
+
+   ```java
+    if (!getFields().isEmpty()) {
+         sb.append(", Columns: ");
+         Joiner.on(", ").skipNulls().appendTo(sb, getFields());
+       }
+   ```
+
+3. Handled separately according to whether isIndexScan is true or not
+
+   ```java
+      if (isIndexScan) {
+        sb.append(toIndexScanPhysicalPlan());
+      } else {
+        sb.append(toTableScanPhysicalPlan());
+      }
+   ```
+
+   * `toTableScanPhysicalPlan:`
+
+     Call `buildTableScan`, then call `toPhysicalPlan`
+
+     ```java
+        sb.append("TableRangeScan");
+        sb.append(": {");
+        TiDAGRequest tableRangeScan = this.copy();
+        tableRangeScan.buildTableScan();
+        sb.append(tableRangeScan.toPhysicalPlan());
+     ```
+
+   * `toIndexScanPhysicalPlan:`
+
+      * First process `IndexRangeScan`, add the information of index scanned by `IndexRangeScan`, call `buildIndexScan`,then call `toPhysicalPlan`.
+      * if it is` DoubleRead`, add `TableRowIDScan`. first call `buildTableScan`, then call `toPhysicalPlan`.
+
+     ```java
+         sb.append("IndexRangeScan: ");
+         sb.append(index.colNames);
+         ...
+         TiDAGRequest indexRangeScan = this.copy();
+         indexRangeScan.buildIndexScan();
+         sb.append(indexRangeScan.toPhysicalPlan());
+         if (isDoubleRead()) {
+           sb.append(", TableRowIDScan:");
+           TiDAGRequest tableRowIDScan = this.copy();
+           tableRowIDScan.resetRanges();
+           tableRowIDScan.buildTableScan();
+           sb.append(tableRowIDScan.toPhysicalPlan());
+         }
+     ```
+
+   * toPhysicalPlan
+
+     Return `Range`, `Filters`, `Aggregates`, `GroupBy`, `OrderBy`,`Limit`, etc. to String.
+
+     ```java
+     if (!getRangesMaps().isEmpty()) {
+          sb.append(getRangeFliter())
+          sb.append(getRangesMaps())
+     }
+     if (!getPushDownFilters().isEmpty()) {
+         sb.append(getPushDownFilters())
+     }
+     if(!getPushDownAggregates().isEmpty()){
+         sb.append(getPushDownAggregates())
+     }
+     if (!getGroupByItems().isEmpty()) {
+          sb.append(getGroupByItems())
+     }
+     if (!getOrderByItems().isEmpty()) {
+         sb.append(getOrderByItems())
+     }
+     if (getLimit() != 0) {
+         sb.append(getLimit())
+     }
+     ```
 
 ## Test Design
 
-### TableScan
-
-1. Full Table Scan with Selection
+1. Table without cluster index
 
    ```SQL
    CREATE TABLE `t1` (
-     `a` BIGINT(20) UNSIGNED  NOT NULL,
+     `a` BIGINT(20) NOT NULL,
      `b` varchar(255) NOT NULL,
      `c` varchar(255) DEFAULT NULL
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-   ```SQL
-   SELECT * FROM t1 where a>9223372036854775807
+   ```sql
+   SELECT * FROM t1 where a>0 and b > 'aa'
    ```
 
-2. Range Table Scan with Selection
+2. Table with cluster index
 
-   ```SQL
+   ```sql
    CREATE TABLE `t1` (
-     `a` BIGINT(20) UNSIGNED NOT NULL,
+     `a` BIGINT(20) NOT NULL,
      `b` varchar(255) NOT NULL,
      `c` varchar(255) DEFAULT NULL,
      PRIMARY KEY (`a`) clustered
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-   ```SQL
-   SELECT * FROM t1 where a>9223372036854775807 and b > 'aa'
-   ```
-   
-3. prefix index scan
-   
    ```sql
-   CREATE TABLE `t3` (
-     `a` BIGINT(20) UNSIGNED NOT NULL,
+   SELECT * FROM t1 where a>0 and b > 'aa'
+   ```
+
+3. Table with cluster index and partition
+
+   ```sql
+   CREATE TABLE `t1` (
+     `a` BIGINT(20) NOT NULL,
      `b` varchar(255) NOT NULL,
      `c` varchar(255) DEFAULT NULL,
-     PRIMARY KEY (`a`(3)) clustered
+     PRIMARY KEY (a)
+   )PARTITION BY RANGE (a) (
+       PARTITION p0 VALUES LESS THAN (6),
+       PARTITION p1 VALUES LESS THAN (11),
+       PARTITION p2 VALUES LESS THAN (16),
+       PARTITION p3 VALUES LESS THAN MAXVALUE
+     )
+   ```
+
+   ```sql
+   SELECT a,b FROM t1 where a>0 and b>'aa'
+   ```
+
+4. Table with secondary index
+
+   ```sql
+   CREATE TABLE `t1` (
+   `a` BIGINT(20)  NOT NULL,
+   `b` varchar(255) NOT NULL,
+   `c` varchar(255) DEFAULT NULL,
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
-   
+   CREATE INDEX `testIndex` ON `t1` (`a`);
    ```
-   
+
    ```sql
-   SELECT * FROM t3 where a>9223372036854775807
+   SELECT * FROM t1 where a>0 and b > 'aa'
    ```
-   
-   Exception:
-   
-   ```
-   == Physical Plan ==
-   *(1) ColumnarToRow
-   +- TiKV CoprocessorRDD{[table: t3] TableScan, Columns: a@UNSIGNED LONG, b@VARCHAR(255), c@VARCHAR(255): { TableRangeScan: { KeyRange: { RangeFliter: {[a@UNSIGNED LONG GREATER_THAN 9223372036854775807]}, Range: [([t\200\000\000\000\000\000\001\233_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\001\233_r\200\000\000\000\000\000\000\000])] } }, startTs: 433943624491728897}
-   ```
-   
+
    ```sql
-   CREATE TABLE `t3` (
-     `a` BIGINT(20) UNSIGNED NOT NULL,
-     `b` varchar(255) NOT NULL,
-     `c` varchar(255) DEFAULT NULL,
-     PRIMARY KEY (`b`(4)) clustered
+   CREATE TABLE `t1` (
+   `a` BIGINT(20)  NOT NULL,
+   `b` varchar(255) NOT NULL,
+   `c` varchar(255) DEFAULT NULL,
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+   CREATE INDEX `testIndex` ON `t1` (`a`,`b`);
    ```
-   
-   ```sql
-   SELECT * FROM t3 where b>'aa'
-   ```
-   
-   Exception:
-   
-   ```
-   == Physical Plan ==
-   *(1) ColumnarToRow
-   +- TiKV CoprocessorRDD{[table: t3] TableScan, Columns: a@UNSIGNED LONG, b@VARCHAR(255), c@VARCHAR(255): { TableRangeScan: { KeyRange: { RangeFliter: {}, Range: [([t\200\000\000\000\000\000\001\343_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\001\343_s\000\000\000\000\000\000\000\000])], Selection: [b@VARCHAR(255) GREATER_THAN "aa"] } }, startTs: 433943812829085697}
-   ```
-   
-
-### IndexScan
-
-1. range index scan with selection
-
-     ```sql
-     CREATE TABLE `t1` (
-     `a` BIGINT(20) UNSIGNED  NOT NULL,
-     `b` varchar(255) NOT NULL,
-     `c` varchar(255) DEFAULT NULL,
-     PRIMARY KEY (`a`,`b`)
-       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
-     ```
-
-     ```sql
-     SELECT * FROM t1 where a>9223372036854775807 and b>'aa'        
-     ```
-
-     Exception:
-
-     ```
-     == Physical Plan ==
-     *(1) ColumnarToRow
-     +- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[[b@VARCHAR(255) GREATER_THAN "aa"], [a@UNSIGNED LONG GREATER_THAN 9223372036854775807]]
-        +- RowToColumnar
-           +- TiKV FetchHandleRDD{[table: t2] IndexScan, Columns: a@UNSIGNED LONG, b@VARCHAR(255), c@VARCHAR(255): { IndexRangeScan: [Index: primary (a,b)]: { KeyRange: { RangeFliter: {[a@UNSIGNED LONG GREATER_THAN 9223372036854775807]}, Range: [([t\200\000\000\000\000\000\001\220_i\200\000\000\000\000\000\000\001\004\200\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\001\220_i\200\000\000\000\000\000\000\001\372])], Selection: [b@VARCHAR(255) GREATER_THAN "aa"] }, TableRowIDScan:{ Selection: [b@VARCHAR(255) GREATER_THAN "aa"] } }, startTs: 433943524392304641}
-     ```
-
-2. prefix index scan with selection
 
    ```sql
-   CREATE TABLE `t2` (
-     `a` BIGINT(20) UNSIGNED  NOT NULL,
-     `b` varchar(255) NOT NULL,
-     `c` varchar(255) DEFAULT NULL,
-     PRIMARY KEY (`b`(1))
+   SELECT a,b FROM t1 where a>0 and b > 'aa'
+   ```
+
+5. Table with secondary prefix index
+
+   ```sql
+   CREATE TABLE `t1` (
+   `a` BIGINT(20)   NOT NULL,
+   `b` varchar(255) NOT NULL,
+   `c` varchar(255) DEFAULT NULL,
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+   CREATE INDEX `testIndex` ON `t1` (`b`(4));
    ```
 
    ```sql
-   SELECT * FROM t2 where b>'aa' and a>1
-   ```
-   
-   Exception:
-   
-   ```
-   == Physical Plan ==
-   *(1) ColumnarToRow
-   +- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[[b@VARCHAR(255) GREATER_THAN "aa"], [a@UNSIGNED LONG GREATER_THAN 1]]
-      +- RowToColumnar
-         +- TiKV FetchHandleRDD{[table: t2] IndexScan, Columns: a@UNSIGNED LONG, b@VARCHAR(255), c@VARCHAR(255): { IndexRangeScan: [Index: primary (b)]: { KeyRange: { RangeFliter: {[b@VARCHAR(255) GREATER_THAN "aa"]}, Range: [([t\200\000\000\000\000\000\001~_i\200\000\000\000\000\000\000\001\001a\000\000\000\000\000\000\000\370], [t\200\000\000\000\000\000\001~_i\200\000\000\000\000\000\000\001\372])] }, TableRowIDScan:{ Selection: [b@VARCHAR(255) GREATER_THAN "aa"], [a@UNSIGNED LONG GREATER_THAN 1] } }, startTs: 433943452984016897}
+   SELECT * FROM t1 where a>0 and b > 'aa'
    ```
 
-### CoveringIndexScan
 
-```sql
-CREATE TABLE `t2` (
-  `a` BIGINT(20) UNSIGNED  NOT NULL,
-  `b` varchar(255) NOT NULL,
-  `c` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`a`)
+      ```sql
+CREATE TABLE `t1` (
+`a` BIGINT(20)   NOT NULL,
+`b` varchar(255) NOT NULL,
+`c` varchar(255) DEFAULT NULL,
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+CREATE INDEX `testIndex` ON `t1` (`b`(4),a);
 ```
 
-```sql
-SELECT a FROM t2 where a=1
-```
+   ```sql
+   SELECT * FROM t1 where a>0 and b > 'aa'
+   ```
 
-Exception:
+6. Table with secondary index and partiton
 
-```
-== Physical Plan ==
-*(1) ColumnarToRow
-+- TiKV CoprocessorRDD{[table: t2] CoveringIndexScan, Columns: a@UNSIGNED LONG: { IndexRangeScan: [Index: primary (a)]: { KeyRange: { RangeFliter: {[a@UNSIGNED LONG EQUAL 1]}, Range: [([t\200\000\000\000\000\000\002\032_i\200\000\000\000\000\000\000\001\004\000\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\002\032_i\200\000\000\000\000\000\000\001\004\000\000\000\000\000\000\000\002])] } }, startTs: 433944223621840897}
-```
+   ```sql
+   CREATE TABLE `t1` (
+     `a` BIGINT(20) NOT NULL,
+     `b` varchar(255) NOT NULL,
+     `c` varchar(255) DEFAULT NULL,
+     PRIMARY KEY (a)
+   )PARTITION BY RANGE (a) (
+       PARTITION p0 VALUES LESS THAN (6),
+       PARTITION p1 VALUES LESS THAN (11),
+       PARTITION p2 VALUES LESS THAN (16),
+       PARTITION p3 VALUES LESS THAN MAXVALUE
+     )
+   CREATE INDEX `testIndex` ON `t1` (`b`);
+   ```
 
+   ```sql
+   SELECT * FROM t1 where a>0 and b > 'aa'
+   ```
 
+7. Table with secondary prefix index and partiton
 
-## References
+   ```sql
+   CREATE TABLE `t1` (
+     `a` BIGINT(20) NOT NULL,
+     `b` varchar(255) NOT NULL,
+     `c` varchar(255) DEFAULT NULL,
+     PRIMARY KEY (a)
+   )PARTITION BY RANGE (a) (
+       PARTITION p0 VALUES LESS THAN (6),
+       PARTITION p1 VALUES LESS THAN (11),
+       PARTITION p2 VALUES LESS THAN (16),
+       PARTITION p3 VALUES LESS THAN MAXVALUE
+     )
+   CREATE INDEX `testIndex` ON `t1` (`b`(4));
+   ```
 
-List the reference materials here.
+   ```sql
+   SELECT * FROM t1 where a>0 and b > 'aa'
+   ```
+   
