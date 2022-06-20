@@ -5,20 +5,20 @@
 
 ## Table of Contents
 
-* [Introduction](#introduction)
-* [Motivation or Background](#motivation-or-background)
-* [Detailed Design](#detailed-design)
-* [Test Design](#test-design)
+- [Introduction](#introduction)
+- [Motivation or Background](#motivation-or-background)
+- [Detailed Design](#detailed-design)
+- [Test Design](#test-design)
 
 ## Introduction
 
 The physical plan is the physical execution plan in TiSpark. When we use explain in Spark which run with TiSpark, The process of physical plan will be displayed in the terminal .but now this display about how the plan execute has some problem.
 
-* outputting multiple filters  which not should show together in the same time
+- outputting multiple filters  which not should show together in the same time
 
-* unclear representation of the execution process
+- unclear representation of the execution process.
 
-* obscure push-down conditions.
+- obscure push-down conditions.
 
 The displayed of physical plan need to be improved.
 
@@ -38,7 +38,7 @@ CoveringIndexScan is a special case of IndexScan. If the column in Fliter and th
 
 TableScan is different from IndexScan and CoveringIndexScan. TableScan only scan table data. such a scan we called TableRangeScan in the following.
 
-###   Fliter Concept
+### Fliter Concept
 
 #### PushDown Filter
 
@@ -95,7 +95,7 @@ In the original design, Residual Filter represents operators that cannot be down
    SELECT * FROM t2 where a<1 or b>'bb'"
    ```
 
-   ```
+   ```text
    == Physical Plan ==
    *(1) ColumnarToRow
    +- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[[[a@UNSIGNED LONG LESS_THAN 1] OR [b@VARCHAR(255) GREATER_THAN "bb"]]]
@@ -120,7 +120,7 @@ In the original design, Residual Filter represents operators that cannot be down
    SELECT a FROM t3 where a>0
    ```
 
-   ```
+   ```text
    == Physical Plan ==
    *(1) ColumnarToRow
    +- TiKV CoprocessorRDD{[table: t2] CoveringIndexScan[Index: primary(a,b)] , Columns: a@UNSIGNED LONG, b@VARCHAR(255), Residual Filter: [b@VARCHAR(255) GREATER_THAN "aa"], PushDown Filter: [b@VARCHAR(255) GREATER_THAN "aa"], KeyRange: [([t\200\000\000\000\000\000\005z_i\200\000\000\000\000\000\000\001\000], [t\200\000\000\000\000\000\005z_i\200\000\000\000\000\000\000\001\372])], Aggregates: , startTs: 433789855560368130}
@@ -130,13 +130,13 @@ In the original design, Residual Filter represents operators that cannot be down
 
 ### Design Overview
 
-* **TableRangeScan**: Table scans with the specified range, We consider full table scan as a special case of TableRangeScan, so full table scan is also called TableRangeScan
+- **TableRangeScan**: Table scans with the specified range, We consider full table scan as a special case of TableRangeScan, so full table scan is also called TableRangeScan
 
-* **TableRowIDScan**: Scans the table data based on the RowID. Usually follows an index read operation to retrieve the matching data rows.
+- **TableRowIDScan**: Scans the table data based on the RowID. Usually follows an index read operation to retrieve the matching data rows.
 
-* **IndexRangeScan**: Index scans with the specified range.We consider full index scan as a special case of IndexRangeScan, so full index scan is also called IndexRangeScan
+- **IndexRangeScan**: Index scans with the specified range.We consider full index scan as a special case of IndexRangeScan, so full index scan is also called IndexRangeScan
 
-* **RangeFilter**: RangeFilter indicates which conditions the range is made up of. If RangeFilter is empty, it indicates a full table scan or full index scan.RangeFilter generally appears when the query involves an index range，When selection sql The expressions in the RangeFilter form the scanned range from left to right.
+- **RangeFilter**: RangeFilter indicates which conditions the range is made up of. If RangeFilter is empty, it indicates a full table scan or full index scan.RangeFilter generally appears when the query involves an index range，When selection sql The expressions in the RangeFilter form the scanned range from left to right.
 
   For Example
 
@@ -156,12 +156,13 @@ In the original design, Residual Filter represents operators that cannot be down
   The RangeFilter will be `{a=0,b>'aa'}`,Range will be `{t_0 _aa ,t__0_inf}`.
 
 ### Output we expect
-#### Table Scan:
 
-* Add TableRangeScan;
-* Remove  Residual Filter
-* Renamed PushDown Filter to Selection;
-* Add RangeFliter indicating which conditions are used to build Range.
+#### Table Scan
+
+- Add TableRangeScan;
+- Remove  Residual Filter
+- Renamed PushDown Filter to Selection;
+- Add RangeFliter indicating which conditions are used to build Range.
 
 ```SQL
 CREATE TABLE `t1` (
@@ -177,7 +178,7 @@ SELECT * FROM t1 where a>0
 
 **Before:**
 
-```
+```text
 == Physical Plan ==
 *(1) ColumnarToRow
 +- TiKV CoprocessorRDD{[table: t1] TableScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255), Residual Filter: [a@LONG GREATER_THAN 0], PushDown Filter: [a@LONG GREATER_THAN 0], KeyRange: [([t\200\000\000\000\000\000\002\376_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\002\376_s\000\000\000\000\000\000\000\000])], startTs: 433995142104612867}
@@ -185,13 +186,11 @@ SELECT * FROM t1 where a>0
 
 **After:**
 
-```
+```text
 = Physical Plan ==
 *(1) ColumnarToRow
 +- TiKV CoprocessorRDD{[table: t1] TableScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): { TableRangeScan: { KeyRange: { RangeFliter: {}, Range: [([t\200\000\000\000\000\000\003A_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\003A_s\000\000\000\000\000\000\000\000])], Selection: [a@LONG GREATER_THAN 0] } }, startTs: 433995460281892865}
 ```
-
-
 
 ```sql
 CREATE TABLE `t3` (
@@ -208,7 +207,7 @@ SELECT * FROM t3 where a>0
 
 **Before:**
 
-```
+```text
 == Physical Plan ==
 *(1) ColumnarToRow
 +- TiKV CoprocessorRDD{[table: t3] TableScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255), KeyRange: [([t\200\000\000\000\000\000\003\022_r\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\003\022_s\000\000\000\000\000\000\000\000])], startTs: 433995273490923521}
@@ -216,19 +215,19 @@ SELECT * FROM t3 where a>0
 
 **After:**
 
-```
+```text
 == Physical Plan ==
 *(1) ColumnarToRow
 +- TiKV CoprocessorRDD{[table: t3] TableScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): { TableRangeScan: { KeyRange: { RangeFliter: {[a@LONG GREATER_THAN 0]}, Range: [([t\200\000\000\000\000\000\003U_r\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\003U_s\000\000\000\000\000\000\000\000])] } }, startTs: 433995476849393665}
 ```
 
-#### IndexScan:
+#### IndexScan
 
-* The Downgrade Filter on RegionTaskExec is retained.
-* The output IndexScan of FetchHandleRDD is further refined to IndexRangeScan and TableRowIDScan, indicating that after the IndexScan there is a TableScan for the RowID is scanned after IndexScan.
-* Delete the original Downgrade Fliter content and add Selection to indicate the Selection condition executed in the normal execution process.
-* Add the description information of Index.
-* Add RangeFliter in Range, indicating which conditions are used to build Range.
+- The Downgrade Filter on RegionTaskExec is retained.
+- The output IndexScan of FetchHandleRDD is further refined to IndexRangeScan and TableRowIDScan, indicating that after the IndexScan there is a TableScan for the RowID is scanned after IndexScan.
+- Delete the original Downgrade Fliter content and add Selection to indicate the Selection condition executed in the normal execution process.
+- Add the description information of Index.
+- Add RangeFliter in Range, indicating which conditions are used to build Range.
 
 ``` sql
 CREATE TABLE `t2` (
@@ -245,7 +244,7 @@ SELECT * FROM t2 where a>0
 
 **Before:**
 
-```
+```text
 == Physical Plan ==
 *(1) ColumnarToRow
 +- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[]
@@ -255,7 +254,7 @@ SELECT * FROM t2 where a>0
 
 **After:**
 
-```
+```text
 == Physical Plan ==
 *(1) ColumnarToRow
 +- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[]
@@ -265,12 +264,12 @@ SELECT * FROM t2 where a>0
 
 #### CoveringIndexScan
 
-* Remove Residual Filter
-* Rename PushDown Filter to Selection.
-* Add the description information of  Index.
-* Add RangeFliter to indicate which conditions are used to build Range.
+- Remove Residual Filter
+- Rename PushDown Filter to Selection.
+- Add the description information of  Index.
+- Add RangeFliter to indicate which conditions are used to build Range.
 
-```SQL
+```sql
 CREATE TABLE `t2` (
   `a` BIGINT(20) UNSIGNED  NOT NULL,
   `b` varchar(255) NOT NULL,
@@ -279,13 +278,13 @@ CREATE TABLE `t2` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
 ```
 
-```SQL 
+```sql
 SELECT a,b FROM t2 where a>0 and b>'aa'
 ```
 
 **Before:**
 
-```
+```text
 == Physical Plan ==
 *(1) ColumnarToRow
 +- TiKV CoprocessorRDD{[table: t2] CoveringIndexScan[Index: primary] , Columns: a@LONG, b@VARCHAR(255), Residual Filter: [b@VARCHAR(255) GREATER_THAN "aa"], PushDown Filter: [b@VARCHAR(255) GREATER_THAN "aa"], KeyRange: [([t\200\000\000\000\000\000\0033_i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\0033_i\200\000\000\000\000\000\000\001\372])], startTs: 433995356695429121}
@@ -293,7 +292,7 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
 
 **After:**
 
-```
+```text
 == Physical Plan ==
 *(1) ColumnarToRow
 +- TiKV CoprocessorRDD{[table: t2] CoveringIndexScan, Columns: a@LONG, b@VARCHAR(255): { IndexRangeScan: [Index: primary (a,b)]: { KeyRange: { RangeFliter: {[a@LONG GREATER_THAN 0]}, Range: [([t\200\000\000\000\000\000\003\223_i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\003\223_i\200\000\000\000\000\000\000\001\372])], Selection: [b@VARCHAR(255) GREATER_THAN "aa"] } }, startTs: 433995598326923265}
@@ -303,11 +302,11 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
 
 1. We first determine the type of Scan, and here we will classify the Scan into three types
 
-    * Scan on Index first, then on Table, called IndexScan.
+    - Scan on Index first, then on Table, called IndexScan.
 
-    * Scan only for Index, called CoveringIndexScan.
+    - Scan only for Index, called CoveringIndexScan.
 
-    * Scan for Table only, called TableScan.
+    - Scan for Table only, called TableScan.
 
    For Scan type CoveringIndexScan and IndexScan set isIndexScan to true.
 
@@ -345,7 +344,7 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
       }
    ```
 
-    * `toTableScanPhysicalPlan:`
+    - `toTableScanPhysicalPlan:`
 
       Call `buildTableScan`, then call `toPhysicalPlan`
 
@@ -357,10 +356,10 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
          sb.append(tableRangeScan.toPhysicalPlan());
       ```
 
-    * `toIndexScanPhysicalPlan:`
+    - `toIndexScanPhysicalPlan:`
 
-        * First process `IndexRangeScan`, add the information of index scanned by `IndexRangeScan`, call `buildIndexScan`,then call `toPhysicalPlan`.
-        * if it is` DoubleRead`, add `TableRowIDScan`. first call `buildTableScan`, then call `toPhysicalPlan`.
+        - First process `IndexRangeScan`, add the information of index scanned by `IndexRangeScan`, call `buildIndexScan`,then call `toPhysicalPlan`.
+        - if it is`DoubleRead`, add `TableRowIDScan`. first call `buildTableScan`, then call `toPhysicalPlan`.
 
       ```java
           sb.append("IndexRangeScan: ");
@@ -378,7 +377,7 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
           }
       ```
 
-    * toPhysicalPlan
+    - toPhysicalPlan
 
       Return `Range`, `Filters`, `Aggregates`, `GroupBy`, `OrderBy`,`Limit`, etc. to String.
 
@@ -498,15 +497,14 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
    SELECT * FROM t1 where a>0 and b > 'aa'
    ```
 
-
       ```sql
-CREATE TABLE `t1` (
-`a` BIGINT(20)   NOT NULL,
-`b` varchar(255) NOT NULL,
-`c` varchar(255) DEFAULT NULL,
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
-CREATE INDEX `testIndex` ON `t1` (`b`(4),a);
-```
+   CREATE TABLE `t1` (
+   `a` BIGINT(20)   NOT NULL,
+   `b` varchar(255) NOT NULL,
+   `c` varchar(255) DEFAULT NULL,
+   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+   CREATE INDEX `testIndex` ON `t1` (`b`(4),a);
+      ```
 
    ```sql
    SELECT * FROM t1 where a>0 and b > 'aa'
@@ -553,3 +551,7 @@ CREATE INDEX `testIndex` ON `t1` (`b`(4),a);
    ```sql
    SELECT * FROM t1 where a>0 and b > 'aa'
    ```
+
+## References
+
+List the reference materials here.
