@@ -161,7 +161,7 @@ In the original design, Residual Filter represents operators that cannot be down
 * Add TableRangeScan;
 * Remove  Residual Filter
 * Renamed PushDown Filter to Selection;
-* Add RangeFliter indicating which conditions are used to build Range.If RangeFilter is empty, it means the scan range is all, otherwise the scan range consists of the conditions in RangeFilter.
+* Add RangeFliter indicating which conditions are used to build Range.
 
 ```SQL
 CREATE TABLE `t1` (
@@ -228,7 +228,7 @@ SELECT * FROM t3 where a>0
 * The output IndexScan of FetchHandleRDD is further refined to IndexRangeScan and TableRowIDScan, indicating that after the IndexScan there is a TableScan for the RowID is scanned after IndexScan.
 * Delete the original Downgrade Fliter content and add Selection to indicate the Selection condition executed in the normal execution process.
 * Add the description information of Index.
-* Add RangeFliter in Range, indicating which conditions are used to build Range.If RangeFilter is empty, it means the scan range is all, otherwise the scan range consists of the conditions in RangeFilter.
+* Add RangeFliter in Range, indicating which conditions are used to build Range.
 
 ``` sql
 CREATE TABLE `t2` (
@@ -268,7 +268,7 @@ SELECT * FROM t2 where a>0
 * Remove Residual Filter
 * Rename PushDown Filter to Selection.
 * Add the description information of  Index.
-* Add RangeFliter to indicate which conditions are used to build Range.If RangeFilter is empty, it means the scan range is all, otherwise the scan range consists of the conditions in RangeFilter.
+* Add RangeFliter to indicate which conditions are used to build Range.
 
 ```SQL
 CREATE TABLE `t2` (
@@ -303,11 +303,11 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
 
 1. We first determine the type of Scan, and here we will classify the Scan into three types
 
-   * Scan on Index first, then on Table, called IndexScan.
+    * Scan on Index first, then on Table, called IndexScan.
 
-   * Scan only for Index, called CoveringIndexScan.
+    * Scan only for Index, called CoveringIndexScan.
 
-   * Scan for Table only, called TableScan.
+    * Scan for Table only, called TableScan.
 
    For Scan type CoveringIndexScan and IndexScan set isIndexScan to true.
 
@@ -345,64 +345,64 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
       }
    ```
 
-   * `toTableScanPhysicalPlan:`
+    * `toTableScanPhysicalPlan:`
 
-     Call `buildTableScan`, then call `toPhysicalPlan`
+      Call `buildTableScan`, then call `toPhysicalPlan`
 
-     ```java
-        sb.append("TableRangeScan");
-        sb.append(": {");
-        TiDAGRequest tableRangeScan = this.copy();
-        tableRangeScan.buildTableScan();
-        sb.append(tableRangeScan.toPhysicalPlan());
-     ```
+      ```java
+         sb.append("TableRangeScan");
+         sb.append(": {");
+         TiDAGRequest tableRangeScan = this.copy();
+         tableRangeScan.buildTableScan();
+         sb.append(tableRangeScan.toPhysicalPlan());
+      ```
 
-   * `toIndexScanPhysicalPlan:`
+    * `toIndexScanPhysicalPlan:`
 
-      * First process `IndexRangeScan`, add the information of index scanned by `IndexRangeScan`, call `buildIndexScan`,then call `toPhysicalPlan`.
-      * if it is` DoubleRead`, add `TableRowIDScan`. first call `buildTableScan`, then call `toPhysicalPlan`.
+        * First process `IndexRangeScan`, add the information of index scanned by `IndexRangeScan`, call `buildIndexScan`,then call `toPhysicalPlan`.
+        * if it is` DoubleRead`, add `TableRowIDScan`. first call `buildTableScan`, then call `toPhysicalPlan`.
 
-     ```java
-         sb.append("IndexRangeScan: ");
-         sb.append(index.colNames);
-         ...
-         TiDAGRequest indexRangeScan = this.copy();
-         indexRangeScan.buildIndexScan();
-         sb.append(indexRangeScan.toPhysicalPlan());
-         if (isDoubleRead()) {
-           sb.append(", TableRowIDScan:");
-           TiDAGRequest tableRowIDScan = this.copy();
-           tableRowIDScan.resetRanges();
-           tableRowIDScan.buildTableScan();
-           sb.append(tableRowIDScan.toPhysicalPlan());
-         }
-     ```
+      ```java
+          sb.append("IndexRangeScan: ");
+          sb.append(index.colNames);
+          ...
+          TiDAGRequest indexRangeScan = this.copy();
+          indexRangeScan.buildIndexScan();
+          sb.append(indexRangeScan.toPhysicalPlan());
+          if (isDoubleRead()) {
+            sb.append(", TableRowIDScan:");
+            TiDAGRequest tableRowIDScan = this.copy();
+            tableRowIDScan.resetRanges();
+            tableRowIDScan.buildTableScan();
+            sb.append(tableRowIDScan.toPhysicalPlan());
+          }
+      ```
 
-   * toPhysicalPlan
+    * toPhysicalPlan
 
-     Return `Range`, `Filters`, `Aggregates`, `GroupBy`, `OrderBy`,`Limit`, etc. to String.
+      Return `Range`, `Filters`, `Aggregates`, `GroupBy`, `OrderBy`,`Limit`, etc. to String.
 
-     ```java
-     if (!getRangesMaps().isEmpty()) {
-          sb.append(getRangeFliter())
-          sb.append(getRangesMaps())
-     }
-     if (!getPushDownFilters().isEmpty()) {
-         sb.append(getPushDownFilters())
-     }
-     if(!getPushDownAggregates().isEmpty()){
-         sb.append(getPushDownAggregates())
-     }
-     if (!getGroupByItems().isEmpty()) {
-          sb.append(getGroupByItems())
-     }
-     if (!getOrderByItems().isEmpty()) {
-         sb.append(getOrderByItems())
-     }
-     if (getLimit() != 0) {
-         sb.append(getLimit())
-     }
-     ```
+      ```java
+      if (!getRangesMaps().isEmpty()) {
+           sb.append(getRangeFliter())
+           sb.append(getRangesMaps())
+      }
+      if (!getPushDownFilters().isEmpty()) {
+          sb.append(getPushDownFilters())
+      }
+      if(!getPushDownAggregates().isEmpty()){
+          sb.append(getPushDownAggregates())
+      }
+      if (!getGroupByItems().isEmpty()) {
+           sb.append(getGroupByItems())
+      }
+      if (!getOrderByItems().isEmpty()) {
+          sb.append(getOrderByItems())
+      }
+      if (getLimit() != 0) {
+          sb.append(getLimit())
+      }
+      ```
 
 ## Test Design
 
@@ -553,4 +553,3 @@ CREATE INDEX `testIndex` ON `t1` (`b`(4),a);
    ```sql
    SELECT * FROM t1 where a>0 and b > 'aa'
    ```
-   
