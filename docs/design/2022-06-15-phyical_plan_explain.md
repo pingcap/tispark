@@ -12,33 +12,33 @@
 
 ## Introduction
 
-The physical plan is the physical execution plan in TiSpark. When we use explain in Spark which run with TiSpark, The process of physical plan will be displayed in the terminal .but now this display about how the plan execute has some problem.
+The physical plan is the physical execution plan in TiSpark. When we use `explain` in Spark which runs with TiSpark, The process of the physical plan will be displayed in the terminal. but now this display about how the plan executes has some problems.
 
-- outputting multiple filters  which not should show together in the same time
+- outputting multiple filters which not should show together at the same time.
 
 - unclear representation of the execution process.
 
 - obscure push-down conditions.
 
-The displayed of physical plan need to be improved.
+The display of the  physical plan needs to be improved.
 
-## Motivation or Background
+## Background
 
 ### The Process of Scan
 
 #### IndexScan
 
-In TiSpark, An IndexScan requires two scans. One is scanning in index data to get the RowID and the other one is scanning in table data to get the real data. The first scan in code called IndexScan, and the second scan in code called TableScan,but in order to facilitate the distinction,  in the latter part of the text, the first scan is called IndexRangeScan, the second scan is called TableRowIDScan.
+In TiSpark, An IndexScan requires two scans. One is scanning in index data to get the RowID and the other one is scanning in table data to get the real data. The first scan in code is called IndexScan, and the second scan in code called TableScan, but to facilitate the distinction, in the latter part of the text, the first scan is called IndexRangeScan, and the second scan is called TableRowIDScan.
 
 #### CoveringIndexScan
 
-CoveringIndexScan is a special case of IndexScan. If the column in Fliter and the column in Projection are both inside the Index in one visit, then we only need to scan the Index once, no need to scan for the Table. that is, it only scans for the Index, such a Scan is called CoveringIndexScan.
+CoveringIndexScan is a special case of IndexScan. If the column in Filter and the column in Projection are both inside the Index in one visit, then we only need to scan the Index once, no need to scan for the Table. that is, it only scans for the Index, such a Scan is called CoveringIndexScan.
 
 #### TableScan
 
-TableScan is different from IndexScan and CoveringIndexScan. TableScan only scan table data. such a scan we called TableRangeScan in the following.
+TableScan is different from IndexScan and CoveringIndexScan. TableScan only scans table data. such a scan we called TableRangeScan in the following.
 
-### Fliter Concept
+### Filter Concept
 
 #### PushDown Filter
 
@@ -48,15 +48,15 @@ The expression passed to COP/TiKV as Selection without triggering a downgrade.
 
 Downgrade Filter is used after IndexScan downgrade.
 
-In the first stage of IndexScan which we called IndexRangeScan will return the RowIDs that meet the conditions,   and then TiSpark will sort and aggregate  the returned Row IDs to obtain the Region that need to be scanned in the second stage of IndexScan——TableRowIDScan.After sort and aggregate we will get region task number(The number of RangeTask is equal to the number of ranges to be scanned by TableRowIDScan. If the RowIDs returned in the first stage are 1,3,4,5 and 1,3,4 are in same region and 5 is in another region. the 1 will be used as a range, 3,4 will be used as a range,5 will be used as a range,the regionTask number will be 3.). If region task number is bigger than `downgradeThreshold`, The TableRowIDScan in second will be TableScan(start key will be first Row that returns and end key will be last key that returns).
+The first stage of IndexScan which we called IndexRangeScan will return the RowIDs that meet the conditions, and then TiSpark will sort and aggregate the returned Row IDs to obtain the region that needs to be scanned in the second stage of IndexScan——TableRowIDScan. After sorting and aggregating we will get the regionTask number(The number of RangeTask is equal to the number of ranges to be scanned by TableRowIDScan. If the RowIDs returned in the first stage are 1,3,4,5 and 1,3,4 are in the same region and 5 is in another region. Since 1 and 3,4 are not contiguous, 1 is RegionTask, and since 3,4 and 5 are not in a region, 3,4 is a RegionTask and 5 is another RegionTask. ). If the RegionTask number is bigger than `downgradeThreshold`, The TableRowIDScan in the second will be TableScan(Startkey will be first Row that returns and Endkey will be last Row that returns).
 
 #### Residual Filter
 
-In the original design, Residual Filter represents operators that cannot be down-pushed to COP/TiKV. However, in the current implementation, before the construction of DAGRequest, it will judge whether the operators can be downscaled, and only the operators that can be downscaled will participate in the construction of DAGRequest, which means that all the operators in DAGRequest can be downscaled to COP/TiKV. The Residual Filter loses its original meaning because there are no operators in DAGRequest that cannot be downgraded.
+In the original design, the Residual Filter represents operators that cannot be down-pushed to COP/TiKV. However, in the current implementation, before the construction of DAGRequest, it will judge whether the operators can be downscaled, and only the operators that can be downscaled will participate in the construction of DAGRequest, which means that all the operators in DAGRequest can be downscaled to COP/TiKV. The Residual Filter loses its original meaning because there are no operators in DAGRequest that cannot be downgraded.
 
 ### The Problem of DAG Explain
 
-1. Filter recurrence
+1. outputting multiple filters which not should show together at the same time
 
    As shown below, both Residual Filter and PushDown Filter appear, while for a TableScan there should be only PushDown Filter.
 
@@ -78,9 +78,9 @@ In the original design, Residual Filter represents operators that cannot be down
    +- TiKV CoprocessorRDD{[table: t1] TableScan, Columns: a@UNSIGNED LONG, Residual Filter: [a@UNSIGNED LONG GREATER_THAN 1], PushDown Filter: [a@UNSIGNED LONG GREATER_THAN 1], KeyRange: [([t\200\000\000\000\000\000\004W_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\004W_s\000\000\000\000\000\000\000\000])], Aggregates: , startTs: 433780573880188929}
    ```
 
-2. Filter execution process is not well described
+2. unclear representation of the execution process
 
-   As shown below, for an IndexScan, normally the IndexRangeScan should be executed first, then the TableRowIDScan. only in the case of triggering a downgrade will the Downgrade Fliter be executed, but in the physical execution plan only the Downgrade Filter is shown.
+   For an IndexScan, normally the IndexRangeScan should be executed first, then the TableRowIDScan. Only in the case of triggering a downgrade will the Downgrade Filter be executed, but in the physical execution plan, only the Downgrade Filter is shown.
 
    ```SQL
    CREATE TABLE `t2` (
@@ -103,7 +103,7 @@ In the original design, Residual Filter represents operators that cannot be down
          +- TiKV FetchHandleRDD{[table: t2] IndexScan[Index: primary] , Columns: a@UNSIGNED LONG, b@VARCHAR(255), c@VARCHAR(255), Downgrade Filter: [[a@UNSIGNED LONG LESS_THAN 1] OR [b@VARCHAR(255) GREATER_THAN "bb"]], PushDown Filter: [[a@UNSIGNED LONG LESS_THAN 1] OR [b@VARCHAR(255) GREATER_THAN "bb"]], KeyRange: [([t\200\000\000\000\000\000\003\374_i\200\000\000\000\000\000\000\001\000], [t\200\000\000\000\000\000\003\374_i\200\000\000\000\000\000\000\001\372])], Aggregates: , startTs: 433735624236728323}
    ```
 
-3. downgrade filter not show distinctly.
+3. obscure push-down conditions
 
    As shown below, for the query condition a>0 is pushed down, but the pushed-down information is only implicitly given inside the KeyRange, which is not convenient for users to understand.
 
@@ -134,9 +134,9 @@ In the original design, Residual Filter represents operators that cannot be down
 
 - **TableRowIDScan**: Scans the table data based on the RowID. Usually follows an index read operation to retrieve the matching data rows.
 
-- **IndexRangeScan**: Index scans with the specified range.We consider full index scan as a special case of IndexRangeScan, so full index scan is also called IndexRangeScan
+- **IndexRangeScan**: Index scans with the specified range. We consider full index scan as a special case of IndexRangeScan, so full index scan is also called IndexRangeScan
 
-- **RangeFilter**: RangeFilter indicates which conditions the range is made up of. If RangeFilter is empty, it indicates a full table scan or full index scan.RangeFilter generally appears when the query involves an index range，When selection sql The expressions in the RangeFilter form the scanned range from left to right.
+- **RangeFilter**: RangeFilter indicates which conditions the range is made up of. RangeFilter generally appears when the query involves an index. If RangeFilter is empty, it indicates a full table scan or full index scan.RangeFilter generally appears when the query involves an index range, When query The expressions in the RangeFilter form the scanned range from left to right.
 
   For Example
 
@@ -159,12 +159,12 @@ In the original design, Residual Filter represents operators that cannot be down
 
 #### Table Scan
 
-- Add TableRangeScan;
-- Remove  Residual Filter
-- Renamed PushDown Filter to Selection;
+- Add TableRangeScan.
+- Remove  Residual Filter.
+- Renamed PushDown Filter to Selection.
 - Add RangeFliter indicating which conditions are used to build Range.
 
-```SQL
+```sql
 CREATE TABLE `t1` (
   `a` BIGINT(20) NOT NULL,
   `b` varchar(255) NOT NULL,
@@ -226,7 +226,7 @@ SELECT * FROM t3 where a>0
 - The Downgrade Filter on RegionTaskExec is retained.
 - The output IndexScan of FetchHandleRDD is further refined to IndexRangeScan and TableRowIDScan, indicating that after the IndexScan there is a TableScan for the RowID is scanned after IndexScan.
 - Delete the original Downgrade Fliter content and add Selection to indicate the Selection condition executed in the normal execution process.
-- Add the description information of Index.
+- Add the description information of  the index which used in scan.
 - Add RangeFliter in Range, indicating which conditions are used to build Range.
 
 ``` sql
@@ -264,9 +264,9 @@ SELECT * FROM t2 where a>0
 
 #### CoveringIndexScan
 
-- Remove Residual Filter
+- Remove Residual Filter.
 - Rename PushDown Filter to Selection.
-- Add the description information of  Index.
+- Add the description information of  the index which used in scan.
 - Add RangeFliter to indicate which conditions are used to build Range.
 
 ```sql
@@ -302,13 +302,13 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
 
 1. We first determine the type of Scan, and here we will classify the Scan into three types
 
-    - Scan on Index first, then on Table, called IndexScan.
+   - Scan on Index first, then on Table, called IndexScan.
 
-    - Scan only for Index, called CoveringIndexScan.
+   - Scan only for Index, called CoveringIndexScan.
 
-    - Scan for Table only, called TableScan.
+   - Scan for Table only, called TableScan.
 
-   For Scan type CoveringIndexScan and IndexScan set isIndexScan to true.
+   For Scan type, CoveringIndexScan and IndexScan set `isIndexScan` to true.
 
    ```java
     switch (getIndexScanType()) {
@@ -334,7 +334,7 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
        }
    ```
 
-3. Handled separately according to whether isIndexScan is true or not
+3. Handled separately according to whether `isIndexScan` is true or not.
 
    ```java
       if (isIndexScan) {
@@ -344,64 +344,64 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
       }
    ```
 
-    - `toTableScanPhysicalPlan:`
+   - `toTableScanPhysicalPlan:`
 
-      Call `buildTableScan`, then call `toPhysicalPlan`
+     Call `buildTableScan`, then call `toPhysicalPlan`.
 
-      ```java
-         sb.append("TableRangeScan");
-         sb.append(": {");
-         TiDAGRequest tableRangeScan = this.copy();
-         tableRangeScan.buildTableScan();
-         sb.append(tableRangeScan.toPhysicalPlan());
-      ```
+     ```java
+        sb.append("TableRangeScan");
+        sb.append(": {");
+        TiDAGRequest tableRangeScan = this.copy();
+        tableRangeScan.buildTableScan();
+        sb.append(tableRangeScan.toPhysicalPlan());
+     ```
 
-    - `toIndexScanPhysicalPlan:`
+   - `toIndexScanPhysicalPlan:`
 
-        - First process `IndexRangeScan`, add the information of index scanned by `IndexRangeScan`, call `buildIndexScan`,then call `toPhysicalPlan`.
-        - if it is`DoubleRead`, add `TableRowIDScan`. first call `buildTableScan`, then call `toPhysicalPlan`.
+      - First process `IndexRangeScan`, add the information of index scanned by `IndexRangeScan`, call `buildIndexScan`, then call `toPhysicalPlan`.
+      - if it is`DoubleRead`, add `TableRowIDScan`. first call `buildTableScan`, then call `toPhysicalPlan`.
 
-      ```java
-          sb.append("IndexRangeScan: ");
-          sb.append(index.colNames);
-          ...
-          TiDAGRequest indexRangeScan = this.copy();
-          indexRangeScan.buildIndexScan();
-          sb.append(indexRangeScan.toPhysicalPlan());
-          if (isDoubleRead()) {
-            sb.append(", TableRowIDScan:");
-            TiDAGRequest tableRowIDScan = this.copy();
-            tableRowIDScan.resetRanges();
-            tableRowIDScan.buildTableScan();
-            sb.append(tableRowIDScan.toPhysicalPlan());
-          }
-      ```
+     ```java
+         sb.append("IndexRangeScan: ");
+         sb.append(index.colNames);
+         ...
+         TiDAGRequest indexRangeScan = this.copy();
+         indexRangeScan.buildIndexScan();
+         sb.append(indexRangeScan.toPhysicalPlan());
+         if (isDoubleRead()) {
+           sb.append(", TableRowIDScan:");
+           TiDAGRequest tableRowIDScan = this.copy();
+           tableRowIDScan.resetRanges();
+           tableRowIDScan.buildTableScan();
+           sb.append(tableRowIDScan.toPhysicalPlan());
+         }
+     ```
 
-    - toPhysicalPlan
+   - `toPhysicalPlan`
 
-      Return `Range`, `Filters`, `Aggregates`, `GroupBy`, `OrderBy`,`Limit`, etc. to String.
+     Return `Range`, `Filters`, `Aggregates`, `GroupBy`, `OrderBy`,  `Limit`  to String.
 
-      ```java
-      if (!getRangesMaps().isEmpty()) {
-           sb.append(getRangeFliter())
-           sb.append(getRangesMaps())
-      }
-      if (!getPushDownFilters().isEmpty()) {
-          sb.append(getPushDownFilters())
-      }
-      if(!getPushDownAggregates().isEmpty()){
-          sb.append(getPushDownAggregates())
-      }
-      if (!getGroupByItems().isEmpty()) {
-           sb.append(getGroupByItems())
-      }
-      if (!getOrderByItems().isEmpty()) {
-          sb.append(getOrderByItems())
-      }
-      if (getLimit() != 0) {
-          sb.append(getLimit())
-      }
-      ```
+     ```java
+     if (!getRangesMaps().isEmpty()) {
+          sb.append(getRangeFliter())
+          sb.append(getRangesMaps())
+     }
+     if (!getPushDownFilters().isEmpty()) {
+         sb.append(getPushDownFilters())
+     }
+     if(!getPushDownAggregates().isEmpty()){
+         sb.append(getPushDownAggregates())
+     }
+     if (!getGroupByItems().isEmpty()) {
+          sb.append(getGroupByItems())
+     }
+     if (!getOrderByItems().isEmpty()) {
+         sb.append(getOrderByItems())
+     }
+     if (getLimit() != 0) {
+         sb.append(getLimit())
+     }
+     ```
 
 ## Test Design
 
@@ -510,7 +510,7 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
    SELECT * FROM t1 where a>0 and b > 'aa'
    ```
 
-6. Table with secondary index and partiton
+6. Table with secondary index and partition
 
    ```sql
    CREATE TABLE `t1` (
@@ -531,7 +531,7 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
    SELECT * FROM t1 where a>0 and b > 'aa'
    ```
 
-7. Table with secondary prefix index and partiton
+7. Table with secondary prefix index and partition
 
    ```sql
    CREATE TABLE `t1` (
@@ -551,7 +551,3 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
    ```sql
    SELECT * FROM t1 where a>0 and b > 'aa'
    ```
-
-## References
-
-List the reference materials here.
