@@ -50,7 +50,7 @@ public class PDMockServer extends PDGrpc.PDImplBase {
     getMembersResp.addLast(Optional.ofNullable(r));
   }
 
-  //  @Override
+  @Override
   public void getMembers(GetMembersRequest request, StreamObserver<GetMembersResponse> resp) {
     try {
       resp.onNext(getMembersResp.getFirst().get());
@@ -60,7 +60,7 @@ public class PDMockServer extends PDGrpc.PDImplBase {
     }
   }
 
-  //  @Override
+  @Override
   public StreamObserver<TsoRequest> tso(StreamObserver<TsoResponse> resp) {
     return new StreamObserver<TsoRequest>() {
       private int physical = 1;
@@ -84,7 +84,7 @@ public class PDMockServer extends PDGrpc.PDImplBase {
     getRegionResp.addLast(r);
   }
 
-  //  @Override
+  @Override
   public void getRegion(GetRegionRequest request, StreamObserver<GetRegionResponse> resp) {
     try {
       resp.onNext(getRegionResp.removeFirst());
@@ -98,7 +98,7 @@ public class PDMockServer extends PDGrpc.PDImplBase {
     getRegionByIDResp.addLast(r);
   }
 
-  //  @Override
+  @Override
   public void getRegionByID(GetRegionByIDRequest request, StreamObserver<GetRegionResponse> resp) {
     try {
       resp.onNext(getRegionByIDResp.removeFirst());
@@ -121,7 +121,7 @@ public class PDMockServer extends PDGrpc.PDImplBase {
     }
   }
 
-  //  @Override
+  @Override
   public void getAllStores(
       org.tikv.kvproto.Pdpb.GetAllStoresRequest request,
       org.tikv.shade.io.grpc.stub.StreamObserver<org.tikv.kvproto.Pdpb.GetAllStoresResponse>
