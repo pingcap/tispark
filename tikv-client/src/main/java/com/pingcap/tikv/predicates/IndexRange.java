@@ -16,11 +16,13 @@
 
 package com.pingcap.tikv.predicates;
 
+import com.fasterxml.jackson.databind.util.TypeKey;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.TypedKey;
 
 public class IndexRange {
+
   private final Key accessKey;
   private final Range<TypedKey> range;
 
@@ -39,6 +41,19 @@ public class IndexRange {
 
   public boolean hasRange() {
     return range != null;
+  }
+
+  public boolean isUnsignedKey() {
+    if (hasAccessKey()) {
+      return ((TypedKey) accessKey).getType().isUnsigned();
+    }
+    if (hasRange()) {
+      if ((range.hasLowerBound() && range.lowerEndpoint().getType().isUnsigned())
+          || (range.hasUpperBound() && range.upperEndpoint().getType().isUnsigned())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public Range<TypedKey> getRange() {
