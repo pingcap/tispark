@@ -228,6 +228,8 @@
                         <parallel>suites</parallel>
                         <useUnlimitedThreads>true</useUnlimitedThreads>
                         <forkMode>always</forkMode>
+                        <trimStackTrace>false</trimStackTrace>
+                        <useFile>false</useFile>
                         <excludes>
                             <exclude>${someModule.test.excludes}</exclude>
                         </excludes>
