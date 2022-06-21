@@ -20,7 +20,7 @@ cd $TISPARK_HOME/tikv-client
 
 #kvproto_hash=6ed99a08e262d8a32d6355dcba91cf99cb92074a
 
-raft_rs_hash=b9891b673573fad77ebcf9bbe0969cf945841926
+#raft_rs_hash=b9891b673573fad77ebcf9bbe0969cf945841926
 
 tipb_hash=45e60c77588fefe421d0f6f29426a36b5b15171d
 
@@ -30,11 +30,11 @@ tipb_hash=45e60c77588fefe421d0f6f29426a36b5b15171d
 #	git clone https://github.com/pingcap/kvproto; cd kvproto; git checkout ${kvproto_hash}; cd ..
 #fi
 
-if [ -d "raft-rs" ]; then
-	cd raft-rs; git fetch -p; git checkout ${raft_rs_hash}; cd ..
-else
-	git clone https://github.com/pingcap/raft-rs; cd raft-rs; git checkout ${raft_rs_hash}; cd ..
-fi
+#if [ -d "raft-rs" ]; then
+#	cd raft-rs; git fetch -p; git checkout ${raft_rs_hash}; cd ..
+#else
+#	git clone https://github.com/pingcap/raft-rs; cd raft-rs; git checkout ${raft_rs_hash}; cd ..
+#fi
 
 if [ -d "tipb" ]; then
 	cd tipb; git fetch -p; git checkout ${tipb_hash}; cd ..
