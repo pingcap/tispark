@@ -292,6 +292,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <trimStackTrace>false</trimStackTrace>
+                    <useFile>false</useFile>
                     <skipTests>true</skipTests>
                 </configuration>
             </plugin>
