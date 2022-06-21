@@ -44,6 +44,7 @@ import io.etcd.jetcd.options.GetOption;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -53,6 +54,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.common.meta.TiTimestamp;
@@ -83,6 +85,7 @@ import org.tikv.shade.io.grpc.ManagedChannel;
 
 public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     implements ReadOnlyPDClient {
+
   private static final String TIFLASH_TABLE_SYNC_PROGRESS_PATH = "/tiflash/table/sync";
   private final Logger logger = LoggerFactory.getLogger(PDClient.class);
   private RequestHeader header;
@@ -106,7 +109,9 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   }
 
   org.tikv.common.TiConfiguration convertTiConfiguration(com.pingcap.tikv.TiConfiguration conf) {
-    org.tikv.common.TiConfiguration tikvConf = new org.tikv.common.TiConfiguration();
+    org.tikv.common.TiConfiguration tikvConf =
+        org.tikv.common.TiConfiguration.createDefault(
+            conf.getPdAddrs().stream().map(Objects::toString).collect(Collectors.joining(",")));
     tikvConf.setKvClientConcurrency(conf.getKvClientConcurrency());
     tikvConf.setIsolationLevel(conf.getIsolationLevel());
     tikvConf.setCommandPriority(conf.getCommandPriority());
@@ -440,7 +445,9 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   }
 
   synchronized boolean switchLeader(List<String> leaderURLs) {
-    if (leaderURLs.isEmpty()) return false;
+    if (leaderURLs.isEmpty()) {
+      return false;
+    }
     String leaderUrlStr = leaderURLs.get(0);
     // TODO: Why not strip protocol info on server side since grpc does not need it
     if (leaderWrapper != null && leaderUrlStr.equals(leaderWrapper.getLeaderInfo())) {
@@ -645,6 +652,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   }
 
   static class LeaderWrapper {
+
     private final String leaderInfo;
     private final PDBlockingStub blockingStub;
     private final PDStub asyncStub;
