@@ -32,7 +32,7 @@ In TiSpark, an `IndexScan` requires two scans. One is scanning in index data to 
 
 #### `CoveringIndexScan`
 
-`CoveringIndexScan` is a special case of `IndexScan`. If the column in Filter and the column in Projection are both inside the Index in one visit, then we only need to scan the Index once, no need to scan for the Table. that is, it only scans for the Index, such a scan is called `CoveringIndexScan`.
+`CoveringIndexScan` is a special case of `IndexScan`. If the column(s) in Filter and the column(s) in Projection are both inside the Index in one visit, then we only need to scan the Index once, no need to scan for the Table. That is, it only scans for the Index, such a scan is called `CoveringIndexScan`.
 
 #### `TableScan`
 
@@ -48,11 +48,11 @@ The expression passed to COP/TiKV as Selection without triggering a downgrade.
 
 `Downgrade Filter` is used after `IndexScan` downgrade.
 
-The first stage of `IndexScan` which we called `IndexRangeScan` will return the `RowID` that meet the conditions, and then TiSpark will sort and aggregate the returned Row IDs to obtain the region that needs to be scanned in the second stage of `IndexScan`——`TableRowIDScan`. After sorting and aggregating we will get the `regionTask` number (The number of `regionTask` is equal to the number of ranges to be scanned by `TableRowIDScan`. If the `RowID` returned in the first stage are 1,3,4,5 and 1,3,4 are in the same region and 5 is in another region. Since 1 and 3,4 are not contiguous, 1 is `regionTask`, and since 3,4 and 5 are not in a region, 3,4 is a `regionTask` and 5 is another `regionTask`. ). If the `regionTask` number is bigger than `downgradeThreshold`, The `TableRowIDScan` in the second will be `TableScan` (`startKey` will be first Row that returns and `endKey` will be last Row that returns).
+The first stage of `IndexScan` which we called `IndexRangeScan` will return the `RowID` that meet the conditions, and then TiSpark will sort and aggregate the returned Row IDs to obtain the region that needs to be scanned in the second stage of `IndexScan`——`TableRowIDScan`. After sorting and aggregating we will get the `regionTask` number (The number of `regionTask` is equal to the number of ranges to be scanned by `TableRowIDScan`. If the `RowID` returned in the first stage are 1,3,4,5 and 1,3,4 are in the same region and 5 is in another region. Since 1 and 3,4 are not contiguous, 1 is `regionTask`, and since 3,4 and 5 are not in a region, 3,4 is a `regionTask` and 5 is another `regionTask`. ). If the `regionTask` number is bigger than `downgradeThreshold`, The `TableRowIDScan` in the second will be `TableScan`. When `Downgrade Fiter` is triggered, the `TableRowIDScan` of the second stage of `IndexScan` will change to `TableRangeScan`. The `StartKey` of `TableRangeScan` is the minimum `RowID` returned by `IndexRangeScan`, and the `EndKey ` of `TableRangeScan` is the minimum `RowID` returned by `IndexRangeScan`. The Filter will become `Downgrade Filter` (`Downgrade Filter` is the same as if the execution plan is `TableScan`'s Filter).
 
 #### `Residual Filter`
 
-In the original design, the `Residual Filter` represents operators that cannot be downgraded to COP/TiKV. However, in the current implementation, before the construction of `DAGRequest`, it will judge whether the operators can be downgraded, and only the operators that can be downscaled will participate in the construction of `DAGRequest`, which means that all the operators in `DAGRequest` can be downscaled to COP/TiKV. The Residual Filter loses its original meaning because there are no operators in `DAGRequest` that cannot be downgraded.
+In the original design, the `Residual Filter` represents operators that cannot be pushed down to COP/TiKV. However, in the current implementation, before the construction of `DAGRequest`, it will judge whether the operators can be pushed down, and only the operators that can be downscaled will participate in the construction of `DAGRequest`, which means that all the operators in `DAGRequest` can be downscaled to COP/TiKV. The Residual Filter loses its original meaning because there are no operators in `DAGRequest` that cannot be pushed down.
 
 ### The Problem of DAG Explain
 
@@ -302,11 +302,11 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
 
 1. We first determine the type of Scan, and here we will classify the Scan into three types
 
-    - Scan on Index first, then on Table, called `IndexScan`.
+   - Scan on Index first, then on Table, called `IndexScan`.
 
-    - Scan only for Index, called `CoveringIndexScan`.
+   - Scan only for Index, called `CoveringIndexScan`.
 
-    - Scan for Table only, called `TableScan`.
+   - Scan for Table only, called `TableScan`.
 
    For Scan type, `CoveringIndexScan` and `IndexScan` set `isIndexScan` to true.
 
@@ -344,64 +344,64 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
       }
    ```
 
-    - `toTableScanPhysicalPlan`
+   - `toTableScanPhysicalPlan`
 
-      Call `buildTableScan`, then call `toPhysicalPlan`.
+     Call `buildTableScan`, then call `toPhysicalPlan`.
 
-      ```java
-         sb.append("TableRangeScan");
-         sb.append(": {");
-         TiDAGRequest tableRangeScan = this.copy();
-         tableRangeScan.buildTableScan();
-         sb.append(tableRangeScan.toPhysicalPlan());
-      ```
+     ```java
+        sb.append("TableRangeScan");
+        sb.append(": {");
+        TiDAGRequest tableRangeScan = this.copy();
+        tableRangeScan.buildTableScan();
+        sb.append(tableRangeScan.toPhysicalPlan());
+     ```
 
-    - `toIndexScanPhysicalPlan`
+   - `toIndexScanPhysicalPlan`
 
-        - First process `IndexRangeScan`, add the information of index scanned by `IndexRangeScan`, call `buildIndexScan`, then call `toPhysicalPlan`.
-        - if it is `DoubleRead`, add `TableRowIDScan`. first call `buildTableScan`, then call `toPhysicalPlan`.
+      - First process `IndexRangeScan`, add the information of index scanned by `IndexRangeScan`, call `buildIndexScan`, then call `toPhysicalPlan`.
+      - if it is `DoubleRead`, add `TableRowIDScan`. first call `buildTableScan`, then call `toPhysicalPlan`.
 
-      ```java
-          sb.append("IndexRangeScan: ");
-          sb.append(index.colNames);
-          ...
-          TiDAGRequest indexRangeScan = this.copy();
-          indexRangeScan.buildIndexScan();
-          sb.append(indexRangeScan.toPhysicalPlan());
-          if (isDoubleRead()) {
-            sb.append(", TableRowIDScan:");
-            TiDAGRequest tableRowIDScan = this.copy();
-            tableRowIDScan.resetRanges();
-            tableRowIDScan.buildTableScan();
-            sb.append(tableRowIDScan.toPhysicalPlan());
-          }
-      ```
+     ```java
+         sb.append("IndexRangeScan: ");
+         sb.append(index.colNames);
+         ...
+         TiDAGRequest indexRangeScan = this.copy();
+         indexRangeScan.buildIndexScan();
+         sb.append(indexRangeScan.toPhysicalPlan());
+         if (isDoubleRead()) {
+           sb.append(", TableRowIDScan:");
+           TiDAGRequest tableRowIDScan = this.copy();
+           tableRowIDScan.resetRanges();
+           tableRowIDScan.buildTableScan();
+           sb.append(tableRowIDScan.toPhysicalPlan());
+         }
+     ```
 
-    - `toPhysicalPlan`
+   - `toPhysicalPlan`
 
-      Return `Range`, `Filters`, `Aggregates`, `GroupBy`, `OrderBy`, `Limit` to String.
+     Return `Range`, `Filters`, `Aggregates`, `GroupBy`, `OrderBy`, `Limit` to String.
 
-      ```java
-      if (!getRangesMaps().isEmpty()) {
-           sb.append(getRangeFliter())
-           sb.append(getRangesMaps())
-      }
-      if (!getPushDownFilters().isEmpty()) {
-          sb.append(getPushDownFilters())
-      }
-      if(!getPushDownAggregates().isEmpty()){
-          sb.append(getPushDownAggregates())
-      }
-      if (!getGroupByItems().isEmpty()) {
-           sb.append(getGroupByItems())
-      }
-      if (!getOrderByItems().isEmpty()) {
-          sb.append(getOrderByItems())
-      }
-      if (getLimit() != 0) {
-          sb.append(getLimit())
-      }
-      ```
+     ```java
+     if (!getRangesMaps().isEmpty()) {
+          sb.append(getRangeFliter())
+          sb.append(getRangesMaps())
+     }
+     if (!getPushDownFilters().isEmpty()) {
+         sb.append(getPushDownFilters())
+     }
+     if(!getPushDownAggregates().isEmpty()){
+         sb.append(getPushDownAggregates())
+     }
+     if (!getGroupByItems().isEmpty()) {
+          sb.append(getGroupByItems())
+     }
+     if (!getOrderByItems().isEmpty()) {
+         sb.append(getOrderByItems())
+     }
+     if (getLimit() != 0) {
+         sb.append(getLimit())
+     }
+     ```
 
 ## Test Design
 
@@ -415,11 +415,11 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-    - `TableScan` with selection and without `RangeFilter`
+   - `TableScan` with selection and without `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
 2. Table with cluster index
 
@@ -445,17 +445,17 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-    - `TableScan` with selection and with `RangeFilter`
+   - `TableScan` with selection and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `TableScan` without selection and with `RangeFilter`
+   - `TableScan` without selection and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0
+     ```
 
 3. Table with cluster index and partition
 
@@ -473,11 +473,11 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
      )
    ```
 
-    - `TableScan` with Selection and with `RangeFilter` with partition
+   - `TableScan` with Selection and with `RangeFilter` with partition
 
-      ```sql
-      SELECT a,b FROM t1 where a>0 and b>'aa'
-      ```
+     ```sql
+     SELECT a,b FROM t1 where a>0 and b>'aa'
+     ```
 
 4. Table with secondary index
 
@@ -490,23 +490,23 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
    CREATE INDEX `testIndex` ON `t1` (`a`,`b`);
    ```
 
-    - `IndexScan` with Selection and with `RangeFilter`
+   - `IndexScan` with Selection and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `IndexScan` without Selection and with `RangeFilter`
+   - `IndexScan` without Selection and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a=0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a=0 and b > 'aa'
+     ```
 
-    - `CoveringIndex` with Selection and with `RangeFilter`
+   - `CoveringIndex` with Selection and with `RangeFilter`
 
-      ```sql
-      SELECT a,b FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT a,b FROM t1 where a>0 and b > 'aa'
+     ```
 
 5. Table with secondary prefix index
 
@@ -519,29 +519,29 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
    CREATE INDEX `testIndex` ON `t1` (`b`(4),a);
    ```
 
-    - `IndexScan` with `RangeFilter` and with Selection
+   - `IndexScan` with `RangeFilter` and with Selection
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `IndexScan` with `RangeFilter` and without Selection
+   - `IndexScan` with `RangeFilter` and without Selection
 
-      ```sql
-      SELECT * FROM t1 where b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where b > 'aa'
+     ```
 
-    - `CoveringIndexScan` with `RangeFilter` and with Selection
+   - `CoveringIndexScan` with `RangeFilter` and with Selection
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `CoveringIndexScan` with `RangeFilter` and without Selection
+   - `CoveringIndexScan` with `RangeFilter` and without Selection
 
-      ```sql
-      SELECT * FROM t1 where b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where b > 'aa'
+     ```
 
 6. Table with secondary index and partition
 
@@ -560,17 +560,17 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
    CREATE INDEX `testIndex` ON `t1` (`b`);
    ```
 
-    - `IndexScan` with Selection and with `RangeFilter` with partition
+   - `IndexScan` with Selection and with `RangeFilter` with partition
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `CoveringIndexScan` with Selection and with `RangeFilter` with partition
+   - `CoveringIndexScan` with Selection and with `RangeFilter` with partition
 
-      ```sql
-      SELECT a,b FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT a,b FROM t1 where a>0 and b > 'aa'
+     ```
 
 7. Table with secondary prefix index and partition
 
@@ -589,14 +589,14 @@ SELECT a,b FROM t2 where a>0 and b>'aa'
    CREATE INDEX `testIndex` ON `t1` (`b`(4));
    ```
 
-    - `IndexScan` with Selection and with `RangeFilter` with partition
+   - `IndexScan` with Selection and with `RangeFilter` with partition
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `CoveringIndexScan` with Selection and with `RangeFilter` with partition
+   - `CoveringIndexScan` with Selection and with `RangeFilter` with partition
 
-      ```sql
-      SELECT a,b FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT a,b FROM t1 where a>0 and b > 'aa'
+     ```
