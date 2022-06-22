@@ -52,6 +52,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -59,6 +60,7 @@ import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class TiKVScanAnalyzer {
+
   private static final double INDEX_SCAN_COST_FACTOR = 1.2;
   private static final double TABLE_SCAN_COST_FACTOR = 1.0;
   private static final double DOUBLE_READ_COST_FACTOR = TABLE_SCAN_COST_FACTOR * 3;
@@ -208,7 +210,7 @@ public class TiKVScanAnalyzer {
     // Set DAG Request's store type as minPlan's store type.
     dagRequest.setStoreType(minPlanStoreType);
 
-    dagRequest.addRanges(minPlan.getKeyRanges());
+    dagRequest.addRanges(minPlan.getKeyRanges(),minPlan.getRangeFilters());
     dagRequest.setPrunedParts(minPlan.getPrunedParts());
     dagRequest.addFilters(new ArrayList<>(minPlan.getFilters()));
     if (minPlan.isIndexScan()) {
@@ -271,7 +273,7 @@ public class TiKVScanAnalyzer {
     if (index == null || index.isFakePrimaryKey()) {
       planBuilder
           .setDoubleRead(false)
-          .setKeyRanges(buildTableScanKeyRange(table, irs, prunedParts));
+          .setKeyRanges(buildTableScanKeyRange(table, irs, prunedParts),result.getPointPredicates(),result.getRangePredicate());
       if (useTiFlash) {
         // TiFlash is a columnar storage engine
         long colSize =
@@ -292,7 +294,7 @@ public class TiKVScanAnalyzer {
           .setDoubleRead(!isCoveringIndex(columnList, index, table.isPkHandle()))
           // table name, index and handle column
           .calculateCostAndEstimateCount(tableStatistics, conditions, irs, indexSize, tableColSize)
-          .setKeyRanges(buildIndexScanKeyRange(table, index, irs, prunedParts))
+          .setKeyRanges(buildIndexScanKeyRange(table, index, irs, prunedParts),result.getPointPredicates(),result.getRangePredicate())
           .build();
     }
   }
@@ -455,7 +457,9 @@ public class TiKVScanAnalyzer {
   }
 
   public static class TiKVScanPlan {
+
     private final Map<Long, List<KeyRange>> keyRanges;
+    private final List<Expression> rangeFilters;
     private final Set<Expression> filters;
     private final double cost;
     private final TiIndexInfo index;
@@ -466,6 +470,7 @@ public class TiKVScanAnalyzer {
 
     private TiKVScanPlan(
         Map<Long, List<KeyRange>> keyRanges,
+        List<Expression> rangeFilters,
         Set<Expression> filters,
         TiIndexInfo index,
         double cost,
@@ -474,6 +479,7 @@ public class TiKVScanAnalyzer {
         List<TiPartitionDef> partDefs,
         TiStoreType storeType) {
       this.filters = filters;
+      this.rangeFilters=rangeFilters;
       this.keyRanges = keyRanges;
       this.cost = cost;
       this.index = index;
@@ -489,6 +495,10 @@ public class TiKVScanAnalyzer {
 
     public Map<Long, List<KeyRange>> getKeyRanges() {
       return keyRanges;
+    }
+
+    public List<Expression> getRangeFilters(){
+      return rangeFilters;
     }
 
     public Set<Expression> getFilters() {
@@ -520,9 +530,11 @@ public class TiKVScanAnalyzer {
     }
 
     public static class Builder {
+
       private final String tableName;
       private final Logger logger = LoggerFactory.getLogger(getClass().getName());
       private Map<Long, List<KeyRange>> keyRanges;
+      private List<Expression> rangeFilters;
       private Set<Expression> filters;
       private double cost;
       private TiIndexInfo index;
@@ -539,8 +551,15 @@ public class TiKVScanAnalyzer {
         return new Builder(tableName);
       }
 
-      public Builder setKeyRanges(Map<Long, List<KeyRange>> keyRanges) {
+      public Builder setKeyRanges(Map<Long, List<KeyRange>> keyRanges,
+          List<Expression> pointPredicate,
+          Optional<Expression> rangePredicate) {
         this.keyRanges = keyRanges;
+        if (rangeFilters == null) {
+          rangeFilters = new ArrayList<Expression>();
+        }
+        rangeFilters.addAll(pointPredicate);
+        rangePredicate.ifPresent(expression -> rangeFilters.add(expression));
         return this;
       }
 
@@ -582,6 +601,7 @@ public class TiKVScanAnalyzer {
       public TiKVScanPlan build() {
         return new TiKVScanPlan(
             keyRanges,
+            rangeFilters,
             filters,
             index,
             cost,
@@ -670,6 +690,7 @@ public class TiKVScanAnalyzer {
       }
     }
   }
+
 
   private boolean supportIndexScan(TiIndexInfo index, TiTableInfo table) {
     // YEAR TYPE index scan is disabled, https://github.com/pingcap/tispark/issues/1789

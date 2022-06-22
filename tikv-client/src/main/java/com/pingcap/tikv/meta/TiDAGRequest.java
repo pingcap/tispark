@@ -59,6 +59,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -70,7 +71,10 @@ import org.tikv.kvproto.Coprocessor;
  * <p>Used for constructing a new DAG request to TiKV
  */
 public class TiDAGRequest implements Serializable {
-  /** Predefined executor priority map. */
+
+  /**
+   * Predefined executor priority map.
+   */
   private static final Map<ExecType, Integer> EXEC_TYPE_PRIORITY_MAP =
       ImmutableMap.<ExecType, Integer>builder()
           .put(ExecType.TypeTableScan, 0)
@@ -95,6 +99,8 @@ public class TiDAGRequest implements Serializable {
   private final List<ColumnRef> fields = new ArrayList<>();
   private final List<DataType> indexDataTypes = new ArrayList<>();
   private final List<Expression> filters = new ArrayList<>();
+
+  private final List<Expression> rangeFilters = new ArrayList<>();
   private final List<ByItem> groupByItems = new ArrayList<>();
   private final List<ByItem> orderByItems = new ArrayList<>();
   // System like Spark has different type promotion rules
@@ -236,8 +242,8 @@ public class TiDAGRequest implements Serializable {
    * Selection > Aggregation > TopN/Limit a DAGRequest must contain one and only one TableScan or
    * IndexScan.
    *
-   * @param buildIndexScan whether the dagRequest to build should be an {@link
-   *     com.pingcap.tidb.tipb.IndexScan}
+   * @param buildIndexScan whether the dagRequest to build should be an
+   *                       {@link com.pingcap.tidb.tipb.IndexScan}
    * @return final DAGRequest built
    */
   private DAGRequest.Builder buildScan(boolean buildIndexScan, List<Integer> outputOffsets) {
@@ -522,11 +528,11 @@ public class TiDAGRequest implements Serializable {
             .filter(x -> !x.isPrefixIndex())
             .map(TiIndexColumn::getName)
             .collect(Collectors.toSet());
-    return !isDoubleRead()
-        && PredicateUtils.extractColumnRefFromExpression(expr)
-            .stream()
-            .map(ColumnRef::getName)
-            .allMatch(indexColumnRefSet::contains);
+    Object[] a = PredicateUtils.extractColumnRefFromExpression(expr).toArray();
+    return PredicateUtils.extractColumnRefFromExpression(expr)
+        .stream()
+        .map(ColumnRef::getName)
+        .allMatch(indexColumnRefSet::contains);
   }
 
   private boolean isGroupByCoveredByIndex() {
@@ -554,8 +560,8 @@ public class TiDAGRequest implements Serializable {
   /**
    * Check if a DAG request is valid.
    *
-   * <p>Note: When constructing a DAG request, a executor with an ExecType of higher priority should
-   * always be placed before those lower ones.
+   * <p>Note: When constructing a DAG request, a executor with an ExecType of higher priority
+   * should always be placed before those lower ones.
    *
    * @param dagRequest Request DAG.
    */
@@ -754,7 +760,9 @@ public class TiDAGRequest implements Serializable {
     return fields;
   }
 
-  /** Required index columns for double read */
+  /**
+   * Required index columns for double read
+   */
   private void addRequiredIndexDataType() {
     if (!tableInfo.isCommonHandle()) {
       indexDataTypes.add(requireNonNull(IntegerType.BIGINT, "dataType is null"));
@@ -776,13 +784,16 @@ public class TiDAGRequest implements Serializable {
    *
    * @param ranges key range of scan
    */
-  public TiDAGRequest addRanges(Map<Long, List<Coprocessor.KeyRange>> ranges) {
+  public TiDAGRequest addRanges(Map<Long, List<Coprocessor.KeyRange>> ranges,
+      List<Expression> rangeFilters) {
     idToRanges.putAll(requireNonNull(ranges, "KeyRange is null"));
+    this.rangeFilters.addAll(rangeFilters);
     return this;
   }
 
   private void resetRanges() {
     idToRanges.clear();
+    rangeFilters.clear();
   }
 
   public void resetFilters(List<Expression> filters) {
@@ -930,12 +941,16 @@ public class TiDAGRequest implements Serializable {
     return pushDownType;
   }
 
-  /** Get the estimated row count will be fetched from this request. */
+  /**
+   * Get the estimated row count will be fetched from this request.
+   */
   public double getEstimatedCount() {
     return estimatedCount;
   }
 
-  /** Set the estimated row count will be fetched from this request. */
+  /**
+   * Set the estimated row count will be fetched from this request.
+   */
   public void setEstimatedCount(double estimatedCount) {
     this.estimatedCount = estimatedCount;
   }
@@ -970,7 +985,6 @@ public class TiDAGRequest implements Serializable {
   }
 
   private String toStringInternal() {
-    init();
     StringBuilder sb = new StringBuilder();
     if (tableInfo != null) {
       sb.append(String.format("[table: %s] ", tableInfo.getName()));
@@ -980,12 +994,11 @@ public class TiDAGRequest implements Serializable {
     switch (getIndexScanType()) {
       case INDEX_SCAN:
         sb.append("IndexScan");
-        sb.append(String.format("[Index: %s] ", indexInfo.getName()));
         isIndexScan = true;
         break;
       case COVERING_INDEX_SCAN:
         sb.append("CoveringIndexScan");
-        sb.append(String.format("[Index: %s] ", indexInfo.getName()));
+        isIndexScan = true;
         break;
       case TABLE_SCAN:
         sb.append("TableScan");
@@ -995,33 +1008,76 @@ public class TiDAGRequest implements Serializable {
       sb.append(", Columns: ");
       Joiner.on(", ").skipNulls().appendTo(sb, getFields());
     }
-
-    if (isIndexScan && !getDowngradeFilters().isEmpty()) {
-      sb.append(", Downgrade Filter: ");
-      Joiner.on(", ").skipNulls().appendTo(sb, getDowngradeFilters());
+    sb.append(": { ");
+    if (isIndexScan) {
+      sb.append(stringIndexScan());
+    } else {
+      sb.append(stringTableScan());
     }
+    sb.append(" }");
+    sb.append(", startTs: ").append(startTs.getVersion());
+    return sb.toString();
+  }
 
-    if (!isIndexScan && !getFilters().isEmpty()) {
-      sb.append(", Residual Filter: ");
-      Joiner.on(", ").skipNulls().appendTo(sb, getFilters());
+  private String stringIndexScan() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("IndexRangeScan: ");
+    sb.append(String.format("[Index: %s ", indexInfo.getName()));
+    sb.append("(");
+    List<String> colNames =
+        indexInfo
+            .getIndexColumns()
+            .stream()
+            .map(TiIndexColumn::getName)
+            .collect(Collectors.toList());
+    Joiner.on(",").skipNulls().appendTo(sb, colNames);
+    sb.append(")]:");
+    sb.append(" {");
+    TiDAGRequest indexRangeScan = this.copy();
+    indexRangeScan.buildIndexScan();
+    sb.append(indexRangeScan.stringPushDownExpression());
+    sb.append(" }");
+    if (isDoubleRead()) {
+      sb.append(", TableRowIDScan:");
+      sb.append("{ ");
+      TiDAGRequest tableRowIDScan = this.copy();
+      tableRowIDScan.resetRanges();
+      tableRowIDScan.buildTableScan();
+      sb.append(tableRowIDScan.stringPushDownExpression());
+      sb.append(" }");
     }
+    return sb.toString();
+  }
 
-    if (!getPushDownFilters().isEmpty()) {
-      sb.append(", PushDown Filter: ");
-      Joiner.on(", ").skipNulls().appendTo(sb, getPushDownFilters());
-    }
+  private String stringTableScan() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("TableRangeScan");
+    sb.append(": {");
+    TiDAGRequest tableRangeScan = this.copy();
+    tableRangeScan.buildTableScan();
+    sb.append(tableRangeScan.stringPushDownExpression());
+    sb.append(" }");
+    return sb.toString();
+  }
 
-    // Key ranges might be also useful
+  private String stringPushDownExpression() {
+    StringBuilder sb = new StringBuilder();
+    List<String> pushDownExpression = new ArrayList<>();
     if (!getRangesMaps().isEmpty()) {
-      sb.append(", KeyRange: [");
+      StringBuilder keyRange = new StringBuilder();
+      keyRange.append(" KeyRange: {");
+      keyRange.append(" RangeFilter: {");
+      Joiner.on(", ").skipNulls().appendTo(keyRange, getRangeFilter());
+      keyRange.append("}");
+      keyRange.append(", Range: [");
       if (tableInfo.isPartitionEnabled()) {
         getRangesMaps()
             .forEach(
                 (key, value) -> {
                   for (Coprocessor.KeyRange v : value) {
-                    sb.append(" partition: ").append(getPrunedPartName(key));
+                    keyRange.append(" partition: ").append(getPrunedPartName(key));
                     // LogDesensitization: show key range in coprocessor request in log
-                    sb.append(KeyUtils.formatBytesUTF8(v));
+                    keyRange.append(KeyUtils.formatBytesUTF8(v));
                   }
                 });
       } else {
@@ -1031,34 +1087,52 @@ public class TiDAGRequest implements Serializable {
                 vList -> {
                   for (Coprocessor.KeyRange range : vList) {
                     // LogDesensitization: show key range in coprocessor request in log
-                    sb.append(KeyUtils.formatBytesUTF8(range));
+                    keyRange.append(KeyUtils.formatBytesUTF8(range));
                   }
                 });
       }
-      sb.append("]");
+      keyRange.append("]");
+      pushDownExpression.add(keyRange.toString());
+    }
+    if (!getPushDownFilters().isEmpty()) {
+      StringBuilder pushDownBuilder = new StringBuilder();
+      pushDownBuilder.append("Selection: ");
+      Joiner.on(", ").skipNulls().appendTo(pushDownBuilder, getPushDownFilters());
+      pushDownExpression.add(pushDownBuilder.toString());
     }
 
     if (!getPushDownAggregates().isEmpty()) {
-      sb.append(", Aggregates: ");
-      Joiner.on(", ").skipNulls().appendTo(sb, getPushDownAggregates());
+      StringBuilder aggregatesBuilder = new StringBuilder();
+      aggregatesBuilder.append("Aggregates: ");
+      Joiner.on(", ").skipNulls().appendTo(aggregatesBuilder, getPushDownAggregates());
+      pushDownExpression.add(aggregatesBuilder.toString());
     }
 
     if (!getGroupByItems().isEmpty()) {
-      sb.append(", Group By: ");
-      Joiner.on(", ").skipNulls().appendTo(sb, getGroupByItems());
+      StringBuilder groupByBuilder = new StringBuilder();
+      groupByBuilder.append("Group By: ");
+      Joiner.on(", ").skipNulls().appendTo(groupByBuilder, getGroupByItems());
+      pushDownExpression.add(groupByBuilder.toString());
     }
 
     if (!getOrderByItems().isEmpty()) {
-      sb.append(", Order By: ");
-      Joiner.on(", ").skipNulls().appendTo(sb, getOrderByItems());
+      StringBuilder orderByBuilder = new StringBuilder();
+      orderByBuilder.append("Order By: ");
+      Joiner.on(", ").skipNulls().appendTo(orderByBuilder, getOrderByItems());
+      pushDownExpression.add(orderByBuilder.toString());
     }
 
     if (getLimit() != 0) {
-      sb.append(", Limit: ");
-      sb.append("[").append(limit).append("]");
+      String limitBuilder = "Limit: "
+          + "[" + limit + "]";
+      pushDownExpression.add(limitBuilder);
     }
-    sb.append(", startTs: ").append(startTs.getVersion());
+    Joiner.on(", ").skipNulls().appendTo(sb, pushDownExpression);
     return sb.toString();
+  }
+
+  private List<Expression> getRangeFilter() {
+    return rangeFilters;
   }
 
   public TiDAGRequest copy() {
@@ -1078,10 +1152,11 @@ public class TiDAGRequest implements Serializable {
     TiDAGRequest req = this.copy();
     req.setPhysicalId(id);
     List<Coprocessor.KeyRange> currentIdRange = req.getRangesByPhysicalId(id);
+    List<Expression> rangeFilters = new ArrayList<>(req.getRangeFilter());
     req.resetRanges();
     Map<Long, List<Coprocessor.KeyRange>> rangeMap = new HashMap<>();
     rangeMap.put(id, currentIdRange);
-    req.addRanges(rangeMap);
+    req.addRanges(rangeMap, rangeFilters);
     return req;
   }
 
@@ -1100,7 +1175,9 @@ public class TiDAGRequest implements Serializable {
     }
   }
 
-  /** Whether we use streaming to push down the request */
+  /**
+   * Whether we use streaming to push down the request
+   */
   public enum PushDownType {
     STREAMING,
     NORMAL
@@ -1113,6 +1190,7 @@ public class TiDAGRequest implements Serializable {
   }
 
   public static class Builder {
+
     private final List<String> requiredCols = new ArrayList<>();
     private final List<Expression> filters = new ArrayList<>();
     private final List<ByItem> orderBys = new ArrayList<>();
@@ -1190,7 +1268,7 @@ public class TiDAGRequest implements Serializable {
       TiDAGRequest req = new TiDAGRequest(pushDownType);
       req.setTableInfo(tableInfo);
       req.setPhysicalId(physicalId);
-      req.addRanges(ranges);
+      req.addRanges(ranges, req.rangeFilters);
       req.addFilters(filters);
       // this request will push down all filters
       req.addPushDownFilters();
