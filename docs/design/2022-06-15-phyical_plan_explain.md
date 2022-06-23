@@ -36,19 +36,25 @@ In TiSpark, an `IndexScan` requires two scans. One is scanning in index data to 
 
 #### `TableScan`
 
-`TableScan` is different from `IndexScan` and `CoveringIndexScan`. `TableScan` only scans table data. such a scan we called `TableRangeScan` in the following.
+`TableScan` is different from `IndexScan` and `CoveringIndexScan`. `TableScan` only scans table data. Such a scan we called `TableRangeScan` in the following.
 
 ### Filter Concept
 
 #### `PushDown Filter`
 
-The expression passed to COP([TiKV Coprocessor](https://docs.pingcap.com/tidb/v3.0/tikv-overview#tikv-coprocessor) )/TiKV as Selection without triggering a downgrade.
+The expression passed to COP([TiKV Coprocessor](https://docs.pingcap.com/tidb/stable/tikv-overview#tikv-coprocessor))/TiKV as Selection without triggering a downgrade.
 
 #### `Downgrade Filter`
 
 `Downgrade Filter` is used after `IndexScan` downgrade.
 
-The first stage of `IndexScan` which we called `IndexRangeScan` will return the `RowID` that meets the conditions, and then TiSpark will sort and aggregate the returned Row IDs to obtain the region that needs to be scanned in the second stage of `IndexScan`——`TableRowIDScan`. After sorting and aggregating we will get the `regionTask` number (The number of `regionTask` is equal to the number of ranges to be scanned by `TableRowIDScan`. If the `RowID` returned in the first stage are 1,3,4,5 and 1,3,4 are in the same region and 5 is in another region. Since 1 and 3,4 are not contiguous, 1 is `regionTask`, and since 3,4 and 5 are not in a region, 3,4 is a `regionTask` and 5 is another `regionTask`. ). If the `regionTask` number is bigger than `downgradeThreshold`, The `TableRowIDScan` in the second will be `TableScan`. When `Downgrade Filter` is triggered, the `TableRowIDScan` of the second stage of `IndexScan` will change to `TableRangeScan`. The `StartKey` of `TableRangeScan` is the minimum `RowID` returned by `IndexRangeScan`, and the `EndKey ` of `TableRangeScan` is the minimum `RowID` returned by `IndexRangeScan`. The Filter will become `Downgrade Filter` (`Downgrade Filter` is the same as if the execution plan is `TableScan`'s Filter).
+The first stage of `IndexScan` which we called `IndexRangeScan` will return the `RowID` that meets the conditions, and then TiSpark will sort and aggregate the returned Row IDs to obtain the region that needs to be scanned in the second stage of `IndexScan`——`TableRowIDScan`. After sorting and aggregating we will get the `regionTask` number. If the `regionTask` number is bigger than `downgradeThreshold`, The `TableRowIDScan` in the second will be `TableScan`.  The `StartKey` of `TableRangeScan` is the minimum `RowID` returned by `IndexRangeScan`, and the `EndKey ` of `TableRangeScan` is the minimum `RowID` returned by `IndexRangeScan`. The Filter will become `Downgrade Filter` (`Downgrade Filter` is the same as if the execution plan is `TableScan`'s Filter).
+
+> **`RegionTask`**
+>
+> For all returned `RowID`, all consecutive `RowID` in a region will be treated as a `RegionTask`.
+>
+> For example like this the `RowID` returned in the first stage are 1,3,4,5 and 1,3,4 are in the same region and 5 is in another region. Since 1 and 3,4 are not contiguous, 1 is `RegionTask`, and since 3,4 and 5 are not in a region, 3,4 is a `RegionTask` and 5 is another `RegionTask`.The `RegionTask` number will three.
 
 #### `Residual Filter`
 
@@ -159,48 +165,55 @@ In the original design, the `Residual Filter` represents operators that cannot b
 
 - **`RangeFilter`**: `RangeFilter` indicates which conditions the range is made up of. `RangeFilter` generally appears when the query involves an index. If `RangeFilter` is empty, it indicates a full table scan or full index scan. `RangeFilter` generally appears when the query involves an index range, when query the expressions in the `RangeFilter` form the scanned range from left to right.
 
-  For Example
-
-  ```sql
-  CREATE TABLE `t1` (
-    `a` BIGINT(20)  NOT NULL,
-    `b` varchar(255) NOT NULL,
-    `c` varchar(255) DEFAULT NULL,
-    PRIMARY KEY (`a`,`b`)
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
-  CREATE TABLE `t2` (
-    `a` BIGINT(20)  NOT NULL,
-    `b` varchar(255) NOT NULL,
-    `c` varchar(255) DEFAULT NULL,
-    PRIMARY KEY (`b`,`a`)
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
-  ```
-
-  If we execute:
-
-  ```sql
-  SELECT t1.a FROM t1 WHERE t1.a = 0 and t1.b>'aa'
-  ```
-
-  Because the primary key of `t1` has `a` in the front and `b` in the back, we can use these two conditions to build a scan range. The `RangeFilter` is `{a=0,b>'aa'}`, the constructed scan range is `(tid_i_a=0_b='aa', tid_i_a_inf)`.
-
-  If we execute:
-
-  ```sql
-  SELECT t1.a FROM t1 WHERE t1.b>'aa'
-  ```
-
-  Because the primary key of `t1` has a in the front and b in the back, we can't use `b>'aa'` to build the range of the query.  The `RangeFilter` is empty, The scan range is `(tid_i_-inf,tid_i_+inf)`.
-
-  If we execute:
-
-  ```sql
-  SELECT t2.a FROM t2 WHERE t2.a = 0 and t2.b>'aa'
-  ```
-
-  Because the primary key of `t2` has `b` in the front and `a` in the back, we can use this `b>'aa'` to build a scan range. The `RangeFilter` is `{b>'aa'}`, and the scan range is constructed as `(tid_i_b='aa', tid_i_inf)`.
-
-### Output we expect
+  > **Which expression will be appeared in `RangeFilter`**
+  >
+  > 1. iterate through all the columns in the Index from left to right.
+  > 2. If there is an Expression related to the column in Expression and the Expression is dot-checked, add that `Expression` to `RangeFilter`. Go back to step 1.
+  > 3. If there is an Expression related to the column in the Expression and the Expression is a range, add the `Expression` to the `RangeFilter` and exit.
+  > 4. If there is no Expression related to the column in the Expression; exit. Output we expect
+  >
+  > For example:
+  >
+  > ```sql
+  > CREATE TABLE `t1` (
+  >   `a` BIGINT(20)  NOT NULL,
+  >   `b` varchar(255) NOT NULL,
+  >   `c` varchar(255) DEFAULT NULL,
+  >   PRIMARY KEY (`a`,`b`)
+  > ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+  > CREATE TABLE `t2` (
+  >   `a` BIGINT(20)  NOT NULL,
+  >   `b` varchar(255) NOT NULL,
+  >   `c` varchar(255) DEFAULT NULL,
+  >   PRIMARY KEY (`b`,`a`)
+  > ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+  > ```
+  >
+  > If we execute:
+  >
+  > ```sql
+  > SELECT t1.a FROM t1 WHERE t1.a = 0 and t1.b>'aa'
+  > ```
+  >
+  > Because the primary key of `t1` has `a` in the front and `b` in the back, we can use these two conditions to build a scan range. The `RangeFilter` is `{a=0,b>'aa'}`, the constructed scan range is `(tid_i_a=0_b='aa', tid_i_a_inf)`.
+  >
+  > If we execute:
+  >
+  > ```sql
+  > SELECT t1.a FROM t1 WHERE t1.b>'aa'
+  > ```
+  >
+  > Because the primary key of `t1` has a in the front and b in the back, we can't use `b>'aa'` to build the range of the query.  The `RangeFilter` is empty, The scan range is `(tid_i_-inf,tid_i_+inf)`.
+  >
+  > If we execute:
+  >
+  > ```sql
+  > SELECT t2.a FROM t2 WHERE t2.a = 0 and t2.b>'aa'
+  > ```
+  >
+  > Because the primary key of `t2` has `b` in the front and `a` in the back, we can use this `b>'aa'` to build a scan range. The `RangeFilter` is `{b>'aa'}`, and the scan range is constructed as `(tid_i_b='aa', tid_i_inf)`.
+  >
+  > ### 
 
 #### Problem in `TableScan`&`CoveringIndexScan`
 
@@ -326,7 +339,7 @@ For problem obscure push-down conditions, we add `RangeFilter` for `KeyRange`.
 
 ##### `IndexScan`
 
-- The `Downgrade Filter` on `RegionTaskExec` is retained.
+- Fixed the bug that the output of `Downgrade Filter` in `FetchHandleRDD` is actually `PushDown Filter`.
 - The output `IndexScan` of `FetchHandleRDD` is further refined to `IndexRangeScan` and `TableRowIDScan`, indicating that after the `IndexScan` there is a `TableScan` for the `RowID` is scanned after `IndexScan`.
 - Delete the original `Downgrade Filter` in `FetchHandleRDD`. Add `Selection` `FetchHandleRDD` in to indicate the `Selection` condition executed in the normal execution process.
 - Add the description information of the index used in the scan.
@@ -371,11 +384,11 @@ SELECT * FROM t2 where a>0
 
 1. We first determine the type of Scan, and here we will classify the Scan into three types
 
-   - Scan on Index first, then on Table, called `IndexScan`.
+    - Scan on Index first, then on Table, called `IndexScan`.
 
-   - Scan only for Index, called `CoveringIndexScan`.
+    - Scan only for Index, called `CoveringIndexScan`.
 
-   - Scan for Table only, called `TableScan`.
+    - Scan for Table only, called `TableScan`.
 
    For Scan type, `CoveringIndexScan` and `IndexScan` set `isIndexScan` to true.
 
@@ -413,64 +426,64 @@ SELECT * FROM t2 where a>0
       }
    ```
 
-   - `stringTableScan`
+    - `stringTableScan`
 
-     Call `buildTableScan`, then call `toPhysicalPlan`.
+      Call `buildTableScan`, then call `toPhysicalPlan`.
 
-     ```java
-        sb.append("TableRangeScan");
-        sb.append(": {");
-        TiDAGRequest tableRangeScan = this.copy();
-        tableRangeScan.buildTableScan();
-        sb.append(tableRangeScan.stringPushDownExpression());
-     ```
+      ```java
+         sb.append("TableRangeScan");
+         sb.append(": {");
+         TiDAGRequest tableRangeScan = this.copy();
+         tableRangeScan.buildTableScan();
+         sb.append(tableRangeScan.stringPushDownExpression());
+      ```
 
-   - `stringIndexScan`
+    - `stringIndexScan`
 
-      - First process `IndexRangeScan`, add the information of index scanned by `IndexRangeScan`, call `buildIndexScan`, then call `toPhysicalPlan`.
-      - if it is `DoubleRead`, add `TableRowIDScan`. first call `buildTableScan`, then call `toPhysicalPlan`.
+        - First process `IndexRangeScan`, add the information of index scanned by `IndexRangeScan`, call `buildIndexScan`, then call `toPhysicalPlan`.
+        - if it is `DoubleRead`, add `TableRowIDScan`. first call `buildTableScan`, then call `toPhysicalPlan`.
 
-     ```java
-         sb.append("IndexRangeScan: ");
-         sb.append(index.colNames);
-         ...
-         TiDAGRequest indexRangeScan = this.copy();
-         indexRangeScan.buildIndexScan();
-         sb.append(indexRangeScan.stringPushDownExpression());
-         if (isDoubleRead()) {
-           sb.append(", TableRowIDScan:");
-           TiDAGRequest tableRowIDScan = this.copy();
-           tableRowIDScan.resetRanges();
-           tableRowIDScan.buildTableScan();
-           sb.append(tableRowIDScan.stringPushDownExpression());
-         }
-     ```
+      ```java
+          sb.append("IndexRangeScan: ");
+          sb.append(index.colNames);
+          ...
+          TiDAGRequest indexRangeScan = this.copy();
+          indexRangeScan.buildIndexScan();
+          sb.append(indexRangeScan.stringPushDownExpression());
+          if (isDoubleRead()) {
+            sb.append(", TableRowIDScan:");
+            TiDAGRequest tableRowIDScan = this.copy();
+            tableRowIDScan.resetRanges();
+            tableRowIDScan.buildTableScan();
+            sb.append(tableRowIDScan.stringPushDownExpression());
+          }
+      ```
 
-   - `stringPushDownExpression`
+    - `stringPushDownExpression`
 
-     Return `Range`, `Filters`, `Aggregates`, `GroupBy`, `OrderBy`, `Limit` to String.
+      Return `Range`, `Filters`, `Aggregates`, `GroupBy`, `OrderBy`, `Limit` to String.
 
-     ```java
-     if (!getRangesMaps().isEmpty()) {
-          sb.append(getRangeFliter())
-          sb.append(getRangesMaps())
-     }
-     if (!getPushDownFilters().isEmpty()) {
-         sb.append(getPushDownFilters())
-     }
-     if(!getPushDownAggregates().isEmpty()){
-         sb.append(getPushDownAggregates())
-     }
-     if (!getGroupByItems().isEmpty()) {
-          sb.append(getGroupByItems())
-     }
-     if (!getOrderByItems().isEmpty()) {
-         sb.append(getOrderByItems())
-     }
-     if (getLimit() != 0) {
-         sb.append(getLimit())
-     }
-     ```
+      ```java
+      if (!getRangesMaps().isEmpty()) {
+           sb.append(getRangeFliter())
+           sb.append(getRangesMaps())
+      }
+      if (!getPushDownFilters().isEmpty()) {
+          sb.append(getPushDownFilters())
+      }
+      if(!getPushDownAggregates().isEmpty()){
+          sb.append(getPushDownAggregates())
+      }
+      if (!getGroupByItems().isEmpty()) {
+           sb.append(getGroupByItems())
+      }
+      if (!getOrderByItems().isEmpty()) {
+          sb.append(getOrderByItems())
+      }
+      if (getLimit() != 0) {
+          sb.append(getLimit())
+      }
+      ```
 
 ## Test Design
 
@@ -484,11 +497,11 @@ SELECT * FROM t2 where a>0
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-   - `TableScan` with selection and without `RangeFilter`
+    - `TableScan` with selection and without `RangeFilter`
 
-     ```sql
-     SELECT * FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where a>0 and b > 'aa'
+      ```
 
 2. Table with cluster index
 
@@ -514,17 +527,17 @@ SELECT * FROM t2 where a>0
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-   - `TableScan` with selection and with `RangeFilter`
+    - `TableScan` with selection and with `RangeFilter`
 
-     ```sql
-     SELECT * FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where a>0 and b > 'aa'
+      ```
 
-   - `TableScan` without selection and with `RangeFilter`
+    - `TableScan` without selection and with `RangeFilter`
 
-     ```sql
-     SELECT * FROM t1 where a>0
-     ```
+      ```sql
+      SELECT * FROM t1 where a>0
+      ```
 
 3. Table with cluster index and partition
 
@@ -542,11 +555,11 @@ SELECT * FROM t2 where a>0
      )
    ```
 
-   - `TableScan` with Selection and with `RangeFilter` with partition
+    - `TableScan` with Selection and with `RangeFilter` with partition
 
-     ```sql
-     SELECT a,b FROM t1 where a>0 and b>'aa'
-     ```
+      ```sql
+      SELECT a,b FROM t1 where a>0 and b>'aa'
+      ```
 
 4. Table with secondary index
 
@@ -559,23 +572,23 @@ SELECT * FROM t2 where a>0
    CREATE INDEX `testIndex` ON `t1` (`a`,`b`);
    ```
 
-   - `IndexScan` with Selection and with `RangeFilter`
+    - `IndexScan` with Selection and with `RangeFilter`
 
-     ```sql
-     SELECT * FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where a>0 and b > 'aa'
+      ```
 
-   - `IndexScan` without Selection and with `RangeFilter`
+    - `IndexScan` without Selection and with `RangeFilter`
 
-     ```sql
-     SELECT * FROM t1 where a=0 and b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where a=0 and b > 'aa'
+      ```
 
-   - `CoveringIndex` with Selection and with `RangeFilter`
+    - `CoveringIndex` with Selection and with `RangeFilter`
 
-     ```sql
-     SELECT a,b FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT a,b FROM t1 where a>0 and b > 'aa'
+      ```
 
 5. Table with secondary prefix index
 
@@ -588,29 +601,29 @@ SELECT * FROM t2 where a>0
    CREATE INDEX `testIndex` ON `t1` (`b`(4),a);
    ```
 
-   - `IndexScan` with `RangeFilter` and with Selection
+    - `IndexScan` with `RangeFilter` and with Selection
 
-     ```sql
-     SELECT * FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where a>0 and b > 'aa'
+      ```
 
-   - `IndexScan` with `RangeFilter` and without Selection
+    - `IndexScan` with `RangeFilter` and without Selection
 
-     ```sql
-     SELECT * FROM t1 where b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where b > 'aa'
+      ```
 
-   - `CoveringIndexScan` with `RangeFilter` and with Selection
+    - `CoveringIndexScan` with `RangeFilter` and with Selection
 
-     ```sql
-     SELECT * FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where a>0 and b > 'aa'
+      ```
 
-   - `CoveringIndexScan` with `RangeFilter` and without Selection
+    - `CoveringIndexScan` with `RangeFilter` and without Selection
 
-     ```sql
-     SELECT * FROM t1 where b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where b > 'aa'
+      ```
 
 6. Table with secondary index and partition
 
@@ -629,17 +642,17 @@ SELECT * FROM t2 where a>0
    CREATE INDEX `testIndex` ON `t1` (`b`);
    ```
 
-   - `IndexScan` with Selection and with `RangeFilter` with partition
+    - `IndexScan` with Selection and with `RangeFilter` with partition
 
-     ```sql
-     SELECT * FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where a>0 and b > 'aa'
+      ```
 
-   - `CoveringIndexScan` with Selection and with `RangeFilter` with partition
+    - `CoveringIndexScan` with Selection and with `RangeFilter` with partition
 
-     ```sql
-     SELECT a,b FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT a,b FROM t1 where a>0 and b > 'aa'
+      ```
 
 7. Table with secondary prefix index and partition
 
@@ -658,14 +671,14 @@ SELECT * FROM t2 where a>0
    CREATE INDEX `testIndex` ON `t1` (`b`(4));
    ```
 
-   - `IndexScan` with Selection and with `RangeFilter` with partition
+    - `IndexScan` with Selection and with `RangeFilter` with partition
 
-     ```sql
-     SELECT * FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where a>0 and b > 'aa'
+      ```
 
-   - `CoveringIndexScan` with Selection and with `RangeFilter` with partition
+    - `CoveringIndexScan` with Selection and with `RangeFilter` with partition
 
-     ```sql
-     SELECT a,b FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT a,b FROM t1 where a>0 and b > 'aa'
+      ```
