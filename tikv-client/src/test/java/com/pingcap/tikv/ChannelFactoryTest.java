@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.util.ChannelFactory;
+import com.pingcap.tikv.util.ChannelFactory.CertWatcher;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,23 +55,28 @@ public class ChannelFactoryTest {
     File a = new File(caPath);
     File b = new File(clientCertPath);
     File c = new File(clientKeyPath);
-    new ChannelFactory.CertWatcher(2, ImmutableList.of(a, b, c), () -> changed.set(true));
-    Thread.sleep(5000);
-    assertTrue(changed.get());
+    try (CertWatcher certWatcher =
+        new CertWatcher(2, ImmutableList.of(a, b, c), () -> changed.set(true))) {
+      Thread.sleep(5000);
+      assertTrue(changed.get());
+    }
   }
 
   @Test
   public void testCertWatcherWithExceptionTask() throws InterruptedException {
     AtomicInteger timesOfReloadTask = new AtomicInteger(0);
-    new ChannelFactory.CertWatcher(
-        1,
-        ImmutableList.of(new File(caPath), new File(clientCertPath), new File(clientKeyPath)),
-        () -> {
-          timesOfReloadTask.getAndIncrement();
-          touchCert();
-          throw new RuntimeException("Mock exception in reload task");
-        });
+    CertWatcher certWatcher =
+        new CertWatcher(
+            1,
+            ImmutableList.of(new File(caPath), new File(clientCertPath), new File(clientKeyPath)),
+            () -> {
+              timesOfReloadTask.getAndIncrement();
+              touchCert();
+              throw new RuntimeException("Mock exception in reload task");
+            });
+
     Thread.sleep(5000);
+    certWatcher.close();
     assertTrue(timesOfReloadTask.get() > 1);
   }
 
