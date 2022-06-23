@@ -183,7 +183,7 @@
         <dependency>
             <groupId>org.tikv</groupId>
             <artifactId>tikv-client-java</artifactId>
-            <version>3.2.0</version>
+            <version>3.3.0</version>
         </dependency>
     </dependencies>
     <build>

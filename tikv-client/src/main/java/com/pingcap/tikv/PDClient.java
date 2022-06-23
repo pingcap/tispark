@@ -57,6 +57,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.apiversion.RequestKeyCodec;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
@@ -98,14 +99,14 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private ConcurrentMap<Long, Double> tiflashReplicaMap;
   private final org.tikv.common.ReadOnlyPDClient upstreamPDClient;
 
-  private PDClient(TiConfiguration conf, ChannelFactory channelFactory) {
+  private PDClient(TiConfiguration conf, RequestKeyCodec keyCodec, ChannelFactory channelFactory) {
     super(conf, channelFactory);
     initCluster();
     this.blockingStub = getBlockingStub();
     this.asyncStub = getAsyncStub();
     this.upstreamPDClient =
         org.tikv.common.PDClient.create(
-            convertTiConfiguration(conf), convertChannelFactory(conf, channelFactory));
+            convertTiConfiguration(conf), keyCodec, convertChannelFactory(conf, channelFactory));
   }
 
   org.tikv.common.TiConfiguration convertTiConfiguration(com.pingcap.tikv.TiConfiguration conf) {
@@ -121,14 +122,23 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   org.tikv.common.util.ChannelFactory convertChannelFactory(
       com.pingcap.tikv.TiConfiguration conf, com.pingcap.tikv.util.ChannelFactory factory) {
     org.tikv.common.util.ChannelFactory tikvFactory = null;
+    // TODO: TiConfiguration should add this configs
+    int keepaliveTime = 10;
+    int keepaliveTimeout = 3;
+    int idleTimeout = 60;
+    long connRecycleTimeInSeconds = 60;
+    long certReloadIntervalInSeconds = 10;
+
     if (conf.isTlsEnable()) {
       if (conf.isJksEnable()) {
         tikvFactory =
             new org.tikv.common.util.ChannelFactory(
                 conf.getMaxFrameSize(),
-                10,
-                3,
-                60,
+                keepaliveTime,
+                keepaliveTimeout,
+                idleTimeout,
+                connRecycleTimeInSeconds,
+                certReloadIntervalInSeconds,
                 conf.getJksKeyPath(),
                 conf.getJksKeyPassword(),
                 conf.getJksTrustPath(),
@@ -137,55 +147,31 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         tikvFactory =
             new org.tikv.common.util.ChannelFactory(
                 conf.getMaxFrameSize(),
-                10,
-                3,
-                60,
+                keepaliveTime,
+                keepaliveTimeout,
+                idleTimeout,
+                connRecycleTimeInSeconds,
+                certReloadIntervalInSeconds,
                 conf.getTrustCertCollectionFile(),
                 conf.getKeyCertChainFile(),
                 conf.getKeyFile());
       }
     } else {
-      tikvFactory = new org.tikv.common.util.ChannelFactory(conf.getMaxFrameSize(), 10, 3, 60);
+      tikvFactory =
+          new org.tikv.common.util.ChannelFactory(
+              conf.getMaxFrameSize(), keepaliveTime, keepaliveTimeout, idleTimeout);
     }
-    // TODO: add more configs
-
-    //  public static final int DEF_TIKV_GRPC_KEEPALIVE_TIME = 10;
-    //  public static final int DEF_TIKV_GRPC_KEEPALIVE_TIMEOUT = 3;
-    //  public static final int DEF_TIKV_GRPC_IDLE_TIMEOUT = 60;
-
-    //    if (conf.isTlsEnable()) {
-    //      if (conf.isJksEnable()) {
-    //        this.channelFactory =
-    //            new ChannelFactory(
-    //                conf.getMaxFrameSize(),
-    //                conf.getConnRecycleTime(),//60
-    //                conf.getCertReloadInterval(),//10
-    //                conf.getJksKeyPath(),
-    //                conf.getJksKeyPassword(),
-    //                conf.getJksTrustPath(),
-    //                conf.getJksTrustPassword());
-    //      } else {
-    //        this.channelFactory =
-    //            new ChannelFactory(
-    //                conf.getMaxFrameSize(),
-    //                conf.getConnRecycleTime(),
-    //                conf.getCertReloadInterval(),
-    //                conf.getTrustCertCollectionFile(),
-    //                conf.getKeyCertChainFile(),
-    //                conf.getKeyFile());
-    //      }
-    //    } else {
-    //      this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
-    //    }
     return tikvFactory;
   }
 
-  public static ReadOnlyPDClient create(TiConfiguration conf, ChannelFactory channelFactory) {
-    return createRaw(conf, channelFactory);
+  public static ReadOnlyPDClient create(
+      TiConfiguration conf, RequestKeyCodec keyCodec, ChannelFactory channelFactory) {
+    return createRaw(conf, keyCodec, channelFactory);
   }
 
-  static PDClient createRaw(TiConfiguration conf, ChannelFactory channelFactory) {
-    return new PDClient(conf, channelFactory);
+  static PDClient createRaw(
+      TiConfiguration conf, RequestKeyCodec keyCodec, ChannelFactory channelFactory) {
+    return new PDClient(conf, keyCodec, channelFactory);
   }
 
   @Override

@@ -42,6 +42,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.apiversion.RequestKeyCodec;
+import org.tikv.common.apiversion.RequestKeyV1TxnCodec;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Metapb;
 import org.tikv.shade.com.google.protobuf.ByteString;
@@ -50,6 +52,7 @@ public class TiSession implements AutoCloseable {
   private static final Logger logger = LoggerFactory.getLogger(TiSession.class);
   private static final Map<String, TiSession> sessionCachedMap = new HashMap<>();
   private final TiConfiguration conf;
+  private RequestKeyCodec keyCodec;
   private final ChannelFactory channelFactory;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
   // below object creation is either heavy or making connection (pd), pending for lazy loading
@@ -70,6 +73,9 @@ public class TiSession implements AutoCloseable {
 
   private TiSession(TiConfiguration conf) {
     this.conf = conf;
+
+    keyCodec = new RequestKeyV1TxnCodec();
+
     if (conf.isTlsEnable()) {
       if (conf.isJksEnable()) {
         this.channelFactory =
@@ -151,7 +157,7 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (client == null) {
-          client = PDClient.createRaw(this.getConf(), channelFactory);
+          client = PDClient.createRaw(this.getConf(), keyCodec, channelFactory);
         }
         res = client;
       }

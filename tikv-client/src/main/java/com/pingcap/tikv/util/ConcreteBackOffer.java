@@ -187,4 +187,11 @@ public class ConcreteBackOffer implements BackOffer {
   public SlowLog getSlowLog() {
     return upstreamConcreteBackOffer.getSlowLog();
   }
+
+  @Override
+  public Long getClusterId() {
+    // https://github.com/tikv/client-java/pull/558
+    // TODO: to implement
+    return null;
+  }
 }
