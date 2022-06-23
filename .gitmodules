@@ -1,3 +1,0 @@
-[submodule "core/src/test/resources/tispark-test"]
-	path = core/src/test/resources/tispark-test
-	url = https://github.com/pingcap/tispark-test-data.git
