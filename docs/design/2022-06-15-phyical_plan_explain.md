@@ -380,7 +380,7 @@ SELECT * FROM t2 where a>0
 
 ### Code Design
 
-[![jCdcwj.png](https://s1.ax1x.com/2022/06/23/jCdcwj.png)](https://imgtu.com/i/jCdcwj)
+![jCdcwj.png](imgs/phyical_plan_explain/code_flow_chart.png)
 
 1. We first determine the type of Scan, and here we will classify the Scan into three types
 
