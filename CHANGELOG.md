@@ -1,6 +1,13 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 3.0.1] 2022-06-23
+## Fixes
+- Fix the bug that the single column condition is in the incorrect if branch [#2395](https://github.com/pingcap/tispark/pull/2395)
+- Fix the bug that the spark-shell is stuck when exiting  [#2402](https://github.com/pingcap/tispark/pull/2402)
+- Fix the bug that the maven dependency of TiSpark 3.0.0 can not be imported [#2401](https://github.com/pingcap/tispark/pull/2401)
+- Shutdown recycler when closing ChannelFactory to avoid resource leak [#2405](https://github.com/pingcap/tispark/pull/2405)
+
 ## [TiSpark 3.0.0] 2022-06-15
 ### Compatibility Changes
 - TiSpark without catalog plugin is no more supported. You must configure catalog configs and use tidb_catalog now [#2252](https://github.com/pingcap/tispark/pull/2252)
