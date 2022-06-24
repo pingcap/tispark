@@ -95,7 +95,7 @@ public class RegionManager {
     return getRegionStorePairByKey(key, storeType, ConcreteBackOffer.newGetBackOff(getClusterId()));
   }
 
-  protected long getClusterId() {
+  public long getClusterId() {
     return getPDClient() != null ? getPDClient().getClusterId() : 0L;
   }
 
