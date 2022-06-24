@@ -72,7 +72,9 @@ public class KVClient implements AutoCloseable {
    * @return a ByteString value if key exists, ByteString.EMPTY if key does not exist
    */
   public ByteString get(ByteString key, long version) throws GrpcException {
-    BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
+    BackOffer backOffer =
+        ConcreteBackOffer.newGetBackOff(
+            clientBuilder.getRegionManager().getPDClient().getClusterId());
     while (true) {
       RegionStoreClient client = clientBuilder.build(key);
       try {

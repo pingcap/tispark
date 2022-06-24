@@ -141,7 +141,8 @@ public class TiSession implements AutoCloseable {
   }
 
   public TiTimestamp getTimestamp() {
-    return getPDClient().getTimestamp(ConcreteBackOffer.newTsoBackOff());
+    return getPDClient()
+        .getTimestamp(ConcreteBackOffer.newTsoBackOff(getPDClient().getClusterId()));
   }
 
   public Snapshot createSnapshot() {

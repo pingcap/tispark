@@ -37,9 +37,12 @@ public class ConcreteBackOffer implements BackOffer {
   private final List<Exception> errors;
   private int totalSleep;
 
+  private final Long clusterId;
+
   private final org.tikv.common.util.ConcreteBackOffer upstreamConcreteBackOffer;
 
-  private ConcreteBackOffer(int maxSleep) {
+  private ConcreteBackOffer(int maxSleep, long clusterId) {
+    this.clusterId = clusterId;
     this.upstreamConcreteBackOffer =
         org.tikv.common.util.ConcreteBackOffer.newCustomBackOff(maxSleep);
     Preconditions.checkArgument(maxSleep >= 0, "Max sleep time cannot be less than 0.");
@@ -54,35 +57,52 @@ public class ConcreteBackOffer implements BackOffer {
     this.maxSleep = source.maxSleep;
     this.totalSleep = source.totalSleep;
     this.errors = source.errors;
+    this.clusterId = source.clusterId;
     this.backOffFunctionMap = source.backOffFunctionMap;
   }
 
+  public static ConcreteBackOffer newCustomBackOff(int maxSleep, long clusterId) {
+    return new ConcreteBackOffer(maxSleep, clusterId);
+  }
+
   public static ConcreteBackOffer newCustomBackOff(int maxSleep) {
-    return new ConcreteBackOffer(maxSleep);
+    return newCustomBackOff(maxSleep, 0);
   }
 
   public static ConcreteBackOffer newScannerNextMaxBackOff() {
-    return new ConcreteBackOffer(BackOffer.SCANNER_NEXT_MAX_BACKOFF);
+    return new ConcreteBackOffer(BackOffer.SCANNER_NEXT_MAX_BACKOFF, 0);
   }
 
   public static ConcreteBackOffer newBatchGetMaxBackOff() {
-    return new ConcreteBackOffer(BackOffer.BATCH_GET_MAX_BACKOFF);
+    return new ConcreteBackOffer(BackOffer.BATCH_GET_MAX_BACKOFF, 0);
   }
 
   public static ConcreteBackOffer newCopNextMaxBackOff() {
-    return new ConcreteBackOffer(BackOffer.COP_NEXT_MAX_BACKOFF);
+    return newCopNextMaxBackOff(0);
   }
 
-  public static ConcreteBackOffer newGetBackOff() {
-    return new ConcreteBackOffer(BackOffer.GET_MAX_BACKOFF);
+  public static ConcreteBackOffer newCopNextMaxBackOff(long clusterId) {
+    return new ConcreteBackOffer(COP_NEXT_MAX_BACKOFF, clusterId);
+  }
+
+  //  public static ConcreteBackOffer newGetBackOff() {
+  //    return new ConcreteBackOffer(BackOffer.GET_MAX_BACKOFF, 0);
+  //  }
+
+  public static ConcreteBackOffer newGetBackOff(long clusterId) {
+    return new ConcreteBackOffer(GET_MAX_BACKOFF, clusterId);
   }
 
   public static ConcreteBackOffer newRawKVBackOff() {
-    return new ConcreteBackOffer(BackOffer.RAWKV_MAX_BACKOFF);
+    return new ConcreteBackOffer(BackOffer.RAWKV_MAX_BACKOFF, 0);
   }
 
-  public static ConcreteBackOffer newTsoBackOff() {
-    return new ConcreteBackOffer(BackOffer.TSO_MAX_BACKOFF);
+  public static ConcreteBackOffer newRawKVBackOff(long clusterId) {
+    return new ConcreteBackOffer(RAWKV_MAX_BACKOFF, clusterId);
+  }
+
+  public static ConcreteBackOffer newTsoBackOff(long clusterId) {
+    return new ConcreteBackOffer(BackOffer.TSO_MAX_BACKOFF, clusterId);
   }
 
   public static ConcreteBackOffer create(BackOffer source) {

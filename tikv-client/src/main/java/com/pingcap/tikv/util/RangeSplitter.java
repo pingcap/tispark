@@ -177,7 +177,7 @@ public class RangeSplitter {
     while (true) {
       Pair<TiRegion, Metapb.Store> regionStorePair = null;
 
-      BackOffer bo = ConcreteBackOffer.newGetBackOff();
+      BackOffer bo = ConcreteBackOffer.newGetBackOff(regionManager.getPDClient().getClusterId());
       while (regionStorePair == null) {
         try {
           regionStorePair = regionManager.getRegionStorePairByKey(range.getStart(), storeType, bo);

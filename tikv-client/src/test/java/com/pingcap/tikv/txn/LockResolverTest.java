@@ -326,7 +326,7 @@ abstract class LockResolverTest {
       ByteString key = ByteString.copyFromUtf8(String.valueOf((char) ('a' + i)));
       TiRegion tiRegion = session.getRegionManager().getRegionByKey(key);
       RegionStoreClient client = builder.build(tiRegion);
-      BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
+      BackOffer backOffer = ConcreteBackOffer.newGetBackOff(session.getPDClient().getClusterId());
       if (blockingRead) {
         try {
           ByteString v = client.get(backOffer, key, session.getTimestamp().getVersion());
@@ -405,7 +405,7 @@ abstract class LockResolverTest {
     TiTimestamp endTs = session.getTimestamp();
     putKV(key, value, startTs.getVersion(), endTs.getVersion());
 
-    BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
+    BackOffer backOffer = ConcreteBackOffer.newGetBackOff(session.getPDClient().getClusterId());
     ByteString v =
         client.get(backOffer, ByteString.copyFromUtf8(key), session.getTimestamp().getVersion());
     assertEquals(v.toStringUtf8(), value);

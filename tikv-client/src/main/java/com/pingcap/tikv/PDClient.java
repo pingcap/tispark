@@ -164,6 +164,10 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return tikvFactory;
   }
 
+  public Long getClusterId() {
+    return header.getClusterId();
+  }
+
   public static ReadOnlyPDClient create(
       TiConfiguration conf, RequestKeyCodec keyCodec, ChannelFactory channelFactory) {
     return createRaw(conf, keyCodec, channelFactory);

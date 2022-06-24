@@ -835,7 +835,10 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
 
     SplitRegionResponse resp =
         callWithRetry(
-            ConcreteBackOffer.newGetBackOff(), TikvGrpc.getSplitRegionMethod(), request, handler);
+            ConcreteBackOffer.newGetBackOff(pdClient.getClusterId()),
+            TikvGrpc.getSplitRegionMethod(),
+            request,
+            handler);
 
     if (resp == null) {
       this.regionManager.onRequestFail(region);

@@ -64,4 +64,6 @@ public interface ReadOnlyPDClient {
   Future<Store> getStoreAsync(BackOffer backOffer, long storeId);
 
   List<Store> getAllStores(BackOffer backOffer);
+
+  Long getClusterId();
 }

@@ -100,7 +100,7 @@ public class LockResolverSITest extends LockResolverTest {
               .getRegionManager()
               .getRegionByKey(ByteString.copyFromUtf8(String.valueOf((char) ('a' + i))));
       RegionStoreClient client = builder.build(tiRegion);
-      BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
+      BackOffer backOffer = ConcreteBackOffer.newGetBackOff(session.getPDClient().getClusterId());
       ByteString v =
           client.get(
               backOffer,
@@ -138,7 +138,7 @@ public class LockResolverSITest extends LockResolverTest {
     RegionStoreClient client = builder.build(tiRegion);
 
     {
-      BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
+      BackOffer backOffer = ConcreteBackOffer.newGetBackOff(session.getPDClient().getClusterId());
       // With TTL set to 10, after 10 milliseconds <a, aa> is resolved.
       // We should be able to read <a, a> instead.
       ByteString v =
@@ -185,7 +185,7 @@ public class LockResolverSITest extends LockResolverTest {
     RegionStoreClient client = builder.build(tiRegion);
 
     {
-      BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
+      BackOffer backOffer = ConcreteBackOffer.newGetBackOff(session.getPDClient().getClusterId());
       Long callerTS = session.getTimestamp().getVersion();
       System.out.println("callerTS1= " + callerTS);
       ByteString v = client.get(backOffer, ByteString.copyFromUtf8("a"), callerTS);
