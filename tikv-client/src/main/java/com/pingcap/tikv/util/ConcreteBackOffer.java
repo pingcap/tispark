@@ -192,6 +192,6 @@ public class ConcreteBackOffer implements BackOffer {
   public Long getClusterId() {
     // https://github.com/tikv/client-java/pull/558
     // TODO: to implement
-    return null;
+    return 0L;
   }
 }
