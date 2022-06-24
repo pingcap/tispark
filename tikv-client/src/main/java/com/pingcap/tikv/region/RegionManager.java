@@ -76,7 +76,7 @@ public class RegionManager {
   }
 
   public TiRegion getRegionByKey(ByteString key) {
-    return getRegionByKey(key, ConcreteBackOffer.newGetBackOff(getPDClient().getClusterId()));
+    return getRegionByKey(key, ConcreteBackOffer.newGetBackOff(getClusterId()));
   }
 
   public TiRegion getRegionByKey(ByteString key, BackOffer backOffer) {
@@ -92,8 +92,11 @@ public class RegionManager {
   }
 
   public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key, TiStoreType storeType) {
-    return getRegionStorePairByKey(
-        key, storeType, ConcreteBackOffer.newGetBackOff(getPDClient().getClusterId()));
+    return getRegionStorePairByKey(key, storeType, ConcreteBackOffer.newGetBackOff(getClusterId()));
+  }
+
+  protected long getClusterId() {
+    return getPDClient() != null ? getPDClient().getClusterId() : 0L;
   }
 
   public Pair<TiRegion, Store> getRegionStorePairByKey(
@@ -137,7 +140,7 @@ public class RegionManager {
   }
 
   public Store getStoreById(long id) {
-    return getStoreById(id, ConcreteBackOffer.newGetBackOff(getPDClient().getClusterId()));
+    return getStoreById(id, ConcreteBackOffer.newGetBackOff(getClusterId()));
   }
 
   public Store getStoreById(long id, BackOffer backOffer) {
@@ -193,7 +196,6 @@ public class RegionManager {
     public RegionCache(ReadOnlyPDClient pdClient) {
       regionCache = TreeRangeMap.create();
       storeCache = new HashMap<>();
-
       this.pdClient = pdClient;
     }
 
