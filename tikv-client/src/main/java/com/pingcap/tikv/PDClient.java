@@ -62,6 +62,7 @@ import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
+import org.tikv.kvproto.PDGrpc.PDFutureStub;
 import org.tikv.kvproto.PDGrpc.PDStub;
 import org.tikv.kvproto.Pdpb.Error;
 import org.tikv.kvproto.Pdpb.ErrorType;
@@ -84,7 +85,7 @@ import org.tikv.kvproto.Pdpb.TsoRequest;
 import org.tikv.shade.com.google.protobuf.ByteString;
 import org.tikv.shade.io.grpc.ManagedChannel;
 
-public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
+public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, PDStub>
     implements ReadOnlyPDClient {
 
   private static final String TIFLASH_TABLE_SYNC_PROGRESS_PATH = "/tiflash/table/sync";
@@ -104,6 +105,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     initCluster();
     this.blockingStub = getBlockingStub();
     this.asyncStub = getAsyncStub();
+    // this.asyncFutureStub = getAsyncStub();
     this.upstreamPDClient =
         org.tikv.common.PDClient.create(
             convertTiConfiguration(conf), keyCodec, convertChannelFactory(conf, channelFactory));
@@ -113,6 +115,9 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     org.tikv.common.TiConfiguration tikvConf =
         org.tikv.common.TiConfiguration.createDefault(
             conf.getPdAddrs().stream().map(Objects::toString).collect(Collectors.joining(",")));
+    // s --> ms
+    tikvConf.setTimeout(conf.getTimeout() * 1000L);
+
     tikvConf.setKvClientConcurrency(conf.getKvClientConcurrency());
     tikvConf.setIsolationLevel(conf.getIsolationLevel());
     tikvConf.setCommandPriority(conf.getCommandPriority());
@@ -126,9 +131,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     int keepaliveTime = 10;
     int keepaliveTimeout = 3;
     int idleTimeout = 60;
-    long connRecycleTimeInSeconds = 60;
-    long certReloadIntervalInSeconds = 10;
-
     if (conf.isTlsEnable()) {
       if (conf.isJksEnable()) {
         tikvFactory =
@@ -137,8 +139,8 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
                 keepaliveTime,
                 keepaliveTimeout,
                 idleTimeout,
-                connRecycleTimeInSeconds,
-                certReloadIntervalInSeconds,
+                conf.getConnRecycleTime(),
+                conf.getCertReloadInterval(),
                 conf.getJksKeyPath(),
                 conf.getJksKeyPassword(),
                 conf.getJksTrustPath(),
@@ -150,8 +152,8 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
                 keepaliveTime,
                 keepaliveTimeout,
                 idleTimeout,
-                connRecycleTimeInSeconds,
-                certReloadIntervalInSeconds,
+                conf.getConnRecycleTime(),
+                conf.getCertReloadInterval(),
                 conf.getTrustCertCollectionFile(),
                 conf.getKeyCertChainFile(),
                 conf.getKeyFile());
@@ -352,9 +354,11 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   @Override
   public Store getStore(BackOffer backOffer, long storeId) {
-    return callWithRetry(
-            backOffer, PDGrpc.getGetStoreMethod(), buildGetStoreReq(storeId), buildPDErrorHandler())
-        .getStore();
+    return upstreamPDClient.getStore(backOffer, storeId);
+    // return callWithRetry(
+    // backOffer, PDGrpc.getGetStoreMethod(), buildGetStoreReq(storeId),
+    // buildPDErrorHandler())
+    // .getStore();
   }
 
   @Override

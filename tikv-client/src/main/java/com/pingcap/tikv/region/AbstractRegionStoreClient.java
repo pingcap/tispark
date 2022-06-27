@@ -30,7 +30,8 @@ import org.tikv.kvproto.TikvGrpc;
 import org.tikv.shade.io.grpc.ManagedChannel;
 
 public abstract class AbstractRegionStoreClient
-    extends AbstractGRPCClient<TikvGrpc.TikvBlockingStub, TikvGrpc.TikvStub>
+    extends AbstractGRPCClient<
+        TikvGrpc.TikvFutureStub, TikvGrpc.TikvBlockingStub, TikvGrpc.TikvStub>
     implements RegionErrorReceiver {
 
   protected final RegionManager regionManager;

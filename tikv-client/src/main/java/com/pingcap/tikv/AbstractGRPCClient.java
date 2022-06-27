@@ -36,20 +36,22 @@ import org.tikv.shade.io.grpc.MethodDescriptor;
 import org.tikv.shade.io.grpc.health.v1.HealthCheckRequest;
 import org.tikv.shade.io.grpc.health.v1.HealthCheckResponse;
 import org.tikv.shade.io.grpc.health.v1.HealthGrpc;
+import org.tikv.shade.io.grpc.stub.AbstractFutureStub;
 import org.tikv.shade.io.grpc.stub.AbstractStub;
 import org.tikv.shade.io.grpc.stub.ClientCalls;
 import org.tikv.shade.io.grpc.stub.StreamObserver;
 
 public abstract class AbstractGRPCClient<
-        // FutureStubT extends AbstractFutureStub<FutureStubT>
-        BlockingStubT extends AbstractStub<BlockingStubT>, StubT extends AbstractStub<StubT>>
+        FutureStubT extends AbstractFutureStub<FutureStubT>,
+        BlockingStubT extends AbstractStub<BlockingStubT>,
+        StubT extends AbstractStub<StubT>>
     implements AutoCloseable {
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
   protected final ChannelFactory channelFactory;
   protected TiConfiguration conf;
   protected BlockingStubT blockingStub;
   protected StubT asyncStub;
-  //  protected FutureStubT asyncStub;
+  protected FutureStubT asyncFutureStub;
   protected long timeout;
 
   protected AbstractGRPCClient(TiConfiguration conf, ChannelFactory channelFactory) {
