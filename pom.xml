@@ -10,7 +10,7 @@
 
     <groupId>com.pingcap.tispark</groupId>
     <artifactId>tispark-parent</artifactId>
-    <version>${revision}</version>
+    <version>3.1.0-SHAPSHOT</version>
     <packaging>pom</packaging>
     <name>TiSpark Project Parent POM</name>
     <url>http://github.copm/pingcap/tispark</url>
@@ -92,7 +92,6 @@
         <scalaj.version>2.3.0</scalaj.version>
         <lombok.version>1.18.22</lombok.version>
         <someModule.test.excludes></someModule.test.excludes>
-        <revision>3.1.0-SNAPSHOT</revision>
     </properties>
     <repositories>
         <repository>
