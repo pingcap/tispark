@@ -55,8 +55,8 @@ class HostMappingSuite extends FunSuite {
   test("Host map connection test") {
     noException should be thrownBy {
       val conf: SparkConf = new SparkConf(false)
-      val pdAddresses = "120.92.208.55"
-      val fakePdAddresses = "172.16.201.43"
+      val pdAddresses = "127.0.0.1"
+      val fakePdAddresses = "127.1.1.1"
       val port = ":2379"
       conf.set(PD_ADDRESSES, fakePdAddresses + port)
       conf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
