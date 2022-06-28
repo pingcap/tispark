@@ -18,6 +18,7 @@ package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.datatype.TypeMapping
+import com.pingcap.tikv.hostmap.UriHostMapping
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tikv.region.TiStoreType
 import com.pingcap.tikv.types._
@@ -224,6 +225,10 @@ object TiUtil {
 
     if (conf.contains(TiConfigConst.TIKV_CONN_RECYCLE_TIME)) {
       tiConf.setConnRecycleTimeInSeconds(conf.get(TiConfigConst.TIKV_CONN_RECYCLE_TIME))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_HOST_MAPPING)) {
+      tiConf.setHostMapping(new UriHostMapping(conf.get(TiConfigConst.TIKV_HOST_MAPPING)))
     }
 
     tiConf

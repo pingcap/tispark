@@ -25,6 +25,7 @@ import com.pingcap.tispark.auth.TiAuthorization
 import org.apache.spark.sql.internal.SQLConf
 import org.slf4j.LoggerFactory
 import scalaj.http.HttpResponse
+import java.net.URI
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
 
@@ -93,11 +94,22 @@ object TiSparkTeleInfo {
       val conf: TiConfiguration = new TiConfiguration
       TiUtil.sparkConfToTiConfWithoutPD(SparkSession.active.sparkContext.getConf, conf)
 
+      var pd_uri: URI = null;
       if (conf.isTlsEnable) {
-        val url = "https://" + pd_address.get + urlPattern
+        pd_uri = new URI(s"https://${pd_address.get}$urlPattern")
+      } else {
+        pd_uri = new URI(s"http://${pd_address.get}$urlPattern")
+      }
+
+      if (conf.getHostMapping != null) {
+        pd_uri = conf.getHostMapping.getMappedURI(pd_uri)
+      }
+
+      if (conf.isTlsEnable) {
+        val url = pd_uri.toString
         resp = httpClient.getHttpsWithTiConfiguration(url, conf)
       } else {
-        val url = "http://" + pd_address.get + urlPattern
+        val url = pd_uri.toString
         resp = httpClient.get(url)
       }
 
