@@ -12,61 +12,111 @@
 
 ## Introduction
 
-The physical plan is the physical execution plan in TiSpark. When we use `explain` in Spark which runs with TiSpark, the process of the physical plan will be displayed in the terminal. But now this display about how the plan executes has some problems.
+The physical plan is the physical execution plan in TiSpark. When we use to explain in Spark which runs with TiSpark, the process of the physical plan will be displayed in the terminal. But now this display about how the plan executes has some problems.
 
-- outputting multiple filters which should not show together at the same time.
-
+- appear a filter that should not appear.
 - unclear representation of the execution process.
-
-- obscure push-down conditions.
+- expression(s) that constitutes the scanning range is hard to know.
+- confusing naming of the operator.
 
 The display of the physical plan needs to be improved.
 
 ## Background
 
-### The Process of Scan
+### Now the way to build explaination
 
-#### `IndexScan`
+If we call Spark's `explain`, we may see the following output.
 
-In TiSpark, an `IndexScan` requires two scans. One is scanning in index data to get the `RowID` and the other one is scanning in table data to get the real data. The first scan in code is called `IndexScan`, and the second scan in code called `TableScan`, but to facilitate the distinction, in the latter part of the text, the first scan is called `IndexRangeScan`, and the second scan is called `TableRowIDScan`.
+```text
+== Physical Plan ==
+*(1) ColumnarToRow
+// many other node.
++- ...
+	+- TiKV CoprocessorRDD{[table: t1] TableScan, Columns: a@UNSIGNED LONG, Residual Filter: [a@UNSIGNED LONG GREATER_THAN 1], PushDown Filter: [a@UNSIGNED LONG GREATER_THAN 1], KeyRange: [([t\200\000\000\000\000\000\004W_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\004W_s\000\000\000\000\000\000\000\000])], Aggregates: , startTs: 433780573880188929}
+// many other node.
++- ...
+```
+
+What we are interested in here is the content in `CoprocessorRDD`. The content in the `CoprocessRDD` is the output of the `toStringInternal` method called by `TiDAGRequest`. The main code of `toStringInternal` is shown below.
+
+```java
+private String toStringInternal(){
+	StringBuilder sb=new StringBuilder();
+    // init some data in TiDAGRequest.
+	init();
+    switch (getIndexScanType()) {
+      case INDEX_SCAN:
+        sb.append("IndexScan");
+        break;
+      case COVERING_INDEX_SCAN:
+        sb.append("CoveringIndexScan");
+        break;
+      case TABLE_SCAN:
+        sb.append("TableScan");
+    }
+    if (isIndexScan() && !getDowngradeFilters().isEmpty()) {
+       sb.append(", Downgrade Filter: ");
+       Joiner.on(", ").skipNulls().appendTo(sb, request.getDowngradeFilters());
+    }
+    if (!isIndexScan && !getFilters().isEmpty()) {
+        sb.append(", Residual Filter: ");
+        Joiner.on(", ").skipNulls().appendTo(sb, request.getFilters());
+    }
+    if (!getPushDownFilters().isEmpty()) {
+        sb.append(", PushDown Filter: ");
+        Joiner.on(", ").skipNulls().appendTo(sb, request.getPushDownFilters());
+    }
+    // add keyRange and other push down expression to sb.
+    ...
+    return sb.toString();
+}
+```
+
+From the code we can see that the execution plan is divided into three kinds of `IndexScan`, `CoveringIndexScan`, and `TableScan`; `TiDAGRequest` has three kinds `Filter` —— `Downgrade Filter`, ` Resdiual Filter`, `PushDown Filter`. There is zero or more `Filter` for an execution plan. We will describe the meaning of each execution plan and `Filter` in detail below.
+
+### Meaning of execution plan
+
+#### `IndeRegionTaskExecxScan`
+
+In TiSpark, an `IndexScan` requires two scans. The first scan is scanning in index data and the second scan is scanning in table data to get the data we need from the results returned in the first scan.
 
 #### `CoveringIndexScan`
 
-`CoveringIndexScan` is a special case of `IndexScan`. If the column(s) in Filter and the column(s) in Projection are both inside the Index in one visit, then we only need to scan the Index once, no need to scan for the Table. That is, it only scans for the Index, such a scan is called `CoveringIndexScan`.
+`CoveringIndexScan` is a special case of `IndexScan`. If the column(s) in `Filter` and the column(s) in `Projection` are both inside the Index, then we only need to scan the index once, no need to scan for the table. That is, it only scans for the index, such a scan is called `CoveringIndexScan`.
 
 #### `TableScan`
 
-`TableScan` is different from `IndexScan` and `CoveringIndexScan`. `TableScan` only scans table data. Such a scan we called `TableRangeScan` in the following.
+`TableScan` is different from `IndexScan` and `CoveringIndexScan`. `TableScan` only scans table data.
 
-### Filter Concept
-
-#### `PushDown Filter`
-
-The expression passed to COP([TiKV Coprocessor](https://docs.pingcap.com/tidb/stable/tikv-overview#tikv-coprocessor))/TiKV as Selection without triggering a downgrade.
+### Meaning of `Filter`
 
 #### `Downgrade Filter`
 
-`Downgrade Filter` is used after `IndexScan` downgrade.
+If the second scan in `IndexScan` does too many queries on COP([TiKV Coprocessor](https://docs.pingcap.com/tidb/stable/tikv-overview#tikv-coprocessor))/TiKV, it can cause performance problems in COP/TiKV. To solve this problem a downgrading mechanism is introduced. `Downgrade Filter` is used after `IndexScan` downgrade.
 
-The first stage of `IndexScan` which we called `IndexRangeScan` will return the `RowID` that meets the conditions, and then TiSpark will sort and aggregate the returned Row IDs to obtain the region that needs to be scanned in the second stage of `IndexScan`——`TableRowIDScan`. After sorting and aggregating we will get the `regionTask` number. If the `regionTask` number is bigger than `downgradeThreshold`, the `TableRowIDScan` in the second stage will be `TableRangeScan`. The `StartKey` of `TableRangeScan` is the minimum `RowID` returned by `IndexRangeScan`, and the `EndKey ` of `TableRangeScan` is the maximum `RowID` returned by `IndexRangeScan`. The Filter will become `Downgrade Filter` (`Downgrade Filter` is the same as if the execution plan is `TableScan`'s Filter).
+The first scan of `IndexScan` will return the data that meets the conditions, and then TiSpark will sort and aggregate the returned data to obtain the `regionTask` that needs to be done in the `IndexScan` second scan. If the number of `regionTask` is bigger than `downgradeThreshold`, a downgrade will be triggered. When a downgrade is triggered, the range of the second scan table will be changed from the returned value of the first scan index to all values in the middle of the minimum to maximum value of the first scan index, and the `filters` of the second scan will change to `downgradeFilters`(`downgradeFilters` is the same as if the execution plan is `TableScan`'s `filters`).
 
 > **`RegionTask`**
 >
-> For all returned `RowID`, all consecutive `RowID` in a region will be treated as a `RegionTask`.
+> For all returned data, all consecutive data in a region will be treated as a `regionTask`.
 >
-> For example like this the `RowID` returned in the first stage are 1, 3, 4, 5 and 1, 3, 4 are in the same region and 5 is in another region. Since 1 and 3, 4 are not contiguous, 1 is `RegionTask`, and since 3, 4 and 5 are not in a region, 3, 4 is a `RegionTask` and 5 is another `RegionTask`. The `RegionTask` number is three.
+> For example like this the data returned in the first stage are 1, 3, 4, 5 and 1, 3, 4 are in the same region and 5 is in another region. Since 1 and 3, 4 are not contiguous, 1 is a `regionTask`, and since 3, 4 and 5 are not in a region, 3, 4 is a `regionTask` and 5 is a `regionTask`. The `regionTask` number is three.
 
 #### `Residual Filter`
 
-In the original design, the `Residual Filter` represents operators that cannot be pushed down to COP/TiKV. However, in the current implementation, before the construction of `DAGRequest`, it will judge whether the operators can be pushed down, and only the operators that can be pushed down will participate in the construction of `DAGRequest`, which means that all the operators in `DAGRequest` can be pushed down to COP/TiKV. The Residual Filter loses its original meaning because there are no operators in `DAGRequest` that cannot be pushed down.
+In the original design, the `Residual Filter` represents operators that cannot be pushed down to COP/TiKV. However, in the current implementation, before the construction of `TiDAGRequest`, it will judge whether the operators can be pushed down, and only the operators that can be pushed down will participate in the construction of `TiDAGRequest`. This means that all operators in `TiDAGRequest` can be pushed down to COP/TiKV. The `Residual Filter` loses its original meaning because there are no operators in `TiDAGRequest` that cannot be pushed down.
+
+#### `PushDown Filter`
+
+The expression passed to COP/TiKV as a selection expression without triggering a downgrade.
 
 ### The Problem of DAG Explain
 
-1. outputting multiple filters which should not show together at the same time
+1. appear a filter that should not appear
 
-   As shown below, both `Residual Filter` and `PushDown Filter` appear, while for a `TableScan` and `CoveringIndexScan` there should be only `PushDown Filter`.
+   As stated before, the `Residual Filter` loses its meaning and should not be present in the physical plan explanation. But `Residual Filter` still appears in `TableScan` and `CoveringIndexScan`.
 
-   ```SQL
+   ```sql
    CREATE TABLE `t1` (
      `a` BIGINT(20) UNSIGNED  NOT NULL,
      `b` varchar(255) NOT NULL,
@@ -107,7 +157,11 @@ In the original design, the `Residual Filter` represents operators that cannot b
 
 2. unclear representation of the execution process
 
-   For an `IndexScan`, normally the `IndexRangeScan` should be executed first, then the `TableRowIDScan`. Only in the case of triggering a downgrade will the `Downgrade Filter` be executed, but in the physical execution plan, only the Downgrade Filter is shown.
+   As stated before, the execution process for `IndexScan` is divided into two phases, the first phase for index data scanning, and the second phase for table data scanning. However, we cannot see this execution process in the physical plan explanation.
+
+   The `Downgrade Filter` in `RegionTaskExec` is designed to indicate that the `Downgrade Filter` will be used after the downgrade(There is some problem with the content displayed in `RegionTaskExec`, it should show the content of `downgradeFilters` in `TiDAGRequest`, but it actually displays the content of `filters` in `TiDAGRequest`. We will fix this bug here.). However, the `Downgrade Filter` is displayed again in the `FetchHandleRDD` and the `PushDown Filter`, which is executed under normal circumstances, is not displayed.
+
+   In the physical plan explanation, only the name of the index we use is shown, not the columns that make up the index.
 
    ```SQL
    CREATE TABLE `t2` (
@@ -130,11 +184,11 @@ In the original design, the `Residual Filter` represents operators that cannot b
          +- TiKV FetchHandleRDD{[table: t2] IndexScan[Index: primary] , Columns: a@UNSIGNED LONG, b@VARCHAR(255), c@VARCHAR(255), Downgrade Filter: [[a@UNSIGNED LONG LESS_THAN 1] OR [b@VARCHAR(255) GREATER_THAN "bb"]], PushDown Filter: [[a@UNSIGNED LONG LESS_THAN 1] OR [b@VARCHAR(255) GREATER_THAN "bb"]], KeyRange: [([t\200\000\000\000\000\000\003\374_i\200\000\000\000\000\000\000\001\000], [t\200\000\000\000\000\000\003\374_i\200\000\000\000\000\000\000\001\372])], Aggregates: , startTs: 433735624236728323}
    ```
 
-3. obscure push-down conditions
+3. expression(s) that constitutes the scanning range is hard to know
 
-   As shown below, for the query condition a>0 is pushed down, but the pushed-down information is only implicitly given inside the `KeyRange`, which is not convenient for users to understand.
+   The expression(s) for building ranges are not shown explicitly, which makes it difficult to know which expression(s) are used to build range. As shown below, for the query expression `a>0` is pushed down, but the pushed-down information is only implicitly given inside the `KeyRange`, which is not convenient for users to understand.
 
-   ```SQL
+   ```sql
    CREATE TABLE `t3` (
      `a` BIGINT(20) NOT NULL,
      `b` varchar(255) NOT NULL,
@@ -143,7 +197,7 @@ In the original design, the `Residual Filter` represents operators that cannot b
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-   ```SQL
+   ```sql
    SELECT a FROM t3 where a>0
    ```
 
@@ -153,335 +207,50 @@ In the original design, the `Residual Filter` represents operators that cannot b
    +- TiKV CoprocessorRDD{[table: t3] TableScan, Columns: a@LONG, KeyRange: [([t\200\000\000\000\000\000\005/_r\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\005/_s\000\000\000\000\000\000\000\000])], startTs: 434063568626778113}
    ```
 
+4. confusing naming of the operator
+
+   In TiDB, a process named `Scan` means scanning a piece of data, not aggregating and computing the result of the scan. But in TiSpark, a process named scan means aggregating and computing the results of the scan. This may confuse users who switch from TiDB to TiSpark.
+
+   The selection expression pushed down to TiKV/COP in TiDB is called `Selection`, while the selection expression is called `Pushdown Filter` in TiSpark. This may also confuse users who switch from TiDB to TiSpark.
+
 ## Detailed Design
 
-### Design Overview
+### Change to now output
 
-- **`TableRangeScan`**: Table scans with the specified range. We consider full table scan as a special case of `TableRangeScan`, so full table scan is also called `TableRangeScan`.
+#### appear a filter that should not appear
 
-- **`TableRowIDScan`**: Scans the table data based on the `RowID`. Usually follows an index read operation to retrieve the matching data rows.
-
-- **`IndexRangeScan`**: Index scans with the specified range. We consider full index scan as a special case of `IndexRangeScan`, so full index scan is also called `IndexRangeScan`.
-
-- **`RangeFilter`**: `RangeFilter` indicates which conditions the range is made up of. `RangeFilter` generally appears when the query involves an index. If `RangeFilter` is empty, it indicates a full table scan or full index scan. `RangeFilter` generally appears when the query involves an index range, when query the expressions in the `RangeFilter` form the scanned range from left to right.
-
-### outputting multiple filters which should not show together at the same time
-
-* Remove `Residual Filter` 
-* Rename `PushDown Filter` to `Selection`.
-
-##### `Table Scan`
-
-```sql
-CREATE TABLE `t1` (
-  `a` BIGINT(20) NOT NULL,
-  `b` varchar(255) NOT NULL,
-  `c` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
-```
-
-```sql
-SELECT * FROM t1 where a>0
-```
-
-**Before:**
-
-```text
-== Physical Plan ==
-*(1) ColumnarToRow
-+- TiKV CoprocessorRDD{[table: t1] TableScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255), Residual Filter: [a@LONG GREATER_THAN 0], PushDown Filter: [a@LONG GREATER_THAN 0], KeyRange: [([t\200\000\000\000\000\000\002\376_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\002\376_s\000\000\000\000\000\000\000\000])], startTs: 433995142104612867}
-```
-
-**After:**
-
-```text
-= Physical Plan ==
-*(1) ColumnarToRow
-+- TiKV CoprocessorRDD{[table: t1] TableScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): { TableRangeScan: { KeyRange: { RangeFilter: {}, Range: [([t\200\000\000\000\000\000\003A_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\003A_s\000\000\000\000\000\000\000\000])], Selection: [a@LONG GREATER_THAN 0] } }, startTs: 433995460281892865}
-```
-
-##### `CoveringIndexScan`
-
-```sql
-CREATE TABLE `t2` (
-  `a` BIGINT(20) UNSIGNED  NOT NULL,
-  `b` varchar(255) NOT NULL,
-  `c` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`a`,`b`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
-```
-
-```sql
-SELECT a,b FROM t2 where b>'aa'
-```
-
-**Before:**
-
-```text
-== Physical Plan ==
-*(1) ColumnarToRow
-+- TiKV CoprocessorRDD{[table: t2] CoveringIndexScan[Index: primary] , Columns: b@VARCHAR(255), Residual Filter: [b@VARCHAR(255) GREATER_THAN "aa"], PushDown Filter: [b@VARCHAR(255) GREATER_THAN "aa"], KeyRange: [([t\200\000\000\000\000\000\a\242_i\200\000\000\000\000\000\000\001\000], [t\200\000\000\000\000\000\a\242_i\200\000\000\000\000\000\000\001\372])], startTs: 434108998315409409}
-```
-
-**After:**
-
-```text
-== Physical Plan ==
-*(1) ColumnarToRow
-+- TiKV CoprocessorRDD{[table: t2] CoveringIndexScan, Columns: b@VARCHAR(255): { IndexRangeScan: [Index: primary (a,b)]: { KeyRange: { RangeFilter: {}, Range: [([t\200\000\000\000\000\000\a\222_i\200\000\000\000\000\000\000\001\000], [t\200\000\000\000\000\000\a\222_i\200\000\000\000\000\000\000\001\372])], Selection: [b@VARCHAR(255) GREATER_THAN "aa"] } }, startTs: 434108895319293953}
-```
+To solve the problem of appearing a filter that shouldn't appear, we removed the `Residual Filter`.
 
 #### unclear representation of the execution process
 
-* Fixed the bug that the output of `Downgrade Filter` in `FetchHandleRDD` is actually `PushDown Filter`. 
+To solve the problem of the execution process for `IndexScan` is divided into two phases is not show, we divide the scan of `IndexScan` into two parts `IndexRangeScan`, `TableRowIDScan`. The scan of `TableScan` is named `TableRangeScan`. The scan of `CoveringIndexScan` is named `IndexRangeScan`. The meanings of these scans are shown below.
 
-* Refine the output `IndexScan` of `FetchHandleRDD`  to `IndexRangeScan` and `TableRowIDScan`, indicating that after the `IndexScan` there is a `TableScan` for the `RowID` is scanned after `IndexScan`.
+- **`TableRangeScan`**: Table scans with the specified range. We consider full table scan as a special case of `TableRangeScan`, so full table scan is also called `TableRangeScan`.
+- **`TableRowIDScan`**: Scans the table data based on the `RowID`. Usually follows an index read operation to retrieve the matching data rows.
+- **`IndexRangeScan`**: Index scans with the specified range. We consider full index scan as a special case of `IndexRangeScan`, so full index scan is also called `IndexRangeScan`.
 
-* Delete the original `Downgrade Filter` in `FetchHandleRDD`. 
+To solve the problem of only the `Downgrade Filter` shows in `IndexScan`, we delete the `Downgrade Filter` and add the `Selection` (`Selection` will be introduced later) in `FetchHandleRDD`.
 
-* Add `Selection` `FetchHandleRDD` in to indicate the `Selection` condition executed in the normal execution process.
+To solve only the name of the index we use is shown, not the columns that make up the index, we add the columns that make up the index after the index name.
 
-##### `IndexScan`
+#### expression(s) that constitutes the scanning range is hard to know
 
-``` sql
-CREATE TABLE `t2` (
-  `a` BIGINT(20) NOT NULL,
-  `b` varchar(255) NOT NULL,
-  `c` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`a`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
-```
+To solve the problem of expression(s) that constitutes the scanning range is hard to know, we added a `RangeFilter` to the `KeyRange` to indicate the expression(s) used to construct the scan range.
 
-```SQL
-SELECT * FROM t2 where a>0
-```
+- **`RangeFilter`**: `RangeFilter` indicates which expression(s) the range is made up of. If `RangeFilter` is empty, it indicates a full table scan or full index scan. `RangeFilter` generally appears when the query involves an index range, when query the expressions in the `RangeFilter` form the scanned range from left to right.
 
-**Before:**
+#### confusing naming of the operator
 
-```text
-== Physical Plan ==
-*(1) ColumnarToRow
-+- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[[b@VARCHAR(255) GREATER_THAN "aa"]]
-   +- RowToColumnar
-      +- TiKV FetchHandleRDD{[table: t2] IndexScan[Index: primary] , Columns: a@UNSIGNED LONG, b@VARCHAR(255), c@VARCHAR(255), Downgrade Filter: [b@VARCHAR(255) GREATER_THAN "aa"], KeyRange: [([t\200\000\000\000\000\000\a\302_i\200\000\000\000\000\000\000\001\000], [t\200\000\000\000\000\000\a\302_i\200\000\000\000\000\000\000\001\372])], startTs: 434109202211274753}
-```
+To solve the problem of confusing the naming of the operator, we change the operator to the same name as TiDB. `IndexScan` has changed to `IndexLookUp`; `CoveringIndexScan` has changed to `IndexReader`; `TableScan` has changed to `TableReader`. The `PushDown Filter` has changed to `Selection`.
 
-**After:**
-
-```text
-== Physical Plan ==
-*(1) ColumnarToRow
-+- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[[b@VARCHAR(255) GREATER_THAN "aa"]]
-   +- RowToColumnar
-      +- TiKV FetchHandleRDD{[table: t2] IndexScan, Columns: a@UNSIGNED LONG, b@VARCHAR(255), c@VARCHAR(255): { IndexRangeScan: [Index: primary (a,b)]: { KeyRange: { RangeFilter: {}, Range: [([t\200\000\000\000\000\000\a\262_i\200\000\000\000\000\000\000\001\000], [t\200\000\000\000\000\000\a\262_i\200\000\000\000\000\000\000\001\372])], Selection: [b@VARCHAR(255) GREATER_THAN "aa"] }, TableRowIDScan:{ Selection: [b@VARCHAR(255) GREATER_THAN "aa"] } }, startTs: 434109174817226753}
-```
-
-### obscure push-down conditions
-
-* Add `RangeFliter` indicating which conditions are used to build Range.
-
-#### TableScan
-
-```sql
-CREATE TABLE `t3` (
-  `a` BIGINT(20) NOT NULL,
-  `b` varchar(255) NOT NULL,
-  `c` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (a) clustered
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
-```
-
-```sql
-SELECT * FROM t3 where a>0
-```
-
-**Before:**
-
-```text
-== Physical Plan ==
-*(1) ColumnarToRow
-+- TiKV CoprocessorRDD{[table: t3] TableScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255), KeyRange: [([t\200\000\000\000\000\000\003\022_r\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\003\022_s\000\000\000\000\000\000\000\000])], startTs: 433995273490923521}
-```
-
-**After:**
-
-```text
-== Physical Plan ==
-*(1) ColumnarToRow
-+- TiKV CoprocessorRDD{[table: t3] TableScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): { TableRangeScan: { KeyRange: { RangeFilter: {[a@LONG GREATER_THAN 0]}, Range: [([t\200\000\000\000\000\000\003U_r\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\003U_s\000\000\000\000\000\000\000\000])] } }, startTs: 433995476849393665}
-```
-
-#### CoveringIndexScan
-
-```sql
-CREATE TABLE `t2` (
-  `a` BIGINT(20) UNSIGNED  NOT NULL,
-  `b` varchar(255) NOT NULL,
-  `c` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`a`,`b`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
-```
-
-```sql
-SELECT a,b FROM t2 where a>0 and b>'aa'
-```
-
-**Before:**
-
-```text
-== Physical Plan ==
-*(1) ColumnarToRow
-+- TiKV CoprocessorRDD{[table: t2] CoveringIndexScan[Index: primary] , Columns: a@LONG, b@VARCHAR(255), Residual Filter: [b@VARCHAR(255) GREATER_THAN "aa"], PushDown Filter: [b@VARCHAR(255) GREATER_THAN "aa"], KeyRange: [([t\200\000\000\000\000\000\0033_i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\0033_i\200\000\000\000\000\000\000\001\372])], startTs: 433995356695429121}
-```
-
-**After:**
-
-```text
-== Physical Plan ==
-*(1) ColumnarToRow
-+- TiKV CoprocessorRDD{[table: t2] CoveringIndexScan, Columns: a@LONG, b@VARCHAR(255): { IndexRangeScan: [Index: primary (a,b)]: { KeyRange: { RangeFilter: {[a@LONG GREATER_THAN 0]}, Range: [([t\200\000\000\000\000\000\003\223_i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\003\223_i\200\000\000\000\000\000\000\001\372])], Selection: [b@VARCHAR(255) GREATER_THAN "aa"] } }, startTs: 433995598326923265}
-```
-#### IndexScan
-
-``` sql
-CREATE TABLE `t2` (
-  `a` BIGINT(20) NOT NULL,
-  `b` varchar(255) NOT NULL,
-  `c` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`a`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
-```
-
-```sql
-SELECT * FROM t2 where a>0
-```
-
-**Before:**
-
-```text
-== Physical Plan ==
-*(1) ColumnarToRow
-+- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[]
-   +- RowToColumnar
-      +- TiKV FetchHandleRDD{[table: t2] IndexScan[Index: primary] , Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255), Downgrade Filter: [a@LONG GREATER_THAN 0], KeyRange: [([t\200\000\000\000\000\000\003 _i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\003 _i\200\000\000\000\000\000\000\001\372])], startTs: 433995306940497921}
-```
-
-**After:**
-
-```text
-== Physical Plan ==
-*(1) ColumnarToRow
-+- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[[a@UNSIGNED LONG GREATER_THAN 0]]
-   +- RowToColumnar
-      +- TiKV FetchHandleRDD{[table: t2] IndexScan, Columns: a@UNSIGNED LONG, b@VARCHAR(255), c@VARCHAR(255): { IndexRangeScan: [Index: primary (a)]: { KeyRange: { RangeFilter: {[a@UNSIGNED LONG GREATER_THAN 0]}, Range: [([t\200\000\000\000\000\000\006\322_i\200\000\000\000\000\000\000\001\004\000\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\006\322_i\200\000\000\000\000\000\000\001\372])] }, TableRowIDScan:{  } }, startTs: 434100730234142721}
-```
+- **`TableReader`**: Aggregates the data obtained by the underlying operator `TableRangeScan` in TiKV.
+- **`IndexReader`**: Aggregates the data obtained by the underlying operator `IndexRangeScan` in TiKV.
+- **`IndexLookUp`**: First aggregates the RowIDs (in TiKV) scanned by the first scan in the index. Then at the second scan in the table, accurately reads the data from TiKV based on these RowIDs. At the first scan in the index, there is  `IndexRangeScan` operator; at the second scan in the table, there is the `TableRowIDScan` operator.
+- **`Selection`**: The expression passed to COP/TiKV as selection expression without triggering a downgrade.
 
 ### Code Design
 
-![jCdcwj.png](imgs/phyical_plan_explain/code_flow_chart.png)
-
-1. We first determine the type of Scan, and here we will classify the Scan into three types
-
-    - Scan on Index first, then on Table, called `IndexScan`.
-
-    - Scan only for Index, called `CoveringIndexScan`.
-
-    - Scan for Table only, called `TableScan`.
-
-   For Scan type, `CoveringIndexScan` and `IndexScan` set `isIndexScan` to true.
-
-   ```java
-    switch (getIndexScanType()) {
-      case INDEX_SCAN:
-        sb.append("IndexScan");
-        isIndexScan = true;
-        break;
-      case COVERING_INDEX_SCAN:
-        sb.append("CoveringIndexScan");
-        isIndexScan = true;
-        break;
-      case TABLE_SCAN:
-        sb.append("TableScan");
-    }
-   ```
-
-2. Get the columns in projection and predicates.
-
-   ```java
-    if (!getFields().isEmpty()) {
-         sb.append(", Columns: ");
-         Joiner.on(", ").skipNulls().appendTo(sb, getFields());
-       }
-   ```
-
-3. Handled separately according to whether `isIndexScan` is true or not.
-
-   ```java
-      if (isIndexScan) {
-        sb.append(stringIndexScan());
-      } else {
-        sb.append(stringTableScan());
-      }
-   ```
-
-    - `stringTableScan`
-
-      Call `buildTableScan`, then call `toPhysicalPlan`.
-
-      ```java
-         sb.append("TableRangeScan");
-         sb.append(": {");
-         TiDAGRequest tableRangeScan = this.copy();
-         tableRangeScan.buildTableScan();
-         sb.append(tableRangeScan.stringPushDownExpression());
-      ```
-
-    - `stringIndexScan`
-
-        - First process `IndexRangeScan`, add the information of index scanned by `IndexRangeScan`, call `buildIndexScan`, then call `toPhysicalPlan`.
-        - if it is `DoubleRead`, add `TableRowIDScan`. first call `buildTableScan`, then call `toPhysicalPlan`.
-
-      ```java
-          sb.append("IndexRangeScan: ");
-          sb.append(index.colNames);
-          ...
-          TiDAGRequest indexRangeScan = this.copy();
-          indexRangeScan.buildIndexScan();
-          sb.append(indexRangeScan.stringPushDownExpression());
-          if (isDoubleRead()) {
-            sb.append(", TableRowIDScan:");
-            TiDAGRequest tableRowIDScan = this.copy();
-            tableRowIDScan.resetRanges();
-            tableRowIDScan.buildTableScan();
-            sb.append(tableRowIDScan.stringPushDownExpression());
-          }
-      ```
-
-    - `stringPushDownExpression`
-
-      Return `Range`, `Filters`, `Aggregates`, `GroupBy`, `OrderBy`, `Limit` to String.
-
-      ```java
-      if (!getRangesMaps().isEmpty()) {
-           sb.append(getRangeFliter())
-           sb.append(getRangesMaps())
-      }
-      if (!getPushDownFilters().isEmpty()) {
-          sb.append(getPushDownFilters())
-      }
-      if(!getPushDownAggregates().isEmpty()){
-          sb.append(getPushDownAggregates())
-      }
-      if (!getGroupByItems().isEmpty()) {
-           sb.append(getGroupByItems())
-      }
-      if (!getOrderByItems().isEmpty()) {
-          sb.append(getOrderByItems())
-      }
-      if (getLimit() != 0) {
-          sb.append(getLimit())
-      }
-      ```
+![image-20220628112756535](./imgs/phyical_plan_explain/code_flow_chart.png)
 
 ## Test Design
 
@@ -495,15 +264,15 @@ SELECT * FROM t2 where a>0
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-    - `TableScan` with selection and without `RangeFilter`
+   - `TableScan` with selection and without `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
 2. Table with cluster index
 
-   TiDB Version smaller than 5.0
+   TiDB version smaller than 5.0
 
    ```sql
    CREATE TABLE `t1` (
@@ -514,7 +283,7 @@ SELECT * FROM t2 where a>0
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-   TiDB Version bigger than 5.0
+   TiDB version bigger than 5.0
 
    ```sql
    CREATE TABLE `t1` (
@@ -525,17 +294,17 @@ SELECT * FROM t2 where a>0
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-    - `TableScan` with selection and with `RangeFilter`
+   - `TableScan` with selection and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `TableScan` without selection and with `RangeFilter`
+   - `TableScan` without selection and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0
+     ```
 
 3. Table with cluster index and partition
 
@@ -553,11 +322,11 @@ SELECT * FROM t2 where a>0
      )
    ```
 
-    - `TableScan` with Selection and with `RangeFilter` with partition
+   - `TableScan` with Selection and with `RangeFilter` with partition
 
-      ```sql
-      SELECT a,b FROM t1 where a>0 and b>'aa'
-      ```
+     ```sql
+     SELECT a,b FROM t1 where a>0 and b>'aa'
+     ```
 
 4. Table with secondary index
 
@@ -570,23 +339,23 @@ SELECT * FROM t2 where a>0
    CREATE INDEX `testIndex` ON `t1` (`a`,`b`);
    ```
 
-    - `IndexScan` with Selection and with `RangeFilter`
+   - `IndexScan` with Selection and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `IndexScan` without Selection and with `RangeFilter`
+   - `IndexScan` without Selection and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a=0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a=0 and b > 'aa'
+     ```
 
-    - `CoveringIndex` with Selection and with `RangeFilter`
+   - `CoveringIndex` with Selection and with `RangeFilter`
 
-      ```sql
-      SELECT a,b FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT a,b FROM t1 where a>0 and b > 'aa'
+     ```
 
 5. Table with secondary prefix index
 
@@ -599,29 +368,29 @@ SELECT * FROM t2 where a>0
    CREATE INDEX `testIndex` ON `t1` (`b`(4),a);
    ```
 
-    - `IndexScan` with `RangeFilter` and with Selection
+   - `IndexScan` with `RangeFilter` and with `Selection`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `IndexScan` with `RangeFilter` and without Selection
+   - `IndexScan` with `RangeFilter` and without `Selection`
 
-      ```sql
-      SELECT * FROM t1 where b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where b > 'aa'
+     ```
 
-    - `CoveringIndexScan` with `RangeFilter` and with Selection
+   - `CoveringIndexScan` with `RangeFilter` and with `Selection`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `CoveringIndexScan` with `RangeFilter` and without Selection
+   - `CoveringIndexScan` with `RangeFilter` and without `Selection`
 
-      ```sql
-      SELECT * FROM t1 where b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where b > 'aa'
+     ```
 
 6. Table with secondary index and partition
 
@@ -640,17 +409,17 @@ SELECT * FROM t2 where a>0
    CREATE INDEX `testIndex` ON `t1` (`b`);
    ```
 
-    - `IndexScan` with Selection and with `RangeFilter` with partition
+   - `IndexScan` with `Selectio`n and with `RangeFilter` with partition
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `CoveringIndexScan` with Selection and with `RangeFilter` with partition
+   - `CoveringIndexScan` with `Selection` and with `RangeFilter` with partition
 
-      ```sql
-      SELECT a,b FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT a,b FROM t1 where a>0 and b > 'aa'
+     ```
 
 7. Table with secondary prefix index and partition
 
@@ -669,14 +438,14 @@ SELECT * FROM t2 where a>0
    CREATE INDEX `testIndex` ON `t1` (`b`(4));
    ```
 
-    - `IndexScan` with Selection and with `RangeFilter` with partition
+   - `IndexScan` with `Selection` and with `RangeFilter` with partition
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `CoveringIndexScan` with Selection and with `RangeFilter` with partition
+   - `CoveringIndexScan` with `Selection` and with `RangeFilter` with partition
 
-      ```sql
-      SELECT a,b FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT a,b FROM t1 where a>0 and b > 'aa'
+     ```
