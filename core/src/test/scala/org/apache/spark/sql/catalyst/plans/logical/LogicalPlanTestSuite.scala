@@ -112,7 +112,58 @@ class LogicalPlanTestSuite extends BasePlanTest {
     extractDAGRequests(df).map(_.getStartTs).foreach { checkTimestamp }
   }
 
-  // https://github.com/pingcap/tispark/issues/1498
+  // https://github.com/pingcap/tispark/issues/2290
+  test("fix cannot encode row key with non-long type1") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    tidbStmt.execute("DROP TABLE IF EXISTS `t2`")
+    tidbStmt.execute("DROP TABLE IF EXISTS `t3`")
+    tidbStmt.execute("DROP TABLE IF EXISTS `t4`")
+    tidbStmt.execute(
+      """
+        |CREATE TABLE `t1` (
+        |  `a` BIGINT(20) NOT NULL,
+        |  `b` varchar(255) NOT NULL,
+        |  `c` varchar(255) DEFAULT NULL
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    tidbStmt.execute(
+      """
+        |CREATE TABLE `t2` (
+        |  `a` BIGINT(20) NOT NULL,
+        |  `b` varchar(255) NOT NULL,
+        |  `c` varchar(255) DEFAULT NULL,
+        |  PRIMARY KEY (`b`)
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    tidbStmt.execute(
+      """
+        |CREATE TABLE `t3` (
+        |  `a` BIGINT(20) NOT NULL,
+        |  `b` varchar(255) NOT NULL,
+        |  `c` varchar(255) DEFAULT NULL,
+        |  PRIMARY KEY (`b`(4)) clustered
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    tidbStmt.execute(
+      """
+        |CREATE TABLE `t4` (
+        |  `a` BIGINT(20) NOT NULL,
+        |  `b` varchar(255) NOT NULL,
+        |  `c` varchar(255) DEFAULT NULL,
+        |  PRIMARY KEY (a)
+        |)PARTITION BY RANGE (a) (
+        |    PARTITION p0 VALUES LESS THAN (6),
+        |    PARTITION p1 VALUES LESS THAN (11),
+        |    PARTITION p2 VALUES LESS THAN (16),
+        |    PARTITION p3 VALUES LESS THAN MAXVALUE
+        |)""".stripMargin)
+    tidbStmt.execute("split table t1 between (0) and (9223888888) regions 16")
+    val situation = "select * from t2 where b >'aa'"
+    val df = spark.sql(situation)
+    df.explain()
+    val DAGRequest = extractDAGRequests(df).head
+    val timestamp = DAGRequest.getStartTs.getVersion
+    val plan = DAGRequest.toString
+  }
+
+    // https://github.com/pingcap/tispark/issues/1498
   test("test index scan failed to push down varchar") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute(

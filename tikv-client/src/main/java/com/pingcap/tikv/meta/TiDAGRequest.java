@@ -990,18 +990,15 @@ public class TiDAGRequest implements Serializable {
       sb.append(String.format("[table: %s] ", tableInfo.getName()));
     }
 
-    boolean isIndexScan = false;
     switch (getIndexScanType()) {
       case INDEX_SCAN:
-        sb.append("IndexScan");
-        isIndexScan = true;
+        sb.append("IndexLookUp");
         break;
       case COVERING_INDEX_SCAN:
-        sb.append("CoveringIndexScan");
-        isIndexScan = true;
+        sb.append("IndexReader");
         break;
       case TABLE_SCAN:
-        sb.append("TableScan");
+        sb.append("TableReader");
     }
 
     if (!getFields().isEmpty()) {
@@ -1009,21 +1006,28 @@ public class TiDAGRequest implements Serializable {
       Joiner.on(", ").skipNulls().appendTo(sb, getFields());
     }
     sb.append(": { ");
-    if (isIndexScan) {
-      sb.append(stringIndexScan());
-    } else {
-      sb.append(stringTableScan());
+    switch (getIndexScanType()) {
+      case INDEX_SCAN:
+        sb.append("{").append(stringIndexRangeScan()).append("}");
+        sb.append("; {").append(stringTableRowIDScan()).append("}");
+        break;
+      case COVERING_INDEX_SCAN:
+        sb.append(stringIndexRangeScan());
+        break;
+      case TABLE_SCAN:
+        sb.append(stringTableRangeScan());
     }
     sb.append(" }");
     sb.append(", startTs: ").append(startTs.getVersion());
     return sb.toString();
   }
 
-  private String stringIndexScan() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("IndexRangeScan: ");
-    sb.append(String.format("[Index: %s ", indexInfo.getName()));
-    sb.append("(");
+  private String stringIndexRangeScan() {
+    StringBuilder sb= new StringBuilder();
+    TiDAGRequest indexRangeScan = this.copy();
+    indexRangeScan.init();
+    sb.append("IndexRangeScan");
+    sb.append(String.format("(Index:%s(", indexInfo.getName()));
     List<String> colNames =
         indexInfo
             .getIndexColumns()
@@ -1031,41 +1035,35 @@ public class TiDAGRequest implements Serializable {
             .map(TiIndexColumn::getName)
             .collect(Collectors.toList());
     Joiner.on(",").skipNulls().appendTo(sb, colNames);
-    sb.append(")]:");
-    sb.append(" {");
-    TiDAGRequest indexRangeScan = this.copy();
-    indexRangeScan.buildIndexScan();
-    sb.append(indexRangeScan.stringPushDownExpression());
+    sb.append(")): {");
+    sb.append(indexRangeScan.stringScanRange());
     sb.append(" }");
-    if (isDoubleRead()) {
-      sb.append(", TableRowIDScan:");
-      sb.append("{ ");
-      TiDAGRequest tableRowIDScan = this.copy();
-      tableRowIDScan.resetRanges();
-      tableRowIDScan.buildTableScan();
-      sb.append(tableRowIDScan.stringPushDownExpression());
-      sb.append(" }");
-    }
+    sb.append(indexRangeScan.stringPushDownExpression());
     return sb.toString();
   }
 
-  private String stringTableScan() {
+  private String stringTableRowIDScan(){
+    TiDAGRequest tableRowIDScan = this.copy();
+    tableRowIDScan.buildTableScan();
+    return "TableRowIDScan"
+        + tableRowIDScan.stringPushDownExpression();
+  }
+
+  private String stringTableRangeScan() {
     StringBuilder sb = new StringBuilder();
-    sb.append("TableRangeScan");
-    sb.append(": {");
     TiDAGRequest tableRangeScan = this.copy();
     tableRangeScan.buildTableScan();
-    sb.append(tableRangeScan.stringPushDownExpression());
+    sb.append("TableRangeScan");
+    sb.append(": {");
+    sb.append(tableRangeScan.stringScanRange());
     sb.append(" }");
+    sb.append(tableRangeScan.stringPushDownExpression());
     return sb.toString();
   }
 
-  private String stringPushDownExpression() {
-    StringBuilder sb = new StringBuilder();
-    List<String> pushDownExpression = new ArrayList<>();
+  private String stringScanRange(){
+    StringBuilder keyRange = new StringBuilder();
     if (!getRangesMaps().isEmpty()) {
-      StringBuilder keyRange = new StringBuilder();
-      keyRange.append(" KeyRange: {");
       keyRange.append(" RangeFilter: {");
       Joiner.on(", ").skipNulls().appendTo(keyRange, getRangeFilter());
       keyRange.append("}");
@@ -1092,42 +1090,31 @@ public class TiDAGRequest implements Serializable {
                 });
       }
       keyRange.append("]");
-      pushDownExpression.add(keyRange.toString());
     }
+    return keyRange.toString();
+  }
+
+  private String stringPushDownExpression() {
+    StringBuilder sb = new StringBuilder();
     if (!getPushDownFilters().isEmpty()) {
-      StringBuilder pushDownBuilder = new StringBuilder();
-      pushDownBuilder.append("Selection: ");
-      Joiner.on(", ").skipNulls().appendTo(pushDownBuilder, getPushDownFilters());
-      pushDownExpression.add(pushDownBuilder.toString());
+      sb.append(", Selection: ");
+      Joiner.on(", ").skipNulls().appendTo(sb, getPushDownFilters());
     }
-
     if (!getPushDownAggregates().isEmpty()) {
-      StringBuilder aggregatesBuilder = new StringBuilder();
-      aggregatesBuilder.append("Aggregates: ");
-      Joiner.on(", ").skipNulls().appendTo(aggregatesBuilder, getPushDownAggregates());
-      pushDownExpression.add(aggregatesBuilder.toString());
+      sb.append(", Aggregates: ");
+      Joiner.on(", ").skipNulls().appendTo(sb, getPushDownAggregates());
     }
-
     if (!getGroupByItems().isEmpty()) {
-      StringBuilder groupByBuilder = new StringBuilder();
-      groupByBuilder.append("Group By: ");
-      Joiner.on(", ").skipNulls().appendTo(groupByBuilder, getGroupByItems());
-      pushDownExpression.add(groupByBuilder.toString());
+      sb.append(", Group By: ");
+      Joiner.on(", ").skipNulls().appendTo(sb, getGroupByItems());
     }
-
     if (!getOrderByItems().isEmpty()) {
-      StringBuilder orderByBuilder = new StringBuilder();
-      orderByBuilder.append("Order By: ");
-      Joiner.on(", ").skipNulls().appendTo(orderByBuilder, getOrderByItems());
-      pushDownExpression.add(orderByBuilder.toString());
+      sb.append(", Order By: ");
+      Joiner.on(", ").skipNulls().appendTo(sb, getOrderByItems());
     }
-
     if (getLimit() != 0) {
-      String limitBuilder = "Limit: "
-          + "[" + limit + "]";
-      pushDownExpression.add(limitBuilder);
+      sb.append(String.format(", Limit: [%d]",limit));
     }
-    Joiner.on(", ").skipNulls().appendTo(sb, pushDownExpression);
     return sb.toString();
   }
 
