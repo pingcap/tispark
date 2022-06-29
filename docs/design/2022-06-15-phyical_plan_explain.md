@@ -48,41 +48,7 @@ First of all, let's introduce a few member variables in `TiDAGRequest`.
 * `pushdownFilters` is only used in `toStringInternal`. When `indexInfo==null` or `isDoubleRead==false` or all the columns involved in the filter are in the index, the content of `pushDownFilters` is equal to filters, otherwise, `pushDownFilters` is empty.
 * `keyRange` is the scan range of the table or index.
 
-The main code of `toStringInternal` is shown below.
-
-```java
-private String toStringInternal(){
-	StringBuilder sb=new StringBuilder();
-    // init some data in TiDAGRequest.
-	init();
-    switch (getIndexScanType()) {
-      case INDEX_SCAN:
-        sb.append("IndexScan");
-        isIndexScan=true;
-        break;
-      case COVERING_INDEX_SCAN:
-        sb.append("CoveringIndexScan");
-        break;
-      case TABLE_SCAN:
-        sb.append("TableScan");
-    }
-    if (isIndexScan && !getDowngradeFilters().isEmpty()) {
-       sb.append(", Downgrade Filter: ");
-       Joiner.on(", ").skipNulls().appendTo(sb, request.getDowngradeFilters());
-    }
-    if (!isIndexScan && !getFilters().isEmpty()) {
-        sb.append(", Residual Filter: ");
-        Joiner.on(", ").skipNulls().appendTo(sb, request.getFilters());
-    }
-    if (!getPushDownFilters().isEmpty()) {
-        sb.append(", PushDown Filter: ");
-        Joiner.on(", ").skipNulls().appendTo(sb, request.getPushDownFilters());
-    }
-    // add keyRange and other push down expression to sb.
-    ...
-    return sb.toString();
-}
-```
+The main code is in [`toStringInternal`](https://github.com/pingcap/tispark/blob/v3.0.1/tikv-client/src/main/java/com/pingcap/tikv/meta/TiDAGRequest.java#L972-L1012).
 
 From the code we can see that the execution plan is divided into three kinds of `IndexScan`, `CoveringIndexScan`, and `TableScan`; `TiDAGRequest` has three kinds `Filter` —— `Downgrade Filter`, ` Resdiual Filter`, `PushDown Filter`. There is zero or more `Filter` for an execution plan. We will describe the meaning of each execution plan and `Filter` in detail below.
 
@@ -148,26 +114,26 @@ The expression passed to COP/TiKV as a selection expression without triggering a
 
 2. unclear representation of the execution process
 
-    1. unable to know the execution steps
+   1. unable to know the execution steps
 
-       As stated before, the execution process for `IndexScan` is divided into two phases, the first phase for index data scanning, and the second phase for table data scanning. However, we cannot see this execution process in the physical plan explanation.
+      As stated before, the execution process for `IndexScan` is divided into two phases, the first phase for index data scanning, and the second phase for table data scanning. However, we cannot see this execution process in the physical plan explanation.
 
-    2. the displayed `Filter` is not the one that would be executed under normal execution
+   2. the displayed `Filter` is not the one that would be executed under normal execution
 
-       The `Downgrade Filter` in `RegionTaskExec` is designed to indicate that the `Downgrade Filter` will be used after the downgrade(There is some problem with the content displayed in `RegionTaskExec`, it should show the content of `downgradeFilters` in `TiDAGRequest`, but it displays the content of `filters` in `TiDAGRequest`. We will fix this bug here.). However, the `Downgrade Filter` is displayed again in the `FetchHandleRDD` and the `PushDown Filter`, which is executed under normal circumstances, is not displayed.
+      The `Downgrade Filter` in `RegionTaskExec` is designed to indicate that the `Downgrade Filter` will be used after the downgrade(There is some problem with the content displayed in `RegionTaskExec`, it should show the content of `downgradeFilters` in `TiDAGRequest`, but it displays the content of `filters` in `TiDAGRequest`. We will fix this bug here.). However, the `Downgrade Filter` is displayed again in the `FetchHandleRDD` and the `PushDown Filter`, which is executed under normal circumstances, is not displayed.
 
-       > **`RegionTaskExec`**
-       >
-       > `RegionTaskExec` is the node that determines whether to downgrade.
-       >
-       >
-       >**`FetchHandleRDD`**
-       >
-       >When the `isDouble` variable of `TiDAGRequest` is true, the `CoprocessorRDD` is called `FetchHandleRDD`.
+      > **`RegionTaskExec`**
+      >
+      > `RegionTaskExec` is the node that determines whether to downgrade.
+      >
+      >
+      >**`FetchHandleRDD`**
+      >
+      >When the `isDouble` variable of `TiDAGRequest` is true, the `CoprocessorRDD` is called `FetchHandleRDD`.
 
-    3. information about the used index is hard to know
+   3. information about the used index is hard to know
 
-       In the physical plan explanation, only the name of the index we use is shown, not the columns that make up the index.
+      In the physical plan explanation, only the name of the index we use is shown, not the columns that make up the index.
 
    ```SQL
    CREATE TABLE `t2` (
@@ -259,9 +225,9 @@ after:
 
    To solve the problem of the execution process for `IndexScan` is divided into two phases is not show, we divide the scan of `IndexScan` into two parts `IndexRangeScan`, `TableRowIDScan`. The scan of `TableScan` is named `TableRangeScan`. The scan of `CoveringIndexScan` is named `IndexRangeScan`. The meanings of these scans are shown below.
 
-    * **`TableRangeScan`**: Table scans with the specified range. We consider full table scan as a special case of `TableRangeScan`, so full table scan is also called `TableRangeScan`.
-    * **`TableRowIDScan`**: Scans the table data based on the `RowID`. Usually follows an index read operation to retrieve the matching data rows.
-    * **`IndexRangeScan`**: Index scans with the specified range. We consider full index scan as a special case of `IndexRangeScan`, so full index scan is also called `IndexRangeScan`.
+   * **`TableRangeScan`**: Table scans with the specified range. We consider full table scan as a special case of `TableRangeScan`, so full table scan is also called `TableRangeScan`.
+   * **`TableRowIDScan`**: Scans the table data based on the `RowID`. Usually follows an index read operation to retrieve the matching data rows.
+   * **`IndexRangeScan`**: Index scans with the specified range. We consider full index scan as a special case of `IndexRangeScan`, so full index scan is also called `IndexRangeScan`.
 
 2. the displayed `Filter` is not the one that would be executed under normal execution
 
@@ -365,17 +331,17 @@ To solve the problem of confusing the naming of the operator, we change the oper
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-    - `TableScan` with `Selection` and without `RangeFilter`
+   - `TableScan` with `Selection` and without `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `TableScan` with complex sql statements
+   - `TableScan` with complex sql statements
 
-      ```sql
-      select * from t1 where a>0 or b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10)
-      ```
+     ```sql
+     select * from t1 where a>0 or b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10)
+     ```
 
 2. Table with cluster index
 
@@ -401,23 +367,23 @@ To solve the problem of confusing the naming of the operator, we change the oper
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-    - `TableScan` with `Selection` and with `RangeFilter`
+   - `TableScan` with `Selection` and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `TableScan` without `Selection` and with `RangeFilter`
+   - `TableScan` without `Selection` and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0
+     ```
 
-    - `TableScan` with complex sql statements
+   - `TableScan` with `Selection` and with `RangeFilter`
 
-      ```sql
-      select a from t1 where a>0 and b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10) group by a
-      ```
+     ```sql
+     SELECT * FROM t1 where b>'aa'
+     ```
 
 3. Table with cluster index and partition
 
@@ -435,11 +401,11 @@ To solve the problem of confusing the naming of the operator, we change the oper
      )
    ```
 
-    - `TableScan` with `Selection` and with `RangeFilter` with partition
+   - `TableScan` with `Selection` and with `RangeFilter` with partition
 
-      ```sql
-      SELECT a,b FROM t1 where a>0 and b>'aa'
-      ```
+     ```sql
+     SELECT a,b FROM t1 where a>0 and b>'aa'
+     ```
 
 4. Table with secondary index
 
@@ -452,35 +418,35 @@ To solve the problem of confusing the naming of the operator, we change the oper
    CREATE INDEX `testIndex` ON `t1` (`a`,`b`);
    ```
 
-    - `IndexScan` with `Selection` and with `RangeFilter`
+   - `IndexScan` with `Selection` and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `IndexScan` without `Selection`and with `RangeFilter`
+   - `IndexScan` without `Selection`and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a=0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a=0 and b > 'aa'
+     ```
 
-    - `CoveringIndex` with `Selection` and with `RangeFilter`
+   - `CoveringIndex` with `Selection` and with `RangeFilter`
 
-      ```sql
-      SELECT a,b FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT a,b FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `IndexScan` with complex sql statements
+   - `IndexScan` with complex sql statements
 
-      ```sql
-      SELECT max(c) FROM t1 where a>0 and c > 'cc' and c < 'bb' group by c order by(c)
-      ```
+     ```sql
+     SELECT max(c) FROM t1 where a>0 and c > 'cc' and c < 'bb' group by c order by(c)
+     ```
 
-    - `CoveringIndexScan` with complex sql statements
+   - `CoveringIndexScan` with complex sql statements
 
-      ```sql
-      select sum(a) from t1 where a>0 and b > 'aa' or b<'cc' and a>0
-      ```
+     ```sql
+     select sum(a) from t1 where a>0 and b > 'aa' or b<'cc' and a>0
+     ```
 
 5. Table with secondary prefix index
 
@@ -493,20 +459,20 @@ To solve the problem of confusing the naming of the operator, we change the oper
    CREATE INDEX `testIndex` ON `t1` (`b`(4),a);
    ```
 
-    - `IndexScan` with `RangeFilter` and with `Selection`
+   - `IndexScan` with `RangeFilter` and with `Selection`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `IndexScan` with `RangeFilter` and without `Selection`
+   - `IndexScan` with `RangeFilter` and without `Selection`
 
-      ```sql
-      SELECT * FROM t1 where b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where b > 'aa'
+     ```
 
-    - `IndexScan` with complex sql statements
+   - `IndexScan` with complex sql statements
 
-      ```sql
-      select a from t1 where a>0 and b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10) group by a
-      ```
+     ```sql
+     select a from t1 where a>0 and b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10) group by a
+     ```
