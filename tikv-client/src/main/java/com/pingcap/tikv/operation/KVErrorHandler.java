@@ -321,20 +321,22 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     boolean retry = false;
 
     if (resp instanceof ScanResponse) {
-      List<KvPair> kvPairs = ((ScanResponse) resp).getPairsList();
-      List<Lock> locks = new ArrayList<>();
-      for (KvPair kvPair : kvPairs) {
-        if (kvPair.hasError()) {
-          Lock lock = AbstractLockResolverClient.extractLockFromKeyErr(kvPair.getError());
-          locks.add(lock);
+      if (((ScanResponse) resp).hasError()) {
+        List<KvPair> kvPairs = ((ScanResponse) resp).getPairsList();
+        List<Lock> locks = new ArrayList<>();
+        for (KvPair kvPair : kvPairs) {
+          if (kvPair.hasError()) {
+            Lock lock = AbstractLockResolverClient.extractLockFromKeyErr(kvPair.getError());
+            locks.add(lock);
+          }
         }
-      }
-      if (!locks.isEmpty()) {
-        try {
-          resolveLocks(backOffer, locks);
-          retry = true;
-        } catch (KeyException e) {
-          logger.warn("Unable to handle KeyExceptions other than LockException", e);
+        if (!locks.isEmpty()) {
+          try {
+            resolveLocks(backOffer, locks);
+            retry = true;
+          } catch (KeyException e) {
+            logger.warn("Unable to handle KeyExceptions other than LockException", e);
+          }
         }
       }
     } else {

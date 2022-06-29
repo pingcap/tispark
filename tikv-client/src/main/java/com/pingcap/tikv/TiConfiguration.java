@@ -41,7 +41,7 @@ public class TiConfiguration implements Serializable {
   private static final DateTimeZone DEF_TIMEZONE = Converter.getLocalTimezone();
   private static final int DEF_TIMEOUT = 10;
   private static final TimeUnit DEF_TIMEOUT_UNIT = TimeUnit.MINUTES;
-  private static final int DEF_SCAN_BATCH_SIZE = 10480;
+  private static final int DEF_SCAN_BATCH_SIZE = 10240;
   private static final boolean DEF_IGNORE_TRUNCATE = true;
   private static final boolean DEF_TRUNCATE_AS_WARNING = false;
   private static final int DEF_MAX_FRAME_SIZE = 2147483647; // 2 GB
