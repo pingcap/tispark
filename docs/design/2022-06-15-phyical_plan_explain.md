@@ -274,11 +274,17 @@ To solve the problem of confusing the naming of the operator, we change the oper
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-    - `TableScan` with `Selection` and without `RangeFilter`
+   - `TableScan` with `Selection` and without `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
+
+   - `TableScan` with complex sql statements
+
+     ```sql
+     select * from t1 where a>0 or b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10)
+     ```
 
 2. Table with cluster index
 
@@ -304,17 +310,23 @@ To solve the problem of confusing the naming of the operator, we change the oper
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-    - `TableScan` with `Selection` and with `RangeFilter`
+   - `TableScan` with `Selection` and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `TableScan` without `Selection` and with `RangeFilter`
+   - `TableScan` without `Selection` and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0
+     ```
+
+   - `TableScan` with complex sql statements
+
+     ```sql
+     select a from t1 where a>0 and b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10) group by a
+     ```
 
 3. Table with cluster index and partition
 
@@ -332,11 +344,11 @@ To solve the problem of confusing the naming of the operator, we change the oper
      )
    ```
 
-    - `TableScan` with `Selection` and with `RangeFilter` with partition
+   - `TableScan` with `Selection` and with `RangeFilter` with partition
 
-      ```sql
-      SELECT a,b FROM t1 where a>0 and b>'aa'
-      ```
+     ```sql
+     SELECT a,b FROM t1 where a>0 and b>'aa'
+     ```
 
 4. Table with secondary index
 
@@ -349,23 +361,35 @@ To solve the problem of confusing the naming of the operator, we change the oper
    CREATE INDEX `testIndex` ON `t1` (`a`,`b`);
    ```
 
-    - `IndexScan` with `Selection` and with `RangeFilter`
+   - `IndexScan` with `Selection` and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `IndexScan` without `Selection`and with `RangeFilter`
+   - `IndexScan` without `Selection`and with `RangeFilter`
 
-      ```sql
-      SELECT * FROM t1 where a=0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a=0 and b > 'aa'
+     ```
 
-    - `CoveringIndex` with `Selection` and with `RangeFilter`
+   - `CoveringIndex` with `Selection` and with `RangeFilter`
 
-      ```sql
-      SELECT a,b FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT a,b FROM t1 where a>0 and b > 'aa'
+     ```
+
+   - `IndexScan` with complex sql statements
+
+     ```sql
+     SELECT max(c) FROM t1 where a>0 and c > 'cc' and c < 'bb' group by c order by(c)
+     ```
+
+   - `CoveringIndexScan` with complex sql statements
+
+     ```sql
+     select sum(a) from t1 where a>0 and b > 'aa' or b<'cc' and a>0
+     ```
 
 5. Table with secondary prefix index
 
@@ -378,95 +402,20 @@ To solve the problem of confusing the naming of the operator, we change the oper
    CREATE INDEX `testIndex` ON `t1` (`b`(4),a);
    ```
 
-    - `IndexScan` with `RangeFilter` and with `Selection`
+   - `IndexScan` with `RangeFilter` and with `Selection`
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where a>0 and b > 'aa'
+     ```
 
-    - `IndexScan` with `RangeFilter` and without `Selection`
+   - `IndexScan` with `RangeFilter` and without `Selection`
 
-      ```sql
-      SELECT * FROM t1 where b > 'aa'
-      ```
+     ```sql
+     SELECT * FROM t1 where b > 'aa'
+     ```
 
-    - `CoveringIndexScan` with `RangeFilter` and with `Selection`
+   - `IndexScan` with complex sql statements
 
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
-
-    - `CoveringIndexScan` with `RangeFilter` and without `Selection`
-
-      ```sql
-      SELECT * FROM t1 where b > 'aa'
-      ```
-
-6. Table with secondary index and partition
-
-   ```sql
-   CREATE TABLE `t1` (
-     `a` BIGINT(20) NOT NULL,
-     `b` varchar(255) NOT NULL,
-     `c` varchar(255) DEFAULT NULL,
-   )PARTITION BY RANGE (a) (
-       PARTITION p0 VALUES LESS THAN (6),
-       PARTITION p1 VALUES LESS THAN (11),
-       PARTITION p2 VALUES LESS THAN (16),
-       PARTITION p3 VALUES LESS THAN MAXVALUE
-     )
-   CREATE INDEX `testIndex` ON `t1` (`a`,`b`);
-   ```
-
-    - `IndexScan` with `Selection`n and with `RangeFilter` with partition
-
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
-
-    - `CoveringIndexScan` with `Selection` and with `RangeFilter` with partition
-
-      ```sql
-      SELECT a,b FROM t1 where a>0 and b > 'aa'
-      ```
-
-    - `CoveringIndexScan` with complicated sql
-
-      ```sql
-      SELECT sum(a) FROM t1 where a > 0 or b < 'bb' group by a order by(a)
-      ```
-
-7. Table with secondary prefix index and partition
-
-   ```sql
-   CREATE TABLE `t1` (
-     `a` BIGINT(20) NOT NULL,
-     `b` varchar(255) NOT NULL,
-     `c` varchar(255) DEFAULT NULL,
-      PRIMARY KEY (a)
-   )PARTITION BY RANGE (a) (
-       PARTITION p0 VALUES LESS THAN (6),
-       PARTITION p1 VALUES LESS THAN (11),
-       PARTITION p2 VALUES LESS THAN (16),
-       PARTITION p3 VALUES LESS THAN MAXVALUE
-     )
-   CREATE INDEX `testIndex` ON `t1` (`b`(4));
-   ```
-
-    - `IndexScan` with `Selection` and with `RangeFilter` with partition
-
-      ```sql
-      SELECT * FROM t1 where a>0 and b > 'aa'
-      ```
-
-    - `IndexScan` with complicated sql
-
-      ```sql
-      SELECT b FROM t1 where b > 'aa' group by b order by(b) limit(10) 
-      ```
-
-    - `TableScan` with complicated sql
-
-      ```sql
-      SELECT max(c) FROM t1 where c > 'cc' or c < 'bb' group by c order by(c)
-      ```
+     ```sql
+     select a from t1 where a>0 and b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10) group by a
+     ```
