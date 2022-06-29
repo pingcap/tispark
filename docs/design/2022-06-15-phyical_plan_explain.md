@@ -12,9 +12,9 @@
 
 ## Introduction
 
-The physical plan is the physical execution plan in TiSpark. When we use to explain in Spark which runs with TiSpark, the process of the physical plan will be displayed in the terminal. But now this display about how the plan executes has some problems.
+The physical plan is the physical execution plan in TiSpark. When we use explain in Spark which runs with TiSpark, the process of the physical plan will be displayed in the terminal. But now this display about how the plan executes has some problems.
 
-- appear a filter that should not appear.
+- `Residual Filter`  should not appear in physical plan explanation.
 - unclear representation of the execution process.
 - expression(s) that constitutes the scanning range is hard to know.
 - confusing naming of the operator.
@@ -90,7 +90,7 @@ From the code we can see that the execution plan is divided into three kinds of 
 
 #### `IndexScan`
 
-In TiSpark, an `IndexScan` requires two scans. The first scan is scanning in index data and the second scan is scanning in table data to get the data we need from the results returned in the first scan.
+In TiSpark, an `IndexScan` requires two steps. The first step is scanning in index data and the second step is scanning in table data to get the data we need from the results returned in the first scan.
 
 #### `CoveringIndexScan`
 
@@ -112,7 +112,7 @@ The first scan of `IndexScan` will return the data that meets the conditions, an
 >
 > For all returned data, all consecutive data in a region will be treated as a `regionTask`.
 >
-> For example like this the data returned in the first stage are 1, 3, 4, 5 and 1, 3, 4 are in the same region and 5 is in another region. Since 1 and 3, 4 are not contiguous, 1 is a `regionTask`, and since 3, 4 and 5 are not in a region, 3, 4 is a `regionTask` and 5 is a `regionTask`. The `regionTask` number is three.
+> For example like this the data returned in the first stage are 1, 3, 4, 5 and 1, 3, 4 are in the same region and 5 is in another region. Since 1 and 3, 4 are not contiguous, 1 is a `regionTask`, and since 3, 4 and 5 are not in a region, 3, 4 is a `regionTask` and 5 is a `regionTask`. The number of `regionTask`  is three.
 
 #### `Residual Filter`
 
@@ -124,7 +124,7 @@ The expression passed to COP/TiKV as a selection expression without triggering a
 
 ### The Problem of DAG Explain
 
-1. appear a filter that should not appear
+1. `Residual Filter`  should not appear in physical plan explanation.
 
    As stated before, the `Residual Filter` loses its meaning and should not be present in the physical plan explanation. But `Residual Filter` still appears in `TableScan` and `CoveringIndexScan`.
 
@@ -225,6 +225,34 @@ The expression passed to COP/TiKV as a selection expression without triggering a
 
 To solve the problem of appearing a filter that shouldn't appear, we removed the `Residual Filter`.
 
+```sql
+CREATE TABLE `t1` (
+  `a` BIGINT(20) NOT NULL,
+  `b` varchar(255) NOT NULL,
+  `c` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+```
+
+```sql
+select * from t1 where a>0 and b>'aa'
+```
+
+before:
+
+```text
+== Physical Plan ==
+*(1) ColumnarToRow
++- TiKV CoprocessorRDD{[table: t1] TableScan, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255), Residual Filter: [a@LONG GREATER_THAN 0], [b@VARCHAR(255) GREATER_THAN "aa"], PushDown Filter: [a@LONG GREATER_THAN 0], [b@VARCHAR(255) GREATER_THAN "aa"], KeyRange: [([t\200\000\000\000\000\000\rE_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\rE_s\000\000\000\000\000\000\000\000])], startTs: 434247263670239233}
+```
+
+after:
+
+```text
+== Physical Plan ==
+*(1) ColumnarToRow
++- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): { TableRangeScan: { RangeFilter: [], Range: [([t\200\000\000\000\000\000\r\'_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\r\'_s\000\000\000\000\000\000\000\000])] }, Selection: [[a@LONG GREATER_THAN 1]] }, startTs: 434245944457035777}
+```
+
 ### unclear representation of the execution process
 
 1. unable to know the execution steps
@@ -243,11 +271,74 @@ To solve the problem of appearing a filter that shouldn't appear, we removed the
 
    To solve the problem of information about the used index is hard to know, we add the columns that make up the index after the index name.
 
+```sql
+CREATE TABLE `t1` (
+`a` BIGINT(20)  NOT NULL,
+`b` varchar(255) NOT NULL,
+`c` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+CREATE INDEX `testIndex` ON `t1` (`a`,`b`)
+```
+
+```sql
+SELECT * FROM t1 where a>0 and b > 'aa'
+```
+
+before:
+
+```text
+== Physical Plan ==
+*(1) ColumnarToRow
++- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[[b@VARCHAR(255) GREATER_THAN "aa"]]
+   +- RowToColumnar
+      +- TiKV FetchHandleRDD{[table: t1] IndexScan[Index: testindex] , Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255), Downgrade Filter: [b@VARCHAR(255) GREATER_THAN "aa"], [a@LONG GREATER_THAN 0], KeyRange: [([t\200\000\000\000\000\000\rA_i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\rA_i\200\000\000\000\000\000\000\001\372])], startTs: 434247241322725377}
+
+```
+
+after:
+
+```text
+== Physical Plan ==
+*(1) ColumnarToRow
++- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[[b@VARCHAR(255) GREATER_THAN "aa"], [a@LONG GREATER_THAN 0]]
+   +- RowToColumnar
+      +- TiKV FetchHandleRDD{[table: t1] IndexLookUp, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): { {IndexRangeScan(Index:testindex(a,b)): { RangeFilter: [[a@LONG GREATER_THAN 0]], Range: [([t\200\000\000\000\000\000\r-_i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\r-_i\200\000\000\000\000\000\000\001\372])] }, Selection: [[b@VARCHAR(255) GREATER_THAN "aa"]]}; {TableRowIDScan, Selection: [[b@VARCHAR(255) GREATER_THAN "aa"]]} }, startTs: 434247058345951234}
+```
+
 ### expression(s) that constitutes the scanning range is hard to know
 
 To solve the problem of expression(s) that constitutes the scanning range is hard to know, we added a `RangeFilter` to the `KeyRange` to indicate the expression(s) used to construct the scan range.
 
 - **`RangeFilter`**: `RangeFilter` indicates which expression(s) the range is made up of. If `RangeFilter` is empty, it indicates a full table scan or full index scan. `RangeFilter` generally appears when the query involves an index range, when query the expressions in the `RangeFilter` form the scanned range from left to right.
+
+```sql
+CREATE TABLE `t1` (
+`a` BIGINT(20)  NOT NULL,
+`b` varchar(255) NOT NULL,
+`c` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+CREATE INDEX `testIndex` ON `t1` (`a`,`b`)
+```
+
+```sql
+SELECT a FROM t1 where a>0 
+```
+
+before:
+
+```text
+== Physical Plan ==
+*(1) ColumnarToRow
++- TiKV CoprocessorRDD{[table: t1] CoveringIndexScan[Index: testindex] , Columns: a@LONG, KeyRange: [([t\200\000\000\000\000\000\r=_i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\r=_i\200\000\000\000\000\000\000\001\372])], startTs: 434247223260741633}
+```
+
+after:
+
+```text
+== Physical Plan ==
+*(1) ColumnarToRow
++- TiKV CoprocessorRDD{[table: t1] IndexReader, Columns: a@LONG: { IndexRangeScan(Index:testindex(a,b)): { RangeFilter: [[a@LONG GREATER_THAN 0]], Range: [([t\200\000\000\000\000\000\rH_i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\rH_i\200\000\000\000\000\000\000\001\372])] } }, startTs: 434247289531006977}
+```
 
 ### confusing naming of the operator
 
@@ -274,17 +365,17 @@ To solve the problem of confusing the naming of the operator, we change the oper
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-   - `TableScan` with `Selection` and without `RangeFilter`
+    - `TableScan` with `Selection` and without `RangeFilter`
 
-     ```sql
-     SELECT * FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where a>0 and b > 'aa'
+      ```
 
-   - `TableScan` with complex sql statements
+    - `TableScan` with complex sql statements
 
-     ```sql
-     select * from t1 where a>0 or b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10)
-     ```
+      ```sql
+      select * from t1 where a>0 or b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10)
+      ```
 
 2. Table with cluster index
 
@@ -310,23 +401,23 @@ To solve the problem of confusing the naming of the operator, we change the oper
    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
    ```
 
-   - `TableScan` with `Selection` and with `RangeFilter`
+    - `TableScan` with `Selection` and with `RangeFilter`
 
-     ```sql
-     SELECT * FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where a>0 and b > 'aa'
+      ```
 
-   - `TableScan` without `Selection` and with `RangeFilter`
+    - `TableScan` without `Selection` and with `RangeFilter`
 
-     ```sql
-     SELECT * FROM t1 where a>0
-     ```
+      ```sql
+      SELECT * FROM t1 where a>0
+      ```
 
-   - `TableScan` with complex sql statements
+    - `TableScan` with complex sql statements
 
-     ```sql
-     select a from t1 where a>0 and b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10) group by a
-     ```
+      ```sql
+      select a from t1 where a>0 and b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10) group by a
+      ```
 
 3. Table with cluster index and partition
 
@@ -344,11 +435,11 @@ To solve the problem of confusing the naming of the operator, we change the oper
      )
    ```
 
-   - `TableScan` with `Selection` and with `RangeFilter` with partition
+    - `TableScan` with `Selection` and with `RangeFilter` with partition
 
-     ```sql
-     SELECT a,b FROM t1 where a>0 and b>'aa'
-     ```
+      ```sql
+      SELECT a,b FROM t1 where a>0 and b>'aa'
+      ```
 
 4. Table with secondary index
 
@@ -361,35 +452,35 @@ To solve the problem of confusing the naming of the operator, we change the oper
    CREATE INDEX `testIndex` ON `t1` (`a`,`b`);
    ```
 
-   - `IndexScan` with `Selection` and with `RangeFilter`
+    - `IndexScan` with `Selection` and with `RangeFilter`
 
-     ```sql
-     SELECT * FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where a>0 and b > 'aa'
+      ```
 
-   - `IndexScan` without `Selection`and with `RangeFilter`
+    - `IndexScan` without `Selection`and with `RangeFilter`
 
-     ```sql
-     SELECT * FROM t1 where a=0 and b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where a=0 and b > 'aa'
+      ```
 
-   - `CoveringIndex` with `Selection` and with `RangeFilter`
+    - `CoveringIndex` with `Selection` and with `RangeFilter`
 
-     ```sql
-     SELECT a,b FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT a,b FROM t1 where a>0 and b > 'aa'
+      ```
 
-   - `IndexScan` with complex sql statements
+    - `IndexScan` with complex sql statements
 
-     ```sql
-     SELECT max(c) FROM t1 where a>0 and c > 'cc' and c < 'bb' group by c order by(c)
-     ```
+      ```sql
+      SELECT max(c) FROM t1 where a>0 and c > 'cc' and c < 'bb' group by c order by(c)
+      ```
 
-   - `CoveringIndexScan` with complex sql statements
+    - `CoveringIndexScan` with complex sql statements
 
-     ```sql
-     select sum(a) from t1 where a>0 and b > 'aa' or b<'cc' and a>0
-     ```
+      ```sql
+      select sum(a) from t1 where a>0 and b > 'aa' or b<'cc' and a>0
+      ```
 
 5. Table with secondary prefix index
 
@@ -402,20 +493,20 @@ To solve the problem of confusing the naming of the operator, we change the oper
    CREATE INDEX `testIndex` ON `t1` (`b`(4),a);
    ```
 
-   - `IndexScan` with `RangeFilter` and with `Selection`
+    - `IndexScan` with `RangeFilter` and with `Selection`
 
-     ```sql
-     SELECT * FROM t1 where a>0 and b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where a>0 and b > 'aa'
+      ```
 
-   - `IndexScan` with `RangeFilter` and without `Selection`
+    - `IndexScan` with `RangeFilter` and without `Selection`
 
-     ```sql
-     SELECT * FROM t1 where b > 'aa'
-     ```
+      ```sql
+      SELECT * FROM t1 where b > 'aa'
+      ```
 
-   - `IndexScan` with complex sql statements
+    - `IndexScan` with complex sql statements
 
-     ```sql
-     select a from t1 where a>0 and b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10) group by a
-     ```
+      ```sql
+      select a from t1 where a>0 and b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10) group by a
+      ```
