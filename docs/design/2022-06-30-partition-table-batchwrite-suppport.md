@@ -1,7 +1,7 @@
 # Support bypass-TiDB write partition table with DataSource API
 
 - Author(s): [yangxin](http://github.com/xuanyu66)
-- Tracking Issue: https://github.com/pingcap/tispark/issues/2317
+- Tracking Issue: https://github.com/pingcap/tispark/issues/2437
 
 ## Introduction
 
