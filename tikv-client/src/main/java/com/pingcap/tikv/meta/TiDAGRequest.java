@@ -95,7 +95,6 @@ public class TiDAGRequest implements Serializable {
   private final List<ColumnRef> fields = new ArrayList<>();
   private final List<DataType> indexDataTypes = new ArrayList<>();
   private final List<Expression> filters = new ArrayList<>();
-
   private final List<Expression> rangeFilters = new ArrayList<>();
   private final List<ByItem> groupByItems = new ArrayList<>();
   private final List<ByItem> orderByItems = new ArrayList<>();
