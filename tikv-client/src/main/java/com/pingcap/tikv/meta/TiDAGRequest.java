@@ -59,7 +59,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -71,10 +70,7 @@ import org.tikv.kvproto.Coprocessor;
  * <p>Used for constructing a new DAG request to TiKV
  */
 public class TiDAGRequest implements Serializable {
-
-  /**
-   * Predefined executor priority map.
-   */
+  /** Predefined executor priority map. */
   private static final Map<ExecType, Integer> EXEC_TYPE_PRIORITY_MAP =
       ImmutableMap.<ExecType, Integer>builder()
           .put(ExecType.TypeTableScan, 0)
@@ -242,8 +238,8 @@ public class TiDAGRequest implements Serializable {
    * Selection > Aggregation > TopN/Limit a DAGRequest must contain one and only one TableScan or
    * IndexScan.
    *
-   * @param buildIndexScan whether the dagRequest to build should be an
-   *                       {@link com.pingcap.tidb.tipb.IndexScan}
+   * @param buildIndexScan whether the dagRequest to build should be an {@link
+   *     com.pingcap.tidb.tipb.IndexScan}
    * @return final DAGRequest built
    */
   private DAGRequest.Builder buildScan(boolean buildIndexScan, List<Integer> outputOffsets) {
@@ -528,7 +524,6 @@ public class TiDAGRequest implements Serializable {
             .filter(x -> !x.isPrefixIndex())
             .map(TiIndexColumn::getName)
             .collect(Collectors.toSet());
-    Object[] a = PredicateUtils.extractColumnRefFromExpression(expr).toArray();
     return PredicateUtils.extractColumnRefFromExpression(expr)
         .stream()
         .map(ColumnRef::getName)
@@ -560,8 +555,8 @@ public class TiDAGRequest implements Serializable {
   /**
    * Check if a DAG request is valid.
    *
-   * <p>Note: When constructing a DAG request, a executor with an ExecType of higher priority
-   * should always be placed before those lower ones.
+   * <p>Note: When constructing a DAG request, a executor with an ExecType of higher priority should
+   * always be placed before those lower ones.
    *
    * @param dagRequest Request DAG.
    */
@@ -760,9 +755,7 @@ public class TiDAGRequest implements Serializable {
     return fields;
   }
 
-  /**
-   * Required index columns for double read
-   */
+  /** Required index columns for double read */
   private void addRequiredIndexDataType() {
     if (!tableInfo.isCommonHandle()) {
       indexDataTypes.add(requireNonNull(IntegerType.BIGINT, "dataType is null"));
@@ -784,8 +777,8 @@ public class TiDAGRequest implements Serializable {
    *
    * @param ranges key range of scan
    */
-  public TiDAGRequest addRanges(Map<Long, List<Coprocessor.KeyRange>> ranges,
-      List<Expression> rangeFilters) {
+  public TiDAGRequest addRanges(
+      Map<Long, List<Coprocessor.KeyRange>> ranges, List<Expression> rangeFilters) {
     idToRanges.putAll(requireNonNull(ranges, "KeyRange is null"));
     this.rangeFilters.addAll(rangeFilters);
     return this;
@@ -941,16 +934,12 @@ public class TiDAGRequest implements Serializable {
     return pushDownType;
   }
 
-  /**
-   * Get the estimated row count will be fetched from this request.
-   */
+  /** Get the estimated row count will be fetched from this request. */
   public double getEstimatedCount() {
     return estimatedCount;
   }
 
-  /**
-   * Set the estimated row count will be fetched from this request.
-   */
+  /** Set the estimated row count will be fetched from this request. */
   public void setEstimatedCount(double estimatedCount) {
     this.estimatedCount = estimatedCount;
   }
@@ -1023,7 +1012,7 @@ public class TiDAGRequest implements Serializable {
   }
 
   private String stringIndexRangeScan() {
-    StringBuilder sb= new StringBuilder();
+    StringBuilder sb = new StringBuilder();
     TiDAGRequest indexRangeScan = this.copy();
     indexRangeScan.init();
     sb.append("IndexRangeScan");
@@ -1042,11 +1031,10 @@ public class TiDAGRequest implements Serializable {
     return sb.toString();
   }
 
-  private String stringTableRowIDScan(){
+  private String stringTableRowIDScan() {
     TiDAGRequest tableRowIDScan = this.copy();
     tableRowIDScan.buildTableScan();
-    return "TableRowIDScan"
-        + tableRowIDScan.stringPushDownExpression();
+    return "TableRowIDScan" + tableRowIDScan.stringPushDownExpression();
   }
 
   private String stringTableRangeScan() {
@@ -1061,7 +1049,7 @@ public class TiDAGRequest implements Serializable {
     return sb.toString();
   }
 
-  private String stringScanRange(){
+  private String stringScanRange() {
     StringBuilder keyRange = new StringBuilder();
     if (!getRangesMaps().isEmpty()) {
       keyRange.append(" RangeFilter: {");
@@ -1101,7 +1089,7 @@ public class TiDAGRequest implements Serializable {
       Joiner.on(", ").skipNulls().appendTo(sb, getPushDownFilters());
     }
     if (!getPushDownAggregates().isEmpty()) {
-      sb.append(", Aggregates: ");
+      sb.append(", PushDownAggregates: ");
       Joiner.on(", ").skipNulls().appendTo(sb, getPushDownAggregates());
     }
     if (!getGroupByItems().isEmpty()) {
@@ -1113,12 +1101,12 @@ public class TiDAGRequest implements Serializable {
       Joiner.on(", ").skipNulls().appendTo(sb, getOrderByItems());
     }
     if (getLimit() != 0) {
-      sb.append(String.format(", Limit: [%d]",limit));
+      sb.append(String.format(", Limit: [%d]", limit));
     }
     return sb.toString();
   }
 
-  private List<Expression> getRangeFilter() {
+  public List<Expression> getRangeFilter() {
     return rangeFilters;
   }
 
@@ -1162,9 +1150,7 @@ public class TiDAGRequest implements Serializable {
     }
   }
 
-  /**
-   * Whether we use streaming to push down the request
-   */
+  /** Whether we use streaming to push down the request */
   public enum PushDownType {
     STREAMING,
     NORMAL
@@ -1177,7 +1163,6 @@ public class TiDAGRequest implements Serializable {
   }
 
   public static class Builder {
-
     private final List<String> requiredCols = new ArrayList<>();
     private final List<Expression> filters = new ArrayList<>();
     private final List<ByItem> orderBys = new ArrayList<>();

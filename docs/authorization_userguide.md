@@ -59,8 +59,19 @@ Currently, Supported statements are as follows:
 | SHOW COLUMNS    | ❌ | ❌ |
 | DESCRIBE COLUMN | ❌ | ❌ |
 
+## Compatibility with Data Source API
+
+We support authorization check in both read and write, but we recommend using spark SQL instead of Datasource API to read data from TiDB
+
+We will do authorization check as follows:
+
+| Operation | Option             | Required Privilege | 
+|-----------|--------------------|-------------------|
+| Write     | Replace is enable  | Insert and Delete |   
+| Write     | Replace is disable | Insert            |
+| Read      |                    | Select            |
+
 ## limitations
 
 - Can't work with other datasource except TiDB
 - Not supported with role-based privileges
-- Not supported with TiDB Data Source API, such as TiBatchWrite

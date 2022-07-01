@@ -16,8 +16,14 @@
 
 package org.apache.spark.sql.catalyst.plans.logical
 
-import com.pingcap.tikv.meta.TiTimestamp
+import com.pingcap.tikv.codec.KeyUtils
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
+import com.pingcap.tispark.telemetry.TiSparkTeleInfo
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
+import org.apache.spark.sql.execution.{ExplainMode, SimpleMode}
+import org.tikv.kvproto.Coprocessor
+
+import java.util
 
 class LogicalPlanTestSuite extends BasePlanTest {
 
@@ -112,58 +118,376 @@ class LogicalPlanTestSuite extends BasePlanTest {
     extractDAGRequests(df).map(_.getStartTs).foreach { checkTimestamp }
   }
 
-  // https://github.com/pingcap/tispark/issues/2290
-  test("fix cannot encode row key with non-long type1") {
+  test("test physical plan explain which table without cluster index") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    tidbStmt.execute("DROP TABLE IF EXISTS `t2`")
-    tidbStmt.execute("DROP TABLE IF EXISTS `t3`")
-    tidbStmt.execute("DROP TABLE IF EXISTS `t4`")
-    tidbStmt.execute(
-      """
-        |CREATE TABLE `t1` (
-        |  `a` BIGINT(20) NOT NULL,
-        |  `b` varchar(255) NOT NULL,
-        |  `c` varchar(255) DEFAULT NULL
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
-    tidbStmt.execute(
-      """
-        |CREATE TABLE `t2` (
-        |  `a` BIGINT(20) NOT NULL,
-        |  `b` varchar(255) NOT NULL,
-        |  `c` varchar(255) DEFAULT NULL,
-        |  PRIMARY KEY (`b`)
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
-    tidbStmt.execute(
-      """
-        |CREATE TABLE `t3` (
-        |  `a` BIGINT(20) NOT NULL,
-        |  `b` varchar(255) NOT NULL,
-        |  `c` varchar(255) DEFAULT NULL,
-        |  PRIMARY KEY (`b`(4)) clustered
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
-    tidbStmt.execute(
-      """
-        |CREATE TABLE `t4` (
-        |  `a` BIGINT(20) NOT NULL,
-        |  `b` varchar(255) NOT NULL,
-        |  `c` varchar(255) DEFAULT NULL,
-        |  PRIMARY KEY (a)
-        |)PARTITION BY RANGE (a) (
-        |    PARTITION p0 VALUES LESS THAN (6),
-        |    PARTITION p1 VALUES LESS THAN (11),
-        |    PARTITION p2 VALUES LESS THAN (16),
-        |    PARTITION p3 VALUES LESS THAN MAXVALUE
-        |)""".stripMargin)
-    tidbStmt.execute("split table t1 between (0) and (9223888888) regions 16")
-    val situation = "select * from t2 where b >'aa'"
-    val df = spark.sql(situation)
-    df.explain()
-    val DAGRequest = extractDAGRequests(df).head
-    val timestamp = DAGRequest.getStartTs.getVersion
-    val plan = DAGRequest.toString
+    tidbStmt.execute("""
+                       |CREATE TABLE `t1` (
+                       |  `a` BIGINT(20) NOT NULL,
+                       |  `b` varchar(255) NOT NULL,
+                       |  `c` varchar(255) DEFAULT NULL
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+
+    // TableScan with Selection and without RangeFilter.
+    val df1 = spark.sql("select * from t1 where a>0 and b>'aa'")
+    val dag1 = extractDAGRequests(df1).head
+    val exception1 =
+      "== Physical Plan ==\n" +
+        "*(1) ColumnarToRow\n" +
+        "+- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
+        "{ TableRangeScan: { RangeFilter: [], Range: [%s] }, Selection: [%s] }, startTs: %d}".trim
+    val selection1 = dag1.getFilters.toArray().mkString(", ")
+    val myException1 =
+      exception1.format(extractRangeFromDAG(dag1), selection1, dag1.getStartTs.getVersion)
+    val sparkPhysicalPlan1 =
+      df1.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
+    assert(myException1.equals(sparkPhysicalPlan1))
+
+    // TableScan with complex sql statements
+    val df2 = spark.sql(
+      "select * from t1 where a>0 or b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10)")
+    val dag2 = extractDAGRequests(df2).head
+    val exception2 =
+      "== Physical Plan ==\n" +
+        "TakeOrderedAndProject(limit=10, orderBy=[c#171 ASC NULLS FIRST], output=[a#169L,b#170,c#171])\n" +
+        "+- *(1) ColumnarToRow\n" +
+        "   +- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
+        "{ TableRangeScan: { RangeFilter: [], Range: [%s] }, Selection: [%s], " +
+        "Order By: [c@VARCHAR(255) ASC], Limit: [10] }, startTs: %d}".trim
+    val selection2 = dag2.getFilters.toArray().mkString(", ")
+    val myException2 =
+      exception2.format(extractRangeFromDAG(dag2), selection2, dag2.getStartTs.getVersion)
+    val sparkPhysicalPlan2 =
+      df2.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
+    assert(myException2.equals(sparkPhysicalPlan2))
   }
 
-    // https://github.com/pingcap/tispark/issues/1498
+  test("test physical plan explain which table with cluster index") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    val tiSparkTeleInfo = TiSparkTeleInfo.getTiSparkTeleInfo()
+    val version = tiSparkTeleInfo.get("tidb_version")
+    if (version.isEmpty) {
+      fail("TiDB version can not be empty")
+    }
+    if (version.get.toString.compareTo("v5") > 0) {
+      tidbStmt.execute("S")
+      tidbStmt.execute("""
+                         |CREATE TABLE `t1` (
+                         |  `a` BIGINT(20) NOT NULL,
+                         |  `b` varchar(255) NOT NULL,
+                         |  `c` varchar(255) DEFAULT NULL,
+                         |   PRIMARY KEY (`a`) clustered
+                         |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    } else {
+      val config =
+        tidbStmt.executeQuery("show config where type='tidb' and name='alter-primary-key'")
+      if (!config.next() && config.getString(4).toLowerCase() == "true") {
+        fail("TiDB config alter-primary-key must be false")
+      }
+      tidbStmt.execute("""
+                         |CREATE TABLE `t1` (
+                         |  `a` INT(20) NOT NULL,
+                         |  `b` varchar(255) NOT NULL,
+                         |  `c` varchar(255) DEFAULT NULL,
+                         |   PRIMARY KEY (`a`)
+                         |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    }
+
+    // TableScan with Selection and with RangeFilter.
+    val df1 = spark.sql("select * from t1 where a>0 and b>'aa'")
+    val dag1 = extractDAGRequests(df1).head
+    val exception1 =
+      "== Physical Plan ==\n" +
+        "*(1) ColumnarToRow\n" +
+        "+- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
+        "{ TableRangeScan: { RangeFilter: [%s], Range: [%s] }, Selection: [%s] }, startTs: %d}".trim
+    val rangeFilter1 = dag1.getRangeFilter.toArray().mkString(", ")
+    val selection1 = dag1.getFilters.toArray.mkString(", ")
+    val myException1 = exception1.format(
+      rangeFilter1,
+      extractRangeFromDAG(dag1),
+      selection1,
+      dag1.getStartTs.getVersion)
+    val sparkPhysicalPlan1 =
+      df1.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
+    assert(myException1.equals(sparkPhysicalPlan1))
+
+    // TableScan without Selection and with RangeFilter.
+    val df2 = spark.sql("select * from t1 where a>0")
+    val dag2 = extractDAGRequests(df2).head
+    val exception2 =
+      "== Physical Plan ==\n" +
+        "*(1) ColumnarToRow\n" +
+        "+- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
+        "{ TableRangeScan: { RangeFilter: [%s], Range: [%s] } }, startTs: %d}".trim
+    val rangeFilter2 = dag2.getRangeFilter.toArray().mkString(", ")
+    val myException2 =
+      exception2.format(rangeFilter2, extractRangeFromDAG(dag2), dag2.getStartTs.getVersion)
+    val sparkPhysicalPlan2 =
+      df2.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
+    assert(myException2.equals(sparkPhysicalPlan2))
+
+    // TableScan with Selection and without RangeFilter.
+    val df3 = spark.sql("select * from t1 where b>'aa'")
+    val dag3 = extractDAGRequests(df3).head
+    val exception3 =
+      ("== Physical Plan ==\n" +
+        "*(1) ColumnarToRow\n" +
+        "+- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): { " +
+        "TableRangeScan: { RangeFilter: [], Range: [%s] }, Selection: [%s] }, startTs: %d}").trim
+    val selection3 = dag3.getFilters.toArray().mkString(", ")
+    val myException3 =
+      exception3.format(extractRangeFromDAG(dag3), selection3, dag3.getStartTs.getVersion)
+    val sparkPhysicalPlan3 =
+      df3.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
+    assert(myException3.equals(sparkPhysicalPlan3))
+  }
+
+  test("test physical plan explain which table with cluster index and partition") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    tidbStmt.execute("""
+                       |CREATE TABLE `t1` (
+                       |  `a` BIGINT(20) NOT NULL,
+                       |  `b` varchar(255) NOT NULL,
+                       |  `c` varchar(255) DEFAULT NULL,
+                       |  PRIMARY KEY (a)
+                       |)PARTITION BY RANGE (a) (
+                       |    PARTITION p0 VALUES LESS THAN (6),
+                       |    PARTITION p1 VALUES LESS THAN MAXVALUE
+                       |  )
+        """.stripMargin)
+    // TableScan with Selection and with RangeFilter.
+    val df = spark.sql("select b from t1 where t1.b>'aa'")
+    val dags = extractDAGRequests(df)
+    val exception =
+      "== Physical Plan ==\n" +
+        "*(1) ColumnarToRow\n" + "" +
+        "+- partition table[\n" +
+        " TiKV CoprocessorRDD{[table: t1] TableReader, Columns: b@VARCHAR(255): " +
+        "{ TableRangeScan: { RangeFilter: [], Range: [ partition: p0%s] }, " +
+        "Selection: [%s] }, startTs: %d} \n " +
+        "TiKV CoprocessorRDD{[table: t1] TableReader, Columns: b@VARCHAR(255): " + "" +
+        "{ TableRangeScan: { RangeFilter: [], Range: [ partition: p1%s] }, " +
+        "Selection: [%s] }, startTs: %d} \n" +
+        "]".trim
+    val selection0 = dags.head.getFilters.toArray.mkString(", ")
+    val selection1 = dags(1).getFilters.toArray.mkString(", ")
+    val myExceptionPlan = exception.format(
+      extractRangeFromDAG(dags.head),
+      selection0,
+      dags.head.getStartTs.getVersion,
+      extractRangeFromDAG(dags(1)),
+      selection1,
+      dags(1).getStartTs.getVersion)
+    val sparkPhysicalPlan =
+      df.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
+    assert(myExceptionPlan.equals(sparkPhysicalPlan))
+  }
+
+  test("test physical plan explain which table with secondary index") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    tidbStmt.execute("""
+                       |CREATE TABLE `t1` (
+                       |`a` BIGINT(20)  NOT NULL,
+                       |`b` varchar(255) NOT NULL,
+                       |`c` varchar(255) DEFAULT NULL
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+        """.stripMargin)
+    tidbStmt.execute("CREATE INDEX `testIndex` ON `t1` (`a`,`b`)")
+    // IndexScan with Selection and with RangeFilter.
+    val df1 = spark.sql("SELECT * FROM t1 where a>0 and b > 'aa'")
+    val dag1 = extractDAGRequests(df1).head
+    val exception1 =
+      "== Physical Plan ==\n" +
+        "*(1) ColumnarToRow\n" +
+        "+- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[%s]\n" +
+        "   +- RowToColumnar\n" +
+        "      +- TiKV FetchHandleRDD{[table: t1] IndexLookUp, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
+        "{ {IndexRangeScan(Index:testindex(a,b)): { RangeFilter: [%s], Range: [%s] }, " +
+        "Selection: [%s]}; " +
+        "{TableRowIDScan, Selection: [%s]} }, startTs: %s}".trim
+    val downgradeFilter1 = dag1.getDowngradeFilters.toArray.mkString(", ")
+    val rangeFilter1 = dag1.getRangeFilter.toArray.mkString(", ")
+    val selection1 = dag1.getFilters.toArray.mkString(", ")
+    val myExceptionPlan1 = exception1.format(
+      downgradeFilter1,
+      rangeFilter1,
+      extractRangeFromDAG(dag1),
+      selection1,
+      selection1,
+      dag1.getStartTs.getVersion)
+    val sparkPhysicalPlan1 =
+      df1.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
+    assert(myExceptionPlan1.equals(sparkPhysicalPlan1))
+
+    // IndexScan without Selection and with RangeFilter.
+    val df2 = spark.sql("SELECT * FROM t1 where a=0 and b > 'aa'")
+    val dag2 = extractDAGRequests(df2).head
+    val exception2 =
+      ("== Physical Plan ==\n" +
+        "*(1) ColumnarToRow\n" +
+        "+- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[%s]\n" +
+        "   +- RowToColumnar\n" +
+        "      +- TiKV FetchHandleRDD{[table: t1] IndexLookUp, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
+        "{ {IndexRangeScan(Index:testindex(a,b)): { RangeFilter: [%s], Range: [%s] }}; " +
+        "{TableRowIDScan} }, startTs: %d}").trim
+    val sparkPhysicalPlan2 =
+      df2.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
+    val downgradeFilter2 = dag2.getDowngradeFilters.toArray.mkString(", ")
+    val rangeFilter2 = dag2.getRangeFilter.toArray.mkString(", ")
+    val myExceptionPlan2 = exception2.format(
+      downgradeFilter2,
+      rangeFilter2,
+      extractRangeFromDAG(dag2),
+      dag2.getStartTs.getVersion)
+    assert(myExceptionPlan2.equals(sparkPhysicalPlan2))
+
+    // CoveringIndex with Selection and with RangeFilter.
+    val df3 = spark.sql("SELECT a,b FROM t1 where a>0 and b > 'aa'")
+    val dag3 = extractDAGRequests(df3).head
+    val exception3 =
+      ("== Physical Plan ==\n" +
+        "*(1) ColumnarToRow\n" +
+        "+- TiKV CoprocessorRDD{[table: t1] IndexReader, Columns: a@LONG, b@VARCHAR(255): { " +
+        "IndexRangeScan(Index:testindex(a,b)): { RangeFilter: [%s], Range: [%s] }, " +
+        "Selection: [%s] }, startTs: %d}").trim
+    val sparkPhysicalPlan3 =
+      df3.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
+    val rangeFilter3 = dag3.getRangeFilter.toArray.mkString(", ")
+    val selection3 = dag3.getFilters.toArray.mkString(", ")
+    val myExceptionPlan3 = exception3.format(
+      rangeFilter3,
+      extractRangeFromDAG(dag3),
+      selection3,
+      dag3.getStartTs.getVersion)
+    assert(
+      myExceptionPlan3
+        .equals(sparkPhysicalPlan3))
+
+    // IndexScan with complex sql statements
+    val df4 = spark.sql(
+      "SELECT max(c) FROM t1 where a>0 and c > 'cc' and c < 'bb' group by c order by(c)")
+    val dag4 = extractDAGRequests(df4).head
+    val regionTaskExec4 =
+      extractRegionTaskExecs(df4).head.verboseString(25).trim
+    val rangeFilter4 = dag4.getRangeFilter.toArray.mkString(", ")
+    val downgradeFilter4 = dag4.getDowngradeFilters.toArray.mkString(", ")
+    val selection4 = dag4.getFilters.toArray.mkString(", ")
+    var exceptRegionTaskExec4 =
+      ("TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[%s]")
+    exceptRegionTaskExec4 = exceptRegionTaskExec4.format(downgradeFilter4)
+    var exceptDAG4 = "[table: t1] IndexLookUp, Columns: c@VARCHAR(255), a@LONG: " +
+      "{ {IndexRangeScan(Index:testindex(a,b)): " +
+      "{ RangeFilter: [%s], " +
+      "Range: [%s] }, Group By: [c@VARCHAR(255) ASC]}; " +
+      "{TableRowIDScan, Selection: [%s], Aggregates: Max(c@VARCHAR(255)), First(c@VARCHAR(255)), " +
+      "Group By: [c@VARCHAR(255) ASC]} }, startTs: %d"
+    exceptDAG4 = exceptDAG4.format(
+      rangeFilter4,
+      extractRangeFromDAG(dag4),
+      selection4,
+      dag4.getStartTs.getVersion)
+    assert(exceptRegionTaskExec4.equals(regionTaskExec4))
+    assert(exceptDAG4.equals(dag4.toString))
+
+    // IndexScan with complex sql statements
+    val df5 = spark.sql("select sum(a) from t1 where a>0 and b > 'aa' or b<'cc' and a>0")
+    val dag5 = extractDAGRequests(df5).head
+    val exception5 =
+      ("[table: t1] IndexReader, Columns: a@LONG, b@VARCHAR(255): " +
+        "{ IndexRangeScan(Index:testindex(a,b)): " +
+        "{ RangeFilter: [%s], Range: [%s] }, Selection: [%s], Aggregates: Sum(a@LONG) }, startTs: %d").trim
+    val rangeFilter5 = dag5.getRangeFilter.toArray.mkString(", ")
+    val selection5 = dag5.getFilters.toArray.mkString(", ")
+    val myException5 = exception5.format(
+      rangeFilter5,
+      extractRangeFromDAG(dag5),
+      selection5,
+      dag5.getStartTs.getVersion)
+    assert(myException5.equals(dag5.toString.trim))
+  }
+
+  test("test physical plan explain which table with secondary prefix index") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    tidbStmt.execute("""
+                       |CREATE TABLE `t1` (
+                       |`a` BIGINT(20)  NOT NULL,
+                       |`b` varchar(255) NOT NULL,
+                       |`c` varchar(255) DEFAULT NULL
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+        """.stripMargin)
+    tidbStmt.execute("CREATE INDEX `testIndex` ON `t1` (`b`(4),a)")
+    // IndexScan with RangeFilter and with Selection.
+    val df1 = spark.sql("SELECT * FROM t1 where a>0 and b > 'aa'")
+    val dag1 = extractDAGRequests(df1).head
+    val exception1 =
+      ("== Physical Plan ==\n" +
+        "*(1) ColumnarToRow\n" +
+        "+- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[%s]\n" +
+        "   +- RowToColumnar\n" +
+        "      +- TiKV FetchHandleRDD{[table: t1] IndexLookUp, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
+        "{ {IndexRangeScan(Index:testindex(b,a)): { RangeFilter: [%s], Range: [%s] }}; " +
+        "{TableRowIDScan, Selection: [%s]} }, startTs: %d}").trim
+    val sparkPhysicalPlan1 =
+      df1.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
+    val downgradeFilter1 = dag1.getDowngradeFilters.toArray.mkString(", ")
+    val rangeFilter1 = dag1.getRangeFilter.toArray.mkString(", ")
+    val selection1 = dag1.getFilters.toArray.mkString(", ")
+    val myExceptionPlan1 = exception1.format(
+      downgradeFilter1,
+      rangeFilter1,
+      extractRangeFromDAG(dag1),
+      selection1,
+      dag1.getStartTs.getVersion)
+    assert(
+      myExceptionPlan1
+        .equals(sparkPhysicalPlan1))
+
+    // IndexScan with RangeFilter and without Selection.
+    val df2 = spark.sql("SELECT * FROM t1 where b > 'aa'")
+    val dag2 = extractDAGRequests(df2).head
+    val exception2 =
+      ("== Physical Plan ==\n" +
+        "*(1) ColumnarToRow\n" +
+        "+- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[%s]\n" +
+        "   +- RowToColumnar\n" +
+        "      +- TiKV FetchHandleRDD{[table: t1] IndexLookUp, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
+        "{ {IndexRangeScan(Index:testindex(b,a)): { RangeFilter: [%s], Range: [%s] }}; " +
+        "{TableRowIDScan, Selection: [%s]} }, startTs: %d}").trim
+    val sparkPhysicalPlan2 =
+      df2.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
+    val downgradeFilter2 = dag2.getDowngradeFilters.toArray.mkString(", ")
+    val rangeFilter2 = dag2.getRangeFilter.toArray.mkString(", ")
+    val selection2 = dag2.getFilters.toArray.mkString(", ")
+    val myExceptionPlan2 = exception2.format(
+      downgradeFilter2,
+      rangeFilter2,
+      extractRangeFromDAG(dag2),
+      selection2,
+      dag2.getStartTs.getVersion)
+    assert(
+      myExceptionPlan2
+        .equals(sparkPhysicalPlan2))
+
+    // IndexScan with complex sql statements
+    val df3 = spark.sql("SELECT sum(a) FROM t1 where  b > 'cc' or b < 'bb' and a>0 limit(10)")
+    val dag3 = extractDAGRequests(df3).head
+    val regionTaskExec3 =
+      extractRegionTaskExecs(df3).head.verboseString(25).trim
+    val downgradeFilter3 = dag3.getDowngradeFilters.toArray.mkString(", ")
+    val selection3 = dag3.getFilters.toArray.mkString(", ")
+    var exceptRegionTaskExec3 =
+      ("TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[%s]")
+    exceptRegionTaskExec3 = exceptRegionTaskExec3.format(downgradeFilter3)
+    var exceptDAG3 = "[table: t1] IndexLookUp, Columns: b@VARCHAR(255), a@LONG: " +
+      "{ {IndexRangeScan(Index:testindex(b,a)): { RangeFilter: [], Range: [%s] }}; " +
+      "{TableRowIDScan, Selection: [%s], Aggregates: Sum(a@LONG)} }, startTs: %d"
+    exceptDAG3 =
+      exceptDAG3.format(extractRangeFromDAG(dag3), selection3, dag3.getStartTs.getVersion)
+    assert(exceptRegionTaskExec3.equals(regionTaskExec3))
+    assert(exceptDAG3.equals(dag3.toString))
+  }
+
+  // https://github.com/pingcap/tispark/issues/1498
   test("test index scan failed to push down varchar") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute(
@@ -194,4 +518,18 @@ class LogicalPlanTestSuite extends BasePlanTest {
     } finally {
       super.afterAll()
     }
+  def extractRangeFromDAG(dag: TiDAGRequest): String = {
+    val sb = new StringBuilder()
+    dag.getRangesMaps.values.forEach((vList: util.List[Coprocessor.KeyRange]) => {
+      def foo(vList: util.List[Coprocessor.KeyRange]) = {
+        import scala.collection.JavaConversions._
+        for (range <- vList) { // LogDesensitization: show key range in coprocessor request in log
+          sb.append(KeyUtils.formatBytesUTF8(range))
+        }
+      }
+
+      foo(vList)
+    })
+    sb.toString()
+  }
 }

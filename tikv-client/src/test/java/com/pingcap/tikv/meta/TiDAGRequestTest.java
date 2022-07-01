@@ -176,7 +176,8 @@ public class TiDAGRequestTest {
                     Coprocessor.KeyRange.newBuilder()
                         .setStart(ByteString.copyFromUtf8("startkey"))
                         .setEnd(ByteString.copyFromUtf8("endkey"))
-                        .build())),new ArrayList<>(ImmutableList.of(greaterEqual(col1,c1),lessEqual(col1,c2))));
+                        .build())),
+            new ArrayList<>(ImmutableList.of(greaterEqual(col1, c1), lessEqual(col1, c2))));
 
     ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream();
     ObjectOutputStream oos = new ObjectOutputStream(byteOutStream);
