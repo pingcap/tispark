@@ -130,14 +130,14 @@ class LogicalPlanTestSuite extends BasePlanTest {
     // TableScan with Selection and without RangeFilter.
     val df1 = spark.sql("select * from t1 where a>0 and b>'aa'")
     val dag1 = extractDAGRequests(df1).head
-    val exception1 =
+    val expection1 =
       "== Physical Plan ==\n" +
         "*(1) ColumnarToRow\n" +
         "+- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
         "{ TableRangeScan: { RangeFilter: [], Range: [%s] }, Selection: [%s] }, startTs: %d}".trim
     val selection1 = dag1.getFilters.toArray().mkString(", ")
     val myException1 =
-      exception1.format(extractRangeFromDAG(dag1), selection1, dag1.getStartTs.getVersion)
+      expection1.format(extractRangeFromDAG(dag1), selection1, dag1.getStartTs.getVersion)
     val sparkPhysicalPlan1 =
       df1.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
     assert(myException1.equals(sparkPhysicalPlan1))
@@ -146,7 +146,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     val df2 = spark.sql(
       "select * from t1 where a>0 or b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10)")
     val dag2 = extractDAGRequests(df2).head
-    val exception2 =
+    val expection2 =
       "== Physical Plan ==\n" +
         "TakeOrderedAndProject(limit=10, orderBy=[c#171 ASC NULLS FIRST], output=[a#169L,b#170,c#171])\n" +
         "+- *(1) ColumnarToRow\n" +
@@ -155,7 +155,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
         "Order By: [c@VARCHAR(255) ASC], Limit: [10] }, startTs: %d}".trim
     val selection2 = dag2.getFilters.toArray().mkString(", ")
     val myException2 =
-      exception2.format(extractRangeFromDAG(dag2), selection2, dag2.getStartTs.getVersion)
+      expection2.format(extractRangeFromDAG(dag2), selection2, dag2.getStartTs.getVersion)
     val sparkPhysicalPlan2 =
       df2.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
     assert(myException2.equals(sparkPhysicalPlan2))
@@ -378,7 +378,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     var exceptDAG4 = "[table: t1] IndexLookUp, Columns: c@VARCHAR(255), a@LONG: " +
       "{ {IndexRangeScan(Index:testindex(a,b)): " +
       "{ RangeFilter: [%s], " +
-      "Range: [%s] }, Group By: [c@VARCHAR(255) ASC]}; " +
+      "Range: [%s] }}; " +
       "{TableRowIDScan, Selection: [%s], Aggregates: Max(c@VARCHAR(255)), First(c@VARCHAR(255)), " +
       "Group By: [c@VARCHAR(255) ASC]} }, startTs: %d"
     exceptDAG4 = exceptDAG4.format(

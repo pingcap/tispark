@@ -1052,9 +1052,9 @@ public class TiDAGRequest implements Serializable {
   private String stringScanRange() {
     StringBuilder keyRange = new StringBuilder();
     if (!getRangesMaps().isEmpty()) {
-      keyRange.append(" RangeFilter: {");
+      keyRange.append(" RangeFilter: [");
       Joiner.on(", ").skipNulls().appendTo(keyRange, getRangeFilter());
-      keyRange.append("}");
+      keyRange.append("]");
       keyRange.append(", Range: [");
       if (tableInfo.isPartitionEnabled()) {
         getRangesMaps()
@@ -1085,23 +1085,24 @@ public class TiDAGRequest implements Serializable {
   private String stringPushDownExpression() {
     StringBuilder sb = new StringBuilder();
     if (!getPushDownFilters().isEmpty()) {
-      sb.append(", Selection: ");
+      sb.append(", Selection: [");
       Joiner.on(", ").skipNulls().appendTo(sb, getPushDownFilters());
+      sb.append("]");
     }
     if (!getPushDownAggregates().isEmpty()) {
-      sb.append(", PushDownAggregates: ");
+      sb.append(", Aggregates: ");
       Joiner.on(", ").skipNulls().appendTo(sb, getPushDownAggregates());
     }
-    if (!getGroupByItems().isEmpty()) {
+    if (!getPushDownGroupBys().isEmpty()) {
       sb.append(", Group By: ");
-      Joiner.on(", ").skipNulls().appendTo(sb, getGroupByItems());
+      Joiner.on(", ").skipNulls().appendTo(sb,getPushDownGroupBys());
     }
-    if (!getOrderByItems().isEmpty()) {
+    if (!getPushDownOrderBys().isEmpty()) {
       sb.append(", Order By: ");
-      Joiner.on(", ").skipNulls().appendTo(sb, getOrderByItems());
+      Joiner.on(", ").skipNulls().appendTo(sb,getPushDownOrderBys());
     }
-    if (getLimit() != 0) {
-      sb.append(String.format(", Limit: [%d]", limit));
+    if (getPushDownLimits() != 0) {
+      sb.append(String.format(", Limit: [%d]", getPushDownLimits()));
     }
     return sb.toString();
   }
