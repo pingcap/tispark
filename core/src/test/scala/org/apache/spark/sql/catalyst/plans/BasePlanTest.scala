@@ -89,7 +89,7 @@ class BasePlanTest extends BaseTiSparkTest {
     if (tiSparkPlans.isEmpty) {
       fail(df, "No TiSpark plans found in Dataset")
     }
-    val filteredRequests = tiSparkPlans.collect { extractDAGRequest }.flatten.filter{
+    val filteredRequests = tiSparkPlans.collect { extractDAGRequest }.flatten.filter {
       _.getTableInfo.getName.equalsIgnoreCase(tableName)
     }
     if (filteredRequests.isEmpty) {

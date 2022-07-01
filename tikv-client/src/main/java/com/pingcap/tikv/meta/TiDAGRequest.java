@@ -1095,11 +1095,11 @@ public class TiDAGRequest implements Serializable {
     }
     if (!getPushDownGroupBys().isEmpty()) {
       sb.append(", Group By: ");
-      Joiner.on(", ").skipNulls().appendTo(sb,getPushDownGroupBys());
+      Joiner.on(", ").skipNulls().appendTo(sb, getPushDownGroupBys());
     }
     if (!getPushDownOrderBys().isEmpty()) {
       sb.append(", Order By: ");
-      Joiner.on(", ").skipNulls().appendTo(sb,getPushDownOrderBys());
+      Joiner.on(", ").skipNulls().appendTo(sb, getPushDownOrderBys());
     }
     if (getPushDownLimits() != 0) {
       sb.append(String.format(", Limit: [%d]", getPushDownLimits()));
