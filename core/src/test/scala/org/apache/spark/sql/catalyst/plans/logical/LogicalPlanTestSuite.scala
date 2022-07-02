@@ -147,18 +147,13 @@ class LogicalPlanTestSuite extends BasePlanTest {
       "select * from t1 where a>0 or b > 'aa' or c<'cc' and c>'aa' order by(c) limit(10)")
     val dag2 = extractDAGRequests(df2).head
     val expectation2 =
-      "== Physical Plan ==\n" +
-        "TakeOrderedAndProject(limit=10, orderBy=[c#171 ASC NULLS FIRST], output=[a#169L,b#170,c#171])\n" +
-        "+- *(1) ColumnarToRow\n" +
-        "   +- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
+      "[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
         "{ TableRangeScan: { RangeFilter: [], Range: [%s] }, Selection: [%s], " +
-        "Order By: [c@VARCHAR(255) ASC], Limit: [10] }, startTs: %d}".trim
+        "Order By: [c@VARCHAR(255) ASC] }, startTs: %d".trim
     val selection2 = dag2.getFilters.toArray().mkString(", ")
     val myExpectation2 =
       expectation2.format(extractRangeFromDAG(dag2), selection2, dag2.getStartTs.getVersion)
-    val sparkPhysicalPlan2 =
-      df2.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
-    assert(myExpectation2.equals(sparkPhysicalPlan2))
+    assert(myExpectation2.equals(dag2.toString))
   }
 
   test("test physical plan explain which table with cluster index") {
@@ -169,7 +164,6 @@ class LogicalPlanTestSuite extends BasePlanTest {
       fail("TiDB version can not be empty")
     }
     if (version.get.toString.compareTo("v5") > 0) {
-      tidbStmt.execute("S")
       tidbStmt.execute("""
                          |CREATE TABLE `t1` (
                          |  `a` BIGINT(20) NOT NULL,
@@ -181,7 +175,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
       val config =
         tidbStmt.executeQuery("show config where type='tidb' and name='alter-primary-key'")
       if (!config.next() && config.getString(4).toLowerCase() == "true") {
-        fail("TiDB config alter-primary-key must be false")
+        cancel("TiDB config alter-primary-key must be false")
       }
       tidbStmt.execute("""
                          |CREATE TABLE `t1` (
@@ -439,7 +433,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
       selection1,
       dag1.getStartTs.getVersion)
     assert(
-     myExpectationPlan1
+      myExpectationPlan1
         .equals(sparkPhysicalPlan1))
 
     // IndexScan with RangeFilter and without Selection.
@@ -458,7 +452,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     val downgradeFilter2 = dag2.getDowngradeFilters.toArray.mkString(", ")
     val rangeFilter2 = dag2.getRangeFilter.toArray.mkString(", ")
     val selection2 = dag2.getFilters.toArray.mkString(", ")
-    val myExpectationPlan2= expectation2.format(
+    val myExpectationPlan2 = expectation2.format(
       downgradeFilter2,
       rangeFilter2,
       extractRangeFromDAG(dag2),

@@ -969,7 +969,7 @@ public class TiDAGRequest implements Serializable {
 
   @Override
   public String toString() {
-    return this.copy().toStringInternal();
+    return this.toStringInternal();
   }
 
   private String toStringInternal() {
