@@ -1,0 +1,43 @@
+name: alter-primary-key-false-test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distribution: [ 'zulu', 'temurin', 'adopt', 'corretto' ]
+    name: Java ${{ matrix.distribution }} sample
+    steps:
+
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: ${{ matrix.distribution }}
+          cache: maven
+
+      - name: add host and copy properties
+        run: |
+          echo -e "127.0.0.1   pd \n127.0.0.1   tikv" | sudo tee -a /etc/hosts
+          sudo cp -r config /config
+          cp core/src/test/resources/tidb_config_alter_primary_key_true.properties.template core/src/test/resources/tidb_config.properties
+
+      - name: build docker
+        run: docker-compose -f docker-compose-TiDB-TLS.yaml up -d
+
+      - name: build
+        run: mvn clean package -Dmaven.test.skip=true -B
+
+      - name: test
+        run: mvn test -am -pl core -Dtest=moo -DwildcardSuites=org.apache.spark.sql.catalyst.plans.logical.LogicalPlanTestSuite,com.pingcap.tispark.delete -DfailIfNoTests=false
