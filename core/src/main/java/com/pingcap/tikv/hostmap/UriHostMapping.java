@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 public class UriHostMapping implements HostMapping {
 
   private static final Logger logger = LoggerFactory.getLogger(UriHostMapping.class.getName());
-  private ConcurrentMap<String, String> hostMapping = null;
+  private final ConcurrentMap<String, String> hostMapping;
 
   public UriHostMapping(String hostMappingString) {
     try {
