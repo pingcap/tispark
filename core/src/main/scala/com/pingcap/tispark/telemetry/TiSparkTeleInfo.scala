@@ -106,11 +106,9 @@ object TiSparkTeleInfo {
       }
 
       if (conf.isTlsEnable) {
-        val url = pd_uri.toString
-        resp = httpClient.getHttpsWithTiConfiguration(url, conf)
+        resp = httpClient.getHttpsWithTiConfiguration(pd_uri.toString, conf)
       } else {
-        val url = pd_uri.toString
-        resp = httpClient.get(url)
+        resp = httpClient.get(pd_uri.toString)
       }
 
       if (resp == null || !resp.isDefined) {

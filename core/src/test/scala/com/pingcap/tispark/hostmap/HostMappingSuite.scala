@@ -37,13 +37,15 @@ class HostMappingSuite extends FunSuite {
     assert(tiConf.getHostMapping.asInstanceOf[UriHostMapping].getHostMapping.size() == 3)
   }
 
+  test("Host map configuration with empty") {
+    val conf: SparkConf = new SparkConf(false)
+    conf.set(TIKV_HOST_MAPPING, "")
+    val tiConf: TiConfiguration = new TiConfiguration()
+    TiUtil.sparkConfToTiConfWithoutPD(conf, tiConf)
+    assert(tiConf.getHostMapping.asInstanceOf[UriHostMapping].getHostMapping == null)
+  }
+
   test("Host map configuration test with wrong host map") {
-    the[IllegalArgumentException] thrownBy {
-      val conf: SparkConf = new SparkConf(false)
-      conf.set(TIKV_HOST_MAPPING, "")
-      val tiConf: TiConfiguration = new TiConfiguration()
-      TiUtil.sparkConfToTiConfWithoutPD(conf, tiConf)
-    } should have message "Invalid host mapping string: " + ""
     the[IllegalArgumentException] thrownBy {
       val conf: SparkConf = new SparkConf(false)
       conf.set(TIKV_HOST_MAPPING, "host1=1;host2=2;host3=3")

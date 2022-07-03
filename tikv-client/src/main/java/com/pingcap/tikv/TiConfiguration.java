@@ -118,7 +118,7 @@ public class TiConfiguration implements Serializable {
   private long certReloadInterval = getTimeAsSeconds(DEF_TIKV_TLS_RELOAD_INTERVAL);
 
   private String networkMappingName = "";
-  private HostMapping hostMapping = null;
+  private HostMapping hostMapping;
 
   private static Long getTimeAsSeconds(String key) {
     return Utils.timeStringAsSec(key);

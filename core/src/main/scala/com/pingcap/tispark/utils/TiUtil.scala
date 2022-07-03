@@ -229,6 +229,8 @@ object TiUtil {
 
     if (conf.contains(TiConfigConst.TIKV_HOST_MAPPING)) {
       tiConf.setHostMapping(new UriHostMapping(conf.get(TiConfigConst.TIKV_HOST_MAPPING)))
+    } else {
+      tiConf.setHostMapping(new UriHostMapping(""))
     }
 
     tiConf
