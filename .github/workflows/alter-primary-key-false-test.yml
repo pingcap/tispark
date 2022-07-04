@@ -31,10 +31,15 @@ jobs:
         run: |
           echo -e "127.0.0.1   pd \n127.0.0.1   tikv" | sudo tee -a /etc/hosts
           sudo cp -r config /config
-          cp core/src/test/resources/tidb_config_alter_primary_key_true.properties.template core/src/test/resources/tidb_config.properties
+          echo "spark.sql.catalog.tidb_catalog=org.apache.spark.sql.catalyst.catalog.TiCatalog" > tidb_config.properties
+          mv tidb_config.properties core/src/test/resources/tidb_config.properties
 
-      - name: build docker
-        run: docker-compose -f docker-compose-TiDB-TLS.yaml up -d
+      - name: build tidb cluster
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
+          cd config
+          ~/.tiup/bin/tiup playground ^4 --kv.config tikv.toml --pd.config pd.toml --db.config  tidb-alter-primary-key-false.toml --tiflash=0 --without-monitor
+
 
       - name: build
         run: mvn clean package -Dmaven.test.skip=true -B

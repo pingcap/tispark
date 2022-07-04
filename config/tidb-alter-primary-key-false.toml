@@ -42,7 +42,7 @@ enable-table-lock = true
 
 # alter-primary-key is used to control alter primary key feature. Default is false, indicate the alter primary key feature is disabled.
 # If it is true, we can add the primary key by "alter table", but we may not be able to drop the primary key.
-# In order to support "drop primary key" operation , this flag must be true and the table does not have the pkIsHandle flag.
+# In order to support "cluster index in tidb4.0", this flag must be false.
 alter-primary-key = false
 
 # index-limit is used to deal with compatibility issues. It can only be in [64, 64*8].
