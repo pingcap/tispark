@@ -45,4 +45,4 @@ jobs:
         run: mvn clean package -Dmaven.test.skip=true -B
 
       - name: test
-        run: mvn test -am -pl core -Dtest=moo -DwildcardSuites=org.apache.spark.sql.catalyst.plans.logical.LogicalPlanTestSuite,com.pingcap.tispark.delete -DfailIfNoTests=false
+        run: mvn test -am -pl core -Dtest=moo -DwildcardSuites=org.apache.spark.sql.catalyst.plans.logical.LogicalPlanTestSuite -DfailIfNoTests=false
