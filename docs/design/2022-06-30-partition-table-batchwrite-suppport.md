@@ -31,7 +31,7 @@ Currently, TiDB supports Range partitioning, List partitioning, List COLUMNS par
 partitioning.
 For a table partitioned by [RANGE COLUMNS](https://dev.mysql.com/doc/refman/5.7/en/partitioning-columns-range.html),
 currently TiDB only supports using a single partitioning column.
-You can read the [documentation](https://docs.pingcap.com/tidb/dev/partitioned-table#list-partitioning) for more
+You can read the [documentation](https://docs.pingcap.com/tidb/dev/partitioned-table#compatibility-with-mysql) for more
 details.
 
 ### The code-level implementation of partitioning in TiDB
@@ -110,6 +110,8 @@ interface.
 
 ## Test Design
 
+### Functional test
+
 - insert into Range partition table
 - insert into Range Column partition table
 - insert into Hash partition table
@@ -119,3 +121,9 @@ interface.
 - replace into Range partition table
 - replace into Range Column partition table
 - replace into Hash partition table
+
+### Partitioning schemes based on time intervals
+
+- Range partitioning with YEAR() and UNIX_TIMESTAMP() functions
+- Range Column partitioning with DATE and DATETIME types
+- Hash partitioning with TO_DAYS() and YEAR() functions
