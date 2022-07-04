@@ -35,12 +35,12 @@ import org.scalatest.exceptions.TestFailedException
 import scala.collection.JavaConverters._
 
 class StatisticsTestSuite extends BasePlanTest {
-  private val tableScanCases = Set("select * from full_data_type_table_idx where id_dt = 2333")
-  private val indexScanCases = Map(
+  private val tableReaderCases = Set("select * from full_data_type_table_idx where id_dt = 2333")
+  private val indexLookUpCases = Map(
     // double read case
     "select tp_bigint, tp_real from full_data_type_table_idx where tp_int = 2333" -> "idx_tp_int",
     "select * from full_data_type_table_idx where tp_int = 2333" -> "idx_tp_int")
-  private val coveringIndexScanCases = Map(
+  private val indexReaderCases = Map(
     // cover index case
     "select id_dt from full_data_type_table_idx where tp_int = 2333" -> "idx_tp_int",
     "select tp_int from full_data_type_table_idx where tp_bigint < 10 and tp_int < 40" -> "idx_tp_int_tp_bigint",
@@ -157,7 +157,7 @@ class StatisticsTestSuite extends BasePlanTest {
     }
   }
 
-  tableScanCases.foreach { query =>
+  tableReaderCases.foreach { query =>
     {
       val tableName = "full_data_type_table_idx"
       test(query) {
@@ -170,17 +170,17 @@ class StatisticsTestSuite extends BasePlanTest {
     }
   }
 
-  indexScanCases.foreach {
+  indexLookUpCases.foreach {
     case (query, idxName) =>
       val tableName = "full_data_type_table_idx"
       test(query) {
         val df = spark.sql(query)
-        checkIsIndexScan(df, tableName)
+        checkIsIndexLookUp(df, tableName)
         checkIndex(df, idxName)
       }
   }
 
-  coveringIndexScanCases.foreach {
+  indexReaderCases.foreach {
     case (query, idxName) =>
       val tableName = "full_data_type_table_idx"
       test(query) {
@@ -188,7 +188,7 @@ class StatisticsTestSuite extends BasePlanTest {
           cancel()
         }
         val df = spark.sql(query)
-        checkIsCoveringIndexScan(df, tableName)
+        checkIsIndexReader(df, tableName)
         checkIndex(df, idxName)
       }
   }
@@ -203,10 +203,10 @@ class StatisticsTestSuite extends BasePlanTest {
       checkIsTableScan(df, tableName)
     }
 
-    checkIsIndexScan(df, tableName)
+    checkIsIndexLookUp(df, tableName)
 
     assertThrows[TestFailedException] {
-      checkIsCoveringIndexScan(df, tableName)
+      checkIsIndexReader(df, tableName)
     }
 
     checkEstimatedRowCount(df, tableName, 2)

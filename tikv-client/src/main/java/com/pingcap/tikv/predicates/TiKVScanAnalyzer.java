@@ -36,7 +36,7 @@ import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiDAGRequest;
-import com.pingcap.tikv.meta.TiDAGRequest.IndexScanType;
+import com.pingcap.tikv.meta.TiDAGRequest.ScanType;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiPartitionDef;
@@ -618,19 +618,19 @@ public class TiKVScanAnalyzer {
             storeType);
       }
 
-      private void debug(IndexScanType scanType) {
+      private void debug(ScanType scanType) {
         String plan, desc;
         switch (scanType) {
           case TABLE_READER:
-            plan = "TableScan";
+            plan = "TableReader";
             desc = storeType.toString();
             break;
           case INDEX_LOOKUP:
-            plan = "IndexScan";
+            plan = "IndexLookUp";
             desc = index.getName();
             break;
           case INDEX_READER:
-            plan = "CoveringIndexScan";
+            plan = "IndexReader";
             desc = index.getName();
             break;
           default:
@@ -658,7 +658,7 @@ public class TiKVScanAnalyzer {
         if (tableStatistics != null) {
           estimatedRowCount = tableStatistics.getCount();
         }
-        debug(IndexScanType.TABLE_READER);
+        debug(ScanType.TABLE_READER);
         return this;
       }
 
@@ -687,10 +687,10 @@ public class TiKVScanAnalyzer {
 
           if (isDoubleRead) {
             cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
-            debug(IndexScanType.INDEX_LOOKUP);
+            debug(ScanType.INDEX_LOOKUP);
           } else {
             cost *= indexSize * INDEX_SCAN_COST_FACTOR;
-            debug(IndexScanType.INDEX_READER);
+            debug(ScanType.INDEX_READER);
           }
         }
         return this;

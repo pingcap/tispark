@@ -16,7 +16,7 @@
 
 package org.apache.spark.sql.catalyst.plans
 
-import com.pingcap.tikv.meta.TiDAGRequest.IndexScanType
+import com.pingcap.tikv.meta.TiDAGRequest.ScanType
 import com.pingcap.tikv.meta.{TiDAGRequest, TiIndexInfo}
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, ColumnarRegionTaskExec, SparkPlan}
 import org.apache.spark.sql.{BaseTiSparkTest, Dataset}
@@ -79,12 +79,9 @@ class BasePlanTest extends BaseTiSparkTest {
     coprocessorRDD.dagRequest.getIndexInfo
 
   def checkIsTableScan[T](df: Dataset[T], tableName: String): Unit =
-    checkIndexScanType(df, tableName, IndexScanType.TABLE_READER)
+    checkScanType(df, tableName, ScanType.TABLE_READER)
 
-  private def checkIndexScanType[T](
-      df: Dataset[T],
-      tableName: String,
-      indexScanType: IndexScanType): Unit = {
+  private def checkScanType[T](df: Dataset[T], tableName: String, scanType: ScanType): Unit = {
     val tiSparkPlans = extractTiSparkPlans(df)
     if (tiSparkPlans.isEmpty) {
       fail(df, "No TiSpark plans found in Dataset")
@@ -94,25 +91,25 @@ class BasePlanTest extends BaseTiSparkTest {
     }
     if (filteredRequests.isEmpty) {
       fail(df, s"No TiSpark plan contains desired table $tableName")
-    } else if (!tiSparkPlans.exists(checkIndexScanType(_, indexScanType))) {
+    } else if (!tiSparkPlans.exists(checkScanType(_, scanType))) {
       fail(
         df,
-        s"Index scan type not match: ${filteredRequests.head.getIndexScanType}, expected $indexScanType")
+        s"Index scan type not match: ${filteredRequests.head.getScanType}, expected $scanType")
     }
   }
 
-  private def checkIndexScanType(plan: SparkPlan, indexScanType: IndexScanType): Boolean =
+  private def checkScanType(plan: SparkPlan, scanType: ScanType): Boolean =
     plan match {
-      case p: ColumnarCoprocessorRDD => getIndexScanType(p).equals(indexScanType)
+      case p: ColumnarCoprocessorRDD => getScanType(p).equals(scanType)
       case _ => false
     }
 
-  private def getIndexScanType(coprocessorRDD: ColumnarCoprocessorRDD): IndexScanType = {
-    getIndexScanType(coprocessorRDD.dagRequest)
+  private def getScanType(coprocessorRDD: ColumnarCoprocessorRDD): ScanType = {
+    getScanType(coprocessorRDD.dagRequest)
   }
 
-  private def getIndexScanType(dagRequest: TiDAGRequest): IndexScanType = {
-    dagRequest.getIndexScanType
+  private def getScanType(dagRequest: TiDAGRequest): ScanType = {
+    dagRequest.getScanType
   }
 
   /**
@@ -123,11 +120,11 @@ class BasePlanTest extends BaseTiSparkTest {
     fail(message)
   }
 
-  def checkIsCoveringIndexScan[T](df: Dataset[T], tableName: String): Unit =
-    checkIndexScanType(df, tableName, IndexScanType.INDEX_READER)
+  def checkIsIndexReader[T](df: Dataset[T], tableName: String): Unit =
+    checkScanType(df, tableName, ScanType.INDEX_READER)
 
-  def checkIsIndexScan[T](df: Dataset[T], tableName: String): Unit =
-    checkIndexScanType(df, tableName, IndexScanType.INDEX_LOOKUP)
+  def checkIsIndexLookUp[T](df: Dataset[T], tableName: String): Unit =
+    checkScanType(df, tableName, ScanType.INDEX_LOOKUP)
 
   def checkEstimatedRowCount[T](df: Dataset[T], tableName: String, answer: Double): Unit = {
     val estimatedRowCount = getEstimatedRowCount(df, tableName)

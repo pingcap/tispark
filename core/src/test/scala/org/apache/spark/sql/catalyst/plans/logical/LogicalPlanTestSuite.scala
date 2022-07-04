@@ -499,7 +499,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     tidbStmt.execute("analyze table t")
     val df = spark.sql(
       "select artical_id from t where artical_id = 'abcdefg' and last_modify_time > '2020-06-22 00:00:00'")
-    checkIsIndexScan(df, "t")
+    checkIsIndexLookUp(df, "t")
     checkIndex(df, "artical_id")
   }
 

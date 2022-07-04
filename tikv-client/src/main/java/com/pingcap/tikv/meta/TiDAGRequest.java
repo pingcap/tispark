@@ -206,7 +206,7 @@ public class TiDAGRequest implements Serializable {
 
   public DAGRequest buildTableScan() {
     List<Integer> outputOffsets = new ArrayList<>();
-    boolean isCoveringIndex = isCoveringIndexScan();
+    boolean isCoveringIndex = isIndexReader();
     DAGRequest.Builder builder = buildScan(isCoveringIndex, outputOffsets);
     return buildRequest(builder, outputOffsets);
   }
@@ -403,7 +403,7 @@ public class TiDAGRequest implements Serializable {
 
     boolean isIndexDoubleScan = buildIndexScan && isDoubleRead();
 
-    // Should build these executors when performing CoveringIndexScan/TableScan
+    // Should build these executors when performing IndexReader/TableReader
 
     // clear executorBuilder
     executorBuilder.clear();
@@ -911,7 +911,7 @@ public class TiDAGRequest implements Serializable {
    *
    * @return boolean
    */
-  private boolean isCoveringIndexScan() {
+  private boolean isIndexReader() {
     return hasIndex() && !isDoubleRead();
   }
 
@@ -955,15 +955,15 @@ public class TiDAGRequest implements Serializable {
     init(hasIndex());
   }
 
-  public IndexScanType getIndexScanType() {
+  public ScanType getScanType() {
     if (hasIndex()) {
       if (isDoubleRead) {
-        return IndexScanType.INDEX_LOOKUP;
+        return ScanType.INDEX_LOOKUP;
       } else {
-        return IndexScanType.INDEX_READER;
+        return ScanType.INDEX_READER;
       }
     } else {
-      return IndexScanType.TABLE_READER;
+      return ScanType.TABLE_READER;
     }
   }
 
@@ -978,7 +978,7 @@ public class TiDAGRequest implements Serializable {
       sb.append(String.format("[table: %s] ", tableInfo.getName()));
     }
 
-    switch (getIndexScanType()) {
+    switch (getScanType()) {
       case INDEX_LOOKUP:
         sb.append("IndexLookUp");
         break;
@@ -994,7 +994,7 @@ public class TiDAGRequest implements Serializable {
       Joiner.on(", ").skipNulls().appendTo(sb, getFields());
     }
     sb.append(": { ");
-    switch (getIndexScanType()) {
+    switch (getScanType()) {
       case INDEX_LOOKUP:
         sb.append("{").append(stringIndexRangeScan()).append("}");
         sb.append("; {").append(stringTableRowIDScan()).append("}");
@@ -1012,8 +1012,8 @@ public class TiDAGRequest implements Serializable {
 
   private String stringIndexRangeScan() {
     StringBuilder sb = new StringBuilder();
-    TiDAGRequest indexRangeScan = this.copy();
-    indexRangeScan.init();
+    this.clearPushDownInfo();
+    init();
     sb.append("IndexRangeScan");
     sb.append(String.format("(Index:%s(", indexInfo.getName()));
     List<String> colNames =
@@ -1024,27 +1024,27 @@ public class TiDAGRequest implements Serializable {
             .collect(Collectors.toList());
     Joiner.on(",").skipNulls().appendTo(sb, colNames);
     sb.append(")): {");
-    sb.append(indexRangeScan.stringScanRange());
+    sb.append(stringScanRange());
     sb.append(" }");
-    sb.append(indexRangeScan.stringPushDownExpression());
+    sb.append(stringPushDownExpression());
     return sb.toString();
   }
 
   private String stringTableRowIDScan() {
-    TiDAGRequest tableRowIDScan = this.copy();
-    tableRowIDScan.buildTableScan();
-    return "TableRowIDScan" + tableRowIDScan.stringPushDownExpression();
+    this.clearPushDownInfo();
+    buildTableScan();
+    return "TableRowIDScan" + stringPushDownExpression();
   }
 
   private String stringTableRangeScan() {
     StringBuilder sb = new StringBuilder();
-    TiDAGRequest tableRangeScan = this.copy();
-    tableRangeScan.buildTableScan();
+    this.clearPushDownInfo();
+    buildTableScan();
     sb.append("TableRangeScan");
     sb.append(": {");
-    sb.append(tableRangeScan.stringScanRange());
+    sb.append(stringScanRange());
     sb.append(" }");
-    sb.append(tableRangeScan.stringPushDownExpression());
+    sb.append(stringPushDownExpression());
     return sb.toString();
   }
 
@@ -1156,7 +1156,7 @@ public class TiDAGRequest implements Serializable {
     NORMAL
   }
 
-  public enum IndexScanType {
+  public enum ScanType {
     INDEX_LOOKUP,
     INDEX_READER,
     TABLE_READER
