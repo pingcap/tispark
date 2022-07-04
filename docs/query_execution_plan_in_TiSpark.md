@@ -4,21 +4,36 @@ If we call Spark's `explain` that runs with TiSpark,  We might see output like t
 
 ```text
 == Physical Plan ==
-*(1) ColumnarToRow
-+- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): { TableRangeScan: { RangeFilter: [], Range: [([t\200\000\000\000\000\000\r\'_r\000\000\000\000\000\000\000\000], [t\200\000\000\000\000\000\r\'_s\000\000\000\000\000\000\000\000])] }, Selection: [[a@LONG GREATER_THAN 1]] }, startTs: 434245944457035777}
+AdaptiveSparkPlan isFinalPlan=false
++- Project [max(c)#163]
+   +- Sort [c#161 ASC NULLS FIRST], true, 0
+      +- Exchange rangepartitioning(c#161 ASC NULLS FIRST, 200), ENSURE_REQUIREMENTS, [id=#55]
+         +- SortAggregate(key=[c#161], functions=[max(max(c#161)#165)])
+            +- Sort [c#161 ASC NULLS FIRST], false, 0
+               +- Exchange hashpartitioning(c#161, 200), ENSURE_REQUIREMENTS, [id=#51]
+                  +- SortAggregate(key=[c#161], functions=[partial_max(max(c#161)#165)])
+                     +- Sort [c#161 ASC NULLS FIRST], false, 0
+                        +- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: c@VARCHAR(255), a@LONG: { TableRangeScan: { RangeFilter: [[a@LONG GREATER_THAN 0]], Range: [([t\200\000\000\000\000\000\000f_r\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\000f_s\000\000\000\000\000\000\000\000])] }, Selection: [[c@VARCHAR(255) GREATER_THAN "cc"], [c@VARCHAR(255) LESS_THAN "bb"], Not(IsNull(c@VARCHAR(255)))], Aggregates: Max(c@VARCHAR(255)), First(c@VARCHAR(255)), Group By: [c@VARCHAR(255) ASC] }, startTs: 434352901827854337}
 ```
 
 Or output like this.
 
 ```text
 == Physical Plan ==
-*(1) ColumnarToRow
-+- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[[b@VARCHAR(255) GREATER_THAN "aa"]]
-   +- RowToColumnar
-      +- TiKV FetchHandleRDD{[table: t1] IndexScan[Index: testindex] , Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255), Downgrade Filter: [b@VARCHAR(255) GREATER_THAN "aa"], [a@LONG GREATER_THAN 0], KeyRange: [([t\200\000\000\000\000\000\rA_i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\rA_i\200\000\000\000\000\000\000\001\372])], startTs: 434247241322725377}
+AdaptiveSparkPlan isFinalPlan=false
++- Project [max(c)#166]
+   +- Sort [c#164 ASC NULLS FIRST], true, 0
+      +- Exchange rangepartitioning(c#164 ASC NULLS FIRST, 200), ENSURE_REQUIREMENTS, [id=#69]
+         +- SortAggregate(key=[c#164], functions=[max(max(c#164)#168)])
+            +- Sort [c#164 ASC NULLS FIRST], false, 0
+               +- Exchange hashpartitioning(c#164, 200), ENSURE_REQUIREMENTS, [id=#65]
+                  +- SortAggregate(key=[c#164], functions=[partial_max(max(c#164)#168)])
+                     +- Sort [c#164 ASC NULLS FIRST], false, 0
+                        +- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[[c@VARCHAR(255) GREATER_THAN "cc"], Not(IsNull(c@VARCHAR(255))), [a@LONG GREATER_THAN 0], [c@VARCHAR(255) LESS_THAN "bb"]]
+                           +- TiKV FetchHandleRDD{[table: t1] IndexLookUp, Columns: c@VARCHAR(255), a@LONG: { {IndexRangeScan(Index:testindex(a,b)): { RangeFilter: [[a@LONG GREATER_THAN 0]], Range: [([t\200\000\000\000\000\000\000__i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\000__i\200\000\000\000\000\000\000\001\372])] }}; {TableRowIDScan, Selection: [[c@VARCHAR(255) GREATER_THAN "cc"], Not(IsNull(c@VARCHAR(255))), [c@VARCHAR(255) LESS_THAN "bb"]], Aggregates: Max(c@VARCHAR(255)), First(c@VARCHAR(255)), Group By: [c@VARCHAR(255) ASC]} }, startTs: 434352842229415937}
 ```
 
-The node of `RegionTaskExec` and the child node `CoprocessorRDD`(`FetchHandleRDD`) and are the output of TiSpark and the rest is the output of Spark. So here we mainly explain the `RegionTaskExec` and `CoprocessorRDD`(`FetchHandleRDD`).
+Only the node of `RegionTaskExec` and the child node `CoprocessorRDD`(`FetchHandleRDD`) and are the output of TiSpark and the rest node is the output of Spark. So here we mainly explain the `RegionTaskExec` and `CoprocessorRDD`(`FetchHandleRDD`).
 
 ## Understand EXPLAIN output in `CoprocessorRDD`(`FetchHandleRDD`)
 
