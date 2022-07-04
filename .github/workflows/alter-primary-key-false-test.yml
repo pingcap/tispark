@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        distribution: [ 'zulu', 'temurin', 'adopt', 'corretto' ]
+        distribution: [ 'adopt' ]
     name: Java ${{ matrix.distribution }} sample
     steps:
 
