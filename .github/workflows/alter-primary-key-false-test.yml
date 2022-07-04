@@ -31,6 +31,7 @@ jobs:
         run: |
           echo -e "127.0.0.1   pd \n127.0.0.1   tikv" | sudo tee -a /etc/hosts
           sudo cp -r config /config
+          sed -e '/^alter-primary-key/d'  ./config/tidb.toml > ./config/tidb-alter-primary-key-false.toml
           echo "spark.sql.catalog.tidb_catalog=org.apache.spark.sql.catalyst.catalog.TiCatalog" > tidb_config.properties
           mv tidb_config.properties core/src/test/resources/tidb_config.properties
 

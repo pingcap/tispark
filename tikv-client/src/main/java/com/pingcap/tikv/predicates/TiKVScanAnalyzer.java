@@ -621,15 +621,15 @@ public class TiKVScanAnalyzer {
       private void debug(IndexScanType scanType) {
         String plan, desc;
         switch (scanType) {
-          case TABLE_SCAN:
+          case TABLE_READER:
             plan = "TableScan";
             desc = storeType.toString();
             break;
-          case INDEX_SCAN:
+          case INDEX_LOOKUP:
             plan = "IndexScan";
             desc = index.getName();
             break;
-          case COVERING_INDEX_SCAN:
+          case INDEX_READER:
             plan = "CoveringIndexScan";
             desc = index.getName();
             break;
@@ -658,7 +658,7 @@ public class TiKVScanAnalyzer {
         if (tableStatistics != null) {
           estimatedRowCount = tableStatistics.getCount();
         }
-        debug(IndexScanType.TABLE_SCAN);
+        debug(IndexScanType.TABLE_READER);
         return this;
       }
 
@@ -687,10 +687,10 @@ public class TiKVScanAnalyzer {
 
           if (isDoubleRead) {
             cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
-            debug(IndexScanType.INDEX_SCAN);
+            debug(IndexScanType.INDEX_LOOKUP);
           } else {
             cost *= indexSize * INDEX_SCAN_COST_FACTOR;
-            debug(IndexScanType.COVERING_INDEX_SCAN);
+            debug(IndexScanType.INDEX_READER);
           }
         }
         return this;

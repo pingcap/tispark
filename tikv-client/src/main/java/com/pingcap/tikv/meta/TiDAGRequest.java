@@ -958,12 +958,12 @@ public class TiDAGRequest implements Serializable {
   public IndexScanType getIndexScanType() {
     if (hasIndex()) {
       if (isDoubleRead) {
-        return IndexScanType.INDEX_SCAN;
+        return IndexScanType.INDEX_LOOKUP;
       } else {
-        return IndexScanType.COVERING_INDEX_SCAN;
+        return IndexScanType.INDEX_READER;
       }
     } else {
-      return IndexScanType.TABLE_SCAN;
+      return IndexScanType.TABLE_READER;
     }
   }
 
@@ -979,13 +979,13 @@ public class TiDAGRequest implements Serializable {
     }
 
     switch (getIndexScanType()) {
-      case INDEX_SCAN:
+      case INDEX_LOOKUP:
         sb.append("IndexLookUp");
         break;
-      case COVERING_INDEX_SCAN:
+      case INDEX_READER:
         sb.append("IndexReader");
         break;
-      case TABLE_SCAN:
+      case TABLE_READER:
         sb.append("TableReader");
     }
 
@@ -995,14 +995,14 @@ public class TiDAGRequest implements Serializable {
     }
     sb.append(": { ");
     switch (getIndexScanType()) {
-      case INDEX_SCAN:
+      case INDEX_LOOKUP:
         sb.append("{").append(stringIndexRangeScan()).append("}");
         sb.append("; {").append(stringTableRowIDScan()).append("}");
         break;
-      case COVERING_INDEX_SCAN:
+      case INDEX_READER:
         sb.append(stringIndexRangeScan());
         break;
-      case TABLE_SCAN:
+      case TABLE_READER:
         sb.append(stringTableRangeScan());
     }
     sb.append(" }");
@@ -1157,9 +1157,9 @@ public class TiDAGRequest implements Serializable {
   }
 
   public enum IndexScanType {
-    INDEX_SCAN,
-    COVERING_INDEX_SCAN,
-    TABLE_SCAN
+    INDEX_LOOKUP,
+    INDEX_READER,
+    TABLE_READER
   }
 
   public static class Builder {

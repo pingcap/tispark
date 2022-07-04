@@ -79,7 +79,7 @@ class BasePlanTest extends BaseTiSparkTest {
     coprocessorRDD.dagRequest.getIndexInfo
 
   def checkIsTableScan[T](df: Dataset[T], tableName: String): Unit =
-    checkIndexScanType(df, tableName, IndexScanType.TABLE_SCAN)
+    checkIndexScanType(df, tableName, IndexScanType.TABLE_READER)
 
   private def checkIndexScanType[T](
       df: Dataset[T],
@@ -124,10 +124,10 @@ class BasePlanTest extends BaseTiSparkTest {
   }
 
   def checkIsCoveringIndexScan[T](df: Dataset[T], tableName: String): Unit =
-    checkIndexScanType(df, tableName, IndexScanType.COVERING_INDEX_SCAN)
+    checkIndexScanType(df, tableName, IndexScanType.INDEX_READER)
 
   def checkIsIndexScan[T](df: Dataset[T], tableName: String): Unit =
-    checkIndexScanType(df, tableName, IndexScanType.INDEX_SCAN)
+    checkIndexScanType(df, tableName, IndexScanType.INDEX_LOOKUP)
 
   def checkEstimatedRowCount[T](df: Dataset[T], tableName: String, answer: Double): Unit = {
     val estimatedRowCount = getEstimatedRowCount(df, tableName)
