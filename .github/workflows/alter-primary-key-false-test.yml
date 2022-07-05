@@ -31,17 +31,12 @@ jobs:
         run: |
           echo -e "127.0.0.1   pd \n127.0.0.1   tikv" | sudo tee -a /etc/hosts
           sudo cp -r config /config
-          sed -e 's/^alter-primary-key.*/alter-primary-key=false/g'  ./config/tidb.toml > ./config/tidb-alter-primary-key-false.toml
+          sed -i 's/^alter-primary-key.*/alter-primary-key=false/g'  ./config/tidb.toml 
           echo "spark.sql.catalog.tidb_catalog=org.apache.spark.sql.catalyst.catalog.TiCatalog" > tidb_config.properties
           mv tidb_config.properties core/src/test/resources/tidb_config.properties
 
-      - name: build tidb cluster
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
-          ulimit -HSn 1000000
-          cd config
-          ~/.tiup/bin/tiup playground ^4 --kv.config tikv.toml --pd.config pd.toml --db.config  tidb-alter-primary-key-false.toml --tiflash=0 --without-monitor
-
+      - name: build docker
+        run: docker-compose -f docker-compose.yaml up -d
 
       - name: build
         run: mvn clean package -Dmaven.test.skip=true -B
