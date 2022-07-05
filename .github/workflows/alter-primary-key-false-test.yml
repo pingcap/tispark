@@ -29,7 +29,7 @@ jobs:
 
       - name: add host and copy properties
         run: |
-          echo -e "127.0.0.1   pd \n127.0.0.1   tikv" | sudo tee -a /etc/hosts
+          echo -e "127.0.0.1   pd0 \n127.0.0.1   tikv0" | sudo tee -a /etc/hosts
           sudo cp -r config /config
           sed -i 's/^alter-primary-key.*/alter-primary-key=false/g'  ./config/tidb.toml 
           echo "spark.sql.catalog.tidb_catalog=org.apache.spark.sql.catalyst.catalog.TiCatalog" > tidb_config.properties
