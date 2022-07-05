@@ -191,7 +191,7 @@ The expression passed to COP/TiKV as a selection expression without triggering a
 
 To solve the problem of appearing a filter that shouldn't appear, we removed the `Residual Filter`.
 
-As shown below, in the case of the same table and query as in [The Problem of DAG Explain](# the-problem-of-dag-explain) section, the `Residual Filter` has been removed from the `explain` output.
+As shown below, in the case of the same table and query as in [The Problem of DAG Explain](#the-problem-of-dag-explain) section, the `Residual Filter` has been removed from the `explain` output.
 
 ```text
 == Physical Plan ==
