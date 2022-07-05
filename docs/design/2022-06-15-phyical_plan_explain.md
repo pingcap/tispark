@@ -217,7 +217,7 @@ As shown below, in the case of the same table and query as in [The Problem of DA
 
    To solve the problem of information about the used index is hard to know, we add the columns that make up the index after the index name.
 
-As shown below, in the case of the same table and query as in [The Problem of DAG Explain](# the-problem-of-dag-explain) section, add `IndexRangeScan` and `TableRowIDScan`, delete the `Downgrade Filter` and add the `Selection` in `FetchHandleRDD` , add the columns that make up the index after the index name to the output.
+As shown below, in the case of the same table and query as in [The Problem of DAG Explain](#the-problem-of-dag-explain) section, add `IndexRangeScan` and `TableRowIDScan`, delete the `Downgrade Filter` and add the `Selection` in `FetchHandleRDD` , add the columns that make up the index after the index name to the output.
 
 ```text
 == Physical Plan ==
@@ -233,7 +233,7 @@ To solve the problem of expression(s) that constitutes the scanning range is har
 
 - **`RangeFilter`**: `RangeFilter` indicates which expression(s) the range is made up of. If `RangeFilter` is empty, it indicates a full table scan or full index scan. `RangeFilter` generally appears when the query involves an index range, when query the expressions in the `RangeFilter` form the scanned range from left to right.
 
-As shown below, in the case of the same table and query as in [The Problem of DAG Explain](# the-problem-of-dag-explain) section,  add `RangeFilter` to the output.
+As shown below, in the case of the same table and query as in [The Problem of DAG Explain](#the-problem-of-dag-explain) section,  add `RangeFilter` to the output.
 
 ```text
 == Physical Plan ==
