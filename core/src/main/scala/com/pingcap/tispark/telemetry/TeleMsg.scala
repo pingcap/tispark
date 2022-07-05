@@ -42,11 +42,10 @@ class TeleMsg(sparkSession: SparkSession) {
   val configuration: Map[String, Any] = TiSparkTeleConf.getTiSparkTeleConf()
 
   private def generateTrackId(): String = {
-    var tiSession: TiSession = null
     try {
       val conf = TiConfiguration.createDefault(pdAddr.get)
       TiUtil.sparkConfToTiConfWithoutPD(SparkSession.active.sparkContext.getConf, conf)
-      tiSession = TiSession.getInstance(conf)
+      val tiSession = TiSession.getInstance(conf)
       val snapShot = tiSession.createSnapshot()
       val value = snapShot.get(TRACK_ID.getBytes("UTF-8"))
 
@@ -60,9 +59,6 @@ class TeleMsg(sparkSession: SparkSession) {
       case e: Throwable =>
         logger.warn("Failed to generated telemetry track ID", e.getMessage)
         APP_ID_PREFIX + sparkSession.sparkContext.applicationId
-    } finally {
-      if (tiSession != null)
-        tiSession.close()
     }
   }
 

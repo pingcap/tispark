@@ -53,10 +53,15 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
     new AtomicReference(Map.empty)
 
   val task: Runnable = () => {
-    val privs = getPrivileges
-    globalPrivs.set(privs.globalPriv)
-    databasePrivs.set(privs.databasePrivs)
-    tablePrivs.set(privs.tablePrivs)
+    try {
+      val privs = getPrivileges
+      globalPrivs.set(privs.globalPriv)
+      databasePrivs.set(privs.databasePrivs)
+      tablePrivs.set(privs.tablePrivs)
+    } catch {
+      case e: Throwable =>
+        logger.error("Failed to refresh privileges", e)
+    }
   }
 
   /**
@@ -384,6 +389,24 @@ object TiAuthorization {
       tiAuth: Option[TiAuthorization]): Unit = {
     if (enableAuth) {
       tiAuth.get.checkPrivs(database, table, MySQLPriv.DeletePriv, "DELETE")
+    }
+  }
+
+  def authorizeForInsert(
+      table: String,
+      database: String,
+      tiAuth: Option[TiAuthorization]): Unit = {
+    if (enableAuth) {
+      tiAuth.get.checkPrivs(database, table, MySQLPriv.InsertPriv, "INSERT")
+    }
+  }
+
+  def authorizeForUpdate(
+      table: String,
+      database: String,
+      tiAuth: Option[TiAuthorization]): Unit = {
+    if (enableAuth) {
+      tiAuth.get.checkPrivs(database, table, MySQLPriv.UpdatePriv, "UPDATE")
     }
   }
 
