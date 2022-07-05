@@ -31,12 +31,12 @@ jobs:
         run: |
           echo -e "127.0.0.1   pd0 \n127.0.0.1   tikv0" | sudo tee -a /etc/hosts
           sudo cp -r config /config
-          sed -i 's/^alter-primary-key.*/alter-primary-key=false/g'  ./config/tidb.toml 
+          sed -i 's/^alter-primary-key.*/alter-primary-key=false/g'  ./config/tidb-4.0.toml 
           echo "spark.sql.catalog.tidb_catalog=org.apache.spark.sql.catalyst.catalog.TiCatalog" > tidb_config.properties
           mv tidb_config.properties core/src/test/resources/tidb_config.properties
 
       - name: build docker
-        run: docker-compose -f docker-compose.yaml up -d
+        run: docker-compose -f docker-compose-4.0.yaml up -d
 
       - name: build
         run: mvn clean package -Dmaven.test.skip=true -B
