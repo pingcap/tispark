@@ -38,6 +38,7 @@ jobs:
       - name: build tidb cluster
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://tiup-mirrors.pingcap.com/install.sh | sh
+          ulimit -HSn 1000000
           cd config
           ~/.tiup/bin/tiup playground ^4 --kv.config tikv.toml --pd.config pd.toml --db.config  tidb-alter-primary-key-false.toml --tiflash=0 --without-monitor
 
