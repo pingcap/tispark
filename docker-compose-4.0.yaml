@@ -2,7 +2,7 @@ version: '2.3'
 
 services:
   pd0:
-    image: pingcap/pd:v4.0.6-20220430
+    image: pingcap/pd:v4.0.6
     ports:
       - "2379:2379"
     volumes:
@@ -21,7 +21,7 @@ services:
       - --log-file=/logs/pd0.log
     restart: on-failure
   tikv0:
-    image: pingcap/tikv:v4.0.6-20220430
+    image: pingcap/tikv:v4.0.6
     ports:
       - "20160:20160"
     volumes:
@@ -40,7 +40,7 @@ services:
       - "pd0"
     restart: on-failure
   tidb:
-    image: pingcap/tidb:v4.0.6-20220430
+    image: pingcap/tidb:v4.0.6
     ports:
       - "4000:4000"
       - "10080:10080"
