@@ -33,7 +33,7 @@ AdaptiveSparkPlan isFinalPlan=false
                            +- TiKV FetchHandleRDD{[table: t1] IndexLookUp, Columns: c@VARCHAR(255), a@LONG: { {IndexRangeScan(Index:testindex(a,b)): { RangeFilter: [[a@LONG GREATER_THAN 0]], Range: [([t\200\000\000\000\000\000\000__i\200\000\000\000\000\000\000\001\003\200\000\000\000\000\000\000\001], [t\200\000\000\000\000\000\000__i\200\000\000\000\000\000\000\001\372])] }}; {TableRowIDScan, Selection: [[c@VARCHAR(255) GREATER_THAN "cc"], Not(IsNull(c@VARCHAR(255))), [c@VARCHAR(255) LESS_THAN "bb"]], Aggregates: Max(c@VARCHAR(255)), First(c@VARCHAR(255)), Group By: [c@VARCHAR(255) ASC]} }, startTs: 434352842229415937}
 ```
 
-Only the node of `RegionTaskExec` and the child node `CoprocessorRDD`(`FetchHandleRDD`) and are the output of TiSpark and the rest node is the output of Spark. So here we mainly explain the `RegionTaskExec` and `CoprocessorRDD`(`FetchHandleRDD`).
+Only the node `RegionTaskExec` and the child node `CoprocessorRDD`(`FetchHandleRDD`)  are the output of TiSpark. The rest nodes are the output of Spark. So here we mainly explain the `RegionTaskExec` and `CoprocessorRDD`(`FetchHandleRDD`).
 
 ## Understand EXPLAIN output in `CoprocessorRDD`(`FetchHandleRDD`)
 
@@ -49,9 +49,9 @@ An operator is a particular step that is executed as part of returning query res
 
 TiSpark aggregates the data or calculation results scanned from TiKV/TiFlash. The data aggregation operators can be divided into the following categories:
 
-- **`TableReader`**: Aggregates the data obtained by the underlying operator `TableRangeScan` in TiKV.
-- **`IndexReader`**: Aggregates the data obtained by the underlying operator `IndexRangeScan` in TiKV.
-- **`IndexLookUp`**: First aggregates the RowIDs (in TiKV) scanned by the first scan in the index. Then at the second scan in the table, accurately reads the data from TiKV based on these RowIDs. At the first scan in the index, there is  `IndexRangeScan` operator; at the second scan in the table, there is the `TableRowIDScan` operator.
+- **`TableReader`**: Aggregates the data obtained by the underlying operator `TableRangeScan` in TiKV/TiFlash.
+- **`IndexReader`**: Aggregates the data obtained by the underlying operator `IndexRangeScan` in TiKV/TiFlash.
+- **`IndexLookUp`**: First aggregates the RowIDs (in TiKV/TiFlash) scanned by the first scan in the index. Then at the second scan in the table, accurately reads the data from TiKV/TiFlash based on these RowIDs. At the first scan in the index, there is `IndexRangeScan` operator; at the second scan in the table, there is the `TableRowIDScan` operator.
 
 ### `Range`&`RangeFilter`
 
@@ -67,7 +67,7 @@ The expression passed to COP/TiKV as selection expression without triggering a d
 
 From the previous article, we know that `IndexLookUp` will perform two scanning operations, the first scan is `IndexRangeScan` and the second scan is `TableRowIDScan`. If the `TableRowIDScan` in `IndexLookUp` does too many queries on COP([TiKV Coprocessor](https://docs.pingcap.com/tidb/stable/tikv-overview#tikv-coprocessor))/TiKV, it can cause performance problems in COP/TiKV. To solve this problem a downgrading mechanism is introduced.
 
-The `IndexRangeScan` of `IndexLookUp` will return the data that meets the conditions, and then TiSpark will sort and aggregate the returned data to obtain the `regionTask` that needs to be done in the `TableRowIDScan`. If the number of `regionTask` is bigger than `downgradeThreshold`, a downgrade will be triggered. When a downgrade is triggered, the range of the second scan table will be changed from the returned value of the first scan index to all values between the minimum and maximum value of the first scan index, and the `filters` of the second scan will change to `downgradeFilters`(`downgradeFilters` is the same as if the execution plan is `TableScan`'s `filters`).
+The `IndexRangeScan` of `IndexLookUp` will return the data that meets the conditions, and then TiSpark will sort and aggregate the returned data to obtain the `regionTask` that needs to be done in the `TableRowIDScan`. If the number of `regionTask` is bigger than `downgradeThreshold`, a downgrade will be triggered. When a downgrade is triggered, the range of the second  table  scan will be changed from the returned value of the first scan index to all values between the minimum and maximum value of the first scan index, and the `filters` of the second scan will change to `downgradeFilters`(`downgradeFilters` is the same as if the execution plan is `TableScan`'s `filters`).
 
 > **`RegionTask`**
 >

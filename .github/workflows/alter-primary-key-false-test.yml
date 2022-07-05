@@ -11,10 +11,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        distribution: [ 'adopt' ]
-    name: Java ${{ matrix.distribution }} sample
+    name: Java adopt sample
     steps:
 
       - name: checkout
@@ -24,7 +21,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: '8'
-          distribution: ${{ matrix.distribution }}
+          distribution: 'adopt'
           cache: maven
 
       - name: add host and copy properties
