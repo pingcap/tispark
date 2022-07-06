@@ -16,21 +16,27 @@
 
 package com.pingcap.tispark.write
 
-import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType
 import com.pingcap.tikv.meta.TiTableInfo
+import com.pingcap.tikv.partition.{PartitionedTable, TableCommon}
+import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.utils.TiUtil.sparkConfToTiConf
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TwoPhaseCommitHepler, WriteUtil}
-import org.apache.spark.{SparkConf, SparkContext}
+import com.pingcap.tispark.write.TiBatchWrite.TiRow
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SQLContext, SparkSession}
+import org.apache.spark.{SparkConf, SparkContext}
 import org.slf4j.LoggerFactory
 
+import scala.collection.mutable
+
 case class TiDBDelete(
-    df: DataFrame,
-    database: String,
-    table: String,
-    startTs: Long,
-    tiDBOptions: Option[TiDBOptions] = None) {
+                       df: DataFrame,
+                       database: String,
+                       tableName: String,
+                       startTs: Long,
+                       tiDBOptions: Option[TiDBOptions] = None)(@transient val sqlContext: SQLContext,
+                                                                @transient val sparkContext: SparkContext) {
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -40,7 +46,7 @@ case class TiDBDelete(
   // 1.match the schema of dataframe
   // 2.make extract handle more convenience for (pkIsHandle || isCommonHandle) is always true.
   val tiTableInfo: TiTableInfo =
-    tiSession.getCatalog.getTable(database, table).copyTableWithRowId()
+  tiSession.getCatalog.getTable(database, tableName).copyTableWithRowId()
 
   @transient private var persistedDFList: List[DataFrame] = Nil
   @transient private var persistedRDDList: List[RDD[_]] = Nil
@@ -59,25 +65,52 @@ case class TiDBDelete(
       return
     }
 
-    //Convert Spark row to TiKV row
-    val colsInDf = persistDf.columns.toList.map(_.toLowerCase())
-    val tiRowRdd = persistDf.rdd.map(row => {
-      WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
-    })
+    val table = new TableCommon(tiTableInfo.getId, tiTableInfo.getId, tiTableInfo)
+    val tiRowMap: Map[TableCommon, RDD[TiRow]] = if (tiTableInfo.isPartitionEnabled) {
+
+      val mm = new mutable.HashMap[TableCommon, mutable.Set[TiRow]] with mutable.MultiMap[TableCommon, TiRow]
+      val pTable = PartitionedTable.newPartitionTable(table, tiTableInfo)
+      val colsInDf = df.columns.toList.map(_.toLowerCase())
+      df.collect().foreach(row => {
+        val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
+        mm.addBinding(pTable.locatePartition(tiRow), tiRow)
+      })
+
+      mm.map({
+        case (table, rowSet) =>
+          table -> sparkContext.makeRDD(rowSet.toSeq)
+      }).toMap
+
+    } else {
+      //Convert Spark row to TiKV row
+      val colsInDf = persistDf.columns.toList.map(_.toLowerCase())
+      val rows: RDD[TiRow] = persistDf.rdd.map(row => {
+        WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
+      })
+
+      Map(table -> rows)
+    }
 
     //Extract handle
-    val deletion: RDD[WrappedRow] = tiRowRdd.map { row =>
-      WrappedRow(row, WriteUtil.extractHandle(row, tiTableInfo))
+    val deletionMap: Map[TableCommon, RDD[WrappedRow]] = tiRowMap.map { case (table, tiRowRDD) =>
+      table -> tiRowRDD.map(row => WrappedRow(row, WriteUtil.extractHandle(row, tiTableInfo)))
     }
+
 
     // encode record & index
     val tableId = tiTableInfo.getId
-    val recordKV = WriteUtil.generateRecordKVToDelete(deletion, tableId)
-    val indexKV = WriteUtil.generateIndexKV(
-      SparkSession.active.sparkContext,
-      deletion,
-      tiTableInfo,
-      remove = true)
+    val recordKV = deletionMap.map { case (table, wrappedRowRDD) =>
+      WriteUtil.generateRecordKVToDelete(wrappedRowRDD, table.getPhysicalTableId)
+    }.reduceLeft(_ ++ _)
+
+    val indexKV = deletionMap.map { case (table, wrappedRowRDD) =>
+      WriteUtil.generateIndexKV(
+        SparkSession.active.sparkContext,
+        wrappedRowRDD,
+        table,
+        remove = true)
+    }.reduceLeft(_ ++ _)
+
     val keyValueRDD = (recordKV ++ indexKV).map(obj => (obj.encodedKey, obj.encodedValue))
 
     //persist KeyValueRDD
@@ -106,7 +139,7 @@ case class TiDBDelete(
       twoPhaseCommitHepler.prewriteSecondaryKeyByExecutors(secondaryKeysRDD, primaryKey)
       val commitTs = twoPhaseCommitHepler.commitPrimaryKeyWithRetryByDriver(
         primaryKey,
-        List(SchemaUpdateTime(database, table, tiTableInfo.getUpdateTimestamp)))
+        List(SchemaUpdateTime(database, tableName, tiTableInfo.getUpdateTimestamp)))
       twoPhaseCommitHepler.stopPrimaryKeyTTLUpdate()
       twoPhaseCommitHepler.commitSecondaryKeyByExecutors(secondaryKeysRDD, commitTs)
     } finally {
@@ -127,10 +160,13 @@ case class TiDBDelete(
    * @throws IllegalArgumentException if check fail
    */
   private def check(df: DataFrame): Unit = {
-    // Delete from partition table is not supported
+    // Only RangePartition and HashPartition are supported
     if (tiTableInfo.isPartitionEnabled) {
-      throw new IllegalArgumentException(
-        "TiSpark currently does not support delete data from partition table!")
+      val pType = tiTableInfo.getPartitionInfo.getType
+      if (pType != PartitionType.RangePartition && pType != PartitionType.HashPartition) {
+        throw new IllegalArgumentException(
+          s"Delete from $pType partition table is not supported")
+      }
     }
 
     // Check columns: Defensive programming, it won't happen in theory

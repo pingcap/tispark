@@ -26,6 +26,7 @@ import java.util.Objects;
 
 public class ColumnRef extends Expression {
   private final String name;
+  private TiColumnInfo columnInfo;
 
   @Deprecated
   public ColumnRef(String name) {
@@ -66,6 +67,10 @@ public class ColumnRef extends Expression {
     return name.toLowerCase();
   }
 
+  public TiColumnInfo getColumnInfo() {
+    return columnInfo;
+  }
+
   public void resolve(TiTableInfo table) {
     TiColumnInfo columnInfo = null;
     for (TiColumnInfo col : table.getColumns()) {
@@ -83,6 +88,8 @@ public class ColumnRef extends Expression {
     if (columnInfo.getId() == 0) {
       throw new TiExpressionException("Zero Id is not a referable column id");
     }
+
+    this.columnInfo = columnInfo;
   }
 
   public boolean matchName(String name) {

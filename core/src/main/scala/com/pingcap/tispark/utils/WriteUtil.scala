@@ -17,13 +17,10 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
-import com.pingcap.tikv.exception.{
-  ConvertOverflowException,
-  TiBatchWriteException,
-  TiDBConvertException
-}
+import com.pingcap.tikv.exception.{ConvertOverflowException, TiBatchWriteException, TiDBConvertException}
 import com.pingcap.tikv.key.{CommonHandle, Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
+import com.pingcap.tikv.partition.TableCommon
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tispark.write.TiBatchWrite.{SparkRow, TiRow}
@@ -142,18 +139,19 @@ object WriteUtil {
    * For isPkHandle, we don't do this because primary key is not included in indices
    * @param rdd
    * @param remove
-   * @param tiTableInfo
+   * @param tiTable
    * @return  Map[Long, RDD[WrappedEncodedRow], The key of map is indexId
    */
   def generateIndexKVs(
-      rdd: RDD[WrappedRow],
-      tiTableInfo: TiTableInfo,
-      remove: Boolean): Map[Long, RDD[WrappedEncodedRow]] = {
-    tiTableInfo.getIndices.asScala.flatMap { index =>
-      if (tiTableInfo.isCommonHandle && index.isPrimary) {
+                        rdd: RDD[WrappedRow],
+                        tiTable: TableCommon,
+                        remove: Boolean): Map[Long, RDD[WrappedEncodedRow]] = {
+    val tableInfo = tiTable.getTableInfo
+    tableInfo.getIndices.asScala.flatMap { index =>
+      if (tableInfo.isCommonHandle && index.isPrimary) {
         None
       } else {
-        Some((index.getId, generateIndexRDD(rdd, index, tiTableInfo, remove)))
+        Some((index.getId, generateIndexRDD(rdd, index, tiTable, remove)))
       }
     }.toMap
   }
@@ -169,9 +167,9 @@ object WriteUtil {
   def generateIndexKV(
       sc: SparkContext,
       rdd: RDD[WrappedRow],
-      tiTableInfo: TiTableInfo,
+      tiTable: TableCommon,
       remove: Boolean): RDD[WrappedEncodedRow] = {
-    val rdds = generateIndexKVs(rdd, tiTableInfo, remove)
+    val rdds = generateIndexKVs(rdd, tiTable, remove)
     rdds.values.foldLeft(sc.emptyRDD[WrappedEncodedRow])(_ ++ _)
   }
 
@@ -179,14 +177,14 @@ object WriteUtil {
    * generateIndexRDD for UniqueIndexKey and SecondaryIndexKey
    */
   private def generateIndexRDD(
-      rdd: RDD[WrappedRow],
-      index: TiIndexInfo,
-      tiTableInfo: TiTableInfo,
-      remove: Boolean): RDD[WrappedEncodedRow] = {
+                                rdd: RDD[WrappedRow],
+                                index: TiIndexInfo,
+                                tiTable: TableCommon,
+                                remove: Boolean): RDD[WrappedEncodedRow] = {
     if (index.isUnique) {
       rdd.map { row =>
         val (encodedKey, encodedValue) =
-          generateUniqueIndexKey(row.row, row.handle, index, tiTableInfo, remove)
+          generateUniqueIndexKey(row.row, row.handle, index, tiTable, remove)
         WrappedEncodedRow(
           row.row,
           row.handle,
@@ -199,7 +197,7 @@ object WriteUtil {
     } else {
       rdd.map { row =>
         val (encodedKey, encodedValue) =
-          generateSecondaryIndexKey(row.row, row.handle, index, tiTableInfo, remove)
+          generateSecondaryIndexKey(row.row, row.handle, index, tiTable, remove)
         WrappedEncodedRow(
           row.row,
           row.handle,
@@ -223,7 +221,7 @@ object WriteUtil {
       row: TiRow,
       handle: Handle,
       index: TiIndexInfo,
-      tiTableInfo: TiTableInfo,
+      tiTable: TableCommon,
       remove: Boolean): (SerializableKey, Array[Byte]) = {
 
     // NULL is only allowed in unique key, primary key does not allow NULL value
@@ -232,9 +230,9 @@ object WriteUtil {
       index.getIndexColumns,
       handle,
       index.isUnique && !index.isPrimary,
-      tiTableInfo)
+      tiTable.getTableInfo)
     val indexKey = IndexKey.toIndexKey(
-      locatePhysicalTable(row, tiTableInfo),
+      locatePhysicalTable(row, tiTable),
       index.getId,
       encodeResult.keys: _*)
 
@@ -259,16 +257,16 @@ object WriteUtil {
   }
 
   private def generateSecondaryIndexKey(
-      row: TiRow,
-      handle: Handle,
-      index: TiIndexInfo,
-      tiTableInfo: TiTableInfo,
-      remove: Boolean): (SerializableKey, Array[Byte]) = {
+                                         row: TiRow,
+                                         handle: Handle,
+                                         index: TiIndexInfo,
+                                         tiTable: TableCommon,
+                                         remove: Boolean): (SerializableKey, Array[Byte]) = {
     val keys =
-      IndexKey.encodeIndexDataValues(row, index.getIndexColumns, handle, false, tiTableInfo).keys
+      IndexKey.encodeIndexDataValues(row, index.getIndexColumns, handle, false, tiTable.getTableInfo).keys
     val cdo = new CodecDataOutput()
     cdo.write(
-      IndexKey.toIndexKey(locatePhysicalTable(row, tiTableInfo), index.getId, keys: _*).getBytes)
+      IndexKey.toIndexKey(locatePhysicalTable(row, tiTable), index.getId, keys: _*).getBytes)
     cdo.write(handle.encodedAsKey())
 
     val value: Array[Byte] = if (remove) {
@@ -287,7 +285,7 @@ object WriteUtil {
    * @param tiTableInfo
    * @return
    */
-  def locatePhysicalTable(row: TiRow, tiTableInfo: TiTableInfo): Long = {
-    tiTableInfo.getId
+  def locatePhysicalTable(row: TiRow, tiTable: TableCommon): Long = {
+    tiTable.getPhysicalTableId
   }
 }

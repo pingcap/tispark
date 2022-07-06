@@ -16,18 +16,20 @@
 
 package com.pingcap.tispark.write
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv._
+import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tikv.partition.{PartitionedTable, TableCommon}
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.auth.TiAuthorization
-import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler}
+import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler, WriteUtil}
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.sql.{DataFrame, SparkSession, TiContext, TiExtensions}
+import org.apache.spark.sql._
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 object TiBatchWrite {
   type SparkRow = org.apache.spark.sql.Row
@@ -49,9 +51,9 @@ object TiBatchWrite {
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   def write(
-      dataToWrite: Map[DBTable, DataFrame],
-      sparkSession: SparkSession,
-      parameters: Map[String, String]): Unit = {
+             dataToWrite: Map[DBTable, DataFrame],
+             sparkSession: SparkSession,
+             parameters: Map[String, String]): Unit = {
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
         val tiDBOptions = new TiDBOptions(
@@ -65,10 +67,10 @@ object TiBatchWrite {
 }
 
 class TiBatchWrite(
-    @transient val dataToWrite: Map[DBTable, DataFrame],
-    @transient val tiContext: TiContext,
-    options: TiDBOptions)
-    extends Serializable {
+                    @transient val dataToWrite: Map[DBTable, DataFrame],
+                    @transient val tiContext: TiContext,
+                    options: TiDBOptions)
+  extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
   import com.pingcap.tispark.write.TiBatchWrite._
@@ -146,15 +148,50 @@ class TiBatchWrite(
 
     // init tiBatchWriteTables
     tiBatchWriteTables = {
-      dataToWrite.map {
+      dataToWrite.flatMap {
         case (dbTable, df) =>
-          new TiBatchWriteTable(
-            df,
-            tiContext,
-            options.setDBTable(dbTable),
-            tiConf,
-            tiDBJDBCClient,
-            isTiDBV4)
+          val tiTableRef = options.getTiTableRef(tiConf)
+          val tiTableInfo = tiContext.tiSession.getCatalog.getTable(options.getTiTableRef(tiConf).databaseName, options.getTiTableRef(tiConf).databaseName)
+
+          if (tiTableInfo == null) {
+            throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
+          }
+
+          val table = new TableCommon(tiTableInfo.getId, tiTableInfo.getId, tiTableInfo)
+
+          if (tiTableInfo.isPartitionEnabled) {
+            val mm = new mutable.HashMap[TableCommon, mutable.Set[Row]] with mutable.MultiMap[TableCommon, Row]
+
+            val pTable = PartitionedTable.newPartitionTable(table, tiTableInfo)
+            val colsInDf = df.columns.toList.map(_.toLowerCase())
+            df.collect().foreach(row => {
+              val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
+              mm.addBinding(pTable.locatePartition(tiRow), row)
+            })
+
+            mm.map {
+              case (tableCommon, rowSet) =>
+                val data: RDD[Row] = tiContext.sparkSession.sparkContext.makeRDD(rowSet.toSeq)
+                val dfPartitioned: DataFrame = tiContext.sqlContext.createDataFrame(data, df.schema)
+                new TiBatchWriteTable(
+                  dfPartitioned,
+                  tiContext,
+                  options.setDBTable(dbTable),
+                  tiConf,
+                  tiDBJDBCClient,
+                  isTiDBV4,
+                  tableCommon)
+            }.toList
+          } else {
+            List(new TiBatchWriteTable(
+              df,
+              tiContext,
+              options.setDBTable(dbTable),
+              tiConf,
+              tiDBJDBCClient,
+              isTiDBV4,
+              table))
+          }
       }.toList
     }
 
@@ -305,7 +342,7 @@ class TiBatchWrite(
   }
 
   private def getRegionSplitPoints(
-      rdd: RDD[(SerializableKey, Array[Byte])]): List[SerializableKey] = {
+                                    rdd: RDD[(SerializableKey, Array[Byte])]): List[SerializableKey] = {
     val count = rdd.count()
 
     if (count < options.regionSplitThreshold) {
@@ -396,8 +433,8 @@ class TiBatchWrite(
   }
 
   private def mergeSparkConfWithDataSourceConf(
-      conf: SparkConf,
-      options: TiDBOptions): TiConfiguration = {
+                                                conf: SparkConf,
+                                                options: TiDBOptions): TiConfiguration = {
     val clonedConf = conf.clone()
     // priority: data source config > spark config
     clonedConf.setAll(options.parameters)

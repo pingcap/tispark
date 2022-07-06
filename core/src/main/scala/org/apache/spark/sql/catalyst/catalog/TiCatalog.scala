@@ -17,10 +17,9 @@
 package org.apache.spark.sql.catalyst.catalog
 
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{MetaManager, TiTableReference}
 import com.pingcap.tispark.auth.TiAuthorization
-import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable
+import com.pingcap.tispark.{MetaManager, TiTableReference}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{NoSuchNamespaceException, NoSuchTableException}
 import org.apache.spark.sql.connector.catalog._
@@ -132,7 +131,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
       .getOrElse(throw new NoSuchTableException(dbName, ident.name))
 
     TiDBTable(tiSession.get, TiTableReference(dbName, ident.name), table)(
-      SparkSession.active.sqlContext)
+      SparkSession.active.sqlContext, SparkSession.active.sparkContext)
   }
 
   override def listTables(namespace: Array[String]): Array[Identifier] = {
