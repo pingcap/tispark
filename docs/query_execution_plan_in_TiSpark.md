@@ -37,9 +37,9 @@ Only the node `RegionTaskExec` and the child node `CoprocessorRDD`(`FetchHandleR
 
 ## Understand EXPLAIN output in `CoprocessorRDD`(`FetchHandleRDD`)
 
-### Operator that perform table scans
+### Operator that perform data scans
 
-An operator is a particular step that is executed as part of returning query results. The operators that perform table scans (of the disk or the TiKV Block Cache) are listed as follows:
+An operator is a particular step that is executed as part of returning query results. The operators that perform data scans (of the disk or the TiKV/TiFlash Block Cache) are listed as follows:
 
 * **`TableRangeScan`**: Table scans with the specified range. We consider full table scan as a special case of `TableRangeScan`, so full table scan is also called `TableRangeScan`.
 * **`TableRowIDScan`**: Scans the table data based on the `RowID`. Usually follows an index read operation to retrieve the matching data rows.
