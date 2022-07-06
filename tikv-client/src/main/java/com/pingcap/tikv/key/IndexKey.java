@@ -64,14 +64,12 @@ public class IndexKey extends Key {
     // when appendHandleIfContainsNull is true, append handle column if any of the index column is
     // NULL
     boolean appendHandle = false;
-    if (handle.isInt()) {
-      if (appendHandleIfContainsNull) {
-        for (TiIndexColumn col : indexColumns) {
-          DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
-          if (row.get(col.getOffset(), colTp) == null) {
-            appendHandle = true;
-            break;
-          }
+    if (appendHandleIfContainsNull) {
+      for (TiIndexColumn col : indexColumns) {
+        DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
+        if (row.get(col.getOffset(), colTp) == null) {
+          appendHandle = true;
+          break;
         }
       }
     }
@@ -85,7 +83,7 @@ public class IndexKey extends Key {
       keys[i] = key;
     }
     if (appendHandle) {
-      Key key = TypedKey.toTypedKey(handle, IntegerType.BIGINT);
+      Key key = TypedKey.toRawKey(handle.encodedAsKey());
       keys[keys.length - 1] = key;
     }
 
