@@ -35,7 +35,9 @@ public class PartitionedTable {
       TiPartitionDef tiPartitionDef = partitionDefs.get(i);
       TableCommon temp =
           new TableCommon(
-              logicalTable.getTableId(), tiPartitionDef.getId(), logicalTable.getTableInfo());
+              logicalTable.getLogicalTableId(),
+              tiPartitionDef.getId(),
+              logicalTable.getTableInfo());
       physicalTables[i] = temp;
     }
 

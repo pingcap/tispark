@@ -98,7 +98,6 @@ case class TiDBDelete(
 
 
     // encode record & index
-    val tableId = tiTableInfo.getId
     val recordKV = deletionMap.map { case (table, wrappedRowRDD) =>
       WriteUtil.generateRecordKVToDelete(wrappedRowRDD, table.getPhysicalTableId)
     }.reduceLeft(_ ++ _)

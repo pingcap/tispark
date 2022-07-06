@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class TableCommon {
 
-  private final long tableId;
+  private final long logicalTableId;
 
   private final long physicalTableId;
 
