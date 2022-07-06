@@ -106,39 +106,39 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
     this.blockingStub = getBlockingStub();
     this.asyncStub = getAsyncStub();
     // this.asyncFutureStub = getAsyncStub();
-    this.upstreamPDClient =
-        org.tikv.common.PDClient.create(
-            convertTiConfiguration(conf), keyCodec, convertChannelFactory(conf, channelFactory));
+    this.upstreamPDClient = createUpstreamPDClient(keyCodec);
   }
 
-  org.tikv.common.TiConfiguration convertTiConfiguration(com.pingcap.tikv.TiConfiguration conf) {
+  private org.tikv.common.ReadOnlyPDClient createUpstreamPDClient(RequestKeyCodec keyCodec) {
+    org.tikv.common.TiConfiguration tikvConf = convertTiConfiguration(conf);
+    org.tikv.common.util.ChannelFactory channelFactory = convertChannelFactory(conf, tikvConf);
+    return org.tikv.common.PDClient.create(tikvConf, keyCodec, channelFactory);
+  }
+
+  private org.tikv.common.TiConfiguration convertTiConfiguration(
+      com.pingcap.tikv.TiConfiguration conf) {
     org.tikv.common.TiConfiguration tikvConf =
         org.tikv.common.TiConfiguration.createDefault(
             conf.getPdAddrs().stream().map(Objects::toString).collect(Collectors.joining(",")));
     // s --> ms
     tikvConf.setTimeout(conf.getTimeout() * 1000L);
-
     tikvConf.setKvClientConcurrency(conf.getKvClientConcurrency());
     tikvConf.setIsolationLevel(conf.getIsolationLevel());
     tikvConf.setCommandPriority(conf.getCommandPriority());
     return tikvConf;
   }
 
-  org.tikv.common.util.ChannelFactory convertChannelFactory(
-      com.pingcap.tikv.TiConfiguration conf, com.pingcap.tikv.util.ChannelFactory factory) {
+  private org.tikv.common.util.ChannelFactory convertChannelFactory(
+      com.pingcap.tikv.TiConfiguration conf, org.tikv.common.TiConfiguration tikvConf) {
     org.tikv.common.util.ChannelFactory tikvFactory = null;
-    // TODO: TiConfiguration should add this configs
-    int keepaliveTime = 10;
-    int keepaliveTimeout = 3;
-    int idleTimeout = 60;
     if (conf.isTlsEnable()) {
       if (conf.isJksEnable()) {
         tikvFactory =
             new org.tikv.common.util.ChannelFactory(
                 conf.getMaxFrameSize(),
-                keepaliveTime,
-                keepaliveTimeout,
-                idleTimeout,
+                tikvConf.getKeepaliveTime(),
+                tikvConf.getKeepaliveTimeout(),
+                tikvConf.getIdleTimeout(),
                 conf.getConnRecycleTime(),
                 conf.getCertReloadInterval(),
                 conf.getJksKeyPath(),
@@ -149,9 +149,9 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
         tikvFactory =
             new org.tikv.common.util.ChannelFactory(
                 conf.getMaxFrameSize(),
-                keepaliveTime,
-                keepaliveTimeout,
-                idleTimeout,
+                tikvConf.getKeepaliveTime(),
+                tikvConf.getKeepaliveTimeout(),
+                tikvConf.getIdleTimeout(),
                 conf.getConnRecycleTime(),
                 conf.getCertReloadInterval(),
                 conf.getTrustCertCollectionFile(),
@@ -161,7 +161,10 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
     } else {
       tikvFactory =
           new org.tikv.common.util.ChannelFactory(
-              conf.getMaxFrameSize(), keepaliveTime, keepaliveTimeout, idleTimeout);
+              conf.getMaxFrameSize(),
+              tikvConf.getKeepaliveTime(),
+              tikvConf.getKeepaliveTimeout(),
+              tikvConf.getIdleTimeout());
     }
     return tikvFactory;
   }
@@ -355,10 +358,6 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
   @Override
   public Store getStore(BackOffer backOffer, long storeId) {
     return upstreamPDClient.getStore(backOffer, storeId);
-    // return callWithRetry(
-    // backOffer, PDGrpc.getGetStoreMethod(), buildGetStoreReq(storeId),
-    // buildPDErrorHandler())
-    // .getStore();
   }
 
   @Override

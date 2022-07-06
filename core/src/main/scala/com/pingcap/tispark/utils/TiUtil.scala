@@ -29,7 +29,6 @@ import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{SparkConf, sql}
 import org.slf4j.LoggerFactory
-import org.tikv.common.meta
 import org.tikv.common.meta.TiTimestamp
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
@@ -308,7 +307,7 @@ object TiUtil {
     } else {
       try {
         val ts = java.lang.Long.parseLong(str)
-        new meta.TiTimestamp(ts, 0L)
+        new TiTimestamp(ts, 0L)
       } catch {
         case e: Throwable =>
           throw new IllegalArgumentException(
