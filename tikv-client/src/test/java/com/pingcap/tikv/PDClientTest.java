@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
@@ -33,6 +32,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.Test;
+import org.tikv.common.exception.GrpcException;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Store;

@@ -22,6 +22,7 @@ import java.util.Deque;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingDeque;
 import org.tikv.kvproto.PDGrpc;
+import org.tikv.kvproto.Pdpb;
 import org.tikv.kvproto.Pdpb.GetMembersRequest;
 import org.tikv.kvproto.Pdpb.GetMembersResponse;
 import org.tikv.kvproto.Pdpb.GetRegionByIDRequest;
@@ -34,6 +35,10 @@ import org.tikv.kvproto.Pdpb.TsoResponse;
 import org.tikv.shade.io.grpc.Server;
 import org.tikv.shade.io.grpc.ServerBuilder;
 import org.tikv.shade.io.grpc.Status;
+import org.tikv.shade.io.grpc.health.v1.HealthCheckRequest;
+import org.tikv.shade.io.grpc.health.v1.HealthCheckResponse;
+import org.tikv.shade.io.grpc.health.v1.HealthCheckResponse.ServingStatus;
+import org.tikv.shade.io.grpc.health.v1.HealthGrpc.HealthImplBase;
 import org.tikv.shade.io.grpc.stub.StreamObserver;
 
 public class PDMockServer extends PDGrpc.PDImplBase {
@@ -123,9 +128,8 @@ public class PDMockServer extends PDGrpc.PDImplBase {
 
   @Override
   public void getAllStores(
-      org.tikv.kvproto.Pdpb.GetAllStoresRequest request,
-      org.tikv.shade.io.grpc.stub.StreamObserver<org.tikv.kvproto.Pdpb.GetAllStoresResponse>
-          responseObserver) {
+      Pdpb.GetAllStoresRequest request,
+      StreamObserver<Pdpb.GetAllStoresResponse> responseObserver) {
     try {
       responseObserver.onNext(null);
       responseObserver.onCompleted();
@@ -134,12 +138,23 @@ public class PDMockServer extends PDGrpc.PDImplBase {
     }
   }
 
+  private static class HealCheck extends HealthImplBase {
+    @Override
+    public void check(
+        HealthCheckRequest request, StreamObserver<HealthCheckResponse> responseObserver) {
+      responseObserver.onNext(
+          HealthCheckResponse.newBuilder().setStatus(ServingStatus.SERVING).build());
+      responseObserver.onCompleted();
+    }
+  }
+
   public void start(long clusterId) throws IOException {
     try (ServerSocket s = new ServerSocket(0)) {
       port = s.getLocalPort();
     }
     this.clusterId = clusterId;
-    server = ServerBuilder.forPort(port).addService(this).build().start();
+    server =
+        ServerBuilder.forPort(port).addService(new HealCheck()).addService(this).build().start();
 
     Runtime.getRuntime().addShutdownHook(new Thread(PDMockServer.this::stop));
   }
