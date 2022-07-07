@@ -16,7 +16,10 @@
 
 package com.pingcap.tikv;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -29,9 +32,15 @@ import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.Test;
+import org.tikv.common.region.TiStore;
 import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Kvrpcpb;
@@ -67,7 +76,7 @@ public class RegionStoreClientTest extends MockServerTest {
 
     RegionStoreClient.RegionStoreClientBuilder builder = session.getRegionStoreClientBuilder();
 
-    return builder.build(region, store);
+    return builder.build(region, new TiStore(store));
   }
 
   @Test

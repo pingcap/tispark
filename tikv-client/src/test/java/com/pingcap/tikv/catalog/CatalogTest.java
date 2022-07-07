@@ -25,6 +25,7 @@ import com.pingcap.tikv.PDMockServerTest;
 import com.pingcap.tikv.meta.MetaUtils.MetaMockHelper;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.util.ConverterUpstream;
 import com.pingcap.tikv.util.ReflectionWrapper;
 import java.io.IOException;
 import java.util.List;
@@ -45,10 +46,13 @@ public class CatalogTest extends PDMockServerTest {
     kvServer = new KVMockServer();
     kvServer.start(
         new TiRegion(
+            ConverterUpstream.convertTiConfiguration(session.getConf())
+                .setIsolationLevel(IsolationLevel.RC)
+                .setCommandPriority(CommandPri.Low),
             MetaMockHelper.region,
             MetaMockHelper.region.getPeers(0),
-            IsolationLevel.RC,
-            CommandPri.Low));
+            java.util.Collections.emptyList(),
+            java.util.Collections.emptyList()));
   }
 
   @Test

@@ -16,6 +16,7 @@
 
 package com.pingcap.tikv;
 
+import com.pingcap.tikv.util.ConverterUpstream;
 import java.io.IOException;
 import org.junit.Before;
 import org.tikv.common.region.TiRegion;
@@ -44,10 +45,11 @@ public class MockServerTest extends PDMockServerTest {
 
     region =
         new TiRegion(
+            ConverterUpstream.convertTiConfiguration(session.getConf()),
             r,
             r.getPeers(0),
-            session.getConf().getIsolationLevel(),
-            session.getConf().getCommandPriority());
+            java.util.Collections.emptyList(),
+            java.util.Collections.emptyList());
     pdServer.addGetRegionResp(Pdpb.GetRegionResponse.newBuilder().setRegion(r).build());
     server = new KVMockServer();
     port = server.start(region);

@@ -34,7 +34,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.Test;
+import org.tikv.common.TiConfiguration;
 import org.tikv.common.region.TiRegion;
+import org.tikv.common.region.TiStore;
 import org.tikv.common.region.TiStoreType;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Kvrpcpb.CommandPri;
@@ -95,6 +97,9 @@ public class RangeSplitterTest {
 
   private static TiRegion region(long id, KeyRange range) {
     return new TiRegion(
+        TiConfiguration.createDefault()
+            .setIsolationLevel(IsolationLevel.RC)
+            .setCommandPriority(CommandPri.Low),
         Metapb.Region.newBuilder()
             .setId(id)
             .setStartKey(encodeKey(range.getStart().toByteArray()))
@@ -102,8 +107,8 @@ public class RangeSplitterTest {
             .addPeers(Peer.getDefaultInstance())
             .build(),
         null,
-        IsolationLevel.RC,
-        CommandPri.Low);
+        java.util.Collections.emptyList(),
+        java.util.Collections.emptyList());
   }
 
   @Test
@@ -282,13 +287,14 @@ public class RangeSplitterTest {
     }
 
     @Override
-    public Pair<TiRegion, Metapb.Store> getRegionStorePairByKey(
+    public Pair<TiRegion, TiStore> getRegionStorePairByKey(
         ByteString key, TiStoreType storeType, BackOffer backOffer) {
       for (Map.Entry<KeyRange, TiRegion> entry : mockRegionMap.entrySet()) {
         KeyRange range = entry.getKey();
         if (KeyRangeUtils.makeRange(range.getStart(), range.getEnd()).contains(Key.toRawKey(key))) {
           TiRegion region = entry.getValue();
-          return Pair.create(region, Metapb.Store.newBuilder().setId(region.getId()).build());
+          return Pair.create(
+              region, new TiStore(Metapb.Store.newBuilder().setId(region.getId()).build()));
         }
       }
       return null;

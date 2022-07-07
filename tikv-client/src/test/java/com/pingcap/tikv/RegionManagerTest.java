@@ -26,8 +26,8 @@ import java.io.IOException;
 import org.junit.Before;
 import org.junit.Test;
 import org.tikv.common.region.TiRegion;
+import org.tikv.common.region.TiStore;
 import org.tikv.kvproto.Metapb;
-import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.Metapb.StoreState;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
@@ -104,7 +104,7 @@ public class RegionManagerTest extends PDMockServerTest {
                 Metapb.StoreState.Up,
                 GrpcUtils.makeStoreLabel("k1", "v1"),
                 GrpcUtils.makeStoreLabel("k2", "v2"))));
-    Pair<TiRegion, Store> pair = mgr.getRegionStorePairByKey(searchKey);
+    Pair<TiRegion, TiStore> pair = mgr.getRegionStorePairByKey(searchKey);
     assertEquals(pair.first.getId(), regionId);
     assertEquals(pair.first.getId(), storeId);
   }
@@ -122,7 +122,7 @@ public class RegionManagerTest extends PDMockServerTest {
                 Metapb.StoreState.Up,
                 GrpcUtils.makeStoreLabel("k1", "v1"),
                 GrpcUtils.makeStoreLabel("k2", "v2"))));
-    Store store = mgr.getStoreById(storeId);
+    TiStore store = mgr.getStoreById(storeId);
     assertEquals(store.getId(), storeId);
 
     pdServer.addGetStoreResp(

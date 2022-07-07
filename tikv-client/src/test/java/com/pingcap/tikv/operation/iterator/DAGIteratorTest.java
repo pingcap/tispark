@@ -39,6 +39,7 @@ import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.List;
 import org.junit.Test;
 import org.tikv.common.meta.TiTimestamp;
+import org.tikv.common.region.TiStore;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Metapb;
 import org.tikv.shade.com.google.protobuf.ByteString;
@@ -87,7 +88,8 @@ public class DAGIteratorTest extends MockServerTest {
     IntegerCodec.writeLongFully(cdo, 666, false);
     BytesCodec.writeBytesFully(cdo, "value1".getBytes());
     server.put("key1", cdo.toByteString());
-    List<RegionTask> tasks = ImmutableList.of(RegionTask.newInstance(region, store, keyRanges));
+    List<RegionTask> tasks =
+        ImmutableList.of(RegionTask.newInstance(region, new TiStore(store), keyRanges));
     CoprocessorIterator<Row> iter = CoprocessorIterator.getRowIterator(req, tasks, session);
     if (!iter.hasNext()) {
       assertEquals("iterator has next should be true", true, false);
