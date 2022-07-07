@@ -16,25 +16,19 @@
 
 package com.pingcap.tikv.util;
 
-import java.io.Serializable;
 import java.util.Objects;
 
-public class Pair<F, S> implements Serializable {
-  public final F first;
-  public final S second;
-
+public class Pair<F, S> extends org.tikv.common.util.Pair<F, S> {
   public Pair(F f, S s) {
-    first = f;
-    second = s;
+    super(f, s);
+  }
+
+  public Pair(org.tikv.common.util.Pair<F, S> upstream) {
+    super(upstream.first, upstream.second);
   }
 
   public static <F, S> Pair<F, S> create(F f, S s) {
     return new Pair<>(f, s);
-  }
-
-  @Override
-  public String toString() {
-    return String.format("[%s:%s]", first, second);
   }
 
   @Override

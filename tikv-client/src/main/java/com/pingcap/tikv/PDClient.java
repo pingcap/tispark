@@ -22,8 +22,6 @@ import static com.pingcap.tikv.pd.PDError.buildFromPdpbError;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.pingcap.tikv.codec.Codec.BytesCodec;
-import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -36,6 +34,7 @@ import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.FutureObserver;
+import com.pingcap.tikv.util.Pair;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.KeyValue;
@@ -59,6 +58,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.common.apiversion.RequestKeyCodec;
 import org.tikv.common.meta.TiTimestamp;
+import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
@@ -271,20 +271,8 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
   }
 
   @Override
-  public TiRegion getRegionByKey(BackOffer backOffer, ByteString key) {
-    CodecDataOutput cdo = new CodecDataOutput();
-    BytesCodec.writeBytes(cdo, key.toByteArray());
-    ByteString encodedKey = cdo.toByteString();
-    Supplier<GetRegionRequest> request =
-        () -> GetRegionRequest.newBuilder().setHeader(header).setRegionKey(encodedKey).build();
-
-    PDErrorHandler<GetRegionResponse> handler =
-        new PDErrorHandler<>(getRegionResponseErrorExtractor, this);
-
-    GetRegionResponse resp =
-        callWithRetry(backOffer, PDGrpc.getGetRegionMethod(), request, handler);
-    return new TiRegion(
-        resp.getRegion(), resp.getLeader(), conf.getIsolationLevel(), conf.getCommandPriority());
+  public Pair<Metapb.Region, Metapb.Peer> getRegionByKey(BackOffer backOffer, ByteString key) {
+    return new Pair<>(upstreamPDClient.getRegionByKey(backOffer, key));
   }
 
   @Override
@@ -308,17 +296,8 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
   }
 
   @Override
-  public TiRegion getRegionByID(BackOffer backOffer, long id) {
-    Supplier<GetRegionByIDRequest> request =
-        () -> GetRegionByIDRequest.newBuilder().setHeader(header).setRegionId(id).build();
-    PDErrorHandler<GetRegionResponse> handler =
-        new PDErrorHandler<>(getRegionResponseErrorExtractor, this);
-
-    GetRegionResponse resp =
-        callWithRetry(backOffer, PDGrpc.getGetRegionByIDMethod(), request, handler);
-    // Instead of using default leader instance, explicitly set no leader to null
-    return new TiRegion(
-        resp.getRegion(), resp.getLeader(), conf.getIsolationLevel(), conf.getCommandPriority());
+  public Pair<Metapb.Region, Metapb.Peer> getRegionByID(BackOffer backOffer, long id) {
+    return new Pair<>(upstreamPDClient.getRegionByID(backOffer, id));
   }
 
   @Override

@@ -41,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Peer;
+import org.tikv.kvproto.Metapb.Region;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.Metapb.StoreState;
 import org.tikv.shade.com.google.protobuf.ByteString;
@@ -96,6 +97,7 @@ public class RegionManager {
   }
 
   public long getClusterId() {
+    // Be careful to pass null as PDClient in the constructor
     return getPDClient() != null ? getPDClient().getClusterId() : 0L;
   }
 
@@ -208,6 +210,7 @@ public class RegionManager {
 
       if (region == null) {
         logger.debug("Key not found in keyToRegionIdCache:" + formatBytesUTF8(key));
+        Pair<Region, Peer> regionAndLeader = pdClient.getRegionByKey(backOffer, key);
         region = pdClient.getRegionByKey(backOffer, key);
         if (!putRegion(region)) {
           throw new TiClientInternalException("Invalid Region: " + region.toString());
