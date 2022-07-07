@@ -41,7 +41,7 @@ public class FuncCallExprEval {
             DateTime date = DateTime.parse((String) literal.getValue());
             return Constant.create(date.getYear(), IntegerType.INT);
           } else if (type instanceof DateType) {
-            DateTime date = (DateTime) literal.getValue();
+            DateTime date = new DateTime(literal.getValue());
             return Constant.create(date.getYear(), IntegerType.INT);
           } else if (type instanceof DateTimeType) {
             DateTime date = (DateTime) literal.getValue();

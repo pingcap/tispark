@@ -1,6 +1,9 @@
 package com.pingcap.tikv.partition;
 
+import static com.pingcap.tikv.expression.FuncCallExpr.Type.YEAR;
+
 import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.FuncCallExpr;
 import com.pingcap.tikv.meta.TiPartitionDef;
@@ -8,6 +11,7 @@ import com.pingcap.tikv.meta.TiPartitionInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.parser.TiParser;
 import com.pingcap.tikv.row.Row;
+import com.pingcap.tikv.types.DateType;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -94,8 +98,17 @@ public class PartitionedTable {
       int partitionId = (int) (id.longValue() % physicalTables.length);
       return physicalTables[partitionId];
     } else if (partitionExpr instanceof FuncCallExpr) {
-      // TODO: support hash partition
-      return null;
+      // TODO: support more function partition
+      FuncCallExpr partitionFuncExpr = (FuncCallExpr) partitionExpr;
+      if (partitionFuncExpr.getFuncTp() == YEAR) {
+        int result =
+            (int) partitionFuncExpr.eval(Constant.create(row.getDate(0), DateType.DATE)).getValue();
+        int partitionId = result % physicalTables.length;
+        return physicalTables[partitionId];
+      } else {
+        throw new UnsupportedOperationException(
+            "Hash partition write only support YEAR() function");
+      }
     } else {
       throw new UnsupportedOperationException(
           String.format("Unsupported partition expr %s", partitionExpr));
