@@ -35,8 +35,6 @@ import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.region.AbstractRegionStoreClient;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
-import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.region.TiRegion.RegionVerID;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.TsoUtils;
@@ -57,6 +55,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.region.TiRegion;
+import org.tikv.common.region.TiRegion.RegionVerID;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
@@ -183,7 +183,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
       Supplier<Kvrpcpb.PessimisticRollbackRequest> factory =
           () ->
               Kvrpcpb.PessimisticRollbackRequest.newBuilder()
-                  .setContext(region.getContext())
+                  .setContext(region.getLeaderContext())
                   .setStartVersion(lock.getTxnID())
                   .setForUpdateTs(forUpdateTS)
                   .addKeys(lock.getKey())
@@ -311,7 +311,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
         () -> {
           TiRegion primaryKeyRegion = regionManager.getRegionByKey(primary);
           return Kvrpcpb.CheckTxnStatusRequest.newBuilder()
-              .setContext(primaryKeyRegion.getContext())
+              .setContext(primaryKeyRegion.getLeaderContext())
               .setPrimaryKey(primary)
               .setLockTs(txnID)
               .setCallerStartTs(callerStartTS)
@@ -502,7 +502,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     Supplier<Kvrpcpb.CheckSecondaryLocksRequest> factory =
         () ->
             Kvrpcpb.CheckSecondaryLocksRequest.newBuilder()
-                .setContext(tiRegion.getContext())
+                .setContext(tiRegion.getLeaderContext())
                 .setStartVersion(txnID)
                 .addAllKeys(curKeys)
                 .build();
@@ -559,7 +559,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     Supplier<Kvrpcpb.ResolveLockRequest> factory =
         () ->
             Kvrpcpb.ResolveLockRequest.newBuilder()
-                .setContext(tiRegion.getContext())
+                .setContext(tiRegion.getLeaderContext())
                 .setStartVersion(lock.getTxnID())
                 .setCommitVersion(status.getCommitTS())
                 .addAllKeys(keys)
@@ -618,7 +618,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
 
       Kvrpcpb.ResolveLockRequest.Builder builder =
           Kvrpcpb.ResolveLockRequest.newBuilder()
-              .setContext(region.getContext())
+              .setContext(region.getLeaderContext())
               .setStartVersion(lock.getTxnID());
 
       if (txnStatus.isCommitted()) {

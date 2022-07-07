@@ -25,13 +25,13 @@ import com.pingcap.tikv.PDMockServerTest;
 import com.pingcap.tikv.meta.MetaUtils.MetaMockHelper;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.ReflectionWrapper;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.Before;
 import org.junit.Test;
+import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Kvrpcpb.CommandPri;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 

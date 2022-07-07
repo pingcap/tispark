@@ -28,11 +28,11 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.operation.NoopHandler;
 import com.pingcap.tikv.operation.PDErrorHandler;
 import com.pingcap.tikv.pd.PDUtils;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffFunction.BackOffFuncType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import com.pingcap.tikv.util.ConverterUpstream;
 import com.pingcap.tikv.util.FutureObserver;
 import com.pingcap.tikv.util.Pair;
 import io.etcd.jetcd.ByteSequence;
@@ -43,7 +43,6 @@ import io.etcd.jetcd.options.GetOption;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -53,11 +52,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.common.apiversion.RequestKeyCodec;
 import org.tikv.common.meta.TiTimestamp;
+import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
@@ -106,67 +105,7 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
     this.blockingStub = getBlockingStub();
     this.asyncStub = getAsyncStub();
     // this.asyncFutureStub = getAsyncStub();
-    this.upstreamPDClient = createUpstreamPDClient(keyCodec);
-  }
-
-  private org.tikv.common.ReadOnlyPDClient createUpstreamPDClient(RequestKeyCodec keyCodec) {
-    org.tikv.common.TiConfiguration tikvConf = convertTiConfiguration(conf);
-    org.tikv.common.util.ChannelFactory channelFactory = convertChannelFactory(conf, tikvConf);
-    return org.tikv.common.PDClient.create(tikvConf, keyCodec, channelFactory);
-  }
-
-  private org.tikv.common.TiConfiguration convertTiConfiguration(
-      com.pingcap.tikv.TiConfiguration conf) {
-    org.tikv.common.TiConfiguration tikvConf =
-        org.tikv.common.TiConfiguration.createDefault(
-            conf.getPdAddrs().stream().map(Objects::toString).collect(Collectors.joining(",")));
-    // s --> ms
-    tikvConf.setTimeout(conf.getTimeout() * 1000L);
-    tikvConf.setKvClientConcurrency(conf.getKvClientConcurrency());
-    tikvConf.setIsolationLevel(conf.getIsolationLevel());
-    tikvConf.setCommandPriority(conf.getCommandPriority());
-    return tikvConf;
-  }
-
-  private org.tikv.common.util.ChannelFactory convertChannelFactory(
-      com.pingcap.tikv.TiConfiguration conf, org.tikv.common.TiConfiguration tikvConf) {
-    org.tikv.common.util.ChannelFactory tikvFactory = null;
-    if (conf.isTlsEnable()) {
-      if (conf.isJksEnable()) {
-        tikvFactory =
-            new org.tikv.common.util.ChannelFactory(
-                conf.getMaxFrameSize(),
-                tikvConf.getKeepaliveTime(),
-                tikvConf.getKeepaliveTimeout(),
-                tikvConf.getIdleTimeout(),
-                conf.getConnRecycleTime(),
-                conf.getCertReloadInterval(),
-                conf.getJksKeyPath(),
-                conf.getJksKeyPassword(),
-                conf.getJksTrustPath(),
-                conf.getJksTrustPassword());
-      } else {
-        tikvFactory =
-            new org.tikv.common.util.ChannelFactory(
-                conf.getMaxFrameSize(),
-                tikvConf.getKeepaliveTime(),
-                tikvConf.getKeepaliveTimeout(),
-                tikvConf.getIdleTimeout(),
-                conf.getConnRecycleTime(),
-                conf.getCertReloadInterval(),
-                conf.getTrustCertCollectionFile(),
-                conf.getKeyCertChainFile(),
-                conf.getKeyFile());
-      }
-    } else {
-      tikvFactory =
-          new org.tikv.common.util.ChannelFactory(
-              conf.getMaxFrameSize(),
-              tikvConf.getKeepaliveTime(),
-              tikvConf.getKeepaliveTimeout(),
-              tikvConf.getIdleTimeout());
-    }
-    return tikvFactory;
+    this.upstreamPDClient = ConverterUpstream.createUpstreamPDClient(conf, keyCodec);
   }
 
   public Long getClusterId() {
@@ -193,7 +132,7 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
    *
    * @param region represents a region info
    */
-  void scatterRegion(TiRegion region, BackOffer backOffer) {
+  void scatterRegion(Metapb.Region region, BackOffer backOffer) {
     Supplier<ScatterRegionRequest> request =
         () ->
             ScatterRegionRequest.newBuilder().setHeader(header).setRegionId(region.getId()).build();
@@ -217,7 +156,7 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
    *
    * @param region
    */
-  void waitScatterRegionFinish(TiRegion region, BackOffer backOffer) {
+  void waitScatterRegionFinish(Metapb.Region region, BackOffer backOffer) {
     for (; ; ) {
       GetOperatorResponse resp = getOperator(region.getId());
       if (resp != null) {
@@ -281,10 +220,11 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
         new FutureObserver<>(
             resp ->
                 new TiRegion(
+                    ConverterUpstream.convertTiConfiguration(conf),
                     resp.getRegion(),
                     resp.getLeader(),
-                    conf.getIsolationLevel(),
-                    conf.getCommandPriority()));
+                    java.util.Collections.emptyList(),
+                    java.util.Collections.emptyList()));
     Supplier<GetRegionRequest> request =
         () -> GetRegionRequest.newBuilder().setHeader(header).setRegionKey(key).build();
 
@@ -306,10 +246,11 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
         new FutureObserver<>(
             resp ->
                 new TiRegion(
+                    ConverterUpstream.convertTiConfiguration(conf),
                     resp.getRegion(),
                     resp.getLeader(),
-                    conf.getIsolationLevel(),
-                    conf.getCommandPriority()));
+                    java.util.Collections.emptyList(),
+                    java.util.Collections.emptyList()));
 
     Supplier<GetRegionByIDRequest> request =
         () -> GetRegionByIDRequest.newBuilder().setHeader(header).setRegionId(id).build();

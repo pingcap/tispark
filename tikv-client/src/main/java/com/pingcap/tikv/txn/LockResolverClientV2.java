@@ -27,8 +27,6 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.region.AbstractRegionStoreClient;
 import com.pingcap.tikv.region.RegionManager;
-import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.region.TiRegion.RegionVerID;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.TsoUtils;
@@ -45,6 +43,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.region.TiRegion;
+import org.tikv.common.region.TiRegion.RegionVerID;
 import org.tikv.kvproto.Kvrpcpb.CleanupRequest;
 import org.tikv.kvproto.Kvrpcpb.CleanupResponse;
 import org.tikv.kvproto.Kvrpcpb.ResolveLockRequest;
@@ -126,7 +126,7 @@ public class LockResolverClientV2 extends AbstractRegionStoreClient
       Supplier<CleanupRequest> factory =
           () ->
               CleanupRequest.newBuilder()
-                  .setContext(region.getContext())
+                  .setContext(region.getLeaderContext())
                   .setKey(primary)
                   .setStartVersion(txnID)
                   .build();
@@ -233,7 +233,7 @@ public class LockResolverClientV2 extends AbstractRegionStoreClient
         factory =
             () ->
                 ResolveLockRequest.newBuilder()
-                    .setContext(region.getContext())
+                    .setContext(region.getLeaderContext())
                     .setStartVersion(lock.getTxnID())
                     .setCommitVersion(txnStatus)
                     .build();
@@ -241,7 +241,7 @@ public class LockResolverClientV2 extends AbstractRegionStoreClient
         factory =
             () ->
                 ResolveLockRequest.newBuilder()
-                    .setContext(region.getContext())
+                    .setContext(region.getLeaderContext())
                     .setStartVersion(lock.getTxnID())
                     .build();
       }

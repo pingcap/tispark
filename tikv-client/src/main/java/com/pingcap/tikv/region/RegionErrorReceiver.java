@@ -18,6 +18,7 @@
 
 package com.pingcap.tikv.region;
 
+import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Metapb.Store;
 
 public interface RegionErrorReceiver {

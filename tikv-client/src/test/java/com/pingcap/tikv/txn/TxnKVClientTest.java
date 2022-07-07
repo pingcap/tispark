@@ -21,13 +21,13 @@ import static org.mockito.Mockito.doThrow;
 
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.region.RegionStoreClient;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.type.ClientRPCResult;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.shade.com.google.protobuf.ByteString;
 

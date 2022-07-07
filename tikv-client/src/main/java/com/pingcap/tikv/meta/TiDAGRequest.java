@@ -46,7 +46,6 @@ import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.predicates.PredicateUtils;
-import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.KeyRangeUtils;
@@ -63,6 +62,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.tikv.common.meta.TiTimestamp;
+import org.tikv.common.region.TiStoreType;
 import org.tikv.kvproto.Coprocessor;
 
 /**

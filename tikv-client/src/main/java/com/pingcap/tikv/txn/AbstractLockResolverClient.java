@@ -25,10 +25,10 @@ import com.pingcap.tikv.Version;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import java.util.List;
+import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.TikvGrpc;
 

@@ -27,16 +27,16 @@ import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.region.TiRegion;
+import org.tikv.common.region.TiStore;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
-import org.tikv.kvproto.Metapb;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class ConcreteScanIterator extends ScanIterator {
@@ -83,10 +83,10 @@ public class ConcreteScanIterator extends ScanIterator {
 
   private ByteString resolveCurrentLock(Kvrpcpb.KvPair current) {
     logger.warn(String.format("resolve current key error %s", current.getError().toString()));
-    Pair<TiRegion, Metapb.Store> pair =
+    Pair<TiRegion, TiStore> pair =
         builder.getRegionManager().getRegionStorePairByKey(current.getKey());
     TiRegion region = pair.first;
-    Metapb.Store store = pair.second;
+    TiStore store = pair.second;
     BackOffer backOffer =
         ConcreteBackOffer.newGetBackOff(builder.getRegionManager().getPDClient().getClusterId());
     try (RegionStoreClient client = builder.build(region, store)) {

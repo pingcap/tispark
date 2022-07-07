@@ -16,9 +16,9 @@
 
 package com.pingcap.tikv.txn.type;
 
-import com.pingcap.tikv.region.TiRegion;
 import java.util.ArrayList;
 import java.util.List;
+import org.tikv.common.region.TiRegion;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class BatchKeys {

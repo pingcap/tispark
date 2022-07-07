@@ -25,7 +25,6 @@ import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.Batch;
@@ -40,6 +39,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.shade.com.google.protobuf.ByteString;
 

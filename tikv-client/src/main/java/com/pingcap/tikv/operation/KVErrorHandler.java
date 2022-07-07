@@ -26,7 +26,6 @@ import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.region.RegionErrorReceiver;
 import com.pingcap.tikv.region.RegionManager;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.AbstractLockResolverClient;
 import com.pingcap.tikv.txn.Lock;
 import com.pingcap.tikv.txn.ResolveLockResult;
@@ -40,6 +39,7 @@ import java.util.List;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Errorpb;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
@@ -215,7 +215,8 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
           TiRegion newRegion = this.regionManager.updateLeader(recv.getRegion(), newStoreId);
           retry =
               newRegion != null
-                  && recv.onNotLeader(this.regionManager.getStoreById(newStoreId), newRegion);
+                  && recv.onNotLeader(
+                      this.regionManager.getStoreById(newStoreId).getStore(), newRegion);
           if (!retry) {
             notifyRegionStoreCacheInvalidate(
                 recv.getRegion(), CacheInvalidateEvent.CacheType.LEADER);
@@ -251,7 +252,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
                 recv.getRegion().getId(), storeId, actualStoreId));
 
         invalidateRegionStoreCache(recv.getRegion());
-        recv.onStoreNotMatch(this.regionManager.getStoreById(storeId));
+        recv.onStoreNotMatch(this.regionManager.getStoreById(storeId).getStore());
         // assume this is a low probability error, do not retry, just re-split the request by
         // throwing it out.
         return false;

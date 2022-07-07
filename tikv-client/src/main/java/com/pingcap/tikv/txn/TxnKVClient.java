@@ -25,7 +25,6 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.type.ClientRPCResult;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
@@ -35,8 +34,9 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.common.meta.TiTimestamp;
+import org.tikv.common.region.TiRegion;
+import org.tikv.common.region.TiStore;
 import org.tikv.kvproto.Kvrpcpb;
-import org.tikv.kvproto.Metapb;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 /** KV client of transaction APIs for GET/PUT/DELETE/SCAN */
@@ -114,7 +114,7 @@ public class TxnKVClient implements AutoCloseable {
       long startTs,
       long ttl,
       TiRegion tiRegion,
-      Metapb.Store store) {
+      TiStore store) {
     ClientRPCResult result = new ClientRPCResult(true, false, null);
     // send request
     RegionStoreClient client = clientBuilder.build(tiRegion, store);

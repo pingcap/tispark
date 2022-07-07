@@ -28,8 +28,6 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.region.RegionStoreClient;
-import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
@@ -43,8 +41,10 @@ import java.util.Queue;
 import java.util.concurrent.ExecutorCompletionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.region.TiRegion;
+import org.tikv.common.region.TiStore;
+import org.tikv.common.region.TiStoreType;
 import org.tikv.kvproto.Coprocessor;
-import org.tikv.kvproto.Metapb;
 
 public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
   private static final Logger logger = LoggerFactory.getLogger(DAGIterator.class.getName());
@@ -210,7 +210,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       }
       List<Coprocessor.KeyRange> ranges = task.getRanges();
       TiRegion region = task.getRegion();
-      Metapb.Store store = task.getStore();
+      TiStore store = task.getStore();
 
       try {
         RegionStoreClient client =
@@ -251,7 +251,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
   private Iterator<SelectResponse> processByStreaming(RangeSplitter.RegionTask regionTask) {
     List<Coprocessor.KeyRange> ranges = regionTask.getRanges();
     TiRegion region = regionTask.getRegion();
-    Metapb.Store store = regionTask.getStore();
+    TiStore store = regionTask.getStore();
 
     RegionStoreClient client;
     try {

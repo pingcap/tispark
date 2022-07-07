@@ -21,11 +21,11 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.region.TiRegion;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.tikv.common.region.TiRegion;
 
 public class TiBatchWriteUtils {
 

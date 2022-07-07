@@ -22,7 +22,7 @@ import com.pingcap.tikv.expression._
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
-import com.pingcap.tikv.region.TiStoreType
+import org.tikv.common.region.TiStoreType
 import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.statistics.StatisticsManager

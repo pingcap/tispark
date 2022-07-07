@@ -23,9 +23,9 @@ import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder;
-import com.pingcap.tikv.region.TiRegion;
 import java.util.Iterator;
 import java.util.List;
+import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.shade.com.google.protobuf.ByteString;
 

@@ -23,7 +23,6 @@ import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiBatchWriteException;
 import com.pingcap.tikv.region.RegionManager;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.txn.type.BatchKeys;
 import com.pingcap.tikv.txn.type.ClientRPCResult;
@@ -44,9 +43,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.region.TiRegion;
+import org.tikv.common.region.TiStore;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.Op;
-import org.tikv.kvproto.Metapb;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class TwoPhaseCommitter {
@@ -146,7 +146,7 @@ public class TwoPhaseCommitter {
 
   private void doPrewritePrimaryKeyWithRetry(BackOffer backOffer, ByteString key, ByteString value)
       throws TiBatchWriteException {
-    Pair<TiRegion, Metapb.Store> pair = this.regionManager.getRegionStorePairByKey(key, backOffer);
+    Pair<TiRegion, TiStore> pair = this.regionManager.getRegionStorePairByKey(key, backOffer);
     TiRegion tiRegion = pair.first;
 
     Kvrpcpb.Mutation mutation;
@@ -200,7 +200,7 @@ public class TwoPhaseCommitter {
 
   private void doCommitPrimaryKeyWithRetry(BackOffer backOffer, ByteString key, long commitTs)
       throws TiBatchWriteException {
-    Pair<TiRegion, Metapb.Store> pair = this.regionManager.getRegionStorePairByKey(key, backOffer);
+    Pair<TiRegion, TiStore> pair = this.regionManager.getRegionStorePairByKey(key, backOffer);
     TiRegion tiRegion = pair.first;
     List<ByteString> keys = new ArrayList<>();
     keys.add(key);

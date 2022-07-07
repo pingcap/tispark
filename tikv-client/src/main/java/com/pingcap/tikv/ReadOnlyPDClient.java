@@ -16,12 +16,12 @@
 
 package com.pingcap.tikv;
 
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.Pair;
 import java.util.List;
 import java.util.concurrent.Future;
 import org.tikv.common.meta.TiTimestamp;
-import com.pingcap.tikv.util.Pair;
+import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.shade.com.google.protobuf.ByteString;

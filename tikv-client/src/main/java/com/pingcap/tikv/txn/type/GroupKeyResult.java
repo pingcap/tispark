@@ -16,11 +16,11 @@
 
 package com.pingcap.tikv.txn.type;
 
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.Pair;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Metapb;
 import org.tikv.shade.com.google.protobuf.ByteString;
 

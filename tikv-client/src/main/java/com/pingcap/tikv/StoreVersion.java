@@ -16,13 +16,13 @@
 
 package com.pingcap.tikv;
 
-import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.region.TiStoreType;
 import org.tikv.kvproto.Metapb;
 
 public class StoreVersion {

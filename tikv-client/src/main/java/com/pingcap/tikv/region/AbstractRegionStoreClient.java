@@ -25,6 +25,7 @@ import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.util.ChannelFactory;
+import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.shade.io.grpc.ManagedChannel;
