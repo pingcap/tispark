@@ -151,7 +151,7 @@ class TiBatchWrite(
       dataToWrite.flatMap {
         case (dbTable, df) =>
           val tiTableRef = options.getTiTableRef(tiConf)
-          val tiTableInfo = tiContext.tiSession.getCatalog.getTable(options.getTiTableRef(tiConf).databaseName, options.getTiTableRef(tiConf).databaseName)
+          val tiTableInfo = tiContext.tiSession.getCatalog.getTable(options.getTiTableRef(tiConf).databaseName, options.getTiTableRef(tiConf).tableName)
 
           if (tiTableInfo == null) {
             throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)

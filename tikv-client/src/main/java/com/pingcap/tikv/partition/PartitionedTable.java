@@ -87,6 +87,7 @@ public class PartitionedTable {
   private TableCommon locateHashPartition(Row row) {
     if (partitionExpr instanceof ColumnRef) {
       ColumnRef columnRef = (ColumnRef) partitionExpr;
+      columnRef.resolve(logicalTable.getTableInfo());
       Number id =
           (Number)
               row.get(columnRef.getColumnInfo().getOffset(), columnRef.getColumnInfo().getType());
