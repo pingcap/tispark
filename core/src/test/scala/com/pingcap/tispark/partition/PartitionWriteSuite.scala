@@ -107,6 +107,40 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     checkJDBCResult(deleteResultJDBC, Array(Array(Date.valueOf("1995-08-08"), "John")))
   }
 
+  test("hash range column replace and delete test") {
+    tidbStmt.execute(s"create table `$database`.`$table` (id bigint, name varchar(16) unique key) partition by range columns(name) (" +
+      s"partition p0 values less than ('BBBBBB')," +
+      s"partition p1 values less than ('HHHHHH')," +
+      s"partition p2 values less than MAXVALUE)")
+
+    tidbStmt.execute(s"insert into `$database`.`$table` values (5, 'Apple'), (25, 'John'), (29, 'Mike')")
+    val data: RDD[Row] = sc.makeRDD(List(Row(57L, "Apple"), Row(65L, "John"), Row(15L, "Jack")))
+    val schema: StructType =
+      StructType(List(StructField("id", LongType), StructField("name", StringType)))
+    val df = sqlContext.createDataFrame(data, schema)
+    df.write
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", database)
+      .option("table", table)
+      .option("replace", "true")
+      .mode("append")
+      .save()
+
+    val insertResultJDBC = tidbStmt.executeQuery(s"select * from `$database`.`$table`")
+    val insertResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    insertResultSpark.collect() should contain theSameElementsAs Array(Row(57L, "Apple"), Row(65L, "John"), Row(15L, "Jack"), Row(29, "Mike"))
+    checkJDBCResult(insertResultJDBC, Array(Array(57L, "Apple"), Array(65L, "John"), Array(15L, "Jack"), Array(29, "Mike")))
+
+    spark.sql(s"delete from `tidb_catalog`.`$database`.`$table` where name < 'John' or name = 'Mike'")
+
+    val deleteResultJDBC = tidbStmt.executeQuery(s"select * from `$database`.`$table`")
+    val deleteResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    deleteResultSpark.collect() should contain theSameElementsAs Array(Row(65L, "John"))
+    checkJDBCResult(deleteResultJDBC, Array(Array(65L, "John")))
+  }
+
+
   def checkJDBCResult(resultJDBC: ResultSet, rows: Array[Array[_]]): Unit = {
     val rsMetaData = resultJDBC.getMetaData
     var sqlData: Seq[Seq[AnyRef]] = Seq()

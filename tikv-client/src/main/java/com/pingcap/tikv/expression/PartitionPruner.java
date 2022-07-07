@@ -80,7 +80,7 @@ public class PartitionPruner {
     throw new UnsupportedOperationException("cannot prune under invalid partition table");
   }
 
-  static void generateRangeExprs(
+  public static void generateRangeExprs(
       TiPartitionInfo partInfo,
       List<Expression> partExprs,
       TiParser parser,
