@@ -82,4 +82,9 @@ public class ConverterUpstream {
     }
     return tikvFactory;
   }
+
+  public static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType reConvertBackOffFunctionType(
+      org.tikv.common.util.BackOffFunction.BackOffFuncType upstreamType) {
+    return com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.valueOf(upstreamType.name());
+  }
 }

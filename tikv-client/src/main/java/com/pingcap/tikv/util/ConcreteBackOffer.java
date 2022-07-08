@@ -180,7 +180,7 @@ public class ConcreteBackOffer implements BackOffer {
 
   @Override
   public void doBackOff(BackOffFuncType funcType, Exception err) {
-    upstreamConcreteBackOffer.doBackOff(funcType, err);
+    doBackOff(ConverterUpstream.reConvertBackOffFunctionType(funcType), err);
   }
 
   @Override
@@ -195,7 +195,8 @@ public class ConcreteBackOffer implements BackOffer {
 
   @Override
   public void doBackOffWithMaxSleep(BackOffFuncType funcType, long maxSleepMs, Exception err) {
-    upstreamConcreteBackOffer.doBackOffWithMaxSleep(funcType, maxSleepMs, err);
+    doBackOffWithMaxSleep(
+        ConverterUpstream.reConvertBackOffFunctionType(funcType), maxSleepMs, err);
   }
 
   @Override
