@@ -51,8 +51,8 @@ public class CatalogTest extends PDMockServerTest {
                 .setCommandPriority(CommandPri.Low),
             MetaMockHelper.region,
             MetaMockHelper.region.getPeers(0),
-            java.util.Collections.emptyList(),
-            java.util.Collections.emptyList()));
+            MetaMockHelper.region.getPeersList(),
+            MetaMockHelper.getStores()));
   }
 
   @Test

@@ -16,10 +16,13 @@
 
 package com.pingcap.tikv;
 
+import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.util.ConverterUpstream;
 import java.io.IOException;
+import java.util.List;
 import org.junit.Before;
 import org.tikv.common.region.TiRegion;
+import org.tikv.common.region.TiStore;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Pdpb;
 import org.tikv.shade.com.google.protobuf.ByteString;
@@ -43,13 +46,21 @@ public class MockServerTest extends PDMockServerTest {
             .addPeers(Metapb.Peer.newBuilder().setId(11).setStoreId(13))
             .build();
 
+    List<TiStore> s =
+        ImmutableList.of(
+            new TiStore(
+                Metapb.Store.newBuilder()
+                    .setAddress("localhost:1234")
+                    .setVersion("5.0.0")
+                    .setId(13)
+                    .build()));
     region =
         new TiRegion(
             ConverterUpstream.convertTiConfiguration(session.getConf()),
             r,
             r.getPeers(0),
-            java.util.Collections.emptyList(),
-            java.util.Collections.emptyList());
+            r.getPeersList(),
+            s);
     pdServer.addGetRegionResp(Pdpb.GetRegionResponse.newBuilder().setRegion(r).build());
     server = new KVMockServer();
     port = server.start(region);

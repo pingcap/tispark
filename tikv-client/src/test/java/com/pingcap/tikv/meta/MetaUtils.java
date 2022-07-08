@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.tikv.common.region.TiStore;
 import org.tikv.kvproto.Metapb;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
@@ -196,6 +197,18 @@ public class MetaUtils {
     public MetaMockHelper(PDMockServer pdServer, KVMockServer kvServer) {
       this.kvServer = kvServer;
       this.pdServer = pdServer;
+    }
+
+    public static List<TiStore> getStores() {
+      List<TiStore> stores =
+          ImmutableList.of(
+              new TiStore(
+                  Metapb.Store.newBuilder()
+                      .setAddress("localhost:1234")
+                      .setVersion("5.0.0")
+                      .setId(13)
+                      .build()));
+      return stores;
     }
 
     public void preparePDForRegionRead() {
