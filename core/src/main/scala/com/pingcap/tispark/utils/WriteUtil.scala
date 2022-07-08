@@ -18,7 +18,7 @@ package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
 import com.pingcap.tikv.exception.{ConvertOverflowException, TiBatchWriteException, TiDBConvertException}
-import com.pingcap.tikv.key.{CommonHandle, Handle, IndexKey, IntHandle, RowKey}
+import com.pingcap.tikv.key._
 import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.partition.TableCommon
 import com.pingcap.tikv.row.ObjectRowImpl
@@ -29,21 +29,23 @@ import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 object WriteUtil {
 
   /**
    * Convert spark's row to tikv row. We do not allocate handle for no pk case.
    * allocating handle id will be finished after we check conflict.
+   *
    * @param sparkRow
    * @param tiTableInfo
    * @param df
    * @return
    */
   def sparkRow2TiKVRow(
-      sparkRow: SparkRow,
-      tiTableInfo: TiTableInfo,
-      colsInDf: List[String]): TiRow = {
+                        sparkRow: SparkRow,
+                        tiTableInfo: TiTableInfo,
+                        colsInDf: List[String]): TiRow = {
     val colsMapInTiDB = tiTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
 
     val fieldCount = sparkRow.size
@@ -71,6 +73,7 @@ object WriteUtil {
    * ExtractHandle from isCommonHandle or isPkHandle
    * For isPkHandle: build IntHandle with pk
    * For isCommonHandle: build CommonHandle with pk
+   *
    * @param row
    * @param tiTableInfo
    * @return
@@ -111,41 +114,46 @@ object WriteUtil {
    * Generate Record that will be removed
    * key: tableId + handle
    * value: empty
+   *
    * @param rdd
    * @param tableId
    * @return
    */
-  def generateRecordKVToDelete(rdd: RDD[WrappedRow], tableId: Long): RDD[WrappedEncodedRow] = {
-    rdd.map { wrappedRow =>
-      {
-        val (encodedKey, encodedValue) = (
-          new SerializableKey(RowKey.toRowKey(tableId, wrappedRow.handle).getBytes),
-          new Array[Byte](0))
-        WrappedEncodedRow(
-          wrappedRow.row,
-          wrappedRow.handle,
-          encodedKey,
-          encodedValue,
-          isIndex = false,
-          -1,
-          remove = true)
-      }
+  def generateRecordKVRDDToDelete(rdd: RDD[WrappedRow], tableId: Long): RDD[WrappedEncodedRow] = {
+    rdd.map { wrappedRow => {
+      generateRecordKVToDelete(wrappedRow, tableId)
     }
+    }
+  }
+
+  def generateRecordKVToDelete(wrappedRow: WrappedRow, tableId: Long): WrappedEncodedRow = {
+    val (encodedKey, encodedValue) = (
+      new SerializableKey(RowKey.toRowKey(tableId, wrappedRow.handle).getBytes),
+      new Array[Byte](0))
+    WrappedEncodedRow(
+      wrappedRow.row,
+      wrappedRow.handle,
+      encodedKey,
+      encodedValue,
+      isIndex = false,
+      -1,
+      remove = true)
   }
 
   /**
    * use all indices to generate Index kv.
    * For isCommonHandle, we exclude primary key for it has been built by record
    * For isPkHandle, we don't do this because primary key is not included in indices
+   *
    * @param rdd
    * @param remove
    * @param tiTable
-   * @return  Map[Long, RDD[WrappedEncodedRow], The key of map is indexId
+   * @return Map[Long, RDD[WrappedEncodedRow], The key of map is indexId
    */
-  def generateIndexKVs(
-                        rdd: RDD[WrappedRow],
-                        tiTable: TableCommon,
-                        remove: Boolean): Map[Long, RDD[WrappedEncodedRow]] = {
+  def generateIndexKVRDDs(
+                           rdd: RDD[WrappedRow],
+                           tiTable: TableCommon,
+                           remove: Boolean): Map[Long, RDD[WrappedEncodedRow]] = {
     val tableInfo = tiTable.getTableInfo
     tableInfo.getIndices.asScala.flatMap { index =>
       if (tableInfo.isCommonHandle && index.isPrimary) {
@@ -156,73 +164,106 @@ object WriteUtil {
     }.toMap
   }
 
+  def generateIndexKVs(
+                        rdd: WrappedRow,
+                        tiTable: TableCommon,
+                        remove: Boolean): mutable.Map[Long, mutable.Set[WrappedEncodedRow]] = {
+    val tableInfo = tiTable.getTableInfo
+    list2multimap(tableInfo.getIndices.asScala.flatMap { index =>
+      if (tableInfo.isCommonHandle && index.isPrimary) {
+        None
+      } else {
+        Some((index.getId, generateIndex(rdd, index, tiTable, remove)))
+      }
+    }.toList)
+  }
+
+  def list2multimap[A, B](list: List[(A, B)]) =
+    list.foldLeft(new mutable.HashMap[A, mutable.Set[B]] with mutable.MultiMap[A, B]) { (acc, pair) => acc.addBinding(pair._1, pair._2) }
+
   /**
    * mix the results that are produced by method generateIndexKVs
+   *
    * @param sc
    * @param rdd
    * @param tiTableInfo
    * @param remove
    * @return
    */
-  def generateIndexKV(
-      sc: SparkContext,
-      rdd: RDD[WrappedRow],
-      tiTable: TableCommon,
-      remove: Boolean): RDD[WrappedEncodedRow] = {
-    val rdds = generateIndexKVs(rdd, tiTable, remove)
+  def generateIndexKVRDD(
+                          sc: SparkContext,
+                          rdd: RDD[WrappedRow],
+                          tiTable: TableCommon,
+                          remove: Boolean): RDD[WrappedEncodedRow] = {
+    val rdds = generateIndexKVRDDs(rdd, tiTable, remove)
     rdds.values.foldLeft(sc.emptyRDD[WrappedEncodedRow])(_ ++ _)
   }
 
+  def generateIndexKV(
+                       rdd: WrappedRow,
+                       tiTable: TableCommon,
+                       remove: Boolean): List[WrappedEncodedRow] = {
+    val rdds = generateIndexKVs(rdd, tiTable, remove)
+    rdds.values.flatten.toList
+  }
+
   /**
-   * generateIndexRDD for UniqueIndexKey and SecondaryIndexKey
+   * generateIndex for UniqueIndexKey and SecondaryIndexKey
    */
   private def generateIndexRDD(
                                 rdd: RDD[WrappedRow],
                                 index: TiIndexInfo,
                                 tiTable: TableCommon,
                                 remove: Boolean): RDD[WrappedEncodedRow] = {
+    rdd.map { row =>
+      generateIndex(row, index, tiTable, remove)
+    }
+  }
+
+
+  private def generateIndex(
+                             row: WrappedRow,
+                             index: TiIndexInfo,
+                             tiTable: TableCommon,
+                             remove: Boolean): WrappedEncodedRow = {
     if (index.isUnique) {
-      rdd.map { row =>
-        val (encodedKey, encodedValue) =
-          generateUniqueIndexKey(row.row, row.handle, index, tiTable, remove)
-        WrappedEncodedRow(
-          row.row,
-          row.handle,
-          encodedKey,
-          encodedValue,
-          isIndex = true,
-          index.getId,
-          remove)
-      }
+      val (encodedKey, encodedValue) =
+        generateUniqueIndexKey(row.row, row.handle, index, tiTable, remove)
+      WrappedEncodedRow(
+        row.row,
+        row.handle,
+        encodedKey,
+        encodedValue,
+        isIndex = true,
+        index.getId,
+        remove)
     } else {
-      rdd.map { row =>
-        val (encodedKey, encodedValue) =
-          generateSecondaryIndexKey(row.row, row.handle, index, tiTable, remove)
-        WrappedEncodedRow(
-          row.row,
-          row.handle,
-          encodedKey,
-          encodedValue,
-          isIndex = true,
-          index.getId,
-          remove)
-      }
+      val (encodedKey, encodedValue) =
+        generateSecondaryIndexKey(row.row, row.handle, index, tiTable, remove)
+      WrappedEncodedRow(
+        row.row,
+        row.handle,
+        encodedKey,
+        encodedValue,
+        isIndex = true,
+        index.getId,
+        remove)
     }
   }
 
   /**
    * construct unique index and non-unique index and value to be inserted into TiKV
    * NOTE:
-   *      pk is not handle case is equivalent to unique index.
-   *      for non-unique index, handle will be encoded as part of index key. In contrast, unique
-   *      index encoded handle to value.
+   * pk is not handle case is equivalent to unique index.
+   * for non-unique index, handle will be encoded as part of index key. In contrast, unique
+   * index encoded handle to value.
    */
   private def generateUniqueIndexKey(
-      row: TiRow,
-      handle: Handle,
-      index: TiIndexInfo,
-      tiTable: TableCommon,
-      remove: Boolean): (SerializableKey, Array[Byte]) = {
+                                      row: TiRow,
+                                      handle: Handle,
+                                      index: TiIndexInfo,
+                                      tiTable: TableCommon,
+                                      remove: Boolean): (SerializableKey, Array[Byte]) = {
 
     // NULL is only allowed in unique key, primary key does not allow NULL value
     val encodeResult = IndexKey.encodeIndexDataValues(
@@ -281,6 +322,7 @@ object WriteUtil {
 
   /**
    * TODO: support physical table later. Need use partition info and row value to calculate the real physical table.
+   *
    * @param row
    * @param tiTableInfo
    * @return

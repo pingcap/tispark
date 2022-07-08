@@ -6,12 +6,10 @@ import com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.partition.PartitionedTable.PartitionLocatorContext;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
-import java.util.Objects;
 
 public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorContext> {
 
@@ -41,7 +39,9 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
       return (int) node.getValue() == 1;
     } else {
       throw new IllegalStateException(
-          String.format(("Unsupported constant, type: %s, value: %s\n"), node.getDataType(),
+          String.format(
+              ("Unsupported constant, type: %s, value: %s\n"),
+              node.getDataType(),
               node.getValue()));
     }
   }

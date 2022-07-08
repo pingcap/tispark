@@ -6,7 +6,6 @@ import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.FuncCallExpr;
-import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.expression.PartitionPruner;
 import com.pingcap.tikv.expression.visitor.PartitionLocator;
 import com.pingcap.tikv.meta.TiPartitionDef;
@@ -165,7 +164,8 @@ public class PartitionedTable implements Serializable {
   }
 
   private TableCommon locateRangeColumnPartition(Row data) {
-    Map<String, List<Expression>> rangeColumnRefExpressions = partitionExpr.getRangeColumnRefExpressions();
+    Map<String, List<Expression>> rangeColumnRefExpressions =
+        partitionExpr.getRangeColumnRefExpressions();
     if (rangeColumnRefExpressions.size() != 1) {
       throw new UnsupportedOperationException(
           "Currently only support range column partition on a single column");
@@ -177,8 +177,9 @@ public class PartitionedTable implements Serializable {
       List<Expression> value = entry.getValue();
       for (int i = 0; i < value.size(); i++) {
         Expression expression = value.get(i);
-        Boolean accept = expression.accept(partitionLocator,
-            new PartitionLocatorContext(logicalTable.getTableInfo(), data));
+        Boolean accept =
+            expression.accept(
+                partitionLocator, new PartitionLocatorContext(logicalTable.getTableInfo(), data));
         if (accept) {
           return physicalTables[i];
         }

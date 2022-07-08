@@ -251,7 +251,7 @@ class TiBatchWriteTable (
 
       val wrappedEncodedRecordRdd = generateRecordKV(distinctWrappedRowRdd, remove = false)
       val wrappedEncodedIndexRdds =
-        WriteUtil.generateIndexKVs(distinctWrappedRowRdd, tiTable, remove = false)
+        WriteUtil.generateIndexKVRDDs(distinctWrappedRowRdd, tiTable, remove = false)
       val wrappedEncodedIndexRdd: RDD[WrappedEncodedRow] = {
         val list = wrappedEncodedIndexRdds.values.toSeq
         if (list.isEmpty) {
@@ -272,7 +272,7 @@ class TiBatchWriteTable (
           if (r1.encodedValue.isEmpty) r2 else r1
         }
         .map(_._2)
-      val g2 = (wrappedEncodedIndexRdd ++ WriteUtil.generateIndexKV(
+      val g2 = (wrappedEncodedIndexRdd ++ WriteUtil.generateIndexKVRDD(
         sc,
         deletion,
         tiTable,
@@ -294,7 +294,7 @@ class TiBatchWriteTable (
 
       val wrappedEncodedRecordRdd = generateRecordKV(wrappedRowRdd, remove = false)
       val wrappedEncodedIndexRdds =
-        WriteUtil.generateIndexKVs(wrappedRowRdd, tiTable, remove = false)
+        WriteUtil.generateIndexKVRDDs(wrappedRowRdd, tiTable, remove = false)
       val wrappedEncodedIndexRdd = sc.union(wrappedEncodedIndexRdds.values.toSeq)
 
       (wrappedEncodedRecordRdd ++ wrappedEncodedIndexRdd).map(obj =>
