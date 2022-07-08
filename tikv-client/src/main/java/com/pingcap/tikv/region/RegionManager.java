@@ -200,7 +200,7 @@ public class RegionManager {
   }
 
   public TiStore getStoreById(long id, BackOffer backOffer) {
-    //    return cache.getStoreById(id, backOffer);
+    //        return cache.getStoreById(id, backOffer);
     TiStore store = getStoreByIdWithBackOff(id, backOffer);
     if (store == null) {
       logger.warn(String.format("failed to fetch store %d, the store may be missing", id));
@@ -371,19 +371,7 @@ public class RegionManager {
     }
 
     public synchronized TiStore getStoreById(long id, BackOffer backOffer) {
-      try {
-        TiStore store = storeCache.get(id);
-        if (store == null) {
-          store = new TiStore(pdClient.getStore(backOffer, id));
-        }
-        if (store.getStore().getState().equals(StoreState.Tombstone)) {
-          return null;
-        }
-        storeCache.put(id, store);
-        return store;
-      } catch (Exception e) {
-        throw new GrpcException(e);
-      }
+      return storeCache.get(id);
     }
   }
 }

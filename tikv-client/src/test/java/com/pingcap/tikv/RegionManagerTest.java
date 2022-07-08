@@ -50,6 +50,15 @@ public class RegionManagerTest extends PDMockServerTest {
     int confVer = 1026;
     int ver = 1027;
     long regionId = 233;
+    pdServer.addGetStoreResp(
+        GrpcUtils.makeGetStoreResponse(
+            pdServer.getClusterId(),
+            GrpcUtils.makeStore(
+                10,
+                LOCAL_ADDR,
+                Metapb.StoreState.Up,
+                GrpcUtils.makeStoreLabel("k1", "v1"),
+                GrpcUtils.makeStoreLabel("k2", "v2"))));
     pdServer.addGetRegionResp(
         GrpcUtils.makeGetRegionResponse(
             pdServer.getClusterId(),
