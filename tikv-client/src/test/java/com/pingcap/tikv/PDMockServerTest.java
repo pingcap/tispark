@@ -19,7 +19,6 @@ package com.pingcap.tikv;
 import java.io.IOException;
 import org.junit.After;
 import org.junit.Before;
-import org.tikv.kvproto.Metapb;
 
 public abstract class PDMockServerTest {
   protected static final String LOCAL_ADDR = "127.0.0.1";
