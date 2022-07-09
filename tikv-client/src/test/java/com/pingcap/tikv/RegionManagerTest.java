@@ -17,11 +17,13 @@
 package com.pingcap.tikv;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.util.Pair;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Before;
 import org.junit.Test;
 import org.tikv.common.region.TiRegion;
@@ -49,15 +51,8 @@ public class RegionManagerTest extends PDMockServerTest {
     int confVer = 1026;
     int ver = 1027;
     long regionId = 233;
-    pdServer.addGetStoreResp(
-        GrpcUtils.makeGetStoreResponse(
-            pdServer.getClusterId(),
-            GrpcUtils.makeStore(
-                10,
-                LOCAL_ADDR + ":" + pdServer.port,
-                Metapb.StoreState.Up,
-                GrpcUtils.makeStoreLabel("k1", "v1"),
-                GrpcUtils.makeStoreLabel("k2", "v2"))));
+    String testAddress = "127.0.0.1";
+
     pdServer.addGetRegionResp(
         GrpcUtils.makeGetRegionResponse(
             pdServer.getClusterId(),
@@ -68,6 +63,18 @@ public class RegionManagerTest extends PDMockServerTest {
                 GrpcUtils.makeRegionEpoch(confVer, ver),
                 GrpcUtils.makePeer(1, 10),
                 GrpcUtils.makePeer(2, 20))));
+    AtomicInteger i = new AtomicInteger(0);
+    long[] ids = new long[] {10, 20};
+    pdServer.addGetStoreResp(
+        GrpcUtils.makeGetStoreResponse(
+            pdServer.getClusterId(),
+            GrpcUtils.makeStore(
+                ids[i.getAndIncrement()],
+                testAddress,
+                StoreState.Up,
+                GrpcUtils.makeStoreLabel("k1", "v1"),
+                GrpcUtils.makeStoreLabel("k2", "v2"))));
+
     TiRegion region = mgr.getRegionByKey(startKey);
     assertEquals(region.getId(), regionId);
 
@@ -76,11 +83,13 @@ public class RegionManagerTest extends PDMockServerTest {
 
     // This will in turn invoke rpc and results in an error
     // since we set just one rpc response
-    try {
-      mgr.getRegionByKey(searchKeyNotExists);
-      fail();
-    } catch (Exception ignored) {
-    }
+    TiRegion errValue = mgr.getRegionByKey(searchKeyNotExists);
+    assertNull(errValue);
+    //    try {
+    //      TiRegion err = mgr.getRegionByKey(searchKeyNotExists);
+    //      fail();
+    //    } catch (Exception ignored) {
+    //    }
   }
 
   @Test

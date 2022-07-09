@@ -21,6 +21,7 @@ package com.pingcap.tikv.region;
 import static com.pingcap.tikv.codec.KeyUtils.formatBytesUTF8;
 import static com.pingcap.tikv.codec.KeyUtils.getEncodedKey;
 import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
+import static org.tikv.common.region.RegionManager.GET_REGION_BY_KEY_REQUEST_LATENCY;
 
 import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
@@ -41,15 +42,19 @@ import java.util.Map;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.exception.InvalidStoreException;
+import org.tikv.common.log.SlowLogSpan;
 import org.tikv.common.region.StoreHealthyChecker;
 import org.tikv.common.region.TiRegion;
 import org.tikv.common.region.TiStore;
 import org.tikv.common.region.TiStoreType;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Peer;
+import org.tikv.kvproto.Metapb.Region;
 import org.tikv.kvproto.Metapb.StoreState;
 import org.tikv.shade.com.google.protobuf.ByteString;
+import org.tikv.shade.io.prometheus.client.Histogram;
 
 @SuppressWarnings("UnstableApiUsage")
 public class RegionManager {
@@ -58,7 +63,7 @@ public class RegionManager {
   // https://github.com/pingcap/tispark/issues/1170
   private final RegionCache cache;
   private final ReadOnlyPDClient pdClient;
-  private final TiConfiguration conf;
+  private static TiConfiguration conf = null;
   private final StoreHealthyChecker storeChecker;
 
   private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
@@ -72,7 +77,7 @@ public class RegionManager {
     this.cache = new RegionCache(pdClient);
     this.cacheInvalidateCallback = cacheInvalidateCallback;
     this.pdClient = pdClient;
-    this.conf = conf;
+    RegionManager.conf = conf;
     this.storeChecker = null;
   }
 
@@ -80,7 +85,7 @@ public class RegionManager {
     this.cache = new RegionCache(pdClient);
     this.cacheInvalidateCallback = null;
     this.pdClient = pdClient;
-    this.conf = conf;
+    RegionManager.conf = conf;
     this.storeChecker = null;
   }
 
@@ -97,16 +102,23 @@ public class RegionManager {
   }
 
   public TiRegion getRegionByKey(ByteString key, BackOffer backOffer) {
+    Long clusterId = pdClient.getClusterId();
+    Histogram.Timer requestTimer =
+        GET_REGION_BY_KEY_REQUEST_LATENCY.labels(clusterId.toString()).startTimer();
+    SlowLogSpan slowLogSpan = backOffer.getSlowLog().start("getRegionByKey");
     TiRegion region = cache.getRegionByKey(key, backOffer);
     try {
       if (region == null) {
-        logger.debug("Key not found in keyToRegionIdCache:" + formatBytesUTF8(key));
-        Pair<Metapb.Region, Metapb.Peer> regionAndLeader = pdClient.getRegionByKey(backOffer, key);
+        logger.debug("Key not found in keyToRegionIdCache:" + KeyUtils.formatBytesUTF8(key));
+        Pair<Region, Peer> regionAndLeader = pdClient.getRegionByKey(backOffer, key);
         region =
             cache.putRegion(createRegion(regionAndLeader.first, regionAndLeader.second, backOffer));
       }
     } catch (Exception e) {
       return null;
+    } finally {
+      requestTimer.observeDuration();
+      slowLogSpan.end();
     }
     return region;
   }
@@ -204,6 +216,7 @@ public class RegionManager {
     TiStore store = getStoreByIdWithBackOff(id, backOffer);
     if (store == null) {
       logger.warn(String.format("failed to fetch store %d, the store may be missing", id));
+      cache.clearAll();
       throw new InvalidStoreException(id);
     }
     return store;
@@ -372,6 +385,10 @@ public class RegionManager {
 
     public synchronized TiStore getStoreById(long id, BackOffer backOffer) {
       return storeCache.get(id);
+    }
+
+    public void clearAll() {
+      regionCache.clear();
     }
   }
 }
