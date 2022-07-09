@@ -17,7 +17,6 @@
 package com.pingcap.tikv;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import com.pingcap.tikv.region.RegionManager;
@@ -55,7 +54,7 @@ public class RegionManagerTest extends PDMockServerTest {
             pdServer.getClusterId(),
             GrpcUtils.makeStore(
                 10,
-                LOCAL_ADDR,
+                LOCAL_ADDR + ":" + pdServer.port,
                 Metapb.StoreState.Up,
                 GrpcUtils.makeStoreLabel("k1", "v1"),
                 GrpcUtils.makeStoreLabel("k2", "v2"))));
@@ -132,7 +131,7 @@ public class RegionManagerTest extends PDMockServerTest {
                 GrpcUtils.makeStoreLabel("k1", "v1"),
                 GrpcUtils.makeStoreLabel("k2", "v2"))));
     TiStore store = mgr.getStoreById(storeId);
-    assertEquals(store.getId(), storeId);
+    assertEquals(store.getStore().getId(), storeId);
 
     pdServer.addGetStoreResp(
         GrpcUtils.makeGetStoreResponse(
@@ -143,7 +142,12 @@ public class RegionManagerTest extends PDMockServerTest {
                 StoreState.Tombstone,
                 GrpcUtils.makeStoreLabel("k1", "v1"),
                 GrpcUtils.makeStoreLabel("k2", "v2"))));
-    assertNull(mgr.getStoreById(storeId + 1));
+
+    try {
+      mgr.getStoreById(storeId + 1);
+      fail();
+    } catch (Exception ignored) {
+    }
 
     mgr.invalidateStore(storeId);
     try {
