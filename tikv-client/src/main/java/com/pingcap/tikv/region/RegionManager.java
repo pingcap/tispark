@@ -57,7 +57,7 @@ public class RegionManager {
   // https://github.com/pingcap/tispark/issues/1170
   private final RegionCache cache;
   private final ReadOnlyPDClient pdClient;
-  private static TiConfiguration conf = null;
+  private final TiConfiguration conf;
   private final StoreHealthyChecker storeChecker;
 
   private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
@@ -71,7 +71,7 @@ public class RegionManager {
     this.cache = new RegionCache();
     this.cacheInvalidateCallback = cacheInvalidateCallback;
     this.pdClient = pdClient;
-    RegionManager.conf = conf;
+    this.conf = conf;
     this.storeChecker = null;
   }
 
@@ -79,7 +79,7 @@ public class RegionManager {
     this.cache = new RegionCache();
     this.cacheInvalidateCallback = null;
     this.pdClient = pdClient;
-    RegionManager.conf = conf;
+    this.conf = conf;
     this.storeChecker = null;
   }
 
@@ -92,7 +92,8 @@ public class RegionManager {
   }
 
   public TiRegion getRegionByKey(ByteString key) {
-    return getRegionByKey(key, ConcreteBackOffer.newGetBackOff(getClusterId()));
+    return getRegionByKey(
+        key, ConcreteBackOffer.newCustomBackOff(BackOffer.RAWKV_MAX_BACKOFF, getClusterId()));
   }
 
   public TiRegion getRegionByKey(ByteString key, BackOffer backOffer) {
@@ -126,7 +127,10 @@ public class RegionManager {
   }
 
   public Pair<TiRegion, TiStore> getRegionStorePairByKey(ByteString key, TiStoreType storeType) {
-    return getRegionStorePairByKey(key, storeType, ConcreteBackOffer.newGetBackOff(getClusterId()));
+    return getRegionStorePairByKey(
+        key,
+        storeType,
+        ConcreteBackOffer.newCustomBackOff(BackOffer.RAWKV_MAX_BACKOFF, getClusterId()));
   }
 
   public long getClusterId() {
@@ -175,7 +179,8 @@ public class RegionManager {
   }
 
   public TiStore getStoreById(long id) {
-    return getStoreById(id, ConcreteBackOffer.newGetBackOff(getClusterId()));
+    return getStoreById(
+        id, ConcreteBackOffer.newCustomBackOff(BackOffer.RAWKV_MAX_BACKOFF, getClusterId()));
   }
 
   private TiStore getStoreByIdWithBackOff(long id, BackOffer backOffer) {

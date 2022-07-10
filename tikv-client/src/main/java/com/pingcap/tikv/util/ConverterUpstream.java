@@ -18,6 +18,7 @@ package com.pingcap.tikv.util;
 
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.tikv.common.TiConfiguration.ApiVersion;
 import org.tikv.common.apiversion.RequestKeyCodec;
 
 public class ConverterUpstream {
@@ -31,6 +32,7 @@ public class ConverterUpstream {
 
   public static org.tikv.common.TiConfiguration convertTiConfiguration(
       com.pingcap.tikv.TiConfiguration conf) {
+    if (conf == null) return null;
     org.tikv.common.TiConfiguration tikvConf =
         org.tikv.common.TiConfiguration.createDefault(
             conf.getPdAddrs().stream().map(Objects::toString).collect(Collectors.joining(",")));
@@ -39,6 +41,7 @@ public class ConverterUpstream {
     tikvConf.setKvClientConcurrency(conf.getKvClientConcurrency());
     tikvConf.setIsolationLevel(conf.getIsolationLevel());
     tikvConf.setCommandPriority(conf.getCommandPriority());
+    tikvConf.setApiVersion(ApiVersion.V1);
     return tikvConf;
   }
 

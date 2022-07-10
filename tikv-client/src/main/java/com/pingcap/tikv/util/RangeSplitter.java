@@ -174,21 +174,12 @@ public class RangeSplitter {
     Map<Long, Pair<TiRegion, TiStore>> idToRegion = new HashMap<>();
 
     while (true) {
-      Pair<TiRegion, TiStore> regionStorePair = null;
+      Pair<TiRegion, TiStore> regionStorePair =
+          regionManager.getRegionStorePairByKey(range.getStart(), storeType);
 
-      BackOffer bo = ConcreteBackOffer.newGetBackOff(regionManager.getClusterId());
-      while (regionStorePair == null) {
-        try {
-          regionStorePair = regionManager.getRegionStorePairByKey(range.getStart(), storeType, bo);
-
-          if (regionStorePair == null) {
-            throw new NullPointerException(
-                "fail to get region/store pair by key " + formatByteString(range.getStart()));
-          }
-        } catch (Exception e) {
-          LOG.warn("getRegionStorePairByKey error", e);
-          bo.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
-        }
+      if (regionStorePair == null) {
+        throw new NullPointerException(
+            "fail to get region/store pair by key " + formatByteString(range.getStart()));
       }
 
       TiRegion region = regionStorePair.first;
@@ -249,7 +240,7 @@ public class RangeSplitter {
       this.ranges = ranges;
       String host = null;
       try {
-        host = PDUtils.addrToUrl(store.getAddress()).getHost();
+        host = PDUtils.addrToUrl(store.getStore().getAddress()).getHost();
       } catch (Exception ignored) {
       }
       this.host = host;
