@@ -279,8 +279,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
 
   test("test physical plan explain which table with secondary index") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    tidbStmt.execute(
-      """
+    tidbStmt.execute("""
         |CREATE TABLE `t1` (
         |`a` int(20)  NOT NULL,
         |`b` varchar(255) NOT NULL,
