@@ -936,10 +936,6 @@ public class TiDAGRequest implements Serializable {
     }
   }
 
-  private void init() {
-    init(hasIndex());
-  }
-
   public ScanType getScanType() {
     if (hasIndex()) {
       if (isDoubleRead) {
