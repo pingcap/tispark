@@ -99,8 +99,8 @@ public class RangeSplitterTest {
     Metapb.Region region =
         Metapb.Region.newBuilder()
             .setId(id)
-            .setStartKey(encodeKey(range.getStart().toByteArray()))
-            .setEndKey(encodeKey(range.getEnd().toByteArray()))
+            .setStartKey(range.getStart())
+            .setEndKey(range.getEnd())
             .addPeers(Peer.getDefaultInstance())
             .build();
     List<TiStore> s = ImmutableList.of(new TiStore(Metapb.Store.newBuilder().setId(0).build()));
