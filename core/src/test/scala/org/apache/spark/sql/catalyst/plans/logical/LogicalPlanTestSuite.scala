@@ -137,7 +137,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
         "{ TableRangeScan: { RangeFilter: [], Range: [%s] }, Selection: [%s] }, startTs: %d}".trim
     val selection1 = dag1.getFilters.toArray().mkString(", ")
     val myExpectation1 =
-      expectation1.format(extractRangeFromDAG(dag1), selection1, dag1.getStartTs.getVersion)
+      expectation1.format(stringKeyRangeInDAG(dag1), selection1, dag1.getStartTs.getVersion)
     val sparkPhysicalPlan1 =
       df1.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
     assert(myExpectation1.equals(sparkPhysicalPlan1))
@@ -152,7 +152,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
         "Order By: [c@VARCHAR(255) ASC] }, startTs: %d".trim
     val selection2 = dag2.getFilters.toArray().mkString(", ")
     val myExpectation2 =
-      expectation2.format(extractRangeFromDAG(dag2), selection2, dag2.getStartTs.getVersion)
+      expectation2.format(stringKeyRangeInDAG(dag2), selection2, dag2.getStartTs.getVersion)
     assert(myExpectation2.equals(dag2.toString))
   }
 
@@ -198,7 +198,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     val selection1 = dag1.getFilters.toArray.mkString(", ")
     val myExpectation1 = expectation1.format(
       rangeFilter1,
-      extractRangeFromDAG(dag1),
+      stringKeyRangeInDAG(dag1),
       selection1,
       dag1.getStartTs.getVersion)
     val sparkPhysicalPlan1 =
@@ -215,7 +215,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
         "{ TableRangeScan: { RangeFilter: [%s], Range: [%s] } }, startTs: %d}".trim
     val rangeFilter2 = dag2.getRangeFilter.toArray().mkString(", ")
     val myExpectation2 =
-      expectation2.format(rangeFilter2, extractRangeFromDAG(dag2), dag2.getStartTs.getVersion)
+      expectation2.format(rangeFilter2, stringKeyRangeInDAG(dag2), dag2.getStartTs.getVersion)
     val sparkPhysicalPlan2 =
       df2.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
     assert(myExpectation2.equals(sparkPhysicalPlan2))
@@ -230,7 +230,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
         "TableRangeScan: { RangeFilter: [], Range: [%s] }, Selection: [%s] }, startTs: %d}").trim
     val selection3 = dag3.getFilters.toArray().mkString(", ")
     val myExpectation3 =
-      expectation3.format(extractRangeFromDAG(dag3), selection3, dag3.getStartTs.getVersion)
+      expectation3.format(stringKeyRangeInDAG(dag3), selection3, dag3.getStartTs.getVersion)
     val sparkPhysicalPlan3 =
       df3.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
     assert(myExpectation3.equals(sparkPhysicalPlan3))
@@ -266,10 +266,10 @@ class LogicalPlanTestSuite extends BasePlanTest {
     val selection0 = dags.head.getFilters.toArray.mkString(", ")
     val selection1 = dags(1).getFilters.toArray.mkString(", ")
     val myExpectationPlan = expectation.format(
-      extractRangeFromDAG(dags.head),
+      stringKeyRangeInDAG(dags.head),
       selection0,
       dags.head.getStartTs.getVersion,
-      extractRangeFromDAG(dags(1)),
+      stringKeyRangeInDAG(dags(1)),
       selection1,
       dags(1).getStartTs.getVersion)
     val sparkPhysicalPlan =
@@ -279,12 +279,13 @@ class LogicalPlanTestSuite extends BasePlanTest {
 
   test("test physical plan explain which table with secondary index") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    tidbStmt.execute("""
-                       |CREATE TABLE `t1` (
-                       |`a` BIGINT(20)  NOT NULL,
-                       |`b` varchar(255) NOT NULL,
-                       |`c` varchar(255) DEFAULT NULL
-                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+    tidbStmt.execute(
+      """
+        |CREATE TABLE `t1` (
+        |`a` bigint(20)  NOT NULL,
+        |`b` varchar(255) NOT NULL,
+        |`c` varchar(255) DEFAULT NULL
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
         """.stripMargin)
     tidbStmt.execute("CREATE INDEX `testIndex` ON `t1` (`a`,`b`)")
     // IndexScan with Selection and with RangeFilter.
@@ -305,7 +306,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     val myExpectationPlan1 = expectation1.format(
       downgradeFilter1,
       rangeFilter1,
-      extractRangeFromDAG(dag1),
+      stringKeyRangeInDAG(dag1),
       selection1,
       selection1,
       dag1.getStartTs.getVersion)
@@ -331,7 +332,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     val myExpectationPlan2 = expection2.format(
       downgradeFilter2,
       rangeFilter2,
-      extractRangeFromDAG(dag2),
+      stringKeyRangeInDAG(dag2),
       dag2.getStartTs.getVersion)
     assert(myExpectationPlan2.equals(sparkPhysicalPlan2))
 
@@ -350,7 +351,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     val selection3 = dag3.getFilters.toArray.mkString(", ")
     val myExpectationPlan3 = expectation3.format(
       rangeFilter3,
-      extractRangeFromDAG(dag3),
+      stringKeyRangeInDAG(dag3),
       selection3,
       dag3.getStartTs.getVersion)
     assert(
@@ -377,7 +378,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
       "Group By: [c@VARCHAR(255) ASC]} }, startTs: %d"
     expectDAG4 = expectDAG4.format(
       rangeFilter4,
-      extractRangeFromDAG(dag4),
+      stringKeyRangeInDAG(dag4),
       selection4,
       dag4.getStartTs.getVersion)
     assert(expectRegionTaskExec4.equals(regionTaskExec4))
@@ -394,7 +395,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     val selection5 = dag5.getFilters.toArray.mkString(", ")
     val myExpectation5 = expectation5.format(
       rangeFilter5,
-      extractRangeFromDAG(dag5),
+      stringKeyRangeInDAG(dag5),
       selection5,
       dag5.getStartTs.getVersion)
     assert(myExpectation5.equals(dag5.toString.trim))
@@ -429,7 +430,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     val myExpectationPlan1 = expectation1.format(
       downgradeFilter1,
       rangeFilter1,
-      extractRangeFromDAG(dag1),
+      stringKeyRangeInDAG(dag1),
       selection1,
       dag1.getStartTs.getVersion)
     assert(
@@ -455,7 +456,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     val myExpectationPlan2 = expectation2.format(
       downgradeFilter2,
       rangeFilter2,
-      extractRangeFromDAG(dag2),
+      stringKeyRangeInDAG(dag2),
       selection2,
       dag2.getStartTs.getVersion)
     assert(
@@ -476,7 +477,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
       "{ {IndexRangeScan(Index:testindex(b,a)): { RangeFilter: [], Range: [%s] }}; " +
       "{TableRowIDScan, Selection: [%s], Aggregates: Sum(a@LONG)} }, startTs: %d"
     expectDAG3 =
-      expectDAG3.format(extractRangeFromDAG(dag3), selection3, dag3.getStartTs.getVersion)
+      expectDAG3.format(stringKeyRangeInDAG(dag3), selection3, dag3.getStartTs.getVersion)
     assert(expectRegionTaskExec3.equals(regionTaskExec3))
     assert(expectDAG3.equals(dag3.toString))
   }
@@ -512,7 +513,8 @@ class LogicalPlanTestSuite extends BasePlanTest {
     } finally {
       super.afterAll()
     }
-  def extractRangeFromDAG(dag: TiDAGRequest): String = {
+
+  def stringKeyRangeInDAG(dag: TiDAGRequest): String = {
     val sb = new StringBuilder()
     dag.getRangesMaps.values.forEach((vList: util.List[Coprocessor.KeyRange]) => {
       def foo(vList: util.List[Coprocessor.KeyRange]) = {

@@ -57,6 +57,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -248,121 +249,62 @@ public class TiDAGRequest implements Serializable {
     clearPushDownInfo();
     DAGRequest.Builder dagRequestBuilder = DAGRequest.newBuilder();
     Executor.Builder executorBuilder = Executor.newBuilder();
-    IndexScan.Builder indexScanBuilder = IndexScan.newBuilder();
     TableScan.Builder tblScanBuilder = TableScan.newBuilder();
     // find a column's offset in fields
     Map<String, Integer> colOffsetInFieldMap = new HashMap<>();
-    // find a column's position in index
-    Map<String, Integer> colPosInIndexMap = new HashMap<>();
 
     if (buildIndexScan) {
       // IndexScan
       if (indexInfo == null) {
         throw new TiClientInternalException("Index is empty for index scan");
       }
-      List<TiColumnInfo> columnInfoList = tableInfo.getColumns();
-      boolean hasPk = false;
-      // We extract index column info
-      List<Integer> indexColOffsets =
-          indexInfo
-              .getIndexColumns()
-              .stream()
-              .map(TiIndexColumn::getOffset)
-              .collect(Collectors.toList());
-
-      int idxPos = 0;
-      // for index scan builder, columns are added by its order in index
-      for (Integer idx : indexColOffsets) {
-        TiColumnInfo tiColumnInfo = columnInfoList.get(idx);
-        ColumnInfo columnInfo = tiColumnInfo.toProto(tableInfo);
-        colPosInIndexMap.put(tiColumnInfo.getName(), idxPos++);
-
-        ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder(columnInfo);
-        if (columnInfo.getColumnId() == -1) {
-          hasPk = true;
-          colBuilder.setPkHandle(true);
-        }
-        indexScanBuilder.addColumns(colBuilder);
-      }
-
-      int colCount = indexScanBuilder.getColumnsCount();
+      // outputColIDx the col that we want get from index.
+      List<Long> outputColIDx = new ArrayList<>();
+      // selectionColIDx the col that can be used in other operations.
+      // for simplicity, we use here all the columns in the index.
+      List<Long> selectionColIDx = new ArrayList<>();
       if (isDoubleRead()) {
-        // double read case: need to retrieve handle
-        // =================== IMPORTANT ======================
-        // offset for dagRequest should be in accordance with fields
-        // The last pos will be the handle
-        // TODO: we may merge indexDoubleRead and coveringIndexRead logic
-        for (ColumnRef col : getFields()) {
-          Integer pos = colPosInIndexMap.get(col.getName());
-          if (pos != null) {
-            TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
-            if (col.matchName(columnInfo.getName())) {
-              colOffsetInFieldMap.put(col.getName(), pos);
-            }
-            // TODO: primary key may also be considered if pkIsHandle
-          }
-        }
-        // double read case
-        if (!hasPk) {
-          // add handle column
-          if (!tableInfo.isCommonHandle()) {
-            indexScanBuilder.addColumns(handleColumn);
-            ++colCount;
-          } else {
-            for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
-              indexScanBuilder.addColumns(tableInfo.getColumn(col.getName()).toProto(tableInfo));
-              ++colCount;
-            }
-          }
-          addRequiredIndexDataType();
-        }
-
-        if (colCount == 0) {
-          throw new DAGRequestException("Incorrect index scan with zero column count");
-        }
-
+        // in first stage of IndexLookUp, we need to get rowID from index data.
         if (!tableInfo.isCommonHandle()) {
-          outputOffsets.add(colCount - 1);
+          outputColIDx.add(handleColumn.getColumnId());
+          indexDataTypes.add(requireNonNull(IntegerType.BIGINT, "dataType is null"));
         } else {
-          int idxColSize = tableInfo.getPrimaryKey().getIndexColumns().size();
-          for (int i = idxColSize; i >= 1; i--) {
-            outputOffsets.add(colCount - i);
+          for (TiIndexColumn indexColumn : tableInfo.getPrimaryKey().getIndexColumns()) {
+            TiColumnInfo tableColInfo = tableInfo.getColumn(indexColumn.getName());
+            indexDataTypes.add(requireNonNull(tableColInfo.getType(), "dataType is null"));
+            outputColIDx.add(tableColInfo.getId());
           }
         }
       } else {
-        boolean pkIsNeeded = false;
-        // =================== IMPORTANT ======================
-        // offset for dagRequest should be in accordance with fields
-        for (ColumnRef col : getFields()) {
-          Integer pos = colPosInIndexMap.get(col.getName());
-          if (pos != null) {
-            TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
-            if (col.matchName(columnInfo.getName())) {
-              outputOffsets.add(pos);
-              colOffsetInFieldMap.put(col.getName(), pos);
-            }
+        // IndexReader fields col must in primary key or index key.
+        Set<Long> indexAndPrimaryColIDSet = new HashSet<>();
+        if (!tableInfo.isCommonHandle()) {
+          indexAndPrimaryColIDSet.add(handleColumn.getColumnId());
+        } else {
+          for (TiIndexColumn indexColumn : tableInfo.getPrimaryKey().getIndexColumns()) {
+            indexAndPrimaryColIDSet.add(tableInfo.getColumn(indexColumn.getName()).getId());
           }
-          // if a column of field is not contained in index selected,
-          // logically it must be the pk column. Extra check here.
-          else if (tableInfo.getColumn(col.getName()).isPrimaryKey()) {
-            pkIsNeeded = true;
-            // offset should be processed for each primary key encountered
-            outputOffsets.add(colCount);
-            // for index scan, column offset must be in the order of index->handle
-            colOffsetInFieldMap.put(col.getName(), indexColOffsets.size());
+        }
+        for (TiIndexColumn indexColumn : indexInfo.getIndexColumns()) {
+          indexAndPrimaryColIDSet.add(tableInfo.getColumn(indexColumn.getName()).getId());
+        }
+        for (ColumnRef columnRef : getFields()) {
+          TiColumnInfo columnInfo = tableInfo.getColumn(columnRef.getName());
+          if (indexAndPrimaryColIDSet.contains(columnInfo.getId())) {
+            outputColIDx.add(columnInfo.getId());
           } else {
             throw new DAGRequestException(
                 "columns other than primary key and index key exist in fields while index single read: "
-                    + col.getName());
-          }
-        }
-        // pk is not included in index but still needed
-        if (pkIsNeeded) {
-          if (!tableInfo.isCommonHandle()) {
-            indexScanBuilder.addColumns(handleColumn);
+                    + columnInfo.getName());
           }
         }
       }
+      for (TiIndexColumn indexColumn : indexInfo.getIndexColumns()) {
+        TiColumnInfo columnInfo = tableInfo.getColumn(indexColumn.getName());
+        selectionColIDx.add(columnInfo.getId());
+      }
+      IndexScan.Builder indexScanBuilder =
+          buildIndexScanCols(outputColIDx, selectionColIDx, outputOffsets, colOffsetInFieldMap);
       executorBuilder.setTp(ExecType.TypeIndexScan);
 
       indexScanBuilder.setTableId(id).setIndexId(indexInfo.getId());
@@ -450,6 +392,51 @@ public class TiDAGRequest implements Serializable {
     }
 
     return dagRequestBuilder;
+  }
+
+  private void buildTableScanCols() {}
+
+  private IndexScan.Builder buildIndexScanCols(
+      List<Long> outputColIDs,
+      List<Long> selectionCols,
+      List<Integer> outputOffsets,
+      Map<String, Integer> colOffsetInFieldMap) {
+    IndexScan.Builder indexScanBuilder = IndexScan.newBuilder();
+    Map<Long, Integer> colIdToOffset = new HashMap<>();
+    Map<Long, TiColumnInfo> colIDToColInfo = new HashMap<>();
+    for (TiColumnInfo columnInfo : tableInfo.getColumns()) {
+      colIDToColInfo.put(columnInfo.getId(), columnInfo);
+    }
+    for (Long colID : selectionCols) {
+      if (colIdToOffset.containsKey(colID)) {
+        continue;
+      }
+      TiColumnInfo columnInfo = colIDToColInfo.get(colID);
+      colOffsetInFieldMap.put(columnInfo.getName(), indexScanBuilder.getColumnsCount());
+      ColumnInfo.Builder colBuild = ColumnInfo.newBuilder(columnInfo.toProto(tableInfo));
+      if (columnInfo.getId() == -1) {
+        colBuild.setPkHandle(true);
+      }
+      colIdToOffset.put(columnInfo.getId(), indexScanBuilder.getColumnsCount());
+      indexScanBuilder.addColumns(colBuild);
+    }
+    for (Long colID : outputColIDs) {
+      if (colIdToOffset.containsKey(colID)) {
+        outputOffsets.add(colIdToOffset.get(colID));
+        continue;
+      }
+      outputOffsets.add(indexScanBuilder.getColumnsCount());
+      colIdToOffset.put(colID, indexScanBuilder.getColumnsCount());
+      if (colID == -1 && !colIDToColInfo.containsKey(colID)) {
+        indexScanBuilder.addColumns(handleColumn);
+      } else {
+        TiColumnInfo columnInfo = colIDToColInfo.get(colID);
+        colOffsetInFieldMap.put(columnInfo.getName(), indexScanBuilder.getColumnsCount());
+        ColumnInfo.Builder colBuild = ColumnInfo.newBuilder(columnInfo.toProto(tableInfo));
+        indexScanBuilder.addColumns(colBuild);
+      }
+    }
+    return indexScanBuilder;
   }
 
   private void pushDownLimit(
@@ -1013,7 +1000,7 @@ public class TiDAGRequest implements Serializable {
   private String stringIndexRangeScan() {
     StringBuilder sb = new StringBuilder();
     this.clearPushDownInfo();
-    init();
+    buildIndexScan();
     sb.append("IndexRangeScan");
     sb.append(String.format("(Index:%s(", indexInfo.getName()));
     List<String> colNames =
