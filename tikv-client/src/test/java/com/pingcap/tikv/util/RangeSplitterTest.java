@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.util;
 
-import static com.pingcap.tikv.GrpcUtils.encodeKey;
 import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
