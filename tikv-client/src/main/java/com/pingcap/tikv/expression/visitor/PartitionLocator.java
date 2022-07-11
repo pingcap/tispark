@@ -1,26 +1,49 @@
 package com.pingcap.tikv.expression.visitor;
 
+import static com.pingcap.tikv.expression.FuncCallExpr.Type.YEAR;
+
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.FuncCallExpr;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
+import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.partition.PartitionedTable.PartitionLocatorContext;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DateType;
 import com.pingcap.tikv.types.IntegerType;
 
 public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorContext> {
 
   @Override
   public Boolean visit(ComparisonBinaryExpression node, PartitionLocatorContext context) {
-    ColumnRef columnRef = (ColumnRef) node.getLeft();
-    Constant constant = (Constant) node.getRight();
-    columnRef.resolve(context.getTableInfo());
+    Object data;
     Row row = context.getRow();
-    DataType type = columnRef.getColumnInfo().getType();
-    Object data = row.get(columnRef.getColumnInfo().getOffset(), type);
+    TiTableInfo tableInfo = context.getTableInfo();
+    Expression left = node.getLeft();
+    if (left instanceof ColumnRef) {
+      ColumnRef columnRef = (ColumnRef) left;
+      columnRef.resolve(tableInfo);
+      data = row.get(columnRef.getColumnInfo().getOffset(), columnRef.getColumnInfo().getType());
+    } else if (left instanceof FuncCallExpr) {
+      // TODO: support more function partition
+      FuncCallExpr partitionFuncExpr = (FuncCallExpr) left;
+      if (partitionFuncExpr.getFuncTp() == YEAR) {
+        data =
+            partitionFuncExpr.eval(Constant.create(row.getDate(0), DateType.DATE)).getValue();
+      } else {
+        throw new UnsupportedOperationException(
+            "Partition write only support YEAR() function");
+      }
+    } else {
+      throw new UnsupportedOperationException(
+          String.format("Unsupported expr %s", left));
+    }
+
+    Constant constant = (Constant) node.getRight();
     Operator comparisonType = node.getComparisonType();
 
     switch (comparisonType) {

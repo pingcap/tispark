@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PartitionExpression implements Serializable {
 
-  private Expression hashPartitionExpressions;
+  private Expression originExpression;
 
-  private Map<String, List<Expression>> rangeColumnRefExpressions;
+  private Map<String, List<Expression>> rangeColumnRefBoundExpressions;
 
-  private List<Expression> rangePartitionExpressions;
+  private List<Expression> rangePartitionBoundExpressions;
 }

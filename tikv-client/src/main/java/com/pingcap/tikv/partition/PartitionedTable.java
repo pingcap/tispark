@@ -30,6 +30,8 @@ import lombok.RequiredArgsConstructor;
 @Getter
 public class PartitionedTable implements Serializable {
 
+  private static final PartitionLocator partitionLocator = new PartitionLocator();
+
   private final TableCommon logicalTable;
 
   private final TableCommon[] physicalTables;
@@ -60,28 +62,24 @@ public class PartitionedTable implements Serializable {
 
   public static PartitionExpression generatePartitionExpr(TiTableInfo tableInfo) {
     TiPartitionInfo partitionInfo = tableInfo.getPartitionInfo();
-    PartitionExpression partitionExpr = new PartitionExpression();
     switch (partitionInfo.getType()) {
       case RangePartition:
         if (partitionInfo.getColumns().isEmpty()) {
-          partitionExpr.setRangePartitionExpressions(generateRangePartitionExpr(tableInfo));
+          return generateRangePartitionExpr(tableInfo);
         } else {
-          partitionExpr.setRangeColumnRefExpressions(generateRangeColumnPartitionExpr(tableInfo));
+          return generateRangeColumnPartitionExpr(tableInfo);
         }
-        break;
       case HashPartition:
-        partitionExpr.setHashPartitionExpressions(generateHashPartitionExpr(tableInfo));
-        break;
+        return generateHashPartitionExpr(tableInfo);
       default:
         throw new UnsupportedOperationException(
             String.format("Unsupported partition type %s", partitionInfo.getType()));
     }
-
-    return partitionExpr;
   }
 
-  private static Map<String, List<Expression>> generateRangeColumnPartitionExpr(
+  private static PartitionExpression generateRangeColumnPartitionExpr(
       TiTableInfo tableInfo) {
+    PartitionExpression partitionExpr = new PartitionExpression();
     TiPartitionInfo partitionInfo = tableInfo.getPartitionInfo();
     if (partitionInfo.getColumns().size() > 1) {
       throw new UnsupportedOperationException(
@@ -96,23 +94,31 @@ public class PartitionedTable implements Serializable {
       PartitionPruner.generateRangeExprs(partitionInfo, partExprs, parser, colRefName, i);
       column2PartitionExps.put(colRefName, partExprs);
     }
+    partitionExpr.setRangeColumnRefBoundExpressions(column2PartitionExps);
 
-    return column2PartitionExps;
+    return partitionExpr;
   }
 
-  private static Expression generateHashPartitionExpr(TiTableInfo tableInfo) {
+  private static PartitionExpression generateHashPartitionExpr(TiTableInfo tableInfo) {
     TiParser parser = new TiParser(tableInfo);
-    return parser.parseExpression(tableInfo.getPartitionInfo().getExpr());
+    PartitionExpression partitionExpr = new PartitionExpression();
+    partitionExpr.setOriginExpression(parser.parseExpression(tableInfo.getPartitionInfo().getExpr()));
+
+    return partitionExpr;
   }
 
-  private static List<Expression> generateRangePartitionExpr(TiTableInfo tableInfo) {
+  private static PartitionExpression generateRangePartitionExpr(TiTableInfo tableInfo) {
+    PartitionExpression partitionExpr = new PartitionExpression();
     TiPartitionInfo partitionInfo = tableInfo.getPartitionInfo();
-    String partitionExpr = partitionInfo.getExpr();
+    String originExpr = partitionInfo.getExpr();
     TiParser parser = new TiParser(tableInfo);
+    partitionExpr.setOriginExpression(parser.parseExpression(originExpr));
 
     List<Expression> rangePartitionExps = new ArrayList<>();
-    PartitionPruner.generateRangeExprs(partitionInfo, rangePartitionExps, parser, partitionExpr, 0);
-    return rangePartitionExps;
+    PartitionPruner.generateRangeExprs(partitionInfo, rangePartitionExps, parser, originExpr, 0);
+    partitionExpr.setRangePartitionBoundExpressions(rangePartitionExps);
+
+    return partitionExpr;
   }
 
   public TableCommon locatePartition(Row row) {
@@ -132,22 +138,22 @@ public class PartitionedTable implements Serializable {
   }
 
   private TableCommon locateHashPartition(Row row) {
-    Expression hashPartitionExpressions =
+    Expression originalExpr =
         Objects.requireNonNull(
-            partitionExpr.getHashPartitionExpressions(),
-            "HashPartitionExpression should not be null");
+            partitionExpr.getOriginExpression(),
+            "originalExpression should not be null");
 
-    if (hashPartitionExpressions instanceof ColumnRef) {
-      ColumnRef columnRef = (ColumnRef) hashPartitionExpressions;
+    if (originalExpr instanceof ColumnRef) {
+      ColumnRef columnRef = (ColumnRef) originalExpr;
       columnRef.resolve(logicalTable.getTableInfo());
       Number id =
           (Number)
               row.get(columnRef.getColumnInfo().getOffset(), columnRef.getColumnInfo().getType());
       int partitionId = (int) (id.longValue() % physicalTables.length);
       return physicalTables[partitionId];
-    } else if (hashPartitionExpressions instanceof FuncCallExpr) {
+    } else if (originalExpr instanceof FuncCallExpr) {
       // TODO: support more function partition
-      FuncCallExpr partitionFuncExpr = (FuncCallExpr) hashPartitionExpressions;
+      FuncCallExpr partitionFuncExpr = (FuncCallExpr) originalExpr;
       if (partitionFuncExpr.getFuncTp() == YEAR) {
         int result =
             (int) partitionFuncExpr.eval(Constant.create(row.getDate(0), DateType.DATE)).getValue();
@@ -163,34 +169,68 @@ public class PartitionedTable implements Serializable {
     }
   }
 
-  private TableCommon locateRangeColumnPartition(Row data) {
+  private TableCommon locateRangeColumnPartition(Row row) {
     Map<String, List<Expression>> rangeColumnRefExpressions =
-        partitionExpr.getRangeColumnRefExpressions();
+        Objects.requireNonNull(partitionExpr.getRangeColumnRefBoundExpressions(),
+           "RangeColumnRefBoundExpressions should not be null");
     if (rangeColumnRefExpressions.size() != 1) {
       throw new UnsupportedOperationException(
           "Currently only support range column partition on a single column");
     }
 
-    PartitionLocator partitionLocator = new PartitionLocator();
-
+    int partitionIndex = -1;
     for (Entry<String, List<Expression>> entry : rangeColumnRefExpressions.entrySet()) {
       List<Expression> value = entry.getValue();
-      for (int i = 0; i < value.size(); i++) {
-        Expression expression = value.get(i);
-        Boolean accept =
-            expression.accept(
-                partitionLocator, new PartitionLocatorContext(logicalTable.getTableInfo(), data));
-        if (accept) {
-          return physicalTables[i];
-        }
+      partitionIndex = getPartitionIndex(row, value);
+    }
+
+    return physicalTables[partitionIndex];
+  }
+
+  private TableCommon locateRangePartition(Row row) {
+    Expression originalExpr =
+        Objects.requireNonNull(
+            partitionExpr.getOriginExpression(),
+            "originalExpression should not be null");
+    List<Expression> rangePartitionBoundExpressions =
+        Objects.requireNonNull(partitionExpr.getRangePartitionBoundExpressions(),
+            "RangePartitionBoundExpressions should not be null");
+
+    int partitionIndex = -1;
+
+    if (originalExpr instanceof ColumnRef) {
+      ColumnRef columnRef = (ColumnRef) originalExpr;
+      columnRef.resolve(logicalTable.getTableInfo());
+      partitionIndex = getPartitionIndex(row, rangePartitionBoundExpressions);
+    } else if (originalExpr instanceof FuncCallExpr) {
+      // TODO: support more function partition
+      FuncCallExpr partitionFuncExpr = (FuncCallExpr) originalExpr;
+      if (partitionFuncExpr.getFuncTp() == YEAR) {
+        partitionIndex = getPartitionIndex(row, rangePartitionBoundExpressions);
+      } else {
+        throw new UnsupportedOperationException(
+            "Range partition write only support YEAR() function");
+      }
+    } else {
+      throw new UnsupportedOperationException(
+          String.format("Unsupported partition expr %s", partitionExpr));
+    }
+
+    return physicalTables[partitionIndex];
+  }
+
+  private int getPartitionIndex(Row row, List<Expression> rangePartitionBoundExpressions) {
+    for (int i = 0; i < rangePartitionBoundExpressions.size(); i++) {
+      Expression expression = rangePartitionBoundExpressions.get(i);
+      Boolean accept =
+          expression.accept(
+              partitionLocator, new PartitionLocatorContext(logicalTable.getTableInfo(), row));
+      if (accept) {
+        return i;
       }
     }
 
-    throw new IllegalArgumentException("Cannot find partition for row " + data);
-  }
-
-  private TableCommon locateRangePartition(Row data) {
-    return null;
+    throw new IllegalArgumentException("Cannot find partition for row " + row);
   }
 
   @Data
