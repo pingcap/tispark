@@ -165,7 +165,7 @@ class StatisticsTestSuite extends BasePlanTest {
           cancel()
         }
         val df = spark.sql(query)
-        checkIsTableScan(df, tableName)
+        checkIsTableReader(df, tableName)
       }
     }
   }
@@ -200,7 +200,7 @@ class StatisticsTestSuite extends BasePlanTest {
     checkIndex(df, "idx_tp_tinyint_tp_int")
 
     assertThrows[TestFailedException] {
-      checkIsTableScan(df, tableName)
+      checkIsTableReader(df, tableName)
     }
 
     checkIsIndexLookUp(df, tableName)

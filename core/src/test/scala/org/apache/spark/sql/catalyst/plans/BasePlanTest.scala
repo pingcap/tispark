@@ -78,7 +78,7 @@ class BasePlanTest extends BaseTiSparkTest {
   private def extractIndexInfo(coprocessorRDD: ColumnarCoprocessorRDD): TiIndexInfo =
     coprocessorRDD.dagRequest.getIndexInfo
 
-  def checkIsTableScan[T](df: Dataset[T], tableName: String): Unit =
+  def checkIsTableReader[T](df: Dataset[T], tableName: String): Unit =
     checkScanType(df, tableName, ScanType.TABLE_READER)
 
   private def checkScanType[T](df: Dataset[T], tableName: String, scanType: ScanType): Unit = {
