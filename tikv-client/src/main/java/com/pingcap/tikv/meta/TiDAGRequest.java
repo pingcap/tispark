@@ -394,8 +394,6 @@ public class TiDAGRequest implements Serializable {
     return dagRequestBuilder;
   }
 
-  private void buildTableScanCols() {}
-
   private IndexScan.Builder buildIndexScanCols(
       List<Long> outputColIDs,
       List<Long> selectionCols,

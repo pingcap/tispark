@@ -282,7 +282,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     tidbStmt.execute(
       """
         |CREATE TABLE `t1` (
-        |`a` bigint(20)  NOT NULL,
+        |`a` int(20)  NOT NULL,
         |`b` varchar(255) NOT NULL,
         |`c` varchar(255) DEFAULT NULL
         |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
