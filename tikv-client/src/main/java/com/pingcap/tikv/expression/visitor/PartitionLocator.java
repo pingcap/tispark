@@ -81,8 +81,7 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
   }
 
   /**
-   * For partition using MAXVALUE such as
-   * "partition p2 values less than MAXVALUE" <br>
+   * For partition using MAXVALUE such as "partition p2 values less than MAXVALUE" <br>
    * it will be converted to <br>
    * [[year(birthday@DATE) GREATER_EQUAL ${lower_bound}] AND 1], <br>
    * 1 is Constant standing for always true.
