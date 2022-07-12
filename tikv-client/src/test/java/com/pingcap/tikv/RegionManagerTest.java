@@ -74,6 +74,15 @@ public class RegionManagerTest extends PDMockServerTest {
                 StoreState.Up,
                 GrpcUtils.makeStoreLabel("k1", "v1"),
                 GrpcUtils.makeStoreLabel("k2", "v2"))));
+    pdServer.addGetStoreResp(
+        GrpcUtils.makeGetStoreResponse(
+            pdServer.getClusterId(),
+            GrpcUtils.makeStore(
+                ids[i.getAndIncrement()],
+                testAddress,
+                StoreState.Up,
+                GrpcUtils.makeStoreLabel("k1", "v1"),
+                GrpcUtils.makeStoreLabel("k2", "v2"))));
 
     TiRegion region = mgr.getRegionByKey(startKey);
     assertEquals(region.getId(), regionId);
@@ -112,15 +121,35 @@ public class RegionManagerTest extends PDMockServerTest {
                 GrpcUtils.makeRegionEpoch(confVer, ver),
                 GrpcUtils.makePeer(storeId, 10),
                 GrpcUtils.makePeer(storeId + 1, 20))));
+    AtomicInteger i = new AtomicInteger(0);
+    long[] ids = new long[] {10, 20};
     pdServer.addGetStoreResp(
         GrpcUtils.makeGetStoreResponse(
             pdServer.getClusterId(),
             GrpcUtils.makeStore(
-                storeId,
+                ids[i.getAndIncrement()],
                 testAddress,
-                Metapb.StoreState.Up,
+                StoreState.Up,
                 GrpcUtils.makeStoreLabel("k1", "v1"),
                 GrpcUtils.makeStoreLabel("k2", "v2"))));
+    pdServer.addGetStoreResp(
+        GrpcUtils.makeGetStoreResponse(
+            pdServer.getClusterId(),
+            GrpcUtils.makeStore(
+                ids[i.getAndIncrement()],
+                testAddress,
+                StoreState.Up,
+                GrpcUtils.makeStoreLabel("k1", "v1"),
+                GrpcUtils.makeStoreLabel("k2", "v2"))));
+    //    pdServer.addGetStoreResp(
+    //        GrpcUtils.makeGetStoreResponse(
+    //            pdServer.getClusterId(),
+    //            GrpcUtils.makeStore(
+    //                storeId,
+    //                testAddress,
+    //                Metapb.StoreState.Up,
+    //                GrpcUtils.makeStoreLabel("k1", "v1"),
+    //                GrpcUtils.makeStoreLabel("k2", "v2"))));
     Pair<TiRegion, TiStore> pair = mgr.getRegionStorePairByKey(searchKey);
     assertEquals(pair.first.getId(), regionId);
     assertEquals(pair.first.getId(), storeId);

@@ -90,4 +90,9 @@ public class ConverterUpstream {
       org.tikv.common.util.BackOffFunction.BackOffFuncType upstreamType) {
     return com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.valueOf(upstreamType.name());
   }
+
+  public static org.tikv.common.util.BackOffFunction.BackOffFuncType convertBackOffFunctionType(
+      com.pingcap.tikv.util.BackOffFunction.BackOffFuncType funcType) {
+    return org.tikv.common.util.BackOffFunction.BackOffFuncType.valueOf(funcType.name());
+  }
 }
