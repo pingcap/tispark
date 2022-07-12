@@ -74,7 +74,9 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
       return (int) node.getValue() == 1;
     } else {
       throw new IllegalStateException(
-          String.format(("Unsupported constant, type: %s, value: %s\n"), node.getDataType(),
+          String.format(
+              ("Unsupported constant, type: %s, value: %s\n"),
+              node.getDataType(),
               node.getValue()));
     }
   }
