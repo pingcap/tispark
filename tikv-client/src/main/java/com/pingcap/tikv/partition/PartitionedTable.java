@@ -103,9 +103,12 @@ public class PartitionedTable implements Serializable {
 
     Map<String, List<Expression>> column2PartitionExps = new HashMap<>();
     TiParser parser = new TiParser(tableInfo);
+
     for (int i = 0; i < partitionInfo.getColumns().size(); i++) {
       List<Expression> partExprs = new ArrayList<>();
       String colRefName = partitionInfo.getColumns().get(i);
+
+      // the result is like generateRangePartitionExpr(tableInfo)
       PartitionPruner.generateRangeExprs(partitionInfo, partExprs, parser, colRefName, i);
       column2PartitionExps.put(colRefName, partExprs);
     }
@@ -115,12 +118,17 @@ public class PartitionedTable implements Serializable {
   }
 
   private static PartitionExpression generateHashPartitionExpr(TiTableInfo tableInfo) {
-    TiParser parser = new TiParser(tableInfo);
     PartitionExpression partitionExpr = new PartitionExpression();
-    partitionExpr.setOriginExpression(
-        parser.parseExpression(tableInfo.getPartitionInfo().getExpr()));
+    partitionExpr.setOriginExpression(generateOriginExpression(tableInfo));
 
     return partitionExpr;
+  }
+
+  private static Expression generateOriginExpression(TiTableInfo tableInfo) {
+    TiParser parser = new TiParser(tableInfo);
+    // For column, originExpression is like birthday@DATE
+    // For function, originExpression is like year(birthday@DATE)
+    return parser.parseExpression(tableInfo.getPartitionInfo().getExpr());
   }
 
   private static PartitionExpression generateRangePartitionExpr(TiTableInfo tableInfo) {
@@ -161,6 +169,7 @@ public class PartitionedTable implements Serializable {
     if (originalExpr instanceof ColumnRef) {
       ColumnRef columnRef = (ColumnRef) originalExpr;
       columnRef.resolve(logicalTable.getTableInfo());
+      // Hash partition only support int types, they all can convert to Number
       Number id =
           (Number)
               row.get(columnRef.getColumnInfo().getOffset(), columnRef.getColumnInfo().getType());
@@ -235,13 +244,20 @@ public class PartitionedTable implements Serializable {
     return physicalTables[partitionIndex];
   }
 
+  /**
+   * Evaluate the expression and get the physical table index.
+   *
+   * @param row
+   * @param rangePartitionBoundExpressions
+   * @return
+   */
   private int getPartitionIndex(Row row, List<Expression> rangePartitionBoundExpressions) {
     for (int i = 0; i < rangePartitionBoundExpressions.size(); i++) {
       Expression expression = rangePartitionBoundExpressions.get(i);
-      Boolean accept =
+      Boolean match =
           expression.accept(
               partitionLocator, new PartitionLocatorContext(logicalTable.getTableInfo(), row));
-      if (accept) {
+      if (match) {
         return i;
       }
     }

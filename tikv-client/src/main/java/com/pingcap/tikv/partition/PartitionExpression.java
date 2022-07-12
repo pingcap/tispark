@@ -27,9 +27,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PartitionExpression implements Serializable {
 
+  // the original partition expression from TiTableInfo,
+  // it can be a column or a function when Hash partition and ranging partition
   private Expression originExpression;
 
+  // key is the partition column name, value is ranges' expressions of the partition column
   private Map<String, List<Expression>> rangeColumnRefBoundExpressions;
 
+  // the ranges' expressions of the original partition expression when ranging partition.
   private List<Expression> rangePartitionBoundExpressions;
 }

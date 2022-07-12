@@ -18,6 +18,7 @@ package com.pingcap.tispark.write
 
 import com.pingcap.tikv._
 import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.partition.{PartitionedTable, TableCommon}
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.auth.TiAuthorization
@@ -161,32 +162,14 @@ class TiBatchWrite(
 
           val table = new TableCommon(tiTableInfo.getId, tiTableInfo.getId, tiTableInfo)
 
+          /**
+           * Since `TiBatchWriteTable` is associated with a physical table,
+           * - if the table is partitioned, we need to transfer the logical table to the physical table
+           * and then group the rows by physical table to generate TiBatchWriteTable.
+           * - if the table is not partitioned, the logical table is the same as the physical table.
+           */
           if (tiTableInfo.isPartitionEnabled) {
-            val mm = new mutable.HashMap[TableCommon, mutable.Set[Row]]
-              with mutable.MultiMap[TableCommon, Row]
-
-            val pTable = PartitionedTable.newPartitionTable(table, tiTableInfo)
-            val colsInDf = df.columns.toList.map(_.toLowerCase())
-            df.collect()
-              .foreach(row => {
-                val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
-                mm.addBinding(pTable.locatePartition(tiRow), row)
-              })
-
-            mm.map {
-              case (tableCommon, rowSet) =>
-                val data: RDD[Row] = tiContext.sparkSession.sparkContext.makeRDD(rowSet.toSeq)
-                val dfPartitioned: DataFrame =
-                  tiContext.sqlContext.createDataFrame(data, df.schema)
-                new TiBatchWriteTable(
-                  dfPartitioned,
-                  tiContext,
-                  options.setDBTable(dbTable),
-                  tiConf,
-                  tiDBJDBCClient,
-                  isTiDBV4,
-                  tableCommon)
-            }.toList
+            transferToPhysicalTables(df, tiTableInfo, table, isTiDBV4, dbTable)
           } else {
             List(
               new TiBatchWriteTable(
@@ -345,6 +328,39 @@ class TiBatchWrite(
 
     val endMS = System.currentTimeMillis()
     logger.info(s"batch write cost ${(endMS - startMS) / 1000} seconds")
+  }
+
+  private def transferToPhysicalTables(
+      df: DataFrame,
+      tiTableInfo: TiTableInfo,
+      table: TableCommon,
+      isTiDBV4: Boolean,
+      dbTable: DBTable) = {
+    val mm = new mutable.HashMap[TableCommon, mutable.Set[SparkRow]]
+      with mutable.MultiMap[TableCommon, SparkRow]
+
+    val pTable = PartitionedTable.newPartitionTable(table, tiTableInfo)
+    val colsInDf = df.columns.toList.map(_.toLowerCase())
+    df.collect()
+      .foreach(row => {
+        val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
+        mm.addBinding(pTable.locatePartition(tiRow), row)
+      })
+
+    mm.map {
+      case (tableCommon, rowSet) =>
+        val data: RDD[SparkRow] = tiContext.sparkSession.sparkContext.makeRDD(rowSet.toSeq)
+        val dfPartitioned: DataFrame =
+          tiContext.sqlContext.createDataFrame(data, df.schema)
+        new TiBatchWriteTable(
+          dfPartitioned,
+          tiContext,
+          options.setDBTable(dbTable),
+          tiConf,
+          tiDBJDBCClient,
+          isTiDBV4,
+          tableCommon)
+    }.toList
   }
 
   private def getRegionSplitPoints(

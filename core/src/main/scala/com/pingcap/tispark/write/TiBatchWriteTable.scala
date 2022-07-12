@@ -338,7 +338,7 @@ class TiBatchWriteTable(
     if (tiTable.getTableInfo.isPartitionEnabled) {
       val pType = tiTable.getTableInfo.getPartitionInfo.getType
       if (pType != PartitionType.RangePartition && pType != PartitionType.HashPartition) {
-        throw new IllegalArgumentException(s"Delete from $pType partition table is not supported")
+        throw new UnsupportedOperationException(s"Unsupported partition type: $pType")
       }
     }
 

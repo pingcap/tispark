@@ -61,6 +61,16 @@ case class TiDBDelete(
 
     val colsInDf = df.columns.toList.map(_.toLowerCase())
 
+    /**
+     * There will be a stuck the following codes are executed after df.persist()
+     * The reason has not been figured out yet.
+     *
+     * TableCommon is the physical table associated with the TiRow, we can get logical table name
+     * from tiTableInfo.
+     * - if the table is partitioned, we need to transfer the logical table to the physical table
+     * and then group the rows by the physical table.
+     * - if the table is not partitioned, the logical table is the same as the physical table.
+     */
     val tiRowMapRDD: RDD[(TableCommon, TiRow)] = sparkContext.makeRDD(
       df.rdd
         .mapPartitions { rowIterator =>
@@ -70,6 +80,7 @@ case class TiDBDelete(
             val pTable = PartitionedTable.newPartitionTable(table, tiTableInfo)
             rowIterator.map { row =>
               val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
+              // locate partition and return the physical table
               pTable.locatePartition(tiRow) -> tiRow
             }
           } else {
@@ -168,7 +179,7 @@ case class TiDBDelete(
     if (tiTableInfo.isPartitionEnabled) {
       val pType = tiTableInfo.getPartitionInfo.getType
       if (pType != PartitionType.RangePartition && pType != PartitionType.HashPartition) {
-        throw new IllegalArgumentException(s"Delete from $pType partition table is not supported")
+        throw new UnsupportedOperationException(s"Unsupported partition type: $pType")
       }
     }
 

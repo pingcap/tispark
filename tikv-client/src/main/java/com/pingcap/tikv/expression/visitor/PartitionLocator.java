@@ -25,6 +25,7 @@ import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.FuncCallExpr;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
+import com.pingcap.tikv.expression.LogicalBinaryExpression.Type;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.partition.PartitionedTable.PartitionLocatorContext;
 import com.pingcap.tikv.row.Row;
@@ -33,6 +34,11 @@ import com.pingcap.tikv.types.IntegerType;
 
 public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorContext> {
 
+  /**
+   * For ComparisonBinaryExpression such as <br>
+   * year(birthday@DATE) GREATER_EQUAL 1995, <br>
+   * we need to evaluate the result of the left node and compare it with the right node.
+   */
   @Override
   public Boolean visit(ComparisonBinaryExpression node, PartitionLocatorContext context) {
     Object data;
@@ -52,7 +58,13 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
         throw new UnsupportedOperationException("Partition write only support YEAR() function");
       }
     } else {
-      throw new UnsupportedOperationException(String.format("Unsupported expr %s", left));
+      throw new UnsupportedOperationException(
+          String.format("Unsupported expr in range partition %s", left));
+    }
+
+    if (!(node.getRight() instanceof Constant)) {
+      throw new UnsupportedOperationException(
+          String.format("Unsupported right node in partition range expressions %s", node));
     }
 
     Constant constant = (Constant) node.getRight();
@@ -68,6 +80,13 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
     }
   }
 
+  /**
+   * For partition using MAXVALUE such as
+   * "partition p2 values less than MAXVALUE" <br>
+   * it will be converted to <br>
+   * [[year(birthday@DATE) GREATER_EQUAL ${lower_bound}] AND 1], <br>
+   * 1 is Constant standing for always true.
+   */
   @Override
   public Boolean visit(Constant node, PartitionLocatorContext context) {
     if (node.getDataType() == IntegerType.TINYINT) {
@@ -81,11 +100,20 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
     }
   }
 
+  /**
+   * For logicalBinaryExpression such as [[year(birthday@DATE) GREATER_EQUAL 1995] AND
+   * [year(birthday@DATE) LESS_THAN 1997]] we need to get the result of these two
+   * ComparisonBinaryExpression.
+   */
   @Override
   public Boolean visit(LogicalBinaryExpression node, PartitionLocatorContext context) {
     Expression left = node.getLeft();
     Expression right = node.getRight();
 
-    return left.accept(this, context) && right.accept(this, context);
+    if (node.getCompType() == Type.AND) {
+      return left.accept(this, context) && right.accept(this, context);
+    } else {
+      throw new UnsupportedOperationException("Unsupported logical binary expression: " + node);
+    }
   }
 }
