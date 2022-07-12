@@ -41,6 +41,7 @@ public class FuncCallExprEval {
             DateTime date = DateTime.parse((String) literal.getValue());
             return Constant.create(date.getYear(), IntegerType.INT);
           } else if (type instanceof DateType) {
+            // literal can be java.sql.Date, use new DateTime() to avoid convert error
             DateTime date = new DateTime(literal.getValue());
             return Constant.create(date.getYear(), IntegerType.INT);
           } else if (type instanceof DateTimeType) {
