@@ -66,7 +66,8 @@ class TiDBTableProvider
           table
         }
         TiDBTable(tiContext.tiSession, tiTableRef, copyTable, ts, Some(scalaMap))(
-          sparkSession.sqlContext, sparkSession.sparkContext)
+          sparkSession.sqlContext,
+          sparkSession.sparkContext)
       case None => throw new TiBatchWriteException("TiExtensions is disable!")
     }
   }

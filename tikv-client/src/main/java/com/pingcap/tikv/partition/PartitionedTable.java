@@ -251,6 +251,7 @@ public class PartitionedTable implements Serializable {
 
   @Data
   public static class PartitionLocatorContext {
+
     private final TiTableInfo tableInfo;
     private final Row row;
   }

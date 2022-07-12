@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class PartitionPruner {
+
   public static List<Expression> extractLogicalOrComparisonExpr(List<Expression> filters) {
     List<Expression> filteredFilters = new ArrayList<>();
     for (Expression expr : filters) {

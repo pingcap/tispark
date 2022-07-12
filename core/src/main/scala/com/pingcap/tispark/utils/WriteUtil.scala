@@ -17,7 +17,11 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
-import com.pingcap.tikv.exception.{ConvertOverflowException, TiBatchWriteException, TiDBConvertException}
+import com.pingcap.tikv.exception.{
+  ConvertOverflowException,
+  TiBatchWriteException,
+  TiDBConvertException
+}
 import com.pingcap.tikv.key._
 import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.partition.TableCommon
@@ -43,9 +47,9 @@ object WriteUtil {
    * @return
    */
   def sparkRow2TiKVRow(
-                        sparkRow: SparkRow,
-                        tiTableInfo: TiTableInfo,
-                        colsInDf: List[String]): TiRow = {
+      sparkRow: SparkRow,
+      tiTableInfo: TiTableInfo,
+      colsInDf: List[String]): TiRow = {
     val colsMapInTiDB = tiTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
 
     val fieldCount = sparkRow.size
@@ -120,9 +124,10 @@ object WriteUtil {
    * @return
    */
   def generateRecordKVRDDToDelete(rdd: RDD[WrappedRow], tableId: Long): RDD[WrappedEncodedRow] = {
-    rdd.map { wrappedRow => {
-      generateRecordKVToDelete(wrappedRow, tableId)
-    }
+    rdd.map { wrappedRow =>
+      {
+        generateRecordKVToDelete(wrappedRow, tableId)
+      }
     }
   }
 
@@ -151,9 +156,9 @@ object WriteUtil {
    * @return Map[Long, RDD[WrappedEncodedRow], The key of map is indexId
    */
   def generateIndexKVRDDs(
-                           rdd: RDD[WrappedRow],
-                           tiTable: TableCommon,
-                           remove: Boolean): Map[Long, RDD[WrappedEncodedRow]] = {
+      rdd: RDD[WrappedRow],
+      tiTable: TableCommon,
+      remove: Boolean): Map[Long, RDD[WrappedEncodedRow]] = {
     val tableInfo = tiTable.getTableInfo
     tableInfo.getIndices.asScala.flatMap { index =>
       if (tableInfo.isCommonHandle && index.isPrimary) {
@@ -165,11 +170,11 @@ object WriteUtil {
   }
 
   def generateIndexKVs(
-                        rdd: WrappedRow,
-                        tiTable: TableCommon,
-                        remove: Boolean): mutable.Map[Long, mutable.Set[WrappedEncodedRow]] = {
+      rdd: WrappedRow,
+      tiTable: TableCommon,
+      remove: Boolean): mutable.Map[Long, mutable.Set[WrappedEncodedRow]] = {
     val tableInfo = tiTable.getTableInfo
-    list2multimap(tableInfo.getIndices.asScala.flatMap { index =>
+    listPair2multimap(tableInfo.getIndices.asScala.flatMap { index =>
       if (tableInfo.isCommonHandle && index.isPrimary) {
         None
       } else {
@@ -177,9 +182,6 @@ object WriteUtil {
       }
     }.toList)
   }
-
-  def list2multimap[A, B](list: List[(A, B)]) =
-    list.foldLeft(new mutable.HashMap[A, mutable.Set[B]] with mutable.MultiMap[A, B]) { (acc, pair) => acc.addBinding(pair._1, pair._2) }
 
   /**
    * mix the results that are produced by method generateIndexKVs
@@ -191,18 +193,18 @@ object WriteUtil {
    * @return
    */
   def generateIndexKVRDD(
-                          sc: SparkContext,
-                          rdd: RDD[WrappedRow],
-                          tiTable: TableCommon,
-                          remove: Boolean): RDD[WrappedEncodedRow] = {
+      sc: SparkContext,
+      rdd: RDD[WrappedRow],
+      tiTable: TableCommon,
+      remove: Boolean): RDD[WrappedEncodedRow] = {
     val rdds = generateIndexKVRDDs(rdd, tiTable, remove)
     rdds.values.foldLeft(sc.emptyRDD[WrappedEncodedRow])(_ ++ _)
   }
 
   def generateIndexKV(
-                       rdd: WrappedRow,
-                       tiTable: TableCommon,
-                       remove: Boolean): List[WrappedEncodedRow] = {
+      rdd: WrappedRow,
+      tiTable: TableCommon,
+      remove: Boolean): List[WrappedEncodedRow] = {
     val rdds = generateIndexKVs(rdd, tiTable, remove)
     rdds.values.flatten.toList
   }
@@ -211,21 +213,20 @@ object WriteUtil {
    * generateIndex for UniqueIndexKey and SecondaryIndexKey
    */
   private def generateIndexRDD(
-                                rdd: RDD[WrappedRow],
-                                index: TiIndexInfo,
-                                tiTable: TableCommon,
-                                remove: Boolean): RDD[WrappedEncodedRow] = {
+      rdd: RDD[WrappedRow],
+      index: TiIndexInfo,
+      tiTable: TableCommon,
+      remove: Boolean): RDD[WrappedEncodedRow] = {
     rdd.map { row =>
       generateIndex(row, index, tiTable, remove)
     }
   }
 
-
   private def generateIndex(
-                             row: WrappedRow,
-                             index: TiIndexInfo,
-                             tiTable: TableCommon,
-                             remove: Boolean): WrappedEncodedRow = {
+      row: WrappedRow,
+      index: TiIndexInfo,
+      tiTable: TableCommon,
+      remove: Boolean): WrappedEncodedRow = {
     if (index.isUnique) {
       val (encodedKey, encodedValue) =
         generateUniqueIndexKey(row.row, row.handle, index, tiTable, remove)
@@ -259,11 +260,11 @@ object WriteUtil {
    * index encoded handle to value.
    */
   private def generateUniqueIndexKey(
-                                      row: TiRow,
-                                      handle: Handle,
-                                      index: TiIndexInfo,
-                                      tiTable: TableCommon,
-                                      remove: Boolean): (SerializableKey, Array[Byte]) = {
+      row: TiRow,
+      handle: Handle,
+      index: TiIndexInfo,
+      tiTable: TableCommon,
+      remove: Boolean): (SerializableKey, Array[Byte]) = {
 
     // NULL is only allowed in unique key, primary key does not allow NULL value
     val encodeResult = IndexKey.encodeIndexDataValues(
@@ -272,10 +273,8 @@ object WriteUtil {
       handle,
       index.isUnique && !index.isPrimary,
       tiTable.getTableInfo)
-    val indexKey = IndexKey.toIndexKey(
-      locatePhysicalTable(row, tiTable),
-      index.getId,
-      encodeResult.keys: _*)
+    val indexKey =
+      IndexKey.toIndexKey(locatePhysicalTable(row, tiTable), index.getId, encodeResult.keys: _*)
 
     val value = if (remove) {
       new Array[Byte](0)
@@ -298,13 +297,15 @@ object WriteUtil {
   }
 
   private def generateSecondaryIndexKey(
-                                         row: TiRow,
-                                         handle: Handle,
-                                         index: TiIndexInfo,
-                                         tiTable: TableCommon,
-                                         remove: Boolean): (SerializableKey, Array[Byte]) = {
+      row: TiRow,
+      handle: Handle,
+      index: TiIndexInfo,
+      tiTable: TableCommon,
+      remove: Boolean): (SerializableKey, Array[Byte]) = {
     val keys =
-      IndexKey.encodeIndexDataValues(row, index.getIndexColumns, handle, false, tiTable.getTableInfo).keys
+      IndexKey
+        .encodeIndexDataValues(row, index.getIndexColumns, handle, false, tiTable.getTableInfo)
+        .keys
     val cdo = new CodecDataOutput()
     cdo.write(
       IndexKey.toIndexKey(locatePhysicalTable(row, tiTable), index.getId, keys: _*).getBytes)
@@ -330,4 +331,16 @@ object WriteUtil {
   def locatePhysicalTable(row: TiRow, tiTable: TableCommon): Long = {
     tiTable.getPhysicalTableId
   }
+
+  /**
+   * Convert a list of (key, value) pairs to a map from key to a set of values.
+   * @param list the list of (key, value) pairs
+   * @tparam A key type
+   * @tparam B value type
+   * @return
+   */
+  def listPair2multimap[A, B](list: List[(A, B)]) =
+    list.foldLeft(new mutable.HashMap[A, mutable.Set[B]] with mutable.MultiMap[A, B]) {
+      (acc, pair) => acc.addBinding(pair._1, pair._2)
+    }
 }

@@ -36,15 +36,15 @@ import java.util
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-class TiBatchWriteTable (
-                         @transient var df: DataFrame,
-                         @transient val tiContext: TiContext,
-                         val options: TiDBOptions,
-                         val tiConf: TiConfiguration,
-                         @transient val tiDBJDBCClient: TiDBJDBCClient,
-                         val isTiDBV4: Boolean,
-                         val tiTable: TableCommon)
-  extends Serializable {
+class TiBatchWriteTable(
+    @transient var df: DataFrame,
+    @transient val tiContext: TiContext,
+    val options: TiDBOptions,
+    val tiConf: TiConfiguration,
+    @transient val tiDBJDBCClient: TiDBJDBCClient,
+    val isTiDBV4: Boolean,
+    val tiTable: TableCommon)
+    extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
   import com.pingcap.tispark.write.TiBatchWrite._
@@ -56,9 +56,11 @@ class TiBatchWriteTable (
   private val tiTableRef: TiTableReference = options.getTiTableRef(tiConf)
   private val tiDBInfo: TiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
   private val tableColSize: Int = tiTable.getTableInfo.getColumns.size()
-  private val colsMapInTiDB: Map[String, TiColumnInfo] = tiTable.getTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
+  private val colsMapInTiDB: Map[String, TiColumnInfo] =
+    tiTable.getTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
   private var colsInDf: List[String] = df.columns.toList.map(_.toLowerCase())
-  private val uniqueIndices: Seq[TiIndexInfo] = tiTable.getTableInfo.getIndices.asScala.filter(index => index.isUnique)
+  private val uniqueIndices: Seq[TiIndexInfo] =
+    tiTable.getTableInfo.getIndices.asScala.filter(index => index.isUnique)
   private val handleCol: TiColumnInfo = tiTable.getTableInfo.getPKIsHandleColumn
   private var tableLocked: Boolean = false
   private var autoIncProvidedID: Boolean = false
@@ -136,7 +138,8 @@ class TiBatchWriteTable (
 
         if (!options.replace) {
 
-          val colNames = tiTable.getTableInfo.getColumns.asScala.map(col => col.getName).mkString(", ")
+          val colNames =
+            tiTable.getTableInfo.getColumns.asScala.map(col => col.getName).mkString(", ")
           throw new TiBatchWriteException(
             s"""currently user provided auto increment value is only supported in update mode!
                |please set parameter replace to true!
@@ -232,10 +235,10 @@ class TiBatchWriteTable (
       }
 
       val deletion = (if (options.useSnapshotBatchGet) {
-        generateDataToBeRemovedRddV2(distinctWrappedRowRdd, startTimeStamp)
-      } else {
-        generateDataToBeRemovedRddV1(distinctWrappedRowRdd, startTimeStamp)
-      }).persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+                        generateDataToBeRemovedRddV2(distinctWrappedRowRdd, startTimeStamp)
+                      } else {
+                        generateDataToBeRemovedRddV1(distinctWrappedRowRdd, startTimeStamp)
+                      }).persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
       persistedRDDList = deletion :: persistedRDDList
 
       if (!options.replace && !deletion.isEmpty()) {
@@ -332,11 +335,10 @@ class TiBatchWriteTable (
     }
 
     // Only RangePartition and HashPartition are supported
-    if (tiTable.getTableInfo.isPartitionEnabled){
+    if (tiTable.getTableInfo.isPartitionEnabled) {
       val pType = tiTable.getTableInfo.getPartitionInfo.getType
       if (pType != PartitionType.RangePartition && pType != PartitionType.HashPartition) {
-        throw new IllegalArgumentException(
-          s"Delete from $pType partition table is not supported")
+        throw new IllegalArgumentException(s"Delete from $pType partition table is not supported")
       }
     }
 
@@ -349,21 +351,31 @@ class TiBatchWriteTable (
 
   def checkAuthorization(tiAuthorization: Option[TiAuthorization], options: TiDBOptions): Unit = {
     if (options.replace) {
-      TiAuthorization.authorizeForInsert(tiTable.getTableInfo.getName, tiDBInfo.getName, tiAuthorization)
-      TiAuthorization.authorizeForDelete(tiTable.getTableInfo.getName, tiDBInfo.getName, tiAuthorization)
+      TiAuthorization.authorizeForInsert(
+        tiTable.getTableInfo.getName,
+        tiDBInfo.getName,
+        tiAuthorization)
+      TiAuthorization.authorizeForDelete(
+        tiTable.getTableInfo.getName,
+        tiDBInfo.getName,
+        tiAuthorization)
     } else {
-      TiAuthorization.authorizeForInsert(tiTable.getTableInfo.getName, tiDBInfo.getName, tiAuthorization)
+      TiAuthorization.authorizeForInsert(
+        tiTable.getTableInfo.getName,
+        tiDBInfo.getName,
+        tiAuthorization)
     }
   }
 
   def checkColumnNumbers(): Unit = {
-    if (!tiTable.getTableInfo.hasAutoIncrementColumn && colsInDf.lengthCompare(tableColSize) != 0) {
+    if (!tiTable.getTableInfo.hasAutoIncrementColumn && colsInDf.lengthCompare(
+        tableColSize) != 0) {
       throw new TiBatchWriteException(
         s"table without auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize")
     }
 
     if (tiTable.getTableInfo.hasAutoIncrementColumn && colsInDf.lengthCompare(
-      tableColSize) != 0 && colsInDf.lengthCompare(tableColSize - 1) != 0) {
+        tableColSize) != 0 && colsInDf.lengthCompare(tableColSize - 1) != 0) {
       throw new TiBatchWriteException(
         s"table with auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize and table column size - 1 ${tableColSize - 1} ")
     }
@@ -372,7 +384,11 @@ class TiBatchWriteTable (
   // update table statistics: modify_count & count
   def updateTableStatistics(startTs: Long): Unit = {
     try {
-      tiDBJDBCClient.updateTableStatistics(startTs, tiTable.getTableInfo.getId, deltaCount, modifyCount)
+      tiDBJDBCClient.updateTableStatistics(
+        startTs,
+        tiTable.getTableInfo.getId,
+        deltaCount,
+        modifyCount)
     } catch {
       case e: Throwable => logger.warn("updateTableStatistics error!", e)
     }
@@ -392,8 +408,8 @@ class TiBatchWriteTable (
   }
 
   private def generateDataToBeRemovedRddV1(
-                                            rdd: RDD[WrappedRow],
-                                            startTs: TiTimestamp): RDD[WrappedRow] = {
+      rdd: RDD[WrappedRow],
+      startTs: TiTimestamp): RDD[WrappedRow] = {
     rdd
       .mapPartitions { wrappedRows =>
         val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs.getPrevious)
@@ -430,8 +446,8 @@ class TiBatchWriteTable (
   }
 
   private def generateDataToBeRemovedRddV2(
-                                            rdd: RDD[WrappedRow],
-                                            startTs: TiTimestamp): RDD[WrappedRow] = {
+      rdd: RDD[WrappedRow],
+      startTs: TiTimestamp): RDD[WrappedRow] = {
     rdd.mapPartitions { wrappedRows =>
       val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs.getPrevious)
       var rowBuf = mutable.ListBuffer.empty[WrappedRow]
@@ -473,7 +489,7 @@ class TiBatchWriteTable (
         }
 
         def genNextHandleBatch(
-                                batch: List[WrappedRow]): (util.List[Array[Byte]], util.List[Handle]) = {
+            batch: List[WrappedRow]): (util.List[Array[Byte]], util.List[Handle]) = {
           val list = new util.ArrayList[Array[Byte]]()
           val handles = new util.ArrayList[Handle]()
           batch.foreach { wrappedRow =>
@@ -485,8 +501,8 @@ class TiBatchWriteTable (
         }
 
         def genNextUniqueIndexBatch(
-                                     batch: List[WrappedRow],
-                                     index: TiIndexInfo): (util.List[Array[Byte]], util.List[TiRow]) = {
+            batch: List[WrappedRow],
+            index: TiIndexInfo): (util.List[Array[Byte]], util.List[TiRow]) = {
           val keyList = new util.ArrayList[Array[Byte]]()
           val rowList = new util.ArrayList[TiRow]()
           batch.foreach { wrappedRow =>
@@ -507,8 +523,8 @@ class TiBatchWriteTable (
         }
 
         def processHandleDelete(
-                                 oldValueList: java.util.List[BytePairWrapper],
-                                 handleList: java.util.List[Handle]): Unit = {
+            oldValueList: java.util.List[BytePairWrapper],
+            handleList: java.util.List[Handle]): Unit = {
           for (i <- 0 until oldValueList.size) {
             val oldValuePair = oldValueList.get(i)
             val oldValue = oldValuePair.getValue
@@ -600,15 +616,16 @@ class TiBatchWriteTable (
         .reduceByKey((r1, _) => r1)
         .map(_._2)
     }
-    uniqueIndices.foreach { index => {
-      mutableRdd = mutableRdd
-        .map { wrappedRow =>
-          val indexKey = buildUniqueIndexKey(wrappedRow.row, wrappedRow.handle, index)._1
-          (indexKey, wrappedRow)
-        }
-        .reduceByKey((r1, _) => r1)
-        .map(_._2)
-    }
+    uniqueIndices.foreach { index =>
+      {
+        mutableRdd = mutableRdd
+          .map { wrappedRow =>
+            val indexKey = buildUniqueIndexKey(wrappedRow.row, wrappedRow.handle, index)._1
+            (indexKey, wrappedRow)
+          }
+          .reduceByKey((r1, _) => r1)
+          .map(_._2)
+      }
     }
     mutableRdd
   }
@@ -644,9 +661,9 @@ class TiBatchWriteTable (
   }
 
   private def buildUniqueIndexKey(
-                                   row: TiRow,
-                                   handle: Handle,
-                                   index: TiIndexInfo): (SerializableKey, Boolean) = {
+      row: TiRow,
+      handle: Handle,
+      index: TiIndexInfo): (SerializableKey, Boolean) = {
     // NULL is only allowed in unique key, primary key does not allow NULL value
     val encodeResult = IndexKey.encodeIndexDataValues(
       row,
@@ -661,9 +678,9 @@ class TiBatchWriteTable (
   }
 
   private def generateRowKey(
-                              row: TiRow,
-                              handle: Handle,
-                              remove: Boolean): (SerializableKey, Array[Byte]) = {
+      row: TiRow,
+      handle: Handle,
+      remove: Boolean): (SerializableKey, Array[Byte]) = {
     if (remove) {
       (buildRowKey(row, handle), new Array[Byte](0))
     } else {
@@ -676,17 +693,18 @@ class TiBatchWriteTable (
 
   private def generateRecordKV(rdd: RDD[WrappedRow], remove: Boolean): RDD[WrappedEncodedRow] = {
     rdd
-      .map { row => {
-        val (encodedKey, encodedValue) = generateRowKey(row.row, row.handle, remove)
-        WrappedEncodedRow(
-          row.row,
-          row.handle,
-          encodedKey,
-          encodedValue,
-          isIndex = false,
-          -1,
-          remove)
-      }
+      .map { row =>
+        {
+          val (encodedKey, encodedValue) = generateRowKey(row.row, row.handle, remove)
+          WrappedEncodedRow(
+            row.row,
+            row.handle,
+            encodedKey,
+            encodedValue,
+            isIndex = false,
+            -1,
+            remove)
+        }
       }
   }
 }

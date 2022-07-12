@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class ColumnRef extends Expression {
+
   private final String name;
   private TiColumnInfo columnInfo;
 

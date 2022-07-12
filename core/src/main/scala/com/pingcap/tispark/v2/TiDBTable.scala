@@ -29,12 +29,36 @@ import org.apache.commons.lang3.StringUtils
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.catalyst.util.{DateTimeUtils, TimestampFormatter}
-import org.apache.spark.sql.connector.catalog.{SupportsDelete, SupportsRead, SupportsWrite, TableCapability}
+import org.apache.spark.sql.connector.catalog.{
+  SupportsDelete,
+  SupportsRead,
+  SupportsWrite,
+  TableCapability
+}
 import org.apache.spark.sql.connector.read.ScanBuilder
 import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, SparkPlan}
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.sources.{AlwaysFalse, AlwaysTrue, And, EqualNullSafe, EqualTo, Filter, GreaterThan, GreaterThanOrEqual, In, IsNotNull, IsNull, LessThan, LessThanOrEqual, Not, Or, StringContains, StringEndsWith, StringStartsWith}
+import org.apache.spark.sql.sources.{
+  AlwaysFalse,
+  AlwaysTrue,
+  And,
+  EqualNullSafe,
+  EqualTo,
+  Filter,
+  GreaterThan,
+  GreaterThanOrEqual,
+  In,
+  IsNotNull,
+  IsNull,
+  LessThan,
+  LessThanOrEqual,
+  Not,
+  Or,
+  StringContains,
+  StringEndsWith,
+  StringStartsWith
+}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
@@ -49,13 +73,14 @@ import scala.collection.mutable.ListBuffer
 import collection.JavaConverters._
 
 case class TiDBTable(
-                      session: TiSession,
-                      tableRef: TiTableReference,
-                      table: TiTableInfo,
-                      var ts: TiTimestamp = null,
-                      options: Option[Map[String, String]] = None)(@transient val sqlContext: SQLContext,
-                                                                   @transient val sparkContext: SparkContext)
-  extends SupportsRead
+    session: TiSession,
+    tableRef: TiTableReference,
+    table: TiTableInfo,
+    var ts: TiTimestamp = null,
+    options: Option[Map[String, String]] = None)(
+    @transient val sqlContext: SQLContext,
+    @transient val sparkContext: SparkContext)
+    extends SupportsRead
     with SupportsWrite
     with SupportsDelete {
 
@@ -175,7 +200,9 @@ case class TiDBTable(
     val tidbOptions = new TiDBOptions(sqlContext.sparkSession.conf.getAll)
 
     // Execute delete
-    val tiDBDelete = TiDBDelete(df, databaseName, tableName, startTs, Some(tidbOptions))(sqlContext, sparkContext)
+    val tiDBDelete = TiDBDelete(df, databaseName, tableName, startTs, Some(tidbOptions))(
+      sqlContext,
+      sparkContext)
     try {
       tiDBDelete.delete()
     } finally {
@@ -187,11 +214,11 @@ case class TiDBTable(
 object TiDBTable {
 
   private def getDagRequestToRegionTaskExec(
-                                             dagRequest: TiDAGRequest,
-                                             output: Seq[Attribute],
-                                             session: TiSession,
-                                             sqlContext: SQLContext,
-                                             tableRef: TiTableReference): SparkPlan = {
+      dagRequest: TiDAGRequest,
+      output: Seq[Attribute],
+      session: TiSession,
+      sqlContext: SQLContext,
+      tableRef: TiTableReference): SparkPlan = {
     import scala.collection.JavaConverters._
     val ids = dagRequest.getPrunedPhysicalIds.asScala
     val tiHandleRDDs = new ListBuffer[TiHandleRDD]()
@@ -230,11 +257,11 @@ object TiDBTable {
   }
 
   private def getLogicalPlanToRDD(
-                                   dagRequest: TiDAGRequest,
-                                   output: Seq[Attribute],
-                                   session: TiSession,
-                                   sqlContext: SQLContext,
-                                   tableRef: TiTableReference): List[TiRowRDD] = {
+      dagRequest: TiDAGRequest,
+      output: Seq[Attribute],
+      session: TiSession,
+      sqlContext: SQLContext,
+      tableRef: TiTableReference): List[TiRowRDD] = {
     import scala.collection.JavaConverters._
     val ids = dagRequest.getPrunedPhysicalIds.asScala
     val tiRDDs = new ListBuffer[TiRowRDD]
