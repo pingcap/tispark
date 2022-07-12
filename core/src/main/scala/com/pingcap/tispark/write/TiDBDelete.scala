@@ -24,7 +24,7 @@ import com.pingcap.tispark.utils.TiUtil.sparkConfToTiConf
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TwoPhaseCommitHepler, WriteUtil}
 import com.pingcap.tispark.write.TiBatchWrite.TiRow
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, SQLContext}
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.{SparkConf, SparkContext}
 import org.slf4j.LoggerFactory
 
@@ -34,7 +34,6 @@ case class TiDBDelete(
     tableName: String,
     startTs: Long,
     tiDBOptions: Option[TiDBOptions] = None)(
-    @transient val sqlContext: SQLContext,
     @transient val sparkContext: SparkContext) {
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)
