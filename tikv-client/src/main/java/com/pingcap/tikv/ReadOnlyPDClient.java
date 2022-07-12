@@ -21,7 +21,6 @@ import com.pingcap.tikv.util.Pair;
 import java.util.List;
 import java.util.concurrent.Future;
 import org.tikv.common.meta.TiTimestamp;
-import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.shade.com.google.protobuf.ByteString;
@@ -43,7 +42,8 @@ public interface ReadOnlyPDClient {
    */
   Pair<Metapb.Region, Metapb.Peer> getRegionByKey(BackOffer backOffer, ByteString key);
 
-  Future<TiRegion> getRegionByKeyAsync(BackOffer backOffer, ByteString key);
+  Pair<Future<Metapb.Region>, Future<Metapb.Peer>> getRegionByKeyAsync(
+      BackOffer backOffer, ByteString key);
 
   /**
    * Get Region by Region Id
@@ -53,7 +53,7 @@ public interface ReadOnlyPDClient {
    */
   Pair<Metapb.Region, Metapb.Peer> getRegionByID(BackOffer backOffer, long id);
 
-  Future<TiRegion> getRegionByIDAsync(BackOffer backOffer, long id);
+  Pair<Future<Metapb.Region>, Future<Metapb.Peer>> getRegionByIDAsync(BackOffer backOffer, long id);
 
   /**
    * Get Store by StoreId

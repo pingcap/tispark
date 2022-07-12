@@ -33,7 +33,6 @@ import java.util.concurrent.TimeoutException;
 import org.junit.Test;
 import org.tikv.common.exception.GrpcException;
 import org.tikv.common.meta.TiTimestamp;
-import org.tikv.common.region.TiRegion;
 import org.tikv.common.util.Pair;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Peer;
@@ -125,13 +124,16 @@ public class PDClientTest extends PDMockServerTest {
                 GrpcUtils.makePeer(1, 10),
                 GrpcUtils.makePeer(2, 20))));
     try (PDClient client = session.getPDClient()) {
-      TiRegion r = client.getRegionByKeyAsync(defaultBackOff(), ByteString.EMPTY).get();
-      assertEquals(r.getStartKey(), ByteString.copyFrom(startKey));
-      assertEquals(r.getEndKey(), ByteString.copyFrom(endKey));
-      assertEquals(r.getRegionEpoch().getConfVer(), confVer);
-      assertEquals(r.getRegionEpoch().getVersion(), ver);
-      assertEquals(r.getLeader().getId(), 1);
-      assertEquals(r.getLeader().getStoreId(), 10);
+      Pair<Future<Metapb.Region>, Future<Metapb.Peer>> rl =
+          client.getRegionByKeyAsync(defaultBackOff(), ByteString.EMPTY);
+      Metapb.Region region = rl.first.get();
+      Metapb.Peer leader = rl.second.get();
+      assertEquals(region.getStartKey(), ByteString.copyFrom(startKey));
+      assertEquals(region.getEndKey(), ByteString.copyFrom(endKey));
+      assertEquals(region.getRegionEpoch().getConfVer(), confVer);
+      assertEquals(region.getRegionEpoch().getVersion(), ver);
+      assertEquals(leader.getId(), 1);
+      assertEquals(leader.getStoreId(), 10);
     }
   }
 
@@ -182,13 +184,15 @@ public class PDClientTest extends PDMockServerTest {
                 GrpcUtils.makePeer(1, 10),
                 GrpcUtils.makePeer(2, 20))));
     try (PDClient client = session.getPDClient()) {
-      TiRegion r = client.getRegionByIDAsync(defaultBackOff(), 0).get();
-      assertEquals(r.getStartKey(), ByteString.copyFrom(startKey));
-      assertEquals(r.getEndKey(), ByteString.copyFrom(endKey));
-      assertEquals(r.getRegionEpoch().getConfVer(), confVer);
-      assertEquals(r.getRegionEpoch().getVersion(), ver);
-      assertEquals(r.getLeader().getId(), 1);
-      assertEquals(r.getLeader().getStoreId(), 10);
+      Pair<Future<Metapb.Region>, Future<Metapb.Peer>> rl = client.getRegionByIDAsync(defaultBackOff(), 0);
+    * Metapb.Region region = rl.first.get();
+      Metapb.Peer leader = rl.second.get();
+      assertEquals(region.getStartKey(), ByteString.copyFrom(startKey));
+      assertEquals(region.getEndKey(), ByteString.copyFrom(endKey));
+      assertEquals(region.getRegionEpoch().getConfVer(), confVer);
+      assertEquals(region.getRegionEpoch().getVersion(), ver);
+      assertEquals(leader.getId(), 1);
+      assertEquals(leader.getStoreId(), 10);
     }
   }
 

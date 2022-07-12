@@ -95,19 +95,20 @@ public class RangeSplitterTest {
   }
 
   private static TiRegion region(long id, KeyRange range) {
-    Metapb.Region region =
+    Metapb.Region meta =
         Metapb.Region.newBuilder()
             .setId(id)
             .setStartKey(range.getStart())
             .setEndKey(range.getEnd())
             .addPeers(Peer.getDefaultInstance())
             .build();
-    List<TiStore> s = ImmutableList.of(new TiStore(Metapb.Store.newBuilder().setId(0).build()));
+    List<TiStore> stores =
+        ImmutableList.of(new TiStore(Metapb.Store.newBuilder().setId(0).build()));
     TiConfiguration conf =
         TiConfiguration.createDefault()
             .setIsolationLevel(IsolationLevel.RC)
             .setCommandPriority(CommandPri.Low);
-    return new TiRegion(conf, region, region.getPeers(0), region.getPeersList(), s);
+    return new TiRegion(conf, meta, meta.getPeers(0), meta.getPeersList(), stores);
   }
 
   @Test
