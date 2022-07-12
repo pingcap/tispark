@@ -200,8 +200,8 @@ case class TiDBTable(
     val tidbOptions = new TiDBOptions(sqlContext.sparkSession.conf.getAll)
 
     // Execute delete
-    val tiDBDelete = TiDBDelete(df, databaseName, tableName, startTs, Some(tidbOptions))(
-      sparkContext)
+    val tiDBDelete =
+      TiDBDelete(df, databaseName, tableName, startTs, Some(tidbOptions))(sparkContext)
     try {
       tiDBDelete.delete()
     } finally {

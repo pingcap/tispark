@@ -33,8 +33,7 @@ case class TiDBDelete(
     database: String,
     tableName: String,
     startTs: Long,
-    tiDBOptions: Option[TiDBOptions] = None)(
-    @transient val sparkContext: SparkContext) {
+    tiDBOptions: Option[TiDBOptions] = None)(@transient val sparkContext: SparkContext) {
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
