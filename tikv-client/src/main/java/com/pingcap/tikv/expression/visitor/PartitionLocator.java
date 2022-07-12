@@ -12,7 +12,6 @@ import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.partition.PartitionedTable.PartitionLocatorContext;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DateType;
 import com.pingcap.tikv.types.IntegerType;
 
@@ -32,15 +31,12 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
       // TODO: support more function partition
       FuncCallExpr partitionFuncExpr = (FuncCallExpr) left;
       if (partitionFuncExpr.getFuncTp() == YEAR) {
-        data =
-            partitionFuncExpr.eval(Constant.create(row.getDate(0), DateType.DATE)).getValue();
+        data = partitionFuncExpr.eval(Constant.create(row.getDate(0), DateType.DATE)).getValue();
       } else {
-        throw new UnsupportedOperationException(
-            "Partition write only support YEAR() function");
+        throw new UnsupportedOperationException("Partition write only support YEAR() function");
       }
     } else {
-      throw new UnsupportedOperationException(
-          String.format("Unsupported expr %s", left));
+      throw new UnsupportedOperationException(String.format("Unsupported expr %s", left));
     }
 
     Constant constant = (Constant) node.getRight();

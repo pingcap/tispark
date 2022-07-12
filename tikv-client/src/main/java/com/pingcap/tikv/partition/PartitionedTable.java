@@ -77,8 +77,7 @@ public class PartitionedTable implements Serializable {
     }
   }
 
-  private static PartitionExpression generateRangeColumnPartitionExpr(
-      TiTableInfo tableInfo) {
+  private static PartitionExpression generateRangeColumnPartitionExpr(TiTableInfo tableInfo) {
     PartitionExpression partitionExpr = new PartitionExpression();
     TiPartitionInfo partitionInfo = tableInfo.getPartitionInfo();
     if (partitionInfo.getColumns().size() > 1) {
@@ -102,7 +101,8 @@ public class PartitionedTable implements Serializable {
   private static PartitionExpression generateHashPartitionExpr(TiTableInfo tableInfo) {
     TiParser parser = new TiParser(tableInfo);
     PartitionExpression partitionExpr = new PartitionExpression();
-    partitionExpr.setOriginExpression(parser.parseExpression(tableInfo.getPartitionInfo().getExpr()));
+    partitionExpr.setOriginExpression(
+        parser.parseExpression(tableInfo.getPartitionInfo().getExpr()));
 
     return partitionExpr;
   }
@@ -140,8 +140,7 @@ public class PartitionedTable implements Serializable {
   private TableCommon locateHashPartition(Row row) {
     Expression originalExpr =
         Objects.requireNonNull(
-            partitionExpr.getOriginExpression(),
-            "originalExpression should not be null");
+            partitionExpr.getOriginExpression(), "originalExpression should not be null");
 
     if (originalExpr instanceof ColumnRef) {
       ColumnRef columnRef = (ColumnRef) originalExpr;
@@ -171,8 +170,9 @@ public class PartitionedTable implements Serializable {
 
   private TableCommon locateRangeColumnPartition(Row row) {
     Map<String, List<Expression>> rangeColumnRefExpressions =
-        Objects.requireNonNull(partitionExpr.getRangeColumnRefBoundExpressions(),
-           "RangeColumnRefBoundExpressions should not be null");
+        Objects.requireNonNull(
+            partitionExpr.getRangeColumnRefBoundExpressions(),
+            "RangeColumnRefBoundExpressions should not be null");
     if (rangeColumnRefExpressions.size() != 1) {
       throw new UnsupportedOperationException(
           "Currently only support range column partition on a single column");
@@ -190,10 +190,10 @@ public class PartitionedTable implements Serializable {
   private TableCommon locateRangePartition(Row row) {
     Expression originalExpr =
         Objects.requireNonNull(
-            partitionExpr.getOriginExpression(),
-            "originalExpression should not be null");
+            partitionExpr.getOriginExpression(), "originalExpression should not be null");
     List<Expression> rangePartitionBoundExpressions =
-        Objects.requireNonNull(partitionExpr.getRangePartitionBoundExpressions(),
+        Objects.requireNonNull(
+            partitionExpr.getRangePartitionBoundExpressions(),
             "RangePartitionBoundExpressions should not be null");
 
     int partitionIndex = -1;

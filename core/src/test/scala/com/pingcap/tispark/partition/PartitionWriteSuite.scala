@@ -17,6 +17,12 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     tidbStmt.execute(s"drop table if exists `$database`.`$table`")
   }
 
+  /**
+   * hash partition test
+   * - append and delete
+   * - replace and delete
+   * - replace and delete with YEAR()
+   */
   test("hash partition append and delete test") {
     tidbStmt.execute(s"create table `$database`.`$table` (id int) partition by hash(id) PARTITIONS 4")
 
@@ -107,7 +113,45 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     checkJDBCResult(deleteResultJDBC, Array(Array(Date.valueOf("1995-08-08"), "John")))
   }
 
-  test("hash range column replace and delete test") {
+  /**
+   * range column partition
+   * - append and delete
+   * - replace and delete
+   */
+  test("range column append and delete test") {
+    tidbStmt.execute(s"create table `$database`.`$table` (id bigint, name varchar(16) unique key) partition by range columns(name) (" +
+      s"partition p0 values less than ('BBBBBB')," +
+      s"partition p1 values less than ('HHHHHH')," +
+      s"partition p2 values less than MAXVALUE)")
+
+    tidbStmt.execute(s"insert into `$database`.`$table` values (29, 'Mike')")
+    val data: RDD[Row] = sc.makeRDD(List(Row(57L, "Apple"), Row(65L, "John"), Row(15L, "Jack")))
+    val schema: StructType =
+      StructType(List(StructField("id", LongType), StructField("name", StringType)))
+    val df = sqlContext.createDataFrame(data, schema)
+    df.write
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", database)
+      .option("table", table)
+      .option("replace", "false")
+      .mode("append")
+      .save()
+
+    val insertResultJDBC = tidbStmt.executeQuery(s"select * from `$database`.`$table`")
+    val insertResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    insertResultSpark.collect() should contain theSameElementsAs Array(Row(57L, "Apple"), Row(65L, "John"), Row(15L, "Jack"), Row(29, "Mike"))
+    checkJDBCResult(insertResultJDBC, Array(Array(57L, "Apple"), Array(65L, "John"), Array(15L, "Jack"), Array(29, "Mike")))
+
+    spark.sql(s"delete from `tidb_catalog`.`$database`.`$table` where name < 'John' or name = 'Mike'")
+
+    val deleteResultJDBC = tidbStmt.executeQuery(s"select * from `$database`.`$table`")
+    val deleteResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    deleteResultSpark.collect() should contain theSameElementsAs Array(Row(65L, "John"))
+    checkJDBCResult(deleteResultJDBC, Array(Array(65L, "John")))
+  }
+
+  test("range column replace and delete test") {
     tidbStmt.execute(s"create table `$database`.`$table` (id bigint, name varchar(16) unique key) partition by range columns(name) (" +
       s"partition p0 values less than ('BBBBBB')," +
       s"partition p1 values less than ('HHHHHH')," +
@@ -140,10 +184,16 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     checkJDBCResult(deleteResultJDBC, Array(Array(65L, "John")))
   }
 
-  test("hash range column insert and delete test") {
-    tidbStmt.execute(s"create table `$database`.`$table` (id bigint, name varchar(16) unique key) partition by range columns(name) (" +
-      s"partition p0 values less than ('BBBBBB')," +
-      s"partition p1 values less than ('HHHHHH')," +
+  /**
+   * range partition
+   * - append and delete
+   * - replace and delete
+   * - replace and delete with YEAR()
+   */
+  test("range append and delete test") {
+    tidbStmt.execute(s"create table `$database`.`$table` (id bigint primary key, name varchar(16)) partition by range (id) (" +
+      s"partition p0 values less than (20)," +
+      s"partition p1 values less than (60)," +
       s"partition p2 values less than MAXVALUE)")
 
     tidbStmt.execute(s"insert into `$database`.`$table` values (29, 'Mike')")
@@ -166,6 +216,39 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     checkJDBCResult(insertResultJDBC, Array(Array(57L, "Apple"), Array(65L, "John"), Array(15L, "Jack"), Array(29, "Mike")))
 
     spark.sql(s"delete from `tidb_catalog`.`$database`.`$table` where name < 'John' or name = 'Mike'")
+
+    val deleteResultJDBC = tidbStmt.executeQuery(s"select * from `$database`.`$table`")
+    val deleteResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    deleteResultSpark.collect() should contain theSameElementsAs Array(Row(65L, "John"))
+    checkJDBCResult(deleteResultJDBC, Array(Array(65L, "John")))
+  }
+
+  test("range replace and delete test") {
+    tidbStmt.execute(s"create table `$database`.`$table` (id bigint primary key, name varchar(16)) partition by range (id) (" +
+      s"partition p0 values less than (20)," +
+      s"partition p1 values less than (60)," +
+      s"partition p2 values less than MAXVALUE)")
+
+    tidbStmt.execute(s"insert into `$database`.`$table` values (57, 'Hello'), (65, 'Amount'), (29, 'Mike')")
+    val data: RDD[Row] = sc.makeRDD(List(Row(57L, "Apple"), Row(65L, "John"), Row(15L, "Jack")))
+    val schema: StructType =
+      StructType(List(StructField("id", LongType), StructField("name", StringType)))
+    val df = sqlContext.createDataFrame(data, schema)
+    df.write
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", database)
+      .option("table", table)
+      .option("replace", "true")
+      .mode("append")
+      .save()
+
+    val insertResultJDBC = tidbStmt.executeQuery(s"select * from `$database`.`$table`")
+    val insertResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    insertResultSpark.collect() should contain theSameElementsAs Array(Row(57L, "Apple"), Row(65L, "John"), Row(15L, "Jack"), Row(29, "Mike"))
+    checkJDBCResult(insertResultJDBC, Array(Array(57L, "Apple"), Array(65L, "John"), Array(15L, "Jack"), Array(29, "Mike")))
+
+    spark.sql(s"delete from `tidb_catalog`.`$database`.`$table` where id < 50 or name = 'Apple'")
 
     val deleteResultJDBC = tidbStmt.executeQuery(s"select * from `$database`.`$table`")
     val deleteResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
