@@ -66,6 +66,19 @@ public class TableCodec {
   }
 
   /* only for unique index */
+  public static Handle decodeIndexValueForClusteredIndexVersion1(
+      byte[] value, boolean isCommonHandle) {
+    if (isCommonHandle) {
+      // delete bytes in unique index add to value
+      int offset = 6;
+      byte[] encode = new byte[value.length - offset];
+      System.arraycopy(value, offset, encode, 0, value.length - offset);
+      return new CommonHandle(encode);
+    }
+    return new IntHandle(new CodecDataInput(value).readLong());
+  }
+
+  /* only for unique index */
   public static byte[] genIndexValueForClusteredIndexVersion1(TiIndexInfo index, Handle handle) {
     CodecDataOutput cdo = new CodecDataOutput();
     cdo.writeByte(0);
