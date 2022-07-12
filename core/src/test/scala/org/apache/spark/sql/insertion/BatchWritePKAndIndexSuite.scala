@@ -116,8 +116,7 @@ class BatchWritePKAndIndexSuite
   // https://github.com/pingcap/tispark/issues/2452
   test("test duplicate unique indexes are not deleted error") {
     tidbStmt.execute("drop table if exists t")
-    tidbStmt.execute(
-      """
+    tidbStmt.execute("""
         |CREATE TABLE `t` (
         |  `id` bigint(20),
         |  `name` varchar(20) primary key clustered,
@@ -125,39 +124,36 @@ class BatchWritePKAndIndexSuite
         |   unique index(id)
         |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
       """.stripMargin)
-    val schema = StructType(List(
-      StructField("id", IntegerType, nullable = true),
-      StructField("name", StringType, nullable = false),
-      StructField("age", IntegerType, nullable = true),
-    ))
+    val schema = StructType(
+      List(
+        StructField("id", IntegerType, nullable = true),
+        StructField("name", StringType, nullable = false),
+        StructField("age", IntegerType, nullable = true)))
     val tidbOptions: Map[String, String] = Map(
       "tidb.addr" -> "127.0.0.1",
       "tidb.password" -> "",
       "tidb.port" -> "4000",
       "tidb.user" -> "root",
-      "replace" -> "true",
-    )
-    val rdd1 = sc.parallelize(Seq(
-      Row(1, "1", 0),
-    ))
+      "replace" -> "true")
+    val rdd1 = sc.parallelize(Seq(Row(1, "1", 0)))
     val row1 = sqlContext.createDataFrame(rdd1, schema)
-    row1.write.format("tidb").
-      option("database", "tispark_test").
-      option("table", "t").
-      options(tidbOptions).
-      mode("append").
-      save()
-    val rdd2 = sc.parallelize(Seq(
-      Row(1, "2", 0),
-    ))
+    row1.write
+      .format("tidb")
+      .option("database", "tispark_test")
+      .option("table", "t")
+      .options(tidbOptions)
+      .mode("append")
+      .save()
+    val rdd2 = sc.parallelize(Seq(Row(1, "2", 0)))
     val row2 = sqlContext.createDataFrame(rdd2, schema)
-    row2.write.format("tidb").
-      option("database", "tispark_test").
-      option("table", "t").
-      options(tidbOptions).
-      mode("append").
-      save()
-    val result=tidbStmt.executeQuery("select * from t")
+    row2.write
+      .format("tidb")
+      .option("database", "tispark_test")
+      .option("table", "t")
+      .options(tidbOptions)
+      .mode("append")
+      .save()
+    val result = tidbStmt.executeQuery("select * from t")
     assert(result.next())
     assert(result.getString(2).equals("2"))
     assert(!result.next())
