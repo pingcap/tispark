@@ -184,8 +184,9 @@ public class PDClientTest extends PDMockServerTest {
                 GrpcUtils.makePeer(1, 10),
                 GrpcUtils.makePeer(2, 20))));
     try (PDClient client = session.getPDClient()) {
-      Pair<Future<Metapb.Region>, Future<Metapb.Peer>> rl = client.getRegionByIDAsync(defaultBackOff(), 0);
-    * Metapb.Region region = rl.first.get();
+      Pair<Future<Metapb.Region>, Future<Metapb.Peer>> rl =
+          client.getRegionByIDAsync(defaultBackOff(), 0);
+      Metapb.Region region = rl.first.get();
       Metapb.Peer leader = rl.second.get();
       assertEquals(region.getStartKey(), ByteString.copyFrom(startKey));
       assertEquals(region.getEndKey(), ByteString.copyFrom(endKey));
