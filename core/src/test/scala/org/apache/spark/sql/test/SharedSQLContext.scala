@@ -349,7 +349,7 @@ trait SharedSQLContext
     var SSLPara = "false"
     if (conf.contains("jdbc.tls_enable") && conf.get("jdbc.tls_enable").equals("true")) {
       SSLPara =
-        "true&trustServerCertificate=false&enabledSslProtocolSuites=TLSv1.2,TLSv1.3"
+        "true&trustServerCertificate=true&requireSSL=true&enabledSslProtocolSuites=TLSv1.2,TLSv1.3"
     }
 
     jdbcUrl =
