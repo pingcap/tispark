@@ -22,6 +22,7 @@ import org.tikv.common.TiConfiguration.ApiVersion;
 import org.tikv.common.apiversion.RequestKeyCodec;
 
 public class ConverterUpstream {
+
   public static org.tikv.common.ReadOnlyPDClient createUpstreamPDClient(
       com.pingcap.tikv.TiConfiguration conf, RequestKeyCodec keyCodec) {
     org.tikv.common.TiConfiguration tikvConf = ConverterUpstream.convertTiConfiguration(conf);
@@ -32,7 +33,9 @@ public class ConverterUpstream {
 
   public static org.tikv.common.TiConfiguration convertTiConfiguration(
       com.pingcap.tikv.TiConfiguration conf) {
-    if (conf == null) return null;
+    if (conf == null) {
+      return null;
+    }
     org.tikv.common.TiConfiguration tikvConf =
         org.tikv.common.TiConfiguration.createDefault(
             conf.getPdAddrs().stream().map(Objects::toString).collect(Collectors.joining(",")));
@@ -84,11 +87,6 @@ public class ConverterUpstream {
               tikvConf.getIdleTimeout());
     }
     return tikvFactory;
-  }
-
-  public static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType reConvertBackOffFunctionType(
-      org.tikv.common.util.BackOffFunction.BackOffFuncType upstreamType) {
-    return com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.valueOf(upstreamType.name());
   }
 
   public static org.tikv.common.util.BackOffFunction.BackOffFuncType convertBackOffFunctionType(

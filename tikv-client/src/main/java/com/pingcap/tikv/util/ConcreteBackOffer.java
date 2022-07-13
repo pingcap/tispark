@@ -18,9 +18,6 @@
 
 package com.pingcap.tikv.util;
 
-import static org.tikv.common.ConfigUtils.TIKV_BO_REGION_MISS_BASE_IN_MS;
-
-import com.google.common.base.Preconditions;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiKVException;
 import java.util.ArrayList;
@@ -30,13 +27,13 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tikv.common.TiConfiguration;
 import org.tikv.common.log.SlowLog;
 import org.tikv.common.log.SlowLogEmptyImpl;
 import org.tikv.common.log.SlowLogSpan;
 import org.tikv.common.util.BackOffFunction.BackOffFuncType;
 import org.tikv.common.util.HistogramUtils;
 import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
+import org.tikv.shade.com.google.common.base.Preconditions;
 import org.tikv.shade.io.prometheus.client.Histogram;
 
 public class ConcreteBackOffer implements BackOffer {
@@ -48,7 +45,7 @@ public class ConcreteBackOffer implements BackOffer {
   @VisibleForTesting public final Map<BackOffFuncType, BackOffFunction> backOffFunctionMap;
 
   @VisibleForTesting public final List<Exception> errors;
-  private int totalSleep;
+  private long totalSleep;
   private final long deadline;
   private final SlowLog slowLog;
 
@@ -141,10 +138,6 @@ public class ConcreteBackOffer implements BackOffer {
    * to different back off strategies. See http://www.awsarchitectureblog.com/2015/03/backoff.html
    */
   private BackOffFunction createBackOffFunc(BackOffFunction.BackOffFuncType funcType) {
-    if (funcType == BackOffFunction.BackOffFuncType.BoRegionMiss) {
-      return BackOffFunction.create(
-          TiConfiguration.getInt(TIKV_BO_REGION_MISS_BASE_IN_MS), 500, BackOffStrategy.NoJitter);
-    }
     return createBackOffFunc(ConverterUpstream.convertBackOffFunctionType(funcType));
   }
 
@@ -165,26 +158,24 @@ public class ConcreteBackOffer implements BackOffer {
         backOffFunction = BackOffFunction.create(2000, 10000, BackOffStrategy.EqualJitter);
         break;
       case BoRegionMiss:
-        backOffFunction =
-            BackOffFunction.create(
-                TiConfiguration.getInt(TIKV_BO_REGION_MISS_BASE_IN_MS),
-                500,
-                BackOffStrategy.NoJitter);
+        backOffFunction = BackOffFunction.create(100, 500, BackOffStrategy.NoJitter);
         break;
       case BoTxnLock:
         backOffFunction = BackOffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
         break;
       case BoPDRPC:
-        backOffFunction = BackOffFunction.create(100, 600, BackOffStrategy.EqualJitter);
-        break;
-      case BoTiKVRPC:
-        backOffFunction = BackOffFunction.create(10, 400, BackOffStrategy.EqualJitter);
-        break;
-      case BoTxnNotFound:
-        backOffFunction = BackOffFunction.create(2, 500, BackOffStrategy.NoJitter);
+        backOffFunction = BackOffFunction.create(500, 3000, BackOffStrategy.EqualJitter);
         break;
       case BoCheckHealth:
         backOffFunction = BackOffFunction.create(100, 600, BackOffStrategy.EqualJitter);
+        break;
+      case BoTiKVRPC:
+        backOffFunction = BackOffFunction.create(10, 2000, BackOffStrategy.EqualJitter);
+        break;
+      case BoCheckTimeout:
+        backOffFunction = BackOffFunction.create(0, 0, BackOffStrategy.NoJitter);
+      case BoTxnNotFound:
+        backOffFunction = BackOffFunction.create(2, 500, BackOffStrategy.NoJitter);
         break;
     }
     return backOffFunction;

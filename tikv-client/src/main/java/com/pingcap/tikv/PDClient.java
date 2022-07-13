@@ -16,12 +16,10 @@
 
 package com.pingcap.tikv;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.pingcap.tikv.operation.PDErrorHandler.getRegionResponseErrorExtractor;
 import static com.pingcap.tikv.pd.PDError.buildFromPdpbError;
+import static org.tikv.shade.com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -80,6 +78,8 @@ import org.tikv.kvproto.Pdpb.ResponseHeader;
 import org.tikv.kvproto.Pdpb.ScatterRegionRequest;
 import org.tikv.kvproto.Pdpb.ScatterRegionResponse;
 import org.tikv.kvproto.Pdpb.TsoRequest;
+import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
+import org.tikv.shade.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.tikv.shade.com.google.protobuf.ByteString;
 import org.tikv.shade.io.grpc.ManagedChannel;
 
