@@ -151,10 +151,11 @@ class TiBatchWrite(
     tiBatchWriteTables = {
       dataToWrite.flatMap {
         case (dbTable, df) =>
-          val tiTableRef = options.getTiTableRef(tiConf)
+          val physicalTableOptions = options.setDBTable(dbTable)
+          val tiTableRef = physicalTableOptions.getTiTableRef(tiConf)
           val tiTableInfo = tiContext.tiSession.getCatalog.getTable(
-            options.getTiTableRef(tiConf).databaseName,
-            options.getTiTableRef(tiConf).tableName)
+            physicalTableOptions.getTiTableRef(tiConf).databaseName,
+            physicalTableOptions.getTiTableRef(tiConf).tableName)
 
           if (tiTableInfo == null) {
             throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
@@ -169,13 +170,19 @@ class TiBatchWrite(
            * - if the table is not partitioned, the logical table is the same as the physical table.
            */
           if (tiTableInfo.isPartitionEnabled) {
-            transferToPhysicalTables(df, tiTableInfo, table, isTiDBV4, dbTable)
+            transferToPhysicalTables(
+              df,
+              tiTableInfo,
+              table,
+              isTiDBV4,
+              physicalTableOptions,
+              dbTable)
           } else {
             List(
               new TiBatchWriteTable(
                 df,
                 tiContext,
-                options.setDBTable(dbTable),
+                physicalTableOptions,
                 tiConf,
                 tiDBJDBCClient,
                 isTiDBV4,
@@ -335,6 +342,7 @@ class TiBatchWrite(
       tiTableInfo: TiTableInfo,
       table: TableCommon,
       isTiDBV4: Boolean,
+      options: TiDBOptions,
       dbTable: DBTable) = {
     val mm = new mutable.HashMap[TableCommon, mutable.Set[SparkRow]]
       with mutable.MultiMap[TableCommon, SparkRow]
@@ -355,7 +363,7 @@ class TiBatchWrite(
         new TiBatchWriteTable(
           dfPartitioned,
           tiContext,
-          options.setDBTable(dbTable),
+          options,
           tiConf,
           tiDBJDBCClient,
           isTiDBV4,

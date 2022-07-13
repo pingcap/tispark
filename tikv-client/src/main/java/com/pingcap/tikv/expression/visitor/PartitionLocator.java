@@ -68,13 +68,16 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
     }
 
     Constant constant = (Constant) node.getRight();
+    // the value is 'AAAAA', we should escape single quote.
+    String rawString = constant.getValue().toString();
+    String escapeSingeQuote = rawString.substring(1, rawString.length() - 1);
     Operator comparisonType = node.getComparisonType();
 
     switch (comparisonType) {
       case GREATER_EQUAL:
-        return data.toString().compareTo(constant.getValue().toString()) >= 0;
+        return data.toString().compareTo(escapeSingeQuote) >= 0;
       case LESS_THAN:
-        return data.toString().compareTo(constant.getValue().toString()) < 0;
+        return data.toString().compareTo(escapeSingeQuote) < 0;
       default:
         throw new UnsupportedOperationException("Unsupported comparison type: " + comparisonType);
     }
