@@ -95,12 +95,12 @@ public class IndexKeyTest {
         new Object[][] {
           new Object[] {null, "1"}, new Object[] {2, "2"},
         };
-    Key[][] expecteds =
+    Key[][] expectations=
         new Key[][] {
           new Key[] {
             TypedKey.toTypedKey(null, IntegerType.INT), TypedKey.toTypedKey("1", StringType.VARCHAR)
           },
-          new Key[] {TypedKey.toTypedKey(1, IntegerType.INT)},
+          new Key[] {TypedKey.toTypedKey(2, IntegerType.INT)},
         };
     for (int i = 0; i < testRows.length; i++) {
       Row row = ObjectRowImpl.create(testRows[i]);
@@ -109,7 +109,7 @@ public class IndexKeyTest {
               new DataType[] {StringType.VARCHAR}, new Object[] {row.get(1, StringType.VARCHAR)});
       IndexKey.EncodeIndexDataResult result =
           IndexKey.encodeIndexDataValues(row, indexColumns, handle, true, tableInfo);
-      assertArrayEquals(expecteds[i], result.keys);
+      assertArrayEquals(expectations[i], result.keys);
     }
   }
 

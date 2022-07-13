@@ -243,6 +243,8 @@ class TiBatchWriteTable(
 
     val keyValueRDD = if (constraintCheckIsNeeded) {
 
+      // The rows that exist in the current TiDB that conflict
+      // with the primary key or unique index of the inserted rows.
       val conflictRows = (if (options.useSnapshotBatchGet) {
                             generateDataToBeRemovedRddV2(wrappedRowRdd, startTimeStamp)
                           } else {
@@ -279,7 +281,6 @@ class TiBatchWriteTable(
         unionInsertDelete(insertIndexRdd, deleteIndexRDD)).map(obj =>
         (obj.encodedKey, obj.encodedValue))
     } else {
-
       (insertRowRdd ++ insertIndexRdd).map(obj => (obj.encodedKey, obj.encodedValue))
     }
 
@@ -395,7 +396,7 @@ class TiBatchWriteTable(
                 val oldValue = snapshot.get(keyInfo._1.bytes)
                 if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
                   val oldHandle =
-                    TableCodec.decodeIndexValueForClusteredIndexVersion1(oldValue, isCommonHandle)
+                    TableCodec.decodeUniqueIndexValueToHandleForClusteredIndexVersion1(oldValue, isCommonHandle)
                   val oldRowValue = snapshot.get(buildRowKey(wrappedRow.row, oldHandle).bytes)
                   val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
                   rowBuf += WrappedRow(oldRow, oldHandle)
@@ -496,7 +497,7 @@ class TiBatchWriteTable(
                 val conflictUniqueIndexValue = conflictUniqueIndexRows.get(i).getValue
                 if (conflictUniqueIndexValue.nonEmpty && !isNullUniqueIndexValue(
                     conflictUniqueIndexValue)) {
-                  val conflictHandle = TableCodec.decodeIndexValueForClusteredIndexVersion1(
+                  val conflictHandle = TableCodec.decodeUniqueIndexValueToHandleForClusteredIndexVersion1(
                     conflictUniqueIndexValue,
                     isCommonHandle)
                   // TODO
@@ -508,6 +509,7 @@ class TiBatchWriteTable(
               }
             }
           }
+
           if (handleCol != null || isCommonHandle) {
             batch.foreach { wrappedRow =>
               mayConflictRowKeys.add(buildRowKey(wrappedRow.row, wrappedRow.handle).bytes)

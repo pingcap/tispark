@@ -24,6 +24,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
+import java.util.Arrays;
 import java.util.List;
 
 public class TableCodec {
@@ -66,10 +67,13 @@ public class TableCodec {
   }
 
   /* only for unique index */
-  public static Handle decodeIndexValueForClusteredIndexVersion1(
+  public static Handle decodeUniqueIndexValueToHandleForClusteredIndexVersion1(
       byte[] value, boolean isCommonHandle) {
     if (isCommonHandle) {
-      // delete bytes in unique index add to value
+      /**
+       * delete additional information that add to commonHandle in unique index value
+       * @see #genIndexValueForClusteredIndexVersion1(TiIndexInfo, Handle)
+       */
       int offset = 6;
       byte[] encode = new byte[value.length - offset];
       System.arraycopy(value, offset, encode, 0, value.length - offset);
