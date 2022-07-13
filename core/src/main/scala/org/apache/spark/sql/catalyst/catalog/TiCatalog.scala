@@ -66,6 +66,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
     logger.info(s"Initialize TiCatalog with name: $name, pd address: $pdAddress")
     val conf = TiConfiguration.createDefault(pdAddress)
+    TiUtil.confMapToTiConfWithoutPD(SparkSession.active.conf.getAll, conf)
     val session = TiSession.getInstance(conf)
     meta = Some(new MetaManager(session.getCatalog))
     tiSession = Some(session)

@@ -236,6 +236,147 @@ object TiUtil {
     tiConf
   }
 
+  /**
+   * Convert Spark runtime configurations to TiConf.
+   * Use {@link SparkSession.active.conf.getAll} to get runtime configurations.
+   * */
+  def confMapToTiConfWithoutPD(
+      conf: Map[String, String],
+      tiConf: TiConfiguration): TiConfiguration = {
+
+    if (conf.contains(TiConfigConst.GRPC_FRAME_SIZE)) {
+      tiConf.setMaxFrameSize(conf(TiConfigConst.GRPC_FRAME_SIZE).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.GRPC_TIMEOUT)) {
+      tiConf.setTimeout(conf(TiConfigConst.GRPC_TIMEOUT).toInt)
+      tiConf.setTimeoutUnit(TimeUnit.SECONDS)
+    }
+
+    if (conf.contains(TiConfigConst.INDEX_SCAN_BATCH_SIZE)) {
+      tiConf.setIndexScanBatchSize(conf(TiConfigConst.INDEX_SCAN_BATCH_SIZE).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.INDEX_SCAN_CONCURRENCY)) {
+      tiConf.setIndexScanConcurrency(conf(TiConfigConst.INDEX_SCAN_CONCURRENCY).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.TABLE_SCAN_CONCURRENCY)) {
+      tiConf.setTableScanConcurrency(conf(TiConfigConst.TABLE_SCAN_CONCURRENCY).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.REQUEST_ISOLATION_LEVEL)) {
+      val isolationLevel = conf(TiConfigConst.REQUEST_ISOLATION_LEVEL)
+      if (isolationLevel.equals(TiConfigConst.SNAPSHOT_ISOLATION_LEVEL)) {
+        tiConf.setIsolationLevel(IsolationLevel.SI)
+      } else {
+        tiConf.setIsolationLevel(IsolationLevel.RC)
+      }
+    }
+
+    if (conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {
+      val priority =
+        CommandPri.valueOf(conf(TiConfigConst.REQUEST_COMMAND_PRIORITY))
+      tiConf.setCommandPriority(priority)
+    }
+
+    if (conf.contains(TiConfigConst.SHOW_ROWID)) {
+      tiConf.setShowRowId(conf(TiConfigConst.SHOW_ROWID).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.DB_PREFIX)) {
+      tiConf.setDBPrefix(conf(TiConfigConst.DB_PREFIX))
+    }
+
+    if (conf.contains(TiConfigConst.WRITE_ENABLE)) {
+      tiConf.setWriteEnable(conf(TiConfigConst.WRITE_ENABLE).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.WRITE_WITHOUT_LOCK_TABLE)) {
+      tiConf.setWriteWithoutLockTable(conf(TiConfigConst.WRITE_WITHOUT_LOCK_TABLE).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.WRITE_ALLOW_SPARK_SQL)) {
+      tiConf.setWriteAllowSparkSQL(conf(TiConfigConst.WRITE_ALLOW_SPARK_SQL).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB)) {
+      tiConf.setTikvRegionSplitSizeInMB(conf(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD)) {
+      tiConf.setDowngradeThreshold(
+        conf(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.PARTITION_PER_SPLIT)) {
+      tiConf.setPartitionPerSplit(conf(TiConfigConst.PARTITION_PER_SPLIT).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.ISOLATION_READ_ENGINES)) {
+      import scala.collection.JavaConversions._
+      tiConf.setIsolationReadEngines(
+        getIsolationReadEnginesFromString(conf(TiConfigConst.ISOLATION_READ_ENGINES)).toList)
+    }
+
+    if (conf.contains(TiConfigConst.KV_CLIENT_CONCURRENCY)) {
+      tiConf.setKvClientConcurrency(conf(TiConfigConst.KV_CLIENT_CONCURRENCY).toInt)
+    }
+
+    // TLS
+    if (conf.contains(TiConfigConst.TIKV_TLS_ENABLE)) {
+      tiConf.setTlsEnable(conf(TiConfigConst.TIKV_TLS_ENABLE).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_TRUST_CERT_COLLECTION)) {
+      tiConf.setTrustCertCollectionFile(conf(TiConfigConst.TIKV_TRUST_CERT_COLLECTION))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_KEY_CERT_CHAIN)) {
+      tiConf.setKeyCertChainFile(conf(TiConfigConst.TIKV_KEY_CERT_CHAIN))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_KEY_FILE)) {
+      tiConf.setKeyFile(conf(TiConfigConst.TIKV_KEY_FILE))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_ENABLE)) {
+      tiConf.setJksEnable(conf(TiConfigConst.TIKV_JKS_ENABLE).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_KEY_PATH)) {
+      tiConf.setJksKeyPath(conf(TiConfigConst.TIKV_JKS_KEY_PATH))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_KEY_PASSWORD)) {
+      tiConf.setJksKeyPassword(conf(TiConfigConst.TIKV_JKS_KEY_PASSWORD))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_TRUST_PATH)) {
+      tiConf.setJksTrustPath(conf(TiConfigConst.TIKV_JKS_TRUST_PATH))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_JKS_TRUST_PASSWORD)) {
+      tiConf.setJksTrustPassword(conf(TiConfigConst.TIKV_JKS_TRUST_PASSWORD))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_TLS_RELOAD_INTERVAL)) {
+      tiConf.setCertReloadIntervalInSeconds(conf(TiConfigConst.TIKV_TLS_RELOAD_INTERVAL))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_CONN_RECYCLE_TIME)) {
+      tiConf.setConnRecycleTimeInSeconds(conf(TiConfigConst.TIKV_CONN_RECYCLE_TIME))
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_HOST_MAPPING)) {
+      tiConf.setHostMapping(new UriHostMapping(conf(TiConfigConst.TIKV_HOST_MAPPING)))
+    } else {
+      tiConf.setHostMapping(new UriHostMapping(""))
+    }
+
+    tiConf
+  }
+
   private def getIsolationReadEnginesFromString(str: String): List[TiStoreType] = {
     str
       .toLowerCase()
