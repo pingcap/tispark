@@ -21,8 +21,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.ExecType;
@@ -45,6 +43,8 @@ import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Metapb;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
+import org.tikv.shade.com.google.common.collect.ImmutableSet;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class RegionStoreClientTest extends MockServerTest {

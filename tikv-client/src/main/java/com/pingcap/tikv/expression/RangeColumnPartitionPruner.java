@@ -18,9 +18,6 @@ package com.pingcap.tikv.expression;
 
 import static com.pingcap.tikv.expression.PartitionPruner.extractLogicalOrComparisonExpr;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.RangeSet;
-import com.google.common.collect.TreeRangeSet;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.expression.visitor.DefaultVisitor;
 import com.pingcap.tikv.expression.visitor.PrunedPartitionBuilder;
@@ -37,6 +34,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.tikv.shade.com.google.common.collect.ImmutableSet;
+import org.tikv.shade.com.google.common.collect.RangeSet;
+import org.tikv.shade.com.google.common.collect.TreeRangeSet;
 
 @SuppressWarnings("UnstableApiUsage")
 public class RangeColumnPartitionPruner

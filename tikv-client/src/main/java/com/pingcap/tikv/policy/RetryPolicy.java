@@ -16,14 +16,14 @@
 
 package com.pingcap.tikv.policy;
 
-import com.google.common.collect.ImmutableSet;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.operation.ErrorHandler;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import io.grpc.Status;
 import java.util.concurrent.Callable;
 import javax.annotation.Nonnull;
+import org.tikv.shade.com.google.common.collect.ImmutableSet;
+import org.tikv.shade.io.grpc.Status;
 
 public abstract class RetryPolicy<RespT> {
   // handles PD and TiKV's error.

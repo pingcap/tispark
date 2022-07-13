@@ -16,9 +16,9 @@
 
 package com.pingcap.tikv.pd;
 
-import com.google.common.collect.ImmutableList;
 import java.net.URI;
 import java.util.List;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class PDUtils {
   public static URI addrToUrl(String addr) {

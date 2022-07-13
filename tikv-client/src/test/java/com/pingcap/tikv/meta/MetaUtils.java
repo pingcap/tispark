@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.meta;
 
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.GrpcUtils;
 import com.pingcap.tikv.KVMockServer;
 import com.pingcap.tikv.PDMockServer;
@@ -32,6 +31,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.tikv.common.region.TiStore;
 import org.tikv.kvproto.Metapb;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class MetaUtils {

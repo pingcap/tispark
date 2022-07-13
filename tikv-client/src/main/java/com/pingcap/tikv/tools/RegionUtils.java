@@ -18,7 +18,6 @@ package com.pingcap.tikv.tools;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
@@ -31,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.tikv.kvproto.Coprocessor.KeyRange;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class RegionUtils {
   public static Map<String, Integer> getRegionDistribution(

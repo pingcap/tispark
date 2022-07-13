@@ -18,7 +18,6 @@ package com.pingcap.tikv;
 
 import static com.pingcap.tikv.key.Key.toRawKey;
 
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
@@ -37,6 +36,7 @@ import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.Context;
 import org.tikv.kvproto.Kvrpcpb.RawGetResponse;
 import org.tikv.kvproto.TikvGrpc;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 import org.tikv.shade.com.google.protobuf.ByteString;
 import org.tikv.shade.io.grpc.Server;
 import org.tikv.shade.io.grpc.ServerBuilder;

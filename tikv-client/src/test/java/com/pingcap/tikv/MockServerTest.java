@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv;
 
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.util.ConverterUpstream;
 import java.io.IOException;
 import java.util.List;
@@ -25,6 +24,7 @@ import org.tikv.common.region.TiRegion;
 import org.tikv.common.region.TiStore;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Pdpb;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class MockServerTest extends PDMockServerTest {

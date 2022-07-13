@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv;
 
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.types.Converter;
 import java.io.Serializable;
@@ -33,6 +32,7 @@ import org.joda.time.DateTimeZone;
 import org.tikv.common.region.TiStoreType;
 import org.tikv.kvproto.Kvrpcpb.CommandPri;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 @Getter
 @Setter

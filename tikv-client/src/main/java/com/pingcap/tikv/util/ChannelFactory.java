@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.util;
 
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.exception.TiKVException;
 import java.io.File;
 import java.io.FileInputStream;
@@ -37,6 +36,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 import org.tikv.shade.io.grpc.ManagedChannel;
 import org.tikv.shade.io.grpc.netty.GrpcSslContexts;
 import org.tikv.shade.io.grpc.netty.NettyChannelBuilder;

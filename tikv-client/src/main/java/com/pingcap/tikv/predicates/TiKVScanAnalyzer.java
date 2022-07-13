@@ -21,10 +21,6 @@ import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges
 import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.BoundType;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Range;
 import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
@@ -57,6 +53,10 @@ import org.slf4j.LoggerFactory;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.region.TiStoreType;
 import org.tikv.kvproto.Coprocessor.KeyRange;
+import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
+import org.tikv.shade.com.google.common.collect.BoundType;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
+import org.tikv.shade.com.google.common.collect.Range;
 
 public class TiKVScanAnalyzer {
   private static final double INDEX_SCAN_COST_FACTOR = 1.2;

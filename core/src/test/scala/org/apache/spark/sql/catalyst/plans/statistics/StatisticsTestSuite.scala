@@ -16,7 +16,7 @@
 
 package org.apache.spark.sql.catalyst.plans.statistics
 
-import com.google.common.collect.ImmutableList
+import org.tikv.shade.com.google.common.collect.ImmutableList
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.{
   equal,
   greaterThan,

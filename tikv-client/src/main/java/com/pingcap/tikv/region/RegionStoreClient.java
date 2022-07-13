@@ -23,7 +23,6 @@ import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLock;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.PDClient;
@@ -108,6 +107,7 @@ import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import org.tikv.kvproto.TikvGrpc.TikvStub;
+import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
 import org.tikv.shade.com.google.protobuf.ByteString;
 import org.tikv.shade.com.google.protobuf.InvalidProtocolBufferException;
 import org.tikv.shade.io.grpc.ManagedChannel;

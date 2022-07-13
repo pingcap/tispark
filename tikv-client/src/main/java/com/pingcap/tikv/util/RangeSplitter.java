@@ -20,7 +20,6 @@ import static com.pingcap.tikv.key.Key.toRawKey;
 import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
 import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.pd.PDUtils;
@@ -39,6 +38,7 @@ import org.tikv.common.region.TiRegion;
 import org.tikv.common.region.TiStore;
 import org.tikv.common.region.TiStoreType;
 import org.tikv.kvproto.Coprocessor.KeyRange;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class RangeSplitter {

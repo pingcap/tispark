@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.pingcap.tidb.tipb.ColumnInfo;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType;
@@ -32,6 +31,7 @@ import com.pingcap.tikv.types.MySQLType;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
+import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 @JsonIgnoreProperties(ignoreUnknown = true)

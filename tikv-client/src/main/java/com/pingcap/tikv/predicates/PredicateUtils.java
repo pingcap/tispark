@@ -19,8 +19,6 @@ package com.pingcap.tikv.predicates;
 import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
@@ -37,6 +35,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
+import org.tikv.shade.com.google.common.collect.Range;
 
 public class PredicateUtils {
   public static Expression mergeCNFExpressions(List<Expression> exprs) {

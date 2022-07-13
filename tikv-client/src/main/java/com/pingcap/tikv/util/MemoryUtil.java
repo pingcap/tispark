@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.util;
 
-import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.sun.management.OperatingSystemMXBean;
 import java.lang.management.ManagementFactory;
@@ -29,6 +28,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.shade.com.google.common.primitives.UnsignedLong;
 import sun.misc.Cleaner;
 import sun.misc.Unsafe;
 import sun.nio.ch.DirectBuffer;

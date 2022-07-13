@@ -21,7 +21,6 @@ import static com.pingcap.tikv.codec.MetaCodec.KEY_DBs;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.KeyUtils;
@@ -35,6 +34,7 @@ import java.util.List;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class CatalogTransaction {

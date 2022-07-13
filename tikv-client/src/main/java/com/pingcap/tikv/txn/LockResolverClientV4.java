@@ -22,7 +22,6 @@ import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnNotFound;
 import static com.pingcap.tikv.util.ClientUtils.groupKeysByRegion;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.KeyException;
@@ -61,6 +60,7 @@ import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import org.tikv.kvproto.TikvGrpc.TikvStub;
+import org.tikv.shade.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 /**

@@ -21,10 +21,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.pingcap.tidb.tipb.Aggregation;
 import com.pingcap.tidb.tipb.ColumnInfo;
 import com.pingcap.tidb.tipb.DAGRequest;
@@ -64,6 +60,10 @@ import javax.annotation.Nonnull;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.region.TiStoreType;
 import org.tikv.kvproto.Coprocessor;
+import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
+import org.tikv.shade.com.google.common.base.Joiner;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
+import org.tikv.shade.com.google.common.collect.ImmutableMap;
 
 /**
  * Type TiDAGRequest.

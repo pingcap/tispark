@@ -18,13 +18,13 @@ package com.pingcap.tikv.util;
 
 import static com.pingcap.tikv.key.Key.toRawKey;
 
-import com.google.common.collect.BoundType;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
 import java.util.List;
 import org.tikv.kvproto.Coprocessor.KeyRange;
+import org.tikv.shade.com.google.common.collect.BoundType;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
+import org.tikv.shade.com.google.common.collect.Range;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class KeyRangeUtils {

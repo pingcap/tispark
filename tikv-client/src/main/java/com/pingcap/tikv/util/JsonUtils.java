@@ -16,18 +16,18 @@
 
 package com.pingcap.tikv.util;
 
-import com.google.common.io.ByteArrayDataInput;
-import com.google.common.io.ByteStreams;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonNull;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 import java.io.DataInput;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import javax.annotation.Nullable;
+import org.tikv.shade.com.google.common.io.ByteArrayDataInput;
+import org.tikv.shade.com.google.common.io.ByteStreams;
+import org.tikv.shade.com.google.gson.JsonArray;
+import org.tikv.shade.com.google.gson.JsonElement;
+import org.tikv.shade.com.google.gson.JsonNull;
+import org.tikv.shade.com.google.gson.JsonObject;
+import org.tikv.shade.com.google.gson.JsonPrimitive;
 
 public class JsonUtils {
   private static final int KEY_ENTRY_LENGTH = 6;
