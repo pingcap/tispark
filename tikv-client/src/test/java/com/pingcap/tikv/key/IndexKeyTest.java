@@ -61,7 +61,7 @@ public class IndexKeyTest {
   @Test
   public void encodeIndexDataValuesTest() {
     TiColumnInfo col1 = new TiColumnInfo(1, "a", 0, IntegerType.INT, false);
-    TiColumnInfo col2 = new TiColumnInfo(1, "a", 1, StringType.VARCHAR, true);
+    TiColumnInfo col2 = new TiColumnInfo(2, "a", 1, StringType.VARCHAR, true);
     List<TiColumnInfo> tableColumns = new ArrayList<>();
     tableColumns.add(col1);
     tableColumns.add(col2);
@@ -115,6 +115,29 @@ public class IndexKeyTest {
     }
 
     // PkHandle
+    TiTableInfo tableInfo2 =
+        new TiTableInfo(
+            1,
+            CIStr.newCIStr("test"),
+            "",
+            "",
+            true,
+            false,
+            tableColumns,
+            null,
+            "",
+            0,
+            0,
+            0,
+            0,
+            null,
+            null,
+            null,
+            1,
+            1,
+            0,
+            null,
+            0);
     TiIndexColumn index2 = new TiIndexColumn(CIStr.newCIStr("b"), 1, DataType.UNSPECIFIED_LEN);
     List<TiIndexColumn> indexColumns2 = new ArrayList<>();
     Object[][] testRows2 =
@@ -134,7 +157,7 @@ public class IndexKeyTest {
       Row row = ObjectRowImpl.create(testRows2[i]);
       Handle handle = new IntHandle((Integer) row.get(0, IntegerType.BIGINT));
       IndexKey.EncodeIndexDataResult result =
-          IndexKey.encodeIndexDataValues(row, indexColumns2, handle, true, tableInfo);
+          IndexKey.encodeIndexDataValues(row, indexColumns2, handle, true, tableInfo2);
       assertArrayEquals(expectations2[i], result.keys);
     }
   }

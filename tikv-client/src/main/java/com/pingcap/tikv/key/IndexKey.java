@@ -24,6 +24,7 @@ import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.IntegerType;
 import java.util.List;
 
 public class IndexKey extends Key {
@@ -82,8 +83,11 @@ public class IndexKey extends Key {
       keys[i] = key;
     }
     if (appendHandle) {
-      Key key = TypedKey.toRawKey(handle.encodedAsKey());
-      keys[keys.length - 1] = key;
+      if(handle.isInt()){
+        keys[keys.length - 1]  = TypedKey.toTypedKey(handle, IntegerType.BIGINT);
+      }else {
+        keys[keys.length-1]=TypedKey.toRawKey(handle.encoded());
+      }
     }
 
     return new EncodeIndexDataResult(keys, appendHandle);
