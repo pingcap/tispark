@@ -24,7 +24,6 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
-import java.util.Arrays;
 import java.util.List;
 
 public class TableCodec {
@@ -72,6 +71,7 @@ public class TableCodec {
     if (isCommonHandle) {
       /**
        * delete additional information that add to commonHandle in unique index value
+       *
        * @see #genIndexValueForClusteredIndexVersion1(TiIndexInfo, Handle)
        */
       int offset = 6;

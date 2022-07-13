@@ -97,7 +97,7 @@ public class IndexKeyTest {
         new Object[][] {
           new Object[] {null, "1"}, new Object[] {2, "2"},
         };
-    Key[][] expectations1=
+    Key[][] expectations1 =
         new Key[][] {
           new Key[] {
             TypedKey.toTypedKey(null, IntegerType.INT), TypedKey.toTypedKey("1", StringType.VARCHAR)
@@ -108,7 +108,7 @@ public class IndexKeyTest {
       Row row = ObjectRowImpl.create(testRows1[i]);
       Handle handle =
           CommonHandle.newCommonHandle(
-              new DataType[]{StringType.VARCHAR}, new Object[]{row.get(1, StringType.VARCHAR)});
+              new DataType[] {StringType.VARCHAR}, new Object[] {row.get(1, StringType.VARCHAR)});
       IndexKey.EncodeIndexDataResult result =
           IndexKey.encodeIndexDataValues(row, indexColumns1, handle, true, tableInfo);
       assertArrayEquals(expectations1[i], result.keys);
@@ -118,22 +118,21 @@ public class IndexKeyTest {
     TiIndexColumn index2 = new TiIndexColumn(CIStr.newCIStr("b"), 1, DataType.UNSPECIFIED_LEN);
     List<TiIndexColumn> indexColumns2 = new ArrayList<>();
     Object[][] testRows2 =
-        new Object[][]{
-            new Object[]{1, null}, new Object[]{2, "2"},
+        new Object[][] {
+          new Object[] {1, null}, new Object[] {2, "2"},
         };
     Key[][] expectations2 =
-        new Key[][]{
-            new Key[]{
-                TypedKey.toTypedKey(null, StringType.VARCHAR),
-                TypedKey.toTypedKey(1, IntegerType.BIGINT)
-            },
-            new Key[]{TypedKey.toTypedKey("2", StringType.VARCHAR)},
+        new Key[][] {
+          new Key[] {
+            TypedKey.toTypedKey(null, StringType.VARCHAR),
+            TypedKey.toTypedKey(1, IntegerType.BIGINT)
+          },
+          new Key[] {TypedKey.toTypedKey("2", StringType.VARCHAR)},
         };
     indexColumns2.add(index2);
     for (int i = 0; i < testRows2.length; i++) {
       Row row = ObjectRowImpl.create(testRows2[i]);
-      Handle handle =
-          new IntHandle((Integer) row.get(0, IntegerType.BIGINT));
+      Handle handle = new IntHandle((Integer) row.get(0, IntegerType.BIGINT));
       IndexKey.EncodeIndexDataResult result =
           IndexKey.encodeIndexDataValues(row, indexColumns2, handle, true, tableInfo);
       assertArrayEquals(expectations2[i], result.keys);

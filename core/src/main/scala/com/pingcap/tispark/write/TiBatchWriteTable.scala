@@ -396,7 +396,9 @@ class TiBatchWriteTable(
                 val oldValue = snapshot.get(keyInfo._1.bytes)
                 if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
                   val oldHandle =
-                    TableCodec.decodeUniqueIndexValueToHandleForClusteredIndexVersion1(oldValue, isCommonHandle)
+                    TableCodec.decodeUniqueIndexValueToHandleForClusteredIndexVersion1(
+                      oldValue,
+                      isCommonHandle)
                   val oldRowValue = snapshot.get(buildRowKey(wrappedRow.row, oldHandle).bytes)
                   val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
                   rowBuf += WrappedRow(oldRow, oldHandle)
@@ -497,9 +499,10 @@ class TiBatchWriteTable(
                 val conflictUniqueIndexValue = conflictUniqueIndexRows.get(i).getValue
                 if (conflictUniqueIndexValue.nonEmpty && !isNullUniqueIndexValue(
                     conflictUniqueIndexValue)) {
-                  val conflictHandle = TableCodec.decodeUniqueIndexValueToHandleForClusteredIndexVersion1(
-                    conflictUniqueIndexValue,
-                    isCommonHandle)
+                  val conflictHandle =
+                    TableCodec.decodeUniqueIndexValueToHandleForClusteredIndexVersion1(
+                      conflictUniqueIndexValue,
+                      isCommonHandle)
                   // TODO
                   // change to use physical id
                   val conflictUniqueIndexRowKey =
