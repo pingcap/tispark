@@ -148,12 +148,12 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
     val serverCertPassword = getOrDefault(TIDB_JDBC_SERVER_CERT_PASSWORD, "")
     // Set up Server authentication
     if (serverCertStore.equals("")) {
-      SSLParameters = "true&requireSSL=true&verifyServerCertificate=false"
+      SSLParameters = "true&requireSSL=true&trustServerCertificate=false"
     } else {
       if (!serverCertStore.startsWith(FILE_PREFIX))
         serverCertStore = FILE_PREFIX + serverCertStore
       SSLParameters =
-        "true&requireSSL=true&verifyServerCertificate=true&trustStore=" +
+        "true&requireSSL=true&trustServerCertificate=true&trustStore=" +
           serverCertStore + "&trustStorePassword=" + serverCertPassword
     }
     // Setting up client authentication
