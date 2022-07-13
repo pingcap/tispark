@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.concurrent.Callable;
@@ -31,7 +31,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.Test;
-import org.tikv.common.exception.GrpcException;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.util.Pair;
 import org.tikv.kvproto.Metapb;
@@ -39,9 +38,11 @@ import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Region;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.Metapb.StoreState;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class PDClientTest extends PDMockServerTest {
+
   private static final String LOCAL_ADDR_IPV6 = "[::]";
 
   @Test

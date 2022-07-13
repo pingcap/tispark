@@ -225,6 +225,7 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
     PDErrorHandler<GetRegionResponse> handler =
         new PDErrorHandler<>(getRegionResponseErrorExtractor, this);
     callAsyncWithRetry(backOffer, PDGrpc.getGetRegionMethod(), request, responseObserver, handler);
+    callAsyncWithRetry(backOffer, PDGrpc.getGetRegionMethod(), request, responseObserver2, handler);
     return new Pair<>(responseObserver.getFuture(), responseObserver2.getFuture());
   }
 
@@ -248,6 +249,8 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
 
     callAsyncWithRetry(
         backOffer, PDGrpc.getGetRegionByIDMethod(), request, responseObserver, handler);
+    callAsyncWithRetry(
+        backOffer, PDGrpc.getGetRegionByIDMethod(), request, responseObserver2, handler);
     return new Pair<>(responseObserver.getFuture(), responseObserver2.getFuture());
   }
 
@@ -273,7 +276,6 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
   public Future<Store> getStoreAsync(BackOffer backOffer, long storeId) {
     FutureObserver<Store, GetStoreResponse> responseObserver =
         new FutureObserver<>(GetStoreResponse::getStore);
-
     callAsyncWithRetry(
         backOffer,
         PDGrpc.getGetStoreMethod(),
