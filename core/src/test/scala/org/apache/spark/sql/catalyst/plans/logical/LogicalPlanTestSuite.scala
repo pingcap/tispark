@@ -280,15 +280,18 @@ class LogicalPlanTestSuite extends BasePlanTest {
   test("test physical plan explain which table with secondary index") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     tidbStmt.execute("""
-        |CREATE TABLE `t1` (
-        |`a` int(20)  NOT NULL,
-        |`b` varchar(255) NOT NULL,
-        |`c` varchar(255) DEFAULT NULL
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+                       |CREATE TABLE `t1` (
+                       |`a` int(20)  NOT NULL,
+                       |`b` varchar(255) NOT NULL,
+                       |`c` varchar(255) DEFAULT NULL,
+                       |   PRIMARY KEY (`b`,`a`) clustered
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
         """.stripMargin)
     tidbStmt.execute("CREATE INDEX `testIndex` ON `t1` (`a`,`b`)")
+    tidbStmt.execute("insert into t1 values (0,'aa','aa'),(1,'bb','bb')")
     // IndexScan with Selection and with RangeFilter.
     val df1 = spark.sql("SELECT * FROM t1 where a>0 and b > 'aa'")
+    df1.show()
     val dag1 = extractDAGRequests(df1).head
     val expectation1 =
       "== Physical Plan ==\n" +
