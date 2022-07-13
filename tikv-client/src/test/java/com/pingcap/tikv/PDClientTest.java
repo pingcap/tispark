@@ -119,8 +119,8 @@ public class PDClientTest extends PDMockServerTest {
             pdServer.getClusterId(),
             GrpcUtils.makeRegion(
                 1,
-                encodeKey(startKey),
-                encodeKey(endKey),
+                ByteString.copyFrom(startKey),
+                ByteString.copyFrom(endKey),
                 GrpcUtils.makeRegionEpoch(confVer, ver),
                 GrpcUtils.makePeer(1, 10),
                 GrpcUtils.makePeer(2, 20))));
@@ -179,8 +179,8 @@ public class PDClientTest extends PDMockServerTest {
             pdServer.getClusterId(),
             GrpcUtils.makeRegion(
                 1,
-                encodeKey(startKey),
-                encodeKey(endKey),
+                ByteString.copyFrom(startKey),
+                ByteString.copyFrom(endKey),
                 GrpcUtils.makeRegionEpoch(confVer, ver),
                 GrpcUtils.makePeer(1, 10),
                 GrpcUtils.makePeer(2, 20))));
