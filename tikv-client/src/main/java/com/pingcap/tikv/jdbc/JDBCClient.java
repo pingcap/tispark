@@ -36,7 +36,7 @@ public class JDBCClient {
   public static final String SQL_SHOW_GRANTS = "SHOW GRANTS";
   public static final String GET_PD_ADDRESS =
       "SELECT `INSTANCE` FROM `INFORMATION_SCHEMA`.`CLUSTER_INFO` WHERE `TYPE` = 'pd'";
-  private static final String MYSQL_DRIVER_NAME = "org.postgresql.Driver";
+  private static final String MYSQL_DRIVER_NAME = "org.mariadb.jdbc.Driver";
   private static final String SQL_SHOW_GRANTS_USING_ROLE = "SHOW GRANTS FOR CURRENT_USER USING ";
   private static final String SELECT_CURRENT_USER = "SELECT CURRENT_USER()";
   private final Logger logger = LoggerFactory.getLogger(getClass().getName());
