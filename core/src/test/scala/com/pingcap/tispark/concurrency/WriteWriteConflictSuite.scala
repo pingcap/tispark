@@ -79,7 +79,7 @@ class WriteWriteConflictSuite extends ConcurrencyTest {
     }
     assert(
       caught.getMessage
-        .startsWith("Table 'test_concurrency_write_read' was locked in WRITE LOCAL by server"))
+        .contains("Table 'test_concurrency_write_read' was locked in WRITE LOCAL by server"))
   }
 
   test("write write conflict using TableLock & tispark") {
@@ -108,6 +108,6 @@ class WriteWriteConflictSuite extends ConcurrencyTest {
     }
     assert(
       caught.getMessage
-        .startsWith("Table 'test_concurrency_write_read' was locked in WRITE LOCAL by server"))
+        .contains("Table 'test_concurrency_write_read' was locked in WRITE LOCAL by server"))
   }
 }

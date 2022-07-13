@@ -107,7 +107,7 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
     val caught = intercept[java.sql.SQLException] {
       tidbStmt.execute(s"insert into $dbtable values(1),(2),(3),(4),(null)")
     }
-    assert(caught.getMessage.startsWith(s"Table '$table' was locked in WRITE LOCAL by server"))
+    assert(caught.getMessage.contains(s"Table '$table' was locked in WRITE LOCAL by server"))
 
     // unlock tables
     assert(tiDBJDBCClient.unlockTables())
