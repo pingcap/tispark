@@ -51,7 +51,7 @@ public class ConcreteBackOffer implements BackOffer {
 
   public static final Histogram BACKOFF_DURATION =
       HistogramUtils.buildDuration()
-          .name("client_java_backoff_duration")
+          .name("tispark_tikv_client_backoff_duration")
           .help("backoff duration.")
           .labelNames("type", "cluster")
           .register();
