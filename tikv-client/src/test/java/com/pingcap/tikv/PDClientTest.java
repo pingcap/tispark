@@ -125,10 +125,10 @@ public class PDClientTest extends PDMockServerTest {
                 GrpcUtils.makePeer(1, 10),
                 GrpcUtils.makePeer(2, 20))));
     try (PDClient client = session.getPDClient()) {
-      Pair<Future<Metapb.Region>, Future<Metapb.Peer>> rl =
-          client.getRegionByKeyAsync(defaultBackOff(), ByteString.EMPTY);
-      Metapb.Region region = rl.first.get();
-      Metapb.Peer leader = rl.second.get();
+      Pair<Metapb.Region, Metapb.Peer> rl =
+          client.getRegionByKeyAsync(defaultBackOff(), ByteString.EMPTY).get();
+      Metapb.Region region = rl.first;
+      Metapb.Peer leader = rl.second;
       assertEquals(region.getStartKey(), ByteString.copyFrom(startKey));
       assertEquals(region.getEndKey(), ByteString.copyFrom(endKey));
       assertEquals(region.getRegionEpoch().getConfVer(), confVer);
@@ -185,10 +185,9 @@ public class PDClientTest extends PDMockServerTest {
                 GrpcUtils.makePeer(1, 10),
                 GrpcUtils.makePeer(2, 20))));
     try (PDClient client = session.getPDClient()) {
-      Pair<Future<Metapb.Region>, Future<Metapb.Peer>> rl =
-          client.getRegionByIDAsync(defaultBackOff(), 0);
-      Metapb.Region region = rl.first.get();
-      Metapb.Peer leader = rl.second.get();
+      Pair<Metapb.Region, Metapb.Peer> rl = client.getRegionByIDAsync(defaultBackOff(), 0).get();
+      Metapb.Region region = rl.first;
+      Metapb.Peer leader = rl.second;
       assertEquals(region.getStartKey(), ByteString.copyFrom(startKey));
       assertEquals(region.getEndKey(), ByteString.copyFrom(endKey));
       assertEquals(region.getRegionEpoch().getConfVer(), confVer);

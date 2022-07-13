@@ -42,8 +42,7 @@ public interface ReadOnlyPDClient {
    */
   Pair<Metapb.Region, Metapb.Peer> getRegionByKey(BackOffer backOffer, ByteString key);
 
-  Pair<Future<Metapb.Region>, Future<Metapb.Peer>> getRegionByKeyAsync(
-      BackOffer backOffer, ByteString key);
+  Future<Pair<Metapb.Region, Metapb.Peer>> getRegionByKeyAsync(BackOffer backOffer, ByteString key);
 
   /**
    * Get Region by Region Id
@@ -53,7 +52,7 @@ public interface ReadOnlyPDClient {
    */
   Pair<Metapb.Region, Metapb.Peer> getRegionByID(BackOffer backOffer, long id);
 
-  Pair<Future<Metapb.Region>, Future<Metapb.Peer>> getRegionByIDAsync(BackOffer backOffer, long id);
+  Future<Pair<Metapb.Region, Metapb.Peer>> getRegionByIDAsync(BackOffer backOffer, long id);
 
   /**
    * Get Store by StoreId

@@ -214,19 +214,20 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
   }
 
   @Override
-  public Pair<Future<Metapb.Region>, Future<Metapb.Peer>> getRegionByKeyAsync(
+  public Future<Pair<Metapb.Region, Metapb.Peer>> getRegionByKeyAsync(
       BackOffer backOffer, ByteString key) {
-    FutureObserver<Metapb.Region, GetRegionResponse> responseObserver =
-        new FutureObserver<>(GetRegionResponse::getRegion);
-    FutureObserver<Metapb.Peer, GetRegionResponse> responseObserver2 =
-        new FutureObserver<>(GetRegionResponse::getLeader);
+    FutureObserver<Pair<Metapb.Region, Metapb.Peer>, GetRegionResponse> responseObserver =
+        new FutureObserver<>(this::getAll);
     Supplier<GetRegionRequest> request =
         () -> GetRegionRequest.newBuilder().setHeader(header).setRegionKey(key).build();
     PDErrorHandler<GetRegionResponse> handler =
         new PDErrorHandler<>(getRegionResponseErrorExtractor, this);
     callAsyncWithRetry(backOffer, PDGrpc.getGetRegionMethod(), request, responseObserver, handler);
-    callAsyncWithRetry(backOffer, PDGrpc.getGetRegionMethod(), request, responseObserver2, handler);
-    return new Pair<>(responseObserver.getFuture(), responseObserver2.getFuture());
+    return responseObserver.getFuture();
+  }
+
+  private Pair<Metapb.Region, Metapb.Peer> getAll(GetRegionResponse resp) {
+    return new Pair<>(resp.getRegion(), resp.getLeader());
   }
 
   @Override
@@ -235,23 +236,16 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
   }
 
   @Override
-  public Pair<Future<Metapb.Region>, Future<Metapb.Peer>> getRegionByIDAsync(
-      BackOffer backOffer, long id) {
-    FutureObserver<Metapb.Region, GetRegionResponse> responseObserver =
-        new FutureObserver<>(GetRegionResponse::getRegion);
-    FutureObserver<Metapb.Peer, GetRegionResponse> responseObserver2 =
-        new FutureObserver<>(GetRegionResponse::getLeader);
-
+  public Future<Pair<Metapb.Region, Metapb.Peer>> getRegionByIDAsync(BackOffer backOffer, long id) {
+    FutureObserver<Pair<Metapb.Region, Metapb.Peer>, GetRegionResponse> responseObserver =
+        new FutureObserver<>(this::getAll);
     Supplier<GetRegionByIDRequest> request =
         () -> GetRegionByIDRequest.newBuilder().setHeader(header).setRegionId(id).build();
     PDErrorHandler<GetRegionResponse> handler =
         new PDErrorHandler<>(getRegionResponseErrorExtractor, this);
-
     callAsyncWithRetry(
         backOffer, PDGrpc.getGetRegionByIDMethod(), request, responseObserver, handler);
-    callAsyncWithRetry(
-        backOffer, PDGrpc.getGetRegionByIDMethod(), request, responseObserver2, handler);
-    return new Pair<>(responseObserver.getFuture(), responseObserver2.getFuture());
+    return responseObserver.getFuture();
   }
 
   private Supplier<GetStoreRequest> buildGetStoreReq(long storeId) {
