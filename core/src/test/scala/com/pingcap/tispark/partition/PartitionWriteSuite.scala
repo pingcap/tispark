@@ -262,6 +262,57 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     checkJDBCResult(deleteResultJDBC, Array(Array(65L, "John")))
   }
 
+  test("date type range column partition replace and delete test") {
+    tidbStmt.execute(
+      s"create table `$database`.`$table` (birthday date primary key , name varchar(16)) partition by range columns(birthday) (" +
+        s"partition p0 values less than ('1995-07-17')," +
+        s"partition p1 values less than ('1996-01-01')," +
+        s"partition p2 values less than MAXVALUE)")
+
+    tidbStmt.execute(
+      s"insert into `$database`.`$table` values ('1995-06-15', 'Apple'), ('1995-08-08', 'Honey'), ('1999-06-04', 'Mike')")
+    val data: RDD[Row] = sc.makeRDD(
+      List(
+        Row(Date.valueOf("1995-06-15"), "Luo"),
+        Row(Date.valueOf("1995-08-08"), "John"),
+        Row(Date.valueOf("1993-08-22"), "Jack")))
+    val schema: StructType =
+      StructType(List(StructField("birthday", DateType), StructField("name", StringType)))
+    val df = sqlContext.createDataFrame(data, schema)
+    df.write
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", database)
+      .option("table", table)
+      .option("replace", "true")
+      .mode("append")
+      .save()
+
+    val insertResultJDBC = tidbStmt.executeQuery(s"select * from `$database`.`$table`")
+    val insertResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    insertResultSpark.collect() should contain theSameElementsAs Array(
+      Row(Date.valueOf("1995-06-15"), "Luo"),
+      Row(Date.valueOf("1995-08-08"), "John"),
+      Row(Date.valueOf("1993-08-22"), "Jack"),
+      Row(Date.valueOf("1999-06-04"), "Mike"))
+    checkJDBCResult(
+      insertResultJDBC,
+      Array(
+        Array(Date.valueOf("1995-06-15"), "Luo"),
+        Array(Date.valueOf("1995-08-08"), "John"),
+        Array(Date.valueOf("1993-08-22"), "Jack"),
+        Array(Date.valueOf("1999-06-04"), "Mike")))
+
+    spark.sql(
+      s"delete from `tidb_catalog`.`$database`.`$table` where birthday <= '1995-06-15' or name = 'Mike'")
+
+    val deleteResultJDBC = tidbStmt.executeQuery(s"select * from `$database`.`$table`")
+    val deleteResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    deleteResultSpark.collect() should contain theSameElementsAs Array(
+      Row(Date.valueOf("1995-08-08"), "John"))
+    checkJDBCResult(deleteResultJDBC, Array(Array(Date.valueOf("1995-08-08"), "John")))
+  }
+
   /**
    * range partition
    * - append and delete
