@@ -153,15 +153,15 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
       if (!serverCertStore.startsWith(FILE_PREFIX))
         serverCertStore = FILE_PREFIX + serverCertStore
       SSLParameters =
-        "true&requireSSL=true&verifyServerCertificate=true&trustCertificateKeyStoreUrl=" +
-          serverCertStore + "&trustCertificateKeyStorePassword=" + serverCertPassword
+        "true&requireSSL=true&verifyServerCertificate=true&trustStore=" +
+          serverCertStore + "&trustStorePassword=" + serverCertPassword
     }
     // Setting up client authentication
     if (!clientCertStore.equals("")) {
       if (!clientCertStore.startsWith(FILE_PREFIX))
         clientCertStore = FILE_PREFIX + clientCertStore
-      SSLParameters += "&clientCertificateKeyStoreUrl=" + clientCertStore +
-        "&clientCertificateKeyStorePassword=" + clientCertPassword
+      SSLParameters += "&keyStore=" + clientCertStore +
+        "&keyStorePassword=" + clientCertPassword
     }
   }
 
