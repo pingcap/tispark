@@ -169,7 +169,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // Calculated parameters
   // ------------------------------------------------------------
   val url: String =
-    s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?permitMysqlScheme&user=$user&password=$password&useSSL=$SSLParameters&rewriteBatchedStatements=true&enabledTLSProtocols=TLSv1.2,TLSv1.3"
+    s"jdbc:mariadb://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useSSL=$SSLParameters&rewriteBatchedStatements=true&enabledSslProtocolSuites=TLSv1.2,TLSv1.3"
       .replaceAll("%", "%25")
 
   def useTableLock(isV4: Boolean): Boolean = {

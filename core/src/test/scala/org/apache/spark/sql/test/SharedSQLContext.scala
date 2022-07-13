@@ -349,11 +349,11 @@ trait SharedSQLContext
     var SSLPara = "false"
     if (conf.contains("jdbc.tls_enable") && conf.get("jdbc.tls_enable").equals("true")) {
       SSLPara =
-        "true&verifyServerCertificate=false&requireSSL=true&enabledTLSProtocols=TLSv1.2,TLSv1.3"
+        "true&verifyServerCertificate=false&requireSSL=true&enabledSslProtocolSuites=TLSv1.2,TLSv1.3"
     }
 
     jdbcUrl =
-      s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?permitMysqlScheme&user=$tidbUser&password=$tidbPassword" +
+      s"jdbc:mariadb://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword" +
         s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=round&useSSL=$SSLPara" +
         s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
         s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}&sessionVariables=time_zone='$timeZoneOffset'"
