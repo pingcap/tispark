@@ -65,7 +65,7 @@ The expression passed to COP/TiKV as selection expression without triggering a d
 
 ## Understand EXPLAIN output in `RegionTaskExec`
 
-From the previous article, we know that `IndexLookUp` will perform two scanning operations, the first scan is `IndexRangeScan` and the second scan is `TableRowIDScan`. If the `TableRowIDScan` in `IndexLookUp` does too many queries on COP([TiKV Coprocessor](https://docs.pingcap.com/tidb/stable/tikv-overview#tikv-coprocessor))/TiKV, it can cause performance problems in COP/TiKV. To solve this problem a downgrading mechanism is introduced.
+From the previous section, we know that `IndexLookUp` will perform two scanning operations, the first scan is `IndexRangeScan` and the second scan is `TableRowIDScan`. If the `TableRowIDScan` in `IndexLookUp` does too many queries on COP([TiKV Coprocessor](https://docs.pingcap.com/tidb/stable/tikv-overview#tikv-coprocessor))/TiKV, it can cause performance problems in COP/TiKV. To solve this problem a downgrading mechanism is introduced.
 
 The `IndexRangeScan` of `IndexLookUp` will return the data that meets the conditions, and then TiSpark will sort and aggregate the returned data to obtain the `regionTask` that needs to be done in the `TableRowIDScan`. If the number of `regionTask` is bigger than `downgradeThreshold`, a downgrade will be triggered. When a downgrade is triggered, the range of the second  table  scan will be changed from the returned value of the first scan index to all values between the minimum and maximum value of the first scan index, and the `filters` of the second scan will change to `downgradeFilters`(`downgradeFilters` is the same as if the execution plan is `TableScan`'s `filters`).
 

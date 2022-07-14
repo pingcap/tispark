@@ -270,7 +270,7 @@ public class TiDAGRequest implements Serializable {
       indexDataTypes.add(requireNonNull(IntegerType.BIGINT, "dataType is null"));
       usedColIDSet.add(handleColumn.getColumnId());
     }
-    addIndexColsToScanBuilder(indexScanBuilder, usedColIDSet,colOffsetInFieldMap);
+    addIndexColsToScanBuilder(indexScanBuilder, usedColIDSet, colOffsetInFieldMap);
   }
 
   private void addIndexReaderIndexRangeScanExecutorCols(
@@ -295,11 +295,13 @@ public class TiDAGRequest implements Serializable {
                 + columnInfo.getName());
       }
     }
-    addIndexColsToScanBuilder(indexScanBuilder, usedColIDSet,colOffsetInFieldMap);
+    addIndexColsToScanBuilder(indexScanBuilder, usedColIDSet, colOffsetInFieldMap);
   }
 
   private void addIndexColsToScanBuilder(
-      IndexScan.Builder indexScanBuilder, Set<Long> usedColIDSet,Map<String,Integer> colOffsetInFieldMap) {
+      IndexScan.Builder indexScanBuilder,
+      Set<Long> usedColIDSet,
+      Map<String, Integer> colOffsetInFieldMap) {
     for (TiIndexColumn indexColumn : indexInfo.getIndexColumns()) {
       TiColumnInfo tableInfoColumn = tableInfo.getColumn(indexColumn.getName());
       // already add this col before.
@@ -308,7 +310,7 @@ public class TiDAGRequest implements Serializable {
       }
       ColumnInfo.Builder colBuild = ColumnInfo.newBuilder(tableInfoColumn.toProto(tableInfo));
 
-      colOffsetInFieldMap.put(tableInfoColumn.getName(),indexScanBuilder.getColumnsCount());
+      colOffsetInFieldMap.put(tableInfoColumn.getName(), indexScanBuilder.getColumnsCount());
       indexScanBuilder.addColumns(colBuild);
     }
   }
