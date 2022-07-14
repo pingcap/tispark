@@ -18,6 +18,11 @@ And the associated supported partition types to be supported in this feature are
 - [Range partitioning](https://docs.pingcap.com/tidb/dev/partitioned-table#range-partitioning)
 - [Hash partitioning](https://docs.pingcap.com/tidb/dev/partitioned-table#hash-partitioning)
 
+And the parititon expression must be under contions as bellow:
++ column expression
++ `YEAR` (expression) where the expression is a column and its type is datetime or string literal
+that can be parsed as datetime.
+
 ## Motivation and background
 
 Partitioning is a way in which a database splits its actual data down into separate tables, but
@@ -51,9 +56,15 @@ physical table.
 
 Since TiSpark supports INSERT, REPLACE semantics with DataSource API and DELETE statement with Spark SQL, 
 it's natural to support the partitioning feature in these semantics.
+
 List partitioning, List COLUMNS partitioning are generally available in V6.1 recently and also more
 complicated. Considering the workload of this feature, we have decide to support them in the future.
 In this feature, we only focus on Range partitioning and Hash partitioning.
+
+Currently TiSpark only support YEAR function, so the parititon expression must be under contions as bellow:
++ column expression
++ `YEAR` (expression) where the expression is a column and its type is datetime or string literal
+that can be parsed as datetime.
 
 ## API changes
 
@@ -127,7 +138,8 @@ interface.
 - replace into Range Column partition table
 - replace into Hash partition table
 
-### Partitioning schemes based on time intervals
+### Scenario tests
 
-- Range partitioning with YEAR() functions
+- Range partitioning with YEAR() function
+- Range partitioning with unsupported functions
 - Range Column partitioning with DATE and DATETIME types
