@@ -142,4 +142,4 @@ interface.
 
 - Range partitioning with YEAR() function
 - Range partitioning with unsupported functions
-- Range Column partitioning with DATE and DATETIME types
+- Range Column partitioning with DATE type
