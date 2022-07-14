@@ -68,7 +68,8 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
     }
 
     Constant constant = (Constant) node.getRight();
-    // For the varchar range the value is 'AAAAA', we should escape single quote.
+    // For the range with single quote such as varchar 'AAAAA' or date '1997-09-09',
+    // we should escape single quote to get the real string need to be compared.
     String rawString = constant.getValue().toString();
     if (rawString.startsWith("'")) {
       rawString = rawString.substring(1, rawString.length() - 1);

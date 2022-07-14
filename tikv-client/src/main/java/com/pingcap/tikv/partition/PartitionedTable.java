@@ -108,7 +108,6 @@ public class PartitionedTable implements Serializable {
       List<Expression> partExprs = new ArrayList<>();
       String colRefName = partitionInfo.getColumns().get(i);
 
-      // the result is like generateRangePartitionExpr(tableInfo)
       PartitionPruner.generateRangeExprs(partitionInfo, partExprs, parser, colRefName, i);
       column2PartitionExps.put(colRefName, partExprs);
     }
