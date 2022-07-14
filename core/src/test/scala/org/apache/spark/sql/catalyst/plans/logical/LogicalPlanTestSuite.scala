@@ -283,7 +283,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
                        |CREATE TABLE `t1` (
                        |`a` int(20)  NOT NULL,
                        |`b` varchar(255) NOT NULL,
-                       |`c` varchar(255) DEFAULT NULL,
+                       |`c` varchar(255) DEFAULT NULL
                        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
         """.stripMargin)
     tidbStmt.execute("CREATE INDEX `testIndex` ON `t1` (`a`,`b`)")
