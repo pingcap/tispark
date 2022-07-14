@@ -17,7 +17,15 @@
 package com.pingcap.tispark.partition
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{DateType, IntegerType, LongType, StringType, StructField, StructType, TimestampType}
+import org.apache.spark.sql.types.{
+  DateType,
+  IntegerType,
+  LongType,
+  StringType,
+  StructField,
+  StructType,
+  TimestampType
+}
 import org.apache.spark.sql.{BaseTiSparkTest, Row}
 import org.scalatest.Matchers.{contain, convertToAnyShouldWrapper, have, the}
 
