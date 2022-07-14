@@ -151,11 +151,11 @@ class TiBatchWrite(
     tiBatchWriteTables = {
       dataToWrite.flatMap {
         case (dbTable, df) =>
-          val physicalTableOptions = options.setDBTable(dbTable)
-          val tiTableRef = physicalTableOptions.getTiTableRef(tiConf)
+          val tableOptions = options.setDBTable(dbTable)
+          val tiTableRef = tableOptions.getTiTableRef(tiConf)
           val tiTableInfo = tiContext.tiSession.getCatalog.getTable(
-            physicalTableOptions.getTiTableRef(tiConf).databaseName,
-            physicalTableOptions.getTiTableRef(tiConf).tableName)
+            tableOptions.getTiTableRef(tiConf).databaseName,
+            tableOptions.getTiTableRef(tiConf).tableName)
 
           if (tiTableInfo == null) {
             throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
@@ -175,14 +175,14 @@ class TiBatchWrite(
               tiTableInfo,
               table,
               isTiDBV4,
-              physicalTableOptions,
+              tableOptions,
               dbTable)
           } else {
             List(
               new TiBatchWriteTable(
                 df,
                 tiContext,
-                physicalTableOptions,
+                tableOptions,
                 tiConf,
                 tiDBJDBCClient,
                 isTiDBV4,

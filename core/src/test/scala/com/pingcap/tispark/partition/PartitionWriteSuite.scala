@@ -178,6 +178,7 @@ class PartitionWriteSuite extends BaseTiSparkTest {
    * range column partition
    * - append and delete
    * - replace and delete
+   * - date type replace and delete
    */
   test("range column append and delete test") {
     tidbStmt.execute(

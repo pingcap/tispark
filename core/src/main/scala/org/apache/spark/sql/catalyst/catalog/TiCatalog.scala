@@ -131,8 +131,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
       .getOrElse(throw new NoSuchTableException(dbName, ident.name))
 
     TiDBTable(tiSession.get, TiTableReference(dbName, ident.name), table)(
-      SparkSession.active.sqlContext,
-      SparkSession.active.sparkContext)
+      SparkSession.active.sqlContext)
   }
 
   override def listTables(namespace: Array[String]): Array[Identifier] = {

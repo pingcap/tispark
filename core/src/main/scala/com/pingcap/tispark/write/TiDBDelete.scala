@@ -24,7 +24,7 @@ import com.pingcap.tispark.utils.TiUtil.sparkConfToTiConf
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TwoPhaseCommitHepler, WriteUtil}
 import com.pingcap.tispark.write.TiBatchWrite.TiRow
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.slf4j.LoggerFactory
 
@@ -33,7 +33,7 @@ case class TiDBDelete(
     database: String,
     tableName: String,
     startTs: Long,
-    tiDBOptions: Option[TiDBOptions] = None)(@transient val sparkContext: SparkContext) {
+    tiDBOptions: Option[TiDBOptions] = None) {
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -62,8 +62,9 @@ case class TiDBDelete(
     val colsInDf = df.columns.toList.map(_.toLowerCase())
 
     /**
-     * There will be a stuck the following codes are executed after df.persist()
-     * The reason has not been figured out yet.
+     * There will be a stuck the following codes are executed after df.persist(),
+     * so we use collect() to trigger action firstly.
+     * The reason why getting stuck has not been figured out yet.
      *
      * TableCommon is the physical table associated with the TiRow, we can get logical table name
      * from tiTableInfo.
@@ -71,7 +72,7 @@ case class TiDBDelete(
      * and then group the rows by the physical table.
      * - if the table is not partitioned, the logical table is the same as the physical table.
      */
-    val tiRowMapRDD: RDD[(TableCommon, TiRow)] = sparkContext.makeRDD(
+    val tiRowMapRDD: RDD[(TableCommon, TiRow)] = SparkSession.active.sparkContext.makeRDD(
       df.rdd
         .mapPartitions { rowIterator =>
           val table = new TableCommon(tiTableInfo.getId, tiTableInfo.getId, tiTableInfo)

@@ -20,45 +20,20 @@ import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
+import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
 import com.pingcap.tispark.v2.sink.TiDBWriteBuilder
 import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions}
-import com.pingcap.tispark.TiTableReference
 import org.apache.commons.lang3.StringUtils
-import org.apache.spark.SparkContext
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.catalyst.util.{DateTimeUtils, TimestampFormatter}
-import org.apache.spark.sql.connector.catalog.{
-  SupportsDelete,
-  SupportsRead,
-  SupportsWrite,
-  TableCapability
-}
+import org.apache.spark.sql.connector.catalog.{SupportsDelete, SupportsRead, SupportsWrite, TableCapability}
 import org.apache.spark.sql.connector.read.ScanBuilder
 import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, SparkPlan}
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.sources.{
-  AlwaysFalse,
-  AlwaysTrue,
-  And,
-  EqualNullSafe,
-  EqualTo,
-  Filter,
-  GreaterThan,
-  GreaterThanOrEqual,
-  In,
-  IsNotNull,
-  IsNull,
-  LessThan,
-  LessThanOrEqual,
-  Not,
-  Or,
-  StringContains,
-  StringEndsWith,
-  StringStartsWith
-}
+import org.apache.spark.sql.sources._
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
@@ -69,8 +44,8 @@ import java.sql.{Date, SQLException, Timestamp}
 import java.time.{Instant, LocalDate}
 import java.util
 import java.util.Collections
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import collection.JavaConverters._
 
 case class TiDBTable(
     session: TiSession,
@@ -78,8 +53,7 @@ case class TiDBTable(
     table: TiTableInfo,
     var ts: TiTimestamp = null,
     options: Option[Map[String, String]] = None)(
-    @transient val sqlContext: SQLContext,
-    @transient val sparkContext: SparkContext)
+    @transient val sqlContext: SQLContext)
     extends SupportsRead
     with SupportsWrite
     with SupportsDelete {
@@ -201,7 +175,7 @@ case class TiDBTable(
 
     // Execute delete
     val tiDBDelete =
-      TiDBDelete(df, databaseName, tableName, startTs, Some(tidbOptions))(sparkContext)
+      TiDBDelete(df, databaseName, tableName, startTs, Some(tidbOptions))
     try {
       tiDBDelete.delete()
     } finally {
