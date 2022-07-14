@@ -42,7 +42,7 @@ public class SchemaInfer {
   }
 
   public static SchemaInfer create(TiDAGRequest dagRequest) {
-    return create(dagRequest.copy(), false);
+    return new SchemaInfer(dagRequest.copy(), false);
   }
 
   public static SchemaInfer create(TiDAGRequest dagRequest, boolean readHandle) {

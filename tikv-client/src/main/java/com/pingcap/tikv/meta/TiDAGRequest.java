@@ -199,13 +199,14 @@ public class TiDAGRequest implements Serializable {
     return tableInfo.isCommonHandle();
   }
 
-  public DAGRequest buildIndexScan() {
+  public DAGRequest buildDAGGetIndexData() {
     List<Integer> outputOffsets = new ArrayList<>();
     DAGRequest.Builder dagRequestBuilder = DAGRequest.newBuilder();
     IndexScan.Builder indexScanBuilder = IndexScan.newBuilder();
     Executor.Builder indexScanExecutor = Executor.newBuilder();
     // find a column's offset in fields
     Map<String, Integer> colOffsetInFieldMap = new HashMap<>();
+    List<DataType> indexDataTypes = new ArrayList<>();
 
     if (indexInfo == null) {
       throw new TiClientInternalException("Index is empty for index scan");
@@ -228,7 +229,7 @@ public class TiDAGRequest implements Serializable {
         indexScanBuilder.addPrimaryColumnIds(tableInfo.getColumn(col.getName()).getId());
       }
     }
-    addExecutorToRequest(dagRequestBuilder, true, outputOffsets, colOffsetInFieldMap);
+    addPushDownExecutorToRequest(dagRequestBuilder, isDoubleRead, outputOffsets, colOffsetInFieldMap);
 
     return buildRequest(dagRequestBuilder, outputOffsets);
   }
@@ -244,9 +245,9 @@ public class TiDAGRequest implements Serializable {
         TiColumnInfo tableColInfo = tableInfo.getColumn(indexColumn.getName());
         ColumnInfo.Builder colBuild = ColumnInfo.newBuilder(tableColInfo.toProto(tableInfo));
         outputOffsets.add(indexScanBuilder.getColumnsCount());
+        indexDataTypes.add(requireNonNull(tableColInfo.getType(), "dataType is null"));
         indexScanBuilder.addColumns(colBuild);
         colOffsetInFieldMap.put(tableColInfo.getName(), indexScanBuilder.getColumnsCount());
-        indexDataTypes.add(requireNonNull(tableColInfo.getType(), "dataType is null"));
         usedColIDSet.add(tableColInfo.getId());
       }
     } else if (tableInfo.isPkHandle()) {
@@ -254,10 +255,10 @@ public class TiDAGRequest implements Serializable {
       ColumnInfo.Builder colBuild = ColumnInfo.newBuilder(pk.toProto(tableInfo));
       colBuild.setPkHandle(true);
       outputOffsets.add(indexScanBuilder.getColumnsCount());
+      indexDataTypes.add(requireNonNull(IntegerType.BIGINT, "dataType is null"));
       indexScanBuilder.addColumns(colBuild);
       colOffsetInFieldMap.put(pk.getName(), indexScanBuilder.getColumnsCount());
       // Whatever the type of PK is, it is BIGINT in rowKey
-      indexDataTypes.add(requireNonNull(IntegerType.BIGINT, "dataType is null"));
       usedColIDSet.add(pk.getId());
     } else {
       outputOffsets.add(indexScanBuilder.getColumnsCount());
@@ -304,7 +305,7 @@ public class TiDAGRequest implements Serializable {
     }
   }
 
-  public DAGRequest buildTableScan() {
+  public DAGRequest buildDAGGetTableData() {
     List<Integer> outputOffsets = new ArrayList<>();
     // TableScan
     DAGRequest.Builder dagRequestBuilder = DAGRequest.newBuilder();
@@ -335,7 +336,7 @@ public class TiDAGRequest implements Serializable {
         tblScanBuilder.addPrimaryColumnIds(tableInfo.getColumn(col.getName()).getId());
       }
     }
-    addExecutorToRequest(dagRequestBuilder, false, outputOffsets, colOffsetInFieldMap);
+    addPushDownExecutorToRequest(dagRequestBuilder, false, outputOffsets, colOffsetInFieldMap);
 
     return buildRequest(dagRequestBuilder, outputOffsets);
   }
@@ -360,16 +361,17 @@ public class TiDAGRequest implements Serializable {
   }
 
 
-  private void addExecutorToRequest(DAGRequest.Builder dagRequestBuilder,
-      boolean isIndexScan, List<Integer> outputOffsets, Map<String, Integer> colOffsetInFieldMap) {
+  private void addPushDownExecutorToRequest(DAGRequest.Builder dagRequestBuilder,
+      boolean isCoverCheckCoverNeed, List<Integer> outputOffsets,
+      Map<String, Integer> colOffsetInFieldMap) {
     Executor.Builder executorBuilder = Executor.newBuilder();
 
     // DO NOT EDIT EXPRESSION CONSTRUCTION ORDER
     // Or make sure the construction order is below:
     // TableScan/IndexScan > Selection > Aggregation > TopN/Limit
 
-    if (getFields().isEmpty()) {
-      if (!isIndexScan || isFilterCoveredByIndex()) {
+    if (!getFilters().isEmpty()) {
+      if (!isCoverCheckCoverNeed || isFilterCoveredByIndex()) {
         pushDownFilters(dagRequestBuilder, executorBuilder, colOffsetInFieldMap);
       } else {
         return;
@@ -378,7 +380,7 @@ public class TiDAGRequest implements Serializable {
 
     if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
       // only allow table scan or covering index scan push down groupby and agg
-      if (!isIndexScan || (isGroupByCoveredByIndex() && isAggregateCoveredByIndex())) {
+      if (!isCoverCheckCoverNeed || (isGroupByCoveredByIndex() && isAggregateCoveredByIndex())) {
         pushDownAggAndGroupBy(
             dagRequestBuilder, executorBuilder, outputOffsets, colOffsetInFieldMap);
       } else {
@@ -387,12 +389,12 @@ public class TiDAGRequest implements Serializable {
     }
 
     if (!getOrderByItems().isEmpty()) {
-      if (!isIndexScan || isOrderByCoveredByIndex()) {
+      if (!isCoverCheckCoverNeed || isOrderByCoveredByIndex()) {
         // only allow table scan or covering index scan push down orderby
         pushDownOrderBy(dagRequestBuilder, executorBuilder, colOffsetInFieldMap);
       }
     } else if (getLimit() != 0) {
-      if (!isIndexScan) {
+      if (!isCoverCheckCoverNeed) {
         pushDownLimit(dagRequestBuilder, executorBuilder);
       }
     }
@@ -412,6 +414,18 @@ public class TiDAGRequest implements Serializable {
       indexAndPrimaryColIDSet.add(tableInfo.getColumn(indexColumn.getName()).getId());
     }
     return indexAndPrimaryColIDSet;
+  }
+
+  private void pushDownFilters(DAGRequest.Builder dagRequestBuilder,
+      Executor.Builder executorBuilder, Map<String, Integer> colOffsetInFieldMap) {
+    Expression whereExpr = mergeCNFExpressions(getFilters());
+    executorBuilder.setTp(ExecType.TypeSelection);
+    dagRequestBuilder.addExecutors(
+        executorBuilder.setSelection(
+            Selection.newBuilder()
+                .addConditions(ProtoConverter.toProto(whereExpr, colOffsetInFieldMap))));
+    executorBuilder.clear();
+    addPushDownFilters();
   }
 
   private void pushDownLimit(
@@ -443,17 +457,6 @@ public class TiDAGRequest implements Serializable {
     addPushDownOrderBys();
   }
 
-  private void pushDownFilters(DAGRequest.Builder dagRequestBuilder,
-      Executor.Builder executorBuilder, Map<String, Integer> colOffsetInFieldMap) {
-    Expression whereExpr = mergeCNFExpressions(getFilters());
-    executorBuilder.setTp(ExecType.TypeSelection);
-    dagRequestBuilder.addExecutors(
-        executorBuilder.setSelection(
-            Selection.newBuilder()
-                .addConditions(ProtoConverter.toProto(whereExpr, colOffsetInFieldMap))));
-    executorBuilder.clear();
-    addPushDownFilters();
-  }
 
   private void pushDownAggAndGroupBy(
       DAGRequest.Builder dagRequestBuilder,
@@ -925,10 +928,16 @@ public class TiDAGRequest implements Serializable {
   }
 
   public void init(boolean readHandle) {
-    if (readHandle) {
-      buildIndexScan();
-    } else {
-      buildTableScan();
+    if(readHandle){
+      // the first stage of IndexLookUp.
+      buildDAGGetIndexData();
+    }else if(hasIndex()&&!isDoubleRead()){
+      // the stage of IndexReader
+      buildDAGGetIndexData();
+    }else{
+      // the second stage of IndexLookUp.
+      // or the stage of TableReader.
+      buildDAGGetTableData();
     }
   }
 
@@ -990,7 +999,7 @@ public class TiDAGRequest implements Serializable {
   private String stringIndexRangeScan() {
     StringBuilder sb = new StringBuilder();
     this.clearPushDownInfo();
-    buildIndexScan();
+    buildDAGGetIndexData();
     sb.append("IndexRangeScan");
     sb.append(String.format("(Index:%s(", indexInfo.getName()));
     List<String> colNames =
@@ -1009,14 +1018,14 @@ public class TiDAGRequest implements Serializable {
 
   private String stringTableRowIDScan() {
     this.clearPushDownInfo();
-    buildTableScan();
+    buildDAGGetTableData();
     return "TableRowIDScan" + stringPushDownExpression();
   }
 
   private String stringTableRangeScan() {
     StringBuilder sb = new StringBuilder();
     this.clearPushDownInfo();
-    buildTableScan();
+    buildDAGGetTableData();
     sb.append("TableRangeScan");
     sb.append(": {");
     sb.append(stringScanRange());

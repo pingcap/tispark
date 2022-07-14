@@ -89,9 +89,9 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
     dagRequest.setEncodeType(EncodeType.TypeDefault);
     DAGRequest request;
     if (dagRequest.hasIndex()) {
-      request = dagRequest.buildIndexScan();
+      request = dagRequest.buildDAGGetIndexData();
     } else {
-      request = dagRequest.buildTableScan();
+      request = dagRequest.buildDAGGetTableData();
     }
     return new DAGIterator<Row>(
         request,
@@ -125,9 +125,9 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
     TiDAGRequest dagRequest = req.copy();
     DAGRequest request;
     if (!dagRequest.isDoubleRead() && dagRequest.hasIndex()) {
-      request = dagRequest.buildIndexScan();
+      request = dagRequest.buildDAGGetIndexData();
     } else {
-      request = dagRequest.buildTableScan();
+      request = dagRequest.buildDAGGetTableData();
     }
     return new DAGIterator<TiChunk>(
         request,
@@ -226,7 +226,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
     // CoprocessorIterator<TiChunk> support TypeChunk and TypeCHBlock encode type
     dagRequest.setEncodeType(EncodeType.TypeDefault);
     return new DAGIterator<Handle>(
-        dagRequest.buildIndexScan(),
+        dagRequest.buildDAGGetIndexData(),
         regionTasks,
         session,
         SchemaInfer.create(dagRequest, true),
