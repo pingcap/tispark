@@ -1,4 +1,4 @@
-# Support bypass-TiDB write partition table with DataSource API
+# Support bypass-TiDB write partition table
 
 - Author(s): [yangxin](http://github.com/xuanyu66)
 - Tracking Issue: https://github.com/pingcap/tispark/issues/2437
@@ -9,9 +9,9 @@ This design doc is about how to support bypass-TiDB write partition table with D
 
 The semantics to be supported in this feature are:
 
-- INSERT semantics
-- REPLACE semantics
-- DELETE semantics
+- INSERT semantics with Data Source API
+- REPLACE semantics with Data Source API
+- DELETE semantics with Spark SQL
 
 And the associated supported partition types to be supported in this feature are:
 
@@ -49,8 +49,8 @@ physical table.
 
 ## Goals
 
-Since TiSpark supports INSERT, REPLACE and DELETE semantics with DataSource API, it's natural to
-support the partitioning feature in these semantics.
+Since TiSpark supports INSERT, REPLACE semantics with DataSource API and DELETE statement with Spark SQL, 
+it's natural to support the partitioning feature in these semantics.
 List partitioning, List COLUMNS partitioning are generally available in V6.1 recently and also more
 complicated. Considering the workload of this feature, we have decide to support them in the future.
 In this feature, we only focus on Range partitioning and Hash partitioning.
@@ -58,7 +58,7 @@ In this feature, we only focus on Range partitioning and Hash partitioning.
 ## API changes
 
 There is no API change in this feature. Users use the DataSource API to execute INSERT, REPLACE and
-DELETE as normal.
+use Spark SQL to DELETE as normal.
 
 ## Detailed design
 
@@ -70,9 +70,15 @@ table so that we can reuse the existing API rather than bring more complexity in
 
 The original type of expression is `String`, we need to use `TiParser` to parse the expression in
 order to evaluate the partitioning expression for the latter steps.
-
-- For the `Range` and `Range Column`  partitioning, it also needs to extract the less than parts
-  from 'partition p0 less than xx ... partition p1 less than ...'
+For the `Range` and `Range Column`  partitioning, it also needs to extract the bound description
+'partition p0 less than xx ... partition p1 less than ...' and then parse to bound's expression.
+```
+[ 
+   [year(birthday@DATE) LESS_THAN 1995], 
+   [[year(birthday@DATE) GREATER_EQUAL 1995] AND [year(birthday@DATE) LESS_THAN 1997]], 
+   [[year(birthday@DATE) GREATER_EQUAL 1997] AND 1] 
+]
+```
 
 ### Locate the partition for each row
 
@@ -80,7 +86,7 @@ In this step, we need to get the physical tableId for each row.
 
 For the `Range` partitioning, the expression can be a column or indeed a function.
 
-- If the expression is a column, we can use the column's value to compare with the less than parts
+- If the expression is a column, we can use the column's value to compare with the bound's expression
   to locate the partition.
 - If the expression is a function, we can evaluate the function's value and then compare with the
   less than parts to locate the partition
@@ -89,8 +95,7 @@ For the `Range Column` partitioning, the expression can only be a column, so we 
 branch above.
 
 For the `Hash` partitioning, the result of the expression must be an integer, it can be a column or
-indeed a function.
-We take the result of the expression and mod it with the number of partitions, then use the
+indeed a function. We take the result of the expression and mod it with the number of partitions, then use the
 remainder as the array index of the partition.
 
 ### Group the rows by partition and invoke write API
@@ -124,6 +129,5 @@ interface.
 
 ### Partitioning schemes based on time intervals
 
-- Range partitioning with YEAR() and UNIX_TIMESTAMP() functions
+- Range partitioning with YEAR() functions
 - Range Column partitioning with DATE and DATETIME types
-- Hash partitioning with TO_DAYS() and YEAR() functions
