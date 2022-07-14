@@ -246,29 +246,30 @@ public class TiDAGRequest implements Serializable {
       for (TiIndexColumn indexColumn : tableInfo.getPrimaryKey().getIndexColumns()) {
         TiColumnInfo tableColInfo = tableInfo.getColumn(indexColumn.getName());
         ColumnInfo.Builder colBuild = ColumnInfo.newBuilder(tableColInfo.toProto(tableInfo));
+        colOffsetInFieldMap.put(tableColInfo.getName(), indexScanBuilder.getColumnsCount());
         outputOffsets.add(indexScanBuilder.getColumnsCount());
         indexDataTypes.add(requireNonNull(tableColInfo.getType(), "dataType is null"));
         indexScanBuilder.addColumns(colBuild);
-        colOffsetInFieldMap.put(tableColInfo.getName(), indexScanBuilder.getColumnsCount());
         usedColIDSet.add(tableColInfo.getId());
       }
     } else if (tableInfo.isPkHandle()) {
       TiColumnInfo pk = tableInfo.getPKIsHandleColumn();
+      usedColIDSet.add(pk.getId());
       ColumnInfo.Builder colBuild = ColumnInfo.newBuilder(pk.toProto(tableInfo));
       colBuild.setPkHandle(true);
+
+      colOffsetInFieldMap.put(pk.getName(), indexScanBuilder.getColumnsCount());
       outputOffsets.add(indexScanBuilder.getColumnsCount());
+      // Whatever the type of PK is, it is BIGINT in rowKey
       indexDataTypes.add(requireNonNull(IntegerType.BIGINT, "dataType is null"));
       indexScanBuilder.addColumns(colBuild);
-      colOffsetInFieldMap.put(pk.getName(), indexScanBuilder.getColumnsCount());
-      // Whatever the type of PK is, it is BIGINT in rowKey
-      usedColIDSet.add(pk.getId());
     } else {
       outputOffsets.add(indexScanBuilder.getColumnsCount());
       indexScanBuilder.addColumns(handleColumn);
       indexDataTypes.add(requireNonNull(IntegerType.BIGINT, "dataType is null"));
       usedColIDSet.add(handleColumn.getColumnId());
     }
-    addIndexColsToScanBuilder(indexScanBuilder, usedColIDSet);
+    addIndexColsToScanBuilder(indexScanBuilder, usedColIDSet,colOffsetInFieldMap);
   }
 
   private void addIndexReaderIndexRangeScanExecutorCols(
@@ -281,22 +282,23 @@ public class TiDAGRequest implements Serializable {
       TiColumnInfo columnInfo = tableInfo.getColumn(columnRef.getName());
       // IndexReader fields col must in primary key or index key.
       if (indexAndPrimaryColIDSet.contains(columnInfo.getId())) {
+        usedColIDSet.add(columnInfo.getId());
         ColumnInfo.Builder colBuild = ColumnInfo.newBuilder(columnInfo.toProto(tableInfo));
+
+        colOffsetInFieldMap.put(columnInfo.getName(), indexScanBuilder.getColumnsCount());
         outputOffsets.add(indexScanBuilder.getColumnsCount());
         indexScanBuilder.addColumns(colBuild);
-        usedColIDSet.add(columnInfo.getId());
-        colOffsetInFieldMap.put(columnInfo.getName(), indexScanBuilder.getColumnsCount());
       } else {
         throw new DAGRequestException(
             "columns other than primary key and index key exist in fields while index single read: "
                 + columnInfo.getName());
       }
     }
-    addIndexColsToScanBuilder(indexScanBuilder, usedColIDSet);
+    addIndexColsToScanBuilder(indexScanBuilder, usedColIDSet,colOffsetInFieldMap);
   }
 
   private void addIndexColsToScanBuilder(
-      IndexScan.Builder indexScanBuilder, Set<Long> usedColIDSet) {
+      IndexScan.Builder indexScanBuilder, Set<Long> usedColIDSet,Map<String,Integer> colOffsetInFieldMap) {
     for (TiIndexColumn indexColumn : indexInfo.getIndexColumns()) {
       TiColumnInfo tableInfoColumn = tableInfo.getColumn(indexColumn.getName());
       // already add this col before.
