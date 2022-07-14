@@ -214,11 +214,11 @@ public class TiDAGRequest implements Serializable {
     indexScanExecutor.setTp(ExecType.TypeIndexScan);
     // Add columns to scan executor
     if (isDoubleRead()) {
-      addIndexLookUpIndexRangeScanExecutorCols(indexScanBuilder, outputOffsets,
-          colOffsetInFieldMap);
+      addIndexLookUpIndexRangeScanExecutorCols(
+          indexScanBuilder, outputOffsets, colOffsetInFieldMap);
     } else {
-      addIndexReaderIndexRangeScanExecutorCols(indexScanBuilder, outputOffsets,
-          colOffsetInFieldMap);
+      addIndexReaderIndexRangeScanExecutorCols(
+          indexScanBuilder, outputOffsets, colOffsetInFieldMap);
     }
 
     indexScanBuilder.setTableId(getPhysicalId()).setIndexId(indexInfo.getId());
@@ -229,12 +229,14 @@ public class TiDAGRequest implements Serializable {
         indexScanBuilder.addPrimaryColumnIds(tableInfo.getColumn(col.getName()).getId());
       }
     }
-    addPushDownExecutorToRequest(dagRequestBuilder, isDoubleRead, outputOffsets, colOffsetInFieldMap);
+    addPushDownExecutorToRequest(
+        dagRequestBuilder, isDoubleRead, outputOffsets, colOffsetInFieldMap);
 
     return buildRequest(dagRequestBuilder, outputOffsets);
   }
 
-  private void addIndexLookUpIndexRangeScanExecutorCols(IndexScan.Builder indexScanBuilder,
+  private void addIndexLookUpIndexRangeScanExecutorCols(
+      IndexScan.Builder indexScanBuilder,
       List<Integer> outputOffsets,
       Map<String, Integer> colOffsetInFieldMap) {
     Set<Long> usedColIDSet = new HashSet<>();
@@ -269,7 +271,8 @@ public class TiDAGRequest implements Serializable {
     addIndexColsToScanBuilder(indexScanBuilder, usedColIDSet);
   }
 
-  private void addIndexReaderIndexRangeScanExecutorCols(IndexScan.Builder indexScanBuilder,
+  private void addIndexReaderIndexRangeScanExecutorCols(
+      IndexScan.Builder indexScanBuilder,
       List<Integer> outputOffsets,
       Map<String, Integer> colOffsetInFieldMap) {
     Set<Long> usedColIDSet = new HashSet<>();
@@ -292,8 +295,8 @@ public class TiDAGRequest implements Serializable {
     addIndexColsToScanBuilder(indexScanBuilder, usedColIDSet);
   }
 
-  private void addIndexColsToScanBuilder(IndexScan.Builder indexScanBuilder,
-      Set<Long> usedColIDSet) {
+  private void addIndexColsToScanBuilder(
+      IndexScan.Builder indexScanBuilder, Set<Long> usedColIDSet) {
     for (TiIndexColumn indexColumn : indexInfo.getIndexColumns()) {
       TiColumnInfo tableInfoColumn = tableInfo.getColumn(indexColumn.getName());
       // already add this col before.
@@ -341,7 +344,6 @@ public class TiDAGRequest implements Serializable {
     return buildRequest(dagRequestBuilder, outputOffsets);
   }
 
-
   private DAGRequest buildRequest(
       DAGRequest.Builder dagRequestBuilder, List<Integer> outputOffsets) {
     checkNotNull(startTs, "startTs is null");
@@ -360,9 +362,10 @@ public class TiDAGRequest implements Serializable {
     return request;
   }
 
-
-  private void addPushDownExecutorToRequest(DAGRequest.Builder dagRequestBuilder,
-      boolean isCoverCheckCoverNeed, List<Integer> outputOffsets,
+  private void addPushDownExecutorToRequest(
+      DAGRequest.Builder dagRequestBuilder,
+      boolean isCoverCheckCoverNeed,
+      List<Integer> outputOffsets,
       Map<String, Integer> colOffsetInFieldMap) {
     Executor.Builder executorBuilder = Executor.newBuilder();
 
@@ -416,8 +419,10 @@ public class TiDAGRequest implements Serializable {
     return indexAndPrimaryColIDSet;
   }
 
-  private void pushDownFilters(DAGRequest.Builder dagRequestBuilder,
-      Executor.Builder executorBuilder, Map<String, Integer> colOffsetInFieldMap) {
+  private void pushDownFilters(
+      DAGRequest.Builder dagRequestBuilder,
+      Executor.Builder executorBuilder,
+      Map<String, Integer> colOffsetInFieldMap) {
     Expression whereExpr = mergeCNFExpressions(getFilters());
     executorBuilder.setTp(ExecType.TypeSelection);
     dagRequestBuilder.addExecutors(
@@ -456,7 +461,6 @@ public class TiDAGRequest implements Serializable {
     executorBuilder.clear();
     addPushDownOrderBys();
   }
-
 
   private void pushDownAggAndGroupBy(
       DAGRequest.Builder dagRequestBuilder,
@@ -928,13 +932,13 @@ public class TiDAGRequest implements Serializable {
   }
 
   public void init(boolean readHandle) {
-    if(readHandle){
+    if (readHandle) {
       // the first stage of IndexLookUp.
       buildDAGGetIndexData();
-    }else if(hasIndex()&&!isDoubleRead()){
+    } else if (hasIndex() && !isDoubleRead()) {
       // the stage of IndexReader
       buildDAGGetIndexData();
-    }else{
+    } else {
       // the second stage of IndexLookUp.
       // or the stage of TableReader.
       buildDAGGetTableData();
