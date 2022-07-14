@@ -74,20 +74,13 @@ public class IndexKey extends Key {
       }
     }
 
-    Key[] keys = new Key[indexColumns.size() + (appendHandle ? 1 : 0)];
+    Key[] keys = new Key[indexColumns.size()];
     for (int i = 0; i < indexColumns.size(); i++) {
       TiIndexColumn col = indexColumns.get(i);
       DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
       // truncate index's if necessary
       Key key = TypedKey.toTypedKey(row.get(col.getOffset(), colTp), colTp, (int) col.getLength());
       keys[i] = key;
-    }
-    if (appendHandle) {
-      if (handle.isInt()) {
-        keys[keys.length - 1] = TypedKey.toTypedKey(handle, IntegerType.BIGINT);
-      } else {
-        keys[keys.length - 1] = TypedKey.toRawKey(handle.encoded());
-      }
     }
 
     return new EncodeIndexDataResult(keys, appendHandle);

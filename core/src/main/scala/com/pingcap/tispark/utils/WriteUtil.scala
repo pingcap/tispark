@@ -233,10 +233,13 @@ object WriteUtil {
       handle,
       index.isUnique && !index.isPrimary,
       tiTableInfo)
-    val indexKey = IndexKey.toIndexKey(
-      locatePhysicalTable(row, tiTableInfo),
-      index.getId,
-      encodeResult.keys: _*)
+    val keyCdo=new CodecDataOutput()
+    keyCdo.write(
+      IndexKey.toIndexKey(locatePhysicalTable(row, tiTableInfo), index.getId,encodeResult.keys: _*).getBytes)
+    if(encodeResult.appendHandle){
+      //  append handle column if any of the index column is NULL
+      keyCdo.write(handle.encodedAsKey())
+    }
 
     val value = if (remove) {
       new Array[Byte](0)
@@ -247,15 +250,15 @@ object WriteUtil {
         value
       } else {
         if (handle.isInt) {
-          val cdo = new CodecDataOutput()
-          cdo.writeLong(handle.intValue())
-          cdo.toBytes
+          val valueCdo = new CodecDataOutput()
+          valueCdo.writeLong(handle.intValue())
+          valueCdo.toBytes
         } else {
           TableCodec.genIndexValueForClusteredIndexVersion1(index, handle)
         }
       }
     }
-    (new SerializableKey(indexKey.getBytes), value)
+    (new SerializableKey(keyCdo.toBytes), value)
   }
 
   private def generateSecondaryIndexKey(

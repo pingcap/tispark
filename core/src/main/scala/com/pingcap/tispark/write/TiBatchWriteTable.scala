@@ -17,13 +17,14 @@
 package com.pingcap.tispark.write
 
 import com.pingcap.tikv.allocator.RowIDAllocator
-import com.pingcap.tikv.codec.TableCodec
+import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta._
 import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient, TiSession}
 import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.auth.TiAuthorization
+import com.pingcap.tispark.utils.WriteUtil.locatePhysicalTable
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -627,9 +628,14 @@ class TiBatchWriteTable(
       index.isUnique && !index.isPrimary,
       tiTableInfo)
     val keys = encodeResult.keys
-    val indexKey =
-      IndexKey.toIndexKey(WriteUtil.locatePhysicalTable(row, tiTableInfo), index.getId, keys: _*)
-    (new SerializableKey(indexKey.getBytes), encodeResult.appendHandle)
+    val cdo = new CodecDataOutput()
+    cdo.write(
+      IndexKey.toIndexKey(locatePhysicalTable(row, tiTableInfo), index.getId, keys: _*).getBytes)
+    if (encodeResult.appendHandle) {
+      //  append handle column if any of the index column is NULL
+      cdo.write(handle.encodedAsKey())
+    }
+    (new SerializableKey(cdo.toBytes), encodeResult.appendHandle)
   }
 
   private def generateRowKey(
