@@ -170,13 +170,7 @@ class TiBatchWrite(
            * - if the table is not partitioned, the logical table is the same as the physical table.
            */
           if (tiTableInfo.isPartitionEnabled) {
-            transferToPhysicalTables(
-              df,
-              tiTableInfo,
-              table,
-              isTiDBV4,
-              tableOptions,
-              dbTable)
+            transferToPhysicalTables(df, tiTableInfo, table, isTiDBV4, tableOptions, dbTable)
           } else {
             List(
               new TiBatchWriteTable(

@@ -352,25 +352,15 @@ class TiBatchWriteTable(
 
   def checkAuthorization(tiAuthorization: Option[TiAuthorization], options: TiDBOptions): Unit = {
     if (options.replace) {
-      TiAuthorization.authorizeForInsert(
-        tiTableInfo.getName,
-        tiDBInfo.getName,
-        tiAuthorization)
-      TiAuthorization.authorizeForDelete(
-        tiTableInfo.getName,
-        tiDBInfo.getName,
-        tiAuthorization)
+      TiAuthorization.authorizeForInsert(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
+      TiAuthorization.authorizeForDelete(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
     } else {
-      TiAuthorization.authorizeForInsert(
-        tiTableInfo.getName,
-        tiDBInfo.getName,
-        tiAuthorization)
+      TiAuthorization.authorizeForInsert(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
     }
   }
 
   def checkColumnNumbers(): Unit = {
-    if (!tiTableInfo.hasAutoIncrementColumn && colsInDf.lengthCompare(
-        tableColSize) != 0) {
+    if (!tiTableInfo.hasAutoIncrementColumn && colsInDf.lengthCompare(tableColSize) != 0) {
       throw new TiBatchWriteException(
         s"table without auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize")
     }
@@ -385,11 +375,7 @@ class TiBatchWriteTable(
   // update table statistics: modify_count & count
   def updateTableStatistics(startTs: Long): Unit = {
     try {
-      tiDBJDBCClient.updateTableStatistics(
-        startTs,
-        tiTableInfo.getId,
-        deltaCount,
-        modifyCount)
+      tiDBJDBCClient.updateTableStatistics(startTs, tiTableInfo.getId, deltaCount, modifyCount)
     } catch {
       case e: Throwable => logger.warn("updateTableStatistics error!", e)
     }

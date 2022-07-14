@@ -28,7 +28,12 @@ import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions}
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.catalyst.util.{DateTimeUtils, TimestampFormatter}
-import org.apache.spark.sql.connector.catalog.{SupportsDelete, SupportsRead, SupportsWrite, TableCapability}
+import org.apache.spark.sql.connector.catalog.{
+  SupportsDelete,
+  SupportsRead,
+  SupportsWrite,
+  TableCapability
+}
 import org.apache.spark.sql.connector.read.ScanBuilder
 import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, SparkPlan}
@@ -52,8 +57,7 @@ case class TiDBTable(
     tableRef: TiTableReference,
     table: TiTableInfo,
     var ts: TiTimestamp = null,
-    options: Option[Map[String, String]] = None)(
-    @transient val sqlContext: SQLContext)
+    options: Option[Map[String, String]] = None)(@transient val sqlContext: SQLContext)
     extends SupportsRead
     with SupportsWrite
     with SupportsDelete {
