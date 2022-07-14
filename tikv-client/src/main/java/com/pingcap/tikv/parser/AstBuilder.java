@@ -39,9 +39,11 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 // In tikv java client, we only need to parser expression
 // which is used by partition pruning.
 public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
+
   private TiTableInfo tableInfo;
 
-  public AstBuilder() {}
+  public AstBuilder() {
+  }
 
   public AstBuilder(TiTableInfo tableInfo) {
     this.tableInfo = tableInfo;
@@ -82,6 +84,8 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
       if (fnNameCtx.YEAR() != null) {
         Expression args = visitFunctionArgs(ctx.functionArgs());
         return new FuncCallExpr(args, Type.YEAR);
+      } else {
+        throw new UnsupportedOperationException("Unsupported function: " + fnNameCtx.getText());
       }
     }
     return visitChildren(ctx);
@@ -129,7 +133,9 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
 
   @Override
   public Expression visitBooleanLiteral(MySqlParser.BooleanLiteralContext ctx) {
-    if (ctx.FALSE() != null) return Constant.create(0);
+    if (ctx.FALSE() != null) {
+      return Constant.create(0);
+    }
     return Constant.create(1, BOOLEAN);
   }
 

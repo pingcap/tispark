@@ -17,18 +17,11 @@
 package com.pingcap.tispark.partition
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{
-  DateType,
-  IntegerType,
-  LongType,
-  StringType,
-  StructField,
-  StructType
-}
+import org.apache.spark.sql.types.{DateType, IntegerType, LongType, StringType, StructField, StructType, TimestampType}
 import org.apache.spark.sql.{BaseTiSparkTest, Row}
-import org.scalatest.Matchers.{contain, convertToAnyShouldWrapper}
+import org.scalatest.Matchers.{contain, convertToAnyShouldWrapper, have, the}
 
-import java.sql.{Date, ResultSet}
+import java.sql.{Date, ResultSet, SQLException, Timestamp}
 
 class PartitionWriteSuite extends BaseTiSparkTest {
 
@@ -406,7 +399,7 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     tidbStmt.execute(
       s"create table `$database`.`$table` (birthday date primary key , name varchar(16)) partition by range(YEAR(birthday)) (" +
         s"partition p0 values less than (1995)," +
-        s"partition p1 values less than (1997)," +
+        s"partition p1 values less than (YEAR('1997-01-01'))," +
         s"partition p2 values less than MAXVALUE)")
 
     tidbStmt.execute(
@@ -451,6 +444,36 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     deleteResultSpark.collect() should contain theSameElementsAs Array(
       Row(Date.valueOf("1995-08-08"), "John"))
     checkJDBCResult(deleteResultJDBC, Array(Array(Date.valueOf("1995-08-08"), "John")))
+  }
+
+  test("unsupported function UNIX_TIMESTAMP() and range partition replace and delete test") {
+    tidbStmt.execute(
+      s"create table `$database`.`$table` (birthday timestamp primary key , name varchar(16)) partition by range(UNIX_TIMESTAMP(birthday)) (" +
+        s"partition p0 values less than (UNIX_TIMESTAMP('1995-07-07 20:20:20'))," +
+        s"partition p1 values less than (UNIX_TIMESTAMP('1996-07-07 20:20:20'))," +
+        s"partition p2 values less than MAXVALUE)")
+
+    tidbStmt.execute(
+      s"insert into `$database`.`$table` values ('1995-06-15 20:20:20', 'Apple'), ('1995-08-08 20:20:20', 'Honey'), ('1999-06-04 20:20:20', 'Mike')")
+    val data: RDD[Row] = sc.makeRDD(
+      List(
+        Row(Timestamp.valueOf("1995-06-15 20:20:20"), "Luo"),
+        Row(Timestamp.valueOf("1995-08-08 20:20:20"), "John"),
+        Row(Timestamp.valueOf("1993-08-22 20:20:20"), "Jack")))
+    val schema: StructType =
+      StructType(List(StructField("birthday", TimestampType), StructField("name", StringType)))
+    val df = sqlContext.createDataFrame(data, schema)
+
+    the[UnsupportedOperationException] thrownBy {
+      df.write
+        .format("tidb")
+        .options(tidbOptions)
+        .option("database", database)
+        .option("table", table)
+        .option("replace", "true")
+        .mode("append")
+        .save()
+    } should have message s"Unsupported function: UNIX_TIMESTAMP"
   }
 
   def checkJDBCResult(resultJDBC: ResultSet, rows: Array[Array[_]]): Unit = {
