@@ -289,7 +289,6 @@ class LogicalPlanTestSuite extends BasePlanTest {
     tidbStmt.execute("CREATE INDEX `testIndex` ON `t1` (`a`,`b`)")
     // IndexScan with Selection and with RangeFilter.
     val df1 = spark.sql("SELECT * FROM t1 where a>0 and b > 'aa'")
-    df1.show()
     val dag1 = extractDAGRequests(df1).head
     val expectation1 =
       "== Physical Plan ==\n" +

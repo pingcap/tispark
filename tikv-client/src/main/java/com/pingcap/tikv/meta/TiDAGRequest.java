@@ -206,7 +206,6 @@ public class TiDAGRequest implements Serializable {
     Executor.Builder indexScanExecutor = Executor.newBuilder();
     // find a column's offset in fields
     Map<String, Integer> colOffsetInFieldMap = new HashMap<>();
-    List<DataType> indexDataTypes = new ArrayList<>();
 
     if (indexInfo == null) {
       throw new TiClientInternalException("Index is empty for index scan");
@@ -245,12 +244,13 @@ public class TiDAGRequest implements Serializable {
     if (isCommonHandle()) {
       for (TiIndexColumn indexColumn : tableInfo.getPrimaryKey().getIndexColumns()) {
         TiColumnInfo tableColInfo = tableInfo.getColumn(indexColumn.getName());
+        usedColIDSet.add(tableColInfo.getId());
         ColumnInfo.Builder colBuild = ColumnInfo.newBuilder(tableColInfo.toProto(tableInfo));
+
         colOffsetInFieldMap.put(tableColInfo.getName(), indexScanBuilder.getColumnsCount());
         outputOffsets.add(indexScanBuilder.getColumnsCount());
         indexDataTypes.add(requireNonNull(tableColInfo.getType(), "dataType is null"));
         indexScanBuilder.addColumns(colBuild);
-        usedColIDSet.add(tableColInfo.getId());
       }
     } else if (tableInfo.isPkHandle()) {
       TiColumnInfo pk = tableInfo.getPKIsHandleColumn();
@@ -265,6 +265,7 @@ public class TiDAGRequest implements Serializable {
       indexScanBuilder.addColumns(colBuild);
     } else {
       outputOffsets.add(indexScanBuilder.getColumnsCount());
+
       indexScanBuilder.addColumns(handleColumn);
       indexDataTypes.add(requireNonNull(IntegerType.BIGINT, "dataType is null"));
       usedColIDSet.add(handleColumn.getColumnId());
@@ -306,6 +307,8 @@ public class TiDAGRequest implements Serializable {
         continue;
       }
       ColumnInfo.Builder colBuild = ColumnInfo.newBuilder(tableInfoColumn.toProto(tableInfo));
+
+      colOffsetInFieldMap.put(tableInfoColumn.getName(),indexScanBuilder.getColumnsCount());
       indexScanBuilder.addColumns(colBuild);
     }
   }
