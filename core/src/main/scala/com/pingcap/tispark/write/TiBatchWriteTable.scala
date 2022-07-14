@@ -232,32 +232,32 @@ class TiBatchWriteTable(
     // for partition table, we need calculate each row and tell which physical table
     // that row is belong to.
     // currently we only support replace and insert.
-    val constraintCheckIsNeeded = isCommonHandle || handleCol != null || uniqueIndices.nonEmpty
+    val constraintCheckAndDeduplicateIsNeeded =
+      isCommonHandle || handleCol != null || uniqueIndices.nonEmpty
 
-    val keyValueRDD = if (constraintCheckIsNeeded) {
+    val keyValueRDD = if (constraintCheckAndDeduplicateIsNeeded) {
       // since the primary key or unique index in the inserted column may be duplicated,
       // duplicate data needs to be removed here.
       val distinctWrappedRowRdd = deduplicate(wrappedRowRdd)
       if (!options.deduplicate && wrappedRowRdd.count() != distinctWrappedRowRdd
-        .count()) {
+          .count()) {
         throw new TiBatchWriteException("duplicate unique key or primary key")
       }
       val insertRowRdd = generateRecordKV(distinctWrappedRowRdd, remove = false)
-      val insertIndexRdd = WriteUtil.generateIndexKV(sc, distinctWrappedRowRdd, tiTableInfo, remove = false)
+      val insertIndexRdd =
+        WriteUtil.generateIndexKV(sc, distinctWrappedRowRdd, tiTableInfo, remove = false)
 
       // The rows that exist in the current TiDB that conflict
       // with the primary key or unique index of the inserted rows.
       val conflictRows = (if (options.useSnapshotBatchGet) {
-        generateDataToBeRemovedRddV2(distinctWrappedRowRdd, startTimeStamp)
-      } else {
-        generateDataToBeRemovedRddV1(distinctWrappedRowRdd, startTimeStamp)
-      }).persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+                            generateDataToBeRemovedRddV2(distinctWrappedRowRdd, startTimeStamp)
+                          } else {
+                            generateDataToBeRemovedRddV1(distinctWrappedRowRdd, startTimeStamp)
+                          }).persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
       persistedRDDList = conflictRows :: persistedRDDList
-
       if (!options.replace && !conflictRows.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
       }
-
       if (autoIncProvidedID && conflictRows.count() != count) {
         throw new TiBatchWriteException(
           "currently user provided auto increment value is only supported in update mode!")
@@ -266,26 +266,14 @@ class TiBatchWriteTable(
       val deleteRowRDD = generateRecordKV(conflictRows, remove = true)
       val deleteIndexRDD = WriteUtil.generateIndexKV(sc, conflictRows, tiTableInfo, remove = true)
 
-      // if rdd contains same key, it means we need first delete the old value and insert the new value associated the
-      // key. We can merge the two operation into one update operation.
-      def unionInsertDelete(
-          insert: RDD[WrappedEncodedRow],
-          delete: RDD[WrappedEncodedRow]): RDD[WrappedEncodedRow] = {
-        (insert ++ delete)
-          .map(wrappedEncodedRow => (wrappedEncodedRow.encodedKey, wrappedEncodedRow))
-          .reduceByKey { (r1, r2) =>
-            // Note: the deletion operation's value of kv pair is empty.
-            if (r1.encodedValue.isEmpty) r2 else r1
-          }
-          .map(_._2)
-      }
-
       (unionInsertDelete(insertRowRdd, deleteRowRDD) ++
         unionInsertDelete(insertIndexRdd, deleteIndexRDD)).map(obj =>
         (obj.encodedKey, obj.encodedValue))
+
     } else {
       val insertRowRdd = generateRecordKV(wrappedRowRdd, remove = false)
-      val insertIndexRdd = WriteUtil.generateIndexKV(sc, wrappedRowRdd, tiTableInfo, remove = false)
+      val insertIndexRdd =
+        WriteUtil.generateIndexKV(sc, wrappedRowRdd, tiTableInfo, remove = false)
       (insertRowRdd ++ insertIndexRdd).map(obj => (obj.encodedKey, obj.encodedValue))
     }
 
@@ -303,6 +291,20 @@ class TiBatchWriteTable(
     } else {
       logger.warn("table already locked!")
     }
+  }
+
+  // if rdd contains same key, it means we need first delete the old value and insert the new value associated the
+  // key. We can merge the two operation into one update operation.
+  private def unionInsertDelete(
+      insert: RDD[WrappedEncodedRow],
+      delete: RDD[WrappedEncodedRow]): RDD[WrappedEncodedRow] = {
+    (insert ++ delete)
+      .map(wrappedEncodedRow => (wrappedEncodedRow.encodedKey, wrappedEncodedRow))
+      .reduceByKey { (r1, r2) =>
+        // Note: the deletion operation's value of kv pair is empty.
+        if (r1.encodedValue.isEmpty) r2 else r1
+      }
+      .map(_._2)
   }
 
   def unlockTable(): Unit = {

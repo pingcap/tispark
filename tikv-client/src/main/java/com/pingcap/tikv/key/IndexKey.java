@@ -83,10 +83,10 @@ public class IndexKey extends Key {
       keys[i] = key;
     }
     if (appendHandle) {
-      if(handle.isInt()){
-        keys[keys.length - 1]  = TypedKey.toTypedKey(handle, IntegerType.BIGINT);
-      }else {
-        keys[keys.length-1]=TypedKey.toRawKey(handle.encoded());
+      if (handle.isInt()) {
+        keys[keys.length - 1] = TypedKey.toTypedKey(handle, IntegerType.BIGINT);
+      } else {
+        keys[keys.length - 1] = TypedKey.toRawKey(handle.encoded());
       }
     }
 
