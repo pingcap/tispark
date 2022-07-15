@@ -136,6 +136,7 @@ public class RegionManager {
 
   public long getClusterId() {
     // Be careful to pass null as PDClient in the constructor
+    // TODO:Careful confirmation/doubt required
     return getPDClient() != null ? getPDClient().getClusterId() : 0L;
   }
 
@@ -212,7 +213,6 @@ public class RegionManager {
   }
 
   public TiStore getStoreById(long id, BackOffer backOffer) {
-    //        return cache.getStoreById(id, backOffer);
     TiStore store = getStoreByIdWithBackOff(id, backOffer);
     if (store == null) {
       logger.warn(String.format("failed to fetch store %d, the store may be missing", id));
@@ -269,6 +269,7 @@ public class RegionManager {
         stores.add(getStoreById(peer.getStoreId(), backOffer));
         peers.add(peer);
       } catch (Exception e) {
+        // TODO:Careful confirmation/doubt required
         logger.warn("Store {} not found: {}", peer.getStoreId(), e.toString());
       }
     }

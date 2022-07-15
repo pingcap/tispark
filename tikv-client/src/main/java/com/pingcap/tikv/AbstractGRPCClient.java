@@ -42,7 +42,8 @@ import org.tikv.shade.io.grpc.stub.ClientCalls;
 import org.tikv.shade.io.grpc.stub.StreamObserver;
 
 public abstract class AbstractGRPCClient<
-        FutureStubT extends AbstractFutureStub<FutureStubT>,
+    // TODO:Careful confirmation/doubt required ,unused to use now. if should to replace?
+    FutureStubT extends AbstractFutureStub<FutureStubT>,
         BlockingStubT extends AbstractStub<BlockingStubT>,
         StubT extends AbstractStub<StubT>>
     implements AutoCloseable {

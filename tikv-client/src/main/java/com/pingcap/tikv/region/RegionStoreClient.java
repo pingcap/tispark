@@ -222,6 +222,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<GetRequest> factory =
         () ->
             GetRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required
                 .setContext(region.getReplicaContext(getResolvedLocks(version), storeType))
                 .setKey(key)
                 .setVersion(version)
@@ -267,6 +268,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<BatchGetRequest> request =
         () ->
             BatchGetRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required
                 .setContext(region.getReplicaContext(getResolvedLocks(version), storeType))
                 .addAllKeys(keys)
                 .setVersion(version)
@@ -337,6 +339,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       Supplier<ScanRequest> request =
           () ->
               ScanRequest.newBuilder()
+                  // TODO:Careful confirmation/doubt required
                   .setContext(region.getReplicaContext(getResolvedLocks(version), storeType))
                   .setStartKey(startKey)
                   .setVersion(version)
@@ -443,6 +446,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
           () -> {
             PrewriteRequest.Builder builder =
                 PrewriteRequest.newBuilder()
+                    // TODO:Careful confirmation/doubt required
                     .setContext(region.getLeaderContext())
                     .setStartVersion(startTs)
                     .setPrimaryLock(primaryLock)
@@ -536,6 +540,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       Supplier<TxnHeartBeatRequest> factory =
           () ->
               TxnHeartBeatRequest.newBuilder()
+                  // TODO:Careful confirmation/doubt required
                   .setContext(region.getLeaderContext())
                   .setStartVersion(startTs)
                   .setPrimaryLock(primaryLock)
@@ -597,6 +602,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
                 .setStartVersion(startTs)
                 .setCommitVersion(commitTs)
                 .addAllKeys(keys)
+                // TODO:Careful confirmation/doubt required
                 .setContext(region.getLeaderContext())
                 .build();
     KVErrorHandler<CommitResponse> handler =
@@ -659,6 +665,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<Coprocessor.Request> reqToSend =
         () ->
             Coprocessor.Request.newBuilder()
+                // TODO:Careful confirmation/doubt required
                 .setContext(region.getReplicaContext(getResolvedLocks(startTs), storeType))
                 .setTp(REQ_TYPE_DAG.getValue())
                 .setStartTs(startTs)
@@ -782,6 +789,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<Coprocessor.Request> reqToSend =
         () ->
             Coprocessor.Request.newBuilder()
+                // TODO:Careful confirmation/doubt required
                 .setContext(region.getReplicaContext(getResolvedLocks(startTs), storeType))
                 // TODO: If no executors...?
                 .setTp(REQ_TYPE_DAG.getValue())
@@ -820,6 +828,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<SplitRegionRequest> request =
         () ->
             SplitRegionRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required
                 .setContext(region.getLeaderContext())
                 .addAllSplitKeys(splitKeys)
                 .build();
@@ -854,6 +863,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
               region.getId(), resp.getRegionError().toString()));
     }
 
+    // TODO:Careful confirmation/doubt required
     return resp.getRegionsList();
   }
 
@@ -863,6 +873,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<RawGetRequest> factory =
         () ->
             RawGetRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required ,emptySet?
                 .setContext(region.getReplicaContext(java.util.Collections.emptySet(), storeType))
                 .setKey(key)
                 .build();
@@ -892,6 +903,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<RawGetKeyTTLRequest> factory =
         () ->
             RawGetKeyTTLRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required ,emptySet?
                 .setContext(region.getReplicaContext(java.util.Collections.emptySet(), storeType))
                 .setKey(key)
                 .build();
@@ -924,6 +936,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
   public void rawDelete(BackOffer backOffer, ByteString key) {
     Supplier<RawDeleteRequest> factory =
         () ->
+            // TODO:Careful confirmation/doubt required
             RawDeleteRequest.newBuilder().setContext(region.getLeaderContext()).setKey(key).build();
 
     KVErrorHandler<RawDeleteResponse> handler =
@@ -952,6 +965,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<RawPutRequest> factory =
         () ->
             RawPutRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required
                 .setContext(region.getLeaderContext())
                 .setKey(key)
                 .setValue(value)
@@ -984,6 +998,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<RawCASRequest> factory =
         () ->
             RawCASRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required
                 .setContext(region.getLeaderContext())
                 .setKey(key)
                 .setValue(value)
@@ -1024,6 +1039,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<RawBatchGetRequest> factory =
         () ->
             RawBatchGetRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required
                 .setContext(region.getLeaderContext())
                 .addAllKeys(keys)
                 .build();
@@ -1053,6 +1069,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<RawBatchPutRequest> factory =
         () ->
             RawBatchPutRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required
                 .setContext(region.getLeaderContext())
                 .addAllPairs(kvPairs)
                 .setTtl(ttl)
@@ -1099,6 +1116,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<RawBatchDeleteRequest> factory =
         () ->
             RawBatchDeleteRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required
                 .setContext(region.getLeaderContext())
                 .addAllKeys(keys)
                 .setForCas(atomic)
@@ -1138,6 +1156,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<RawScanRequest> factory =
         () ->
             RawScanRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required
                 .setContext(region.getLeaderContext())
                 .setStartKey(key)
                 .setKeyOnly(keyOnly)
@@ -1177,6 +1196,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<RawDeleteRangeRequest> factory =
         () ->
             RawDeleteRangeRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required ,emptySet?
                 .setContext(region.getReplicaContext(java.util.Collections.emptySet(), storeType))
                 .setStartKey(startKey)
                 .setEndKey(endKey)

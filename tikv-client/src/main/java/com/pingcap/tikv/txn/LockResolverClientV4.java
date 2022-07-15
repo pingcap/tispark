@@ -183,6 +183,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
       Supplier<Kvrpcpb.PessimisticRollbackRequest> factory =
           () ->
               Kvrpcpb.PessimisticRollbackRequest.newBuilder()
+                  // TODO:Careful confirmation/doubt required
                   .setContext(region.getLeaderContext())
                   .setStartVersion(lock.getTxnID())
                   .setForUpdateTs(forUpdateTS)
@@ -311,6 +312,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
         () -> {
           TiRegion primaryKeyRegion = regionManager.getRegionByKey(primary);
           return Kvrpcpb.CheckTxnStatusRequest.newBuilder()
+              // TODO:Careful confirmation/doubt required
               .setContext(primaryKeyRegion.getLeaderContext())
               .setPrimaryKey(primary)
               .setLockTs(txnID)
@@ -502,6 +504,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     Supplier<Kvrpcpb.CheckSecondaryLocksRequest> factory =
         () ->
             Kvrpcpb.CheckSecondaryLocksRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required
                 .setContext(tiRegion.getLeaderContext())
                 .setStartVersion(txnID)
                 .addAllKeys(curKeys)
@@ -559,6 +562,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     Supplier<Kvrpcpb.ResolveLockRequest> factory =
         () ->
             Kvrpcpb.ResolveLockRequest.newBuilder()
+                // TODO:Careful confirmation/doubt required
                 .setContext(tiRegion.getLeaderContext())
                 .setStartVersion(lock.getTxnID())
                 .setCommitVersion(status.getCommitTS())
@@ -618,6 +622,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
 
       Kvrpcpb.ResolveLockRequest.Builder builder =
           Kvrpcpb.ResolveLockRequest.newBuilder()
+              // TODO:Careful confirmation/doubt required
               .setContext(region.getLeaderContext())
               .setStartVersion(lock.getTxnID());
 

@@ -170,6 +170,7 @@ public class ConcreteBackOffer implements BackOffer {
         backOffFunction = BackOffFunction.create(100, 600, BackOffStrategy.EqualJitter);
         break;
       case BoTiKVRPC:
+        // TODO:Careful confirmation/doubt required
         backOffFunction = BackOffFunction.create(10, 2000, BackOffStrategy.EqualJitter);
         break;
       case BoCheckTimeout:

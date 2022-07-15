@@ -98,6 +98,7 @@ public class RangeSplitterTest {
     Metapb.Region meta =
         Metapb.Region.newBuilder()
             .setId(id)
+            // TODO:Careful confirmation/doubt required
             .setStartKey(range.getStart())
             .setEndKey(range.getEnd())
             .addPeers(Peer.getDefaultInstance())

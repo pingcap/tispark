@@ -90,6 +90,7 @@ public class RegionManagerTest extends PDMockServerTest {
     TiRegion regionToSearch = mgr.getRegionByKey(searchKey);
     assertEquals(region, regionToSearch);
 
+    // TODO:Careful confirmation/doubt required
     // This will in turn invoke rpc and results in an error
     // since we set just one rpc response
     TiRegion errValue = mgr.getRegionByKey(searchKeyNotExists);
@@ -181,6 +182,7 @@ public class RegionManagerTest extends PDMockServerTest {
                 GrpcUtils.makeStoreLabel("k1", "v1"),
                 GrpcUtils.makeStoreLabel("k2", "v2"))));
 
+    // TODO:Careful confirmation/doubt required
     try {
       mgr.getStoreById(storeId + 1);
       fail();

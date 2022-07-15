@@ -270,6 +270,7 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
     return responseObserver.getFuture();
   }
 
+  // TODO:Careful confirmation/doubt required ,should hava async method?
   @Override
   public Future<Pair<Metapb.Region, Metapb.Peer>> getRegionByIDAsync(BackOffer backOffer, long id) {
     FutureObserver<Pair<Metapb.Region, Metapb.Peer>, GetRegionResponse> responseObserver =
@@ -296,6 +297,7 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
         r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null, this);
   }
 
+  // TODO:Careful confirmation/doubt required ,should hava async method?
   @Override
   public Future<Store> getStoreAsync(BackOffer backOffer, long storeId) {
     FutureObserver<Store, GetStoreResponse> responseObserver =

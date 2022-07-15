@@ -34,6 +34,7 @@ public class ConverterUpstream {
   public static org.tikv.common.TiConfiguration convertTiConfiguration(
       com.pingcap.tikv.TiConfiguration conf) {
     if (conf == null) {
+      // TODO:Careful confirmation/doubt required ,return null? required to add more
       return null;
     }
     org.tikv.common.TiConfiguration tikvConf =
@@ -91,6 +92,7 @@ public class ConverterUpstream {
 
   public static org.tikv.common.util.BackOffFunction.BackOffFuncType convertBackOffFunctionType(
       com.pingcap.tikv.util.BackOffFunction.BackOffFuncType funcType) {
+    // TODO:Careful confirmation/doubt required , safe to convert
     return org.tikv.common.util.BackOffFunction.BackOffFuncType.valueOf(funcType.name());
   }
 }

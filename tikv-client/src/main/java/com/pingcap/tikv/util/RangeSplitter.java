@@ -174,6 +174,7 @@ public class RangeSplitter {
     Map<Long, Pair<TiRegion, TiStore>> idToRegion = new HashMap<>();
 
     while (true) {
+      // TODO:Careful confirmation/doubt required
       Pair<TiRegion, TiStore> regionStorePair =
           regionManager.getRegionStorePairByKey(range.getStart(), storeType);
 

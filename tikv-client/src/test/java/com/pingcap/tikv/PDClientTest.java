@@ -119,6 +119,7 @@ public class PDClientTest extends PDMockServerTest {
             pdServer.getClusterId(),
             GrpcUtils.makeRegion(
                 1,
+                // TODO:Careful confirmation/doubt required
                 ByteString.copyFrom(startKey),
                 ByteString.copyFrom(endKey),
                 GrpcUtils.makeRegionEpoch(confVer, ver),
@@ -179,6 +180,7 @@ public class PDClientTest extends PDMockServerTest {
             pdServer.getClusterId(),
             GrpcUtils.makeRegion(
                 1,
+                // TODO:Careful confirmation/doubt required
                 ByteString.copyFrom(startKey),
                 ByteString.copyFrom(endKey),
                 GrpcUtils.makeRegionEpoch(confVer, ver),

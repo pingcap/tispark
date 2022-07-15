@@ -46,6 +46,7 @@ public class MockServerTest extends PDMockServerTest {
             .addPeers(Metapb.Peer.newBuilder().setId(11).setStoreId(13))
             .build();
 
+    // TODO:Careful confirmation/doubt required
     List<TiStore> s =
         ImmutableList.of(
             new TiStore(
