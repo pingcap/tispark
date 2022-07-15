@@ -341,7 +341,7 @@ Currently, TiSpark partially apply partition pruning on range partition.
 The partition pruning is applied when the partition expression of the range partition is one of the following:
 
 + column expression
-+ `YEAR` (expression) where the expression is a column and its type is datetime or string literal
++ `YEAR($argument)` where the argument is a column and its type is datetime or string literal
 that can be parsed as datetime.
 
 If partition pruning is not applied, TiSpark's reading is equivalent to doing a table scan over all partitions.
@@ -350,7 +350,7 @@ If partition pruning is not applied, TiSpark's reading is equivalent to doing a 
 
 Currently, TiSpark only supports writing into the range and hash partition table under the following conditions:
 + the partition expression is column expression
-+ the partition expression is `YEAR` (expression) where the expression is a column and its type is datetime or string literal
++ the partition expression is `YEAR($argument)` where the argument is a column and its type is datetime or string literal
   that can be parsed as datetime.
 
 There are two ways to write into partition table:
