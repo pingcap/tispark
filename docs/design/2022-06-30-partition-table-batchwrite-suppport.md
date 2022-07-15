@@ -20,7 +20,7 @@ And the associated supported partition types to be supported in this feature are
 
 And the parititon expression must be under contions as bellow:
 + column expression
-+ `YEAR` (expression) where the expression is a column and its type is datetime or string literal
++ `YEAR($argument)` where the argument is a column and its type is datetime or string literal
 that can be parsed as datetime.
 
 ## Motivation and background
@@ -63,7 +63,7 @@ In this feature, we only focus on Range partitioning and Hash partitioning.
 
 Currently TiSpark only support YEAR function, so the parititon expression must be under contions as bellow:
 + column expression
-+ `YEAR` (expression) where the expression is a column and its type is datetime or string literal
++ `YEAR($argument)` where the argument is a column and its type is datetime or string literal
 that can be parsed as datetime.
 
 ## API changes
@@ -79,9 +79,9 @@ table so that we can reuse the existing API rather than bring more complexity in
 
 ### Generate the expression for partitioning
 
-The original type of expression is `String`, we need to use `TiParser` to parse the expression in
-order to evaluate the partitioning expression for the latter steps.
-For the `Range` and `Range Column`  partitioning, it also needs to extract the bound description
+The original type of [expression](https://github.com/pingcap/tispark/blob/master/tikv-client/src/main/java/com/pingcap/tikv/meta/TiPartitionInfo.java#L31) 
+is `String`, we need to use `TiParser` to parse the expression in order to evaluate the partitioning expression for the latter steps.
+For the `Range` and `Range Column`  partitioning, it also needs to extract the [bound description](https://github.com/pingcap/tispark/blob/master/tikv-client/src/main/java/com/pingcap/tikv/meta/TiPartitionDef.java#L32)
 'partition p0 less than xx ... partition p1 less than ...' and then parse to bound's expression.
 ```
 [ 
