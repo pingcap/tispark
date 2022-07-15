@@ -82,7 +82,6 @@ import org.tikv.kvproto.Pdpb.RequestHeader;
 import org.tikv.kvproto.Pdpb.ResponseHeader;
 import org.tikv.kvproto.Pdpb.ScatterRegionRequest;
 import org.tikv.kvproto.Pdpb.ScatterRegionResponse;
-import org.tikv.kvproto.Pdpb.TsoRequest;
 import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
 import org.tikv.shade.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.tikv.shade.com.google.protobuf.ByteString;
@@ -94,7 +93,6 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
   private static final String TIFLASH_TABLE_SYNC_PROGRESS_PATH = "/tiflash/table/sync";
   private final Logger logger = LoggerFactory.getLogger(PDClient.class);
   private RequestHeader header;
-  private TsoRequest tsoReq;
   private volatile LeaderWrapper leaderWrapper;
   private ScheduledExecutorService service;
   private ScheduledExecutorService tiflashReplicaService;
@@ -542,7 +540,6 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
     checkNotNull(resp, "Failed to init client for PD cluster.");
     long clusterId = resp.getHeader().getClusterId();
     header = RequestHeader.newBuilder().setClusterId(clusterId).build();
-    tsoReq = TsoRequest.newBuilder().setHeader(header).setCount(1).build();
     this.pdAddrs = pdAddrs;
     this.etcdClient = Client.builder().endpoints(pdAddrs).build();
     this.tiflashReplicaMap = new ConcurrentHashMap<>();
