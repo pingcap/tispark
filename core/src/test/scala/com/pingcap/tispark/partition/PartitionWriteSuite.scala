@@ -17,19 +17,11 @@
 package com.pingcap.tispark.partition
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{
-  DateType,
-  IntegerType,
-  LongType,
-  StringType,
-  StructField,
-  StructType,
-  TimestampType
-}
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.{BaseTiSparkTest, Row}
 import org.scalatest.Matchers.{contain, convertToAnyShouldWrapper, have, the}
 
-import java.sql.{Date, ResultSet, SQLException, Timestamp}
+import java.sql.{Date, ResultSet, Timestamp}
 
 class PartitionWriteSuite extends BaseTiSparkTest {
 
@@ -39,6 +31,11 @@ class PartitionWriteSuite extends BaseTiSparkTest {
   override def beforeEach(): Unit = {
     super.beforeEach()
     tidbStmt.execute(s"drop table if exists `$database`.`$table`")
+  }
+
+  override def afterEach(): Unit = {
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
+    super.afterEach()
   }
 
   /**
