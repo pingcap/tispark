@@ -105,7 +105,8 @@ public class RegionManager {
     try {
       if (region == null) {
         logger.debug("Key not found in keyToRegionIdCache:" + KeyUtils.formatBytesUTF8(key));
-        Pair<Region, Peer> regionAndLeader = pdClient.getRegionByKey(backOffer, key);
+        Pair<Region, Peer> regionAndLeader =
+            (Pair<Region, Peer>) pdClient.getRegionByKey(backOffer, key);
         region =
             cache.putRegion(createRegion(regionAndLeader.first, regionAndLeader.second, backOffer));
       }

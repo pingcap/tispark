@@ -51,15 +51,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.HostMapping;
+import org.tikv.common.TiConfiguration.ReplicaRead;
 import org.tikv.common.apiversion.RequestKeyCodec;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.util.FutureObserver;
 import org.tikv.kvproto.Metapb;
+import org.tikv.kvproto.Metapb.Peer;
+import org.tikv.kvproto.Metapb.Region;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
 import org.tikv.kvproto.PDGrpc.PDFutureStub;
 import org.tikv.kvproto.PDGrpc.PDStub;
+import org.tikv.kvproto.Pdpb;
 import org.tikv.kvproto.Pdpb.Error;
 import org.tikv.kvproto.Pdpb.ErrorType;
 import org.tikv.kvproto.Pdpb.GetAllStoresRequest;
@@ -107,8 +112,59 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
     this.upstreamPDClient = ConverterUpstream.createUpstreamPDClient(conf, keyCodec);
   }
 
+  @Override
+  public TiTimestamp getTimestamp(org.tikv.common.util.BackOffer backOffer) {
+    return upstreamPDClient.getTimestamp(backOffer);
+  }
+
+  @Override
+  public org.tikv.common.util.Pair<Region, Peer> getRegionByKey(
+      org.tikv.common.util.BackOffer backOffer, ByteString key) {
+    return new Pair<>(upstreamPDClient.getRegionByKey(backOffer, key));
+  }
+
+  @Override
+  public org.tikv.common.util.Pair<Region, Peer> getRegionByID(
+      org.tikv.common.util.BackOffer backOffer, long id) {
+    return new Pair<>(upstreamPDClient.getRegionByID(backOffer, id));
+  }
+
+  @Override
+  public List<Pdpb.Region> scanRegions(
+      org.tikv.common.util.BackOffer backOffer,
+      ByteString byteString,
+      ByteString byteString1,
+      int i) {
+    return upstreamPDClient.scanRegions(backOffer, byteString, byteString1, i);
+  }
+
+  @Override
+  public HostMapping getHostMapping() {
+    return upstreamPDClient.getHostMapping();
+  }
+
+  @Override
+  public Store getStore(org.tikv.common.util.BackOffer backOffer, long storeId) {
+    return upstreamPDClient.getStore(backOffer, storeId);
+  }
+
+  @Override
+  public List<Store> getAllStores(org.tikv.common.util.BackOffer backOffer) {
+    return upstreamPDClient.getAllStores(backOffer);
+  }
+
+  @Override
+  public ReplicaRead getReplicaRead() {
+    return upstreamPDClient.getReplicaRead();
+  }
+
   public Long getClusterId() {
-    return header.getClusterId();
+    return upstreamPDClient.getClusterId();
+  }
+
+  @Override
+  public RequestKeyCodec getCodec() {
+    return upstreamPDClient.getCodec();
   }
 
   public static ReadOnlyPDClient create(
@@ -119,11 +175,6 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
   static PDClient createRaw(
       TiConfiguration conf, RequestKeyCodec keyCodec, ChannelFactory channelFactory) {
     return new PDClient(conf, keyCodec, channelFactory);
-  }
-
-  @Override
-  public TiTimestamp getTimestamp(BackOffer backOffer) {
-    return upstreamPDClient.getTimestamp(backOffer);
   }
 
   /**
@@ -209,15 +260,10 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
   }
 
   @Override
-  public Pair<Metapb.Region, Metapb.Peer> getRegionByKey(BackOffer backOffer, ByteString key) {
-    return new Pair<>(upstreamPDClient.getRegionByKey(backOffer, key));
-  }
-
-  @Override
   public Future<Pair<Metapb.Region, Metapb.Peer>> getRegionByKeyAsync(
       BackOffer backOffer, ByteString key) {
     FutureObserver<Pair<Metapb.Region, Metapb.Peer>, GetRegionResponse> responseObserver =
-        new FutureObserver<>(this::getAll);
+        new FutureObserver<>(resp -> new Pair<>(resp.getRegion(), resp.getLeader()));
     Supplier<GetRegionRequest> request =
         () -> GetRegionRequest.newBuilder().setHeader(header).setRegionKey(key).build();
     PDErrorHandler<GetRegionResponse> handler =
@@ -226,19 +272,10 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
     return responseObserver.getFuture();
   }
 
-  private Pair<Metapb.Region, Metapb.Peer> getAll(GetRegionResponse resp) {
-    return new Pair<>(resp.getRegion(), resp.getLeader());
-  }
-
-  @Override
-  public Pair<Metapb.Region, Metapb.Peer> getRegionByID(BackOffer backOffer, long id) {
-    return new Pair<>(upstreamPDClient.getRegionByID(backOffer, id));
-  }
-
   @Override
   public Future<Pair<Metapb.Region, Metapb.Peer>> getRegionByIDAsync(BackOffer backOffer, long id) {
     FutureObserver<Pair<Metapb.Region, Metapb.Peer>, GetRegionResponse> responseObserver =
-        new FutureObserver<>(this::getAll);
+        new FutureObserver<>(resp -> new Pair<>(resp.getRegion(), resp.getLeader()));
     Supplier<GetRegionByIDRequest> request =
         () -> GetRegionByIDRequest.newBuilder().setHeader(header).setRegionId(id).build();
     PDErrorHandler<GetRegionResponse> handler =
@@ -262,11 +299,6 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
   }
 
   @Override
-  public Store getStore(BackOffer backOffer, long storeId) {
-    return upstreamPDClient.getStore(backOffer, storeId);
-  }
-
-  @Override
   public Future<Store> getStoreAsync(BackOffer backOffer, long storeId) {
     FutureObserver<Store, GetStoreResponse> responseObserver =
         new FutureObserver<>(GetStoreResponse::getStore);
@@ -277,18 +309,6 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
         responseObserver,
         buildPDErrorHandler());
     return responseObserver.getFuture();
-  }
-
-  @Override
-  public List<Store> getAllStores(BackOffer backOffer) {
-    return callWithRetry(
-            backOffer,
-            PDGrpc.getGetAllStoresMethod(),
-            buildGetAllStoresReq(),
-            new PDErrorHandler<>(
-                r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
-                this))
-        .getStoresList();
   }
 
   @Override

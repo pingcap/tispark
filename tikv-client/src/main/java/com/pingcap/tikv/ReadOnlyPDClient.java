@@ -18,53 +18,17 @@ package com.pingcap.tikv;
 
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.Pair;
-import java.util.List;
 import java.util.concurrent.Future;
-import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 /** Readonly PD client including only reading related interface Supposed for TiDB-like use cases */
-public interface ReadOnlyPDClient {
-  /**
-   * Get Timestamp from Placement Driver
-   *
-   * @return a timestamp object
-   */
-  TiTimestamp getTimestamp(BackOffer backOffer);
-
-  /**
-   * Get Region from PD by key specified
-   *
-   * @param key key in bytes for locating a region
-   * @return the region whose startKey and endKey range covers the given key
-   */
-  Pair<Metapb.Region, Metapb.Peer> getRegionByKey(BackOffer backOffer, ByteString key);
+public interface ReadOnlyPDClient extends org.tikv.common.ReadOnlyPDClient {
 
   Future<Pair<Metapb.Region, Metapb.Peer>> getRegionByKeyAsync(BackOffer backOffer, ByteString key);
 
-  /**
-   * Get Region by Region Id
-   *
-   * @param id Region Id
-   * @return the region corresponding to the given Id
-   */
-  Pair<Metapb.Region, Metapb.Peer> getRegionByID(BackOffer backOffer, long id);
-
   Future<Pair<Metapb.Region, Metapb.Peer>> getRegionByIDAsync(BackOffer backOffer, long id);
 
-  /**
-   * Get Store by StoreId
-   *
-   * @param storeId StoreId
-   * @return the Store corresponding to the given Id
-   */
-  Store getStore(BackOffer backOffer, long storeId);
-
   Future<Store> getStoreAsync(BackOffer backOffer, long storeId);
-
-  List<Store> getAllStores(BackOffer backOffer);
-
-  Long getClusterId();
 }
