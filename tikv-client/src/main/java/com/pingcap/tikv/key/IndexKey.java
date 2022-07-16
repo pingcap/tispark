@@ -21,6 +21,7 @@ import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiIndexColumn;
+import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
@@ -42,12 +43,12 @@ public class IndexKey extends Key {
   }
 
   public static class EncodeIndexDataResult {
-    public EncodeIndexDataResult(Key[] keys, boolean appendHandle) {
+    public EncodeIndexDataResult(byte[] keys, boolean appendHandle) {
       this.keys = keys;
       this.appendHandle = appendHandle;
     }
 
-    public Key[] keys;
+    public byte[] keys;
     public boolean appendHandle;
   }
 
@@ -55,35 +56,42 @@ public class IndexKey extends Key {
     return new IndexKey(tableId, indexId, dataKeys);
   }
 
-  public static EncodeIndexDataResult encodeIndexDataValues(
+  public static EncodeIndexDataResult genIndexKey(
+      long physicalID,
       Row row,
-      List<TiIndexColumn> indexColumns,
+      TiIndexInfo indexInfo,
       Handle handle,
-      boolean appendHandleIfContainsNull,
       TiTableInfo tableInfo) {
     // when appendHandleIfContainsNull is true, append handle column if any of the index column is
     // NULL
-    boolean appendHandle = false;
-    if (appendHandleIfContainsNull) {
+    boolean distinct = false;
+    List<TiIndexColumn> indexColumns = indexInfo.getIndexColumns();
+    if (indexInfo.isUnique()) {
+      distinct = true;
       for (TiIndexColumn col : indexColumns) {
         DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
         if (row.get(col.getOffset(), colTp) == null) {
-          appendHandle = true;
+          distinct = false;
           break;
         }
       }
     }
-
-    Key[] keys = new Key[indexColumns.size()];
-    for (int i = 0; i < indexColumns.size(); i++) {
-      TiIndexColumn col = indexColumns.get(i);
+    CodecDataOutput keyCdo = new CodecDataOutput();
+    keyCdo.write(IndexKey.toIndexKey(physicalID, indexInfo.getId()).getBytes());
+    for (TiIndexColumn col : indexColumns) {
       DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
       // truncate index's if necessary
       Key key = TypedKey.toTypedKey(row.get(col.getOffset(), colTp), colTp, (int) col.getLength());
-      keys[i] = key;
+      keyCdo.write(key.getBytes());
     }
-
-    return new EncodeIndexDataResult(keys, appendHandle);
+    if(!distinct){
+      if(handle.isInt()){
+        keyCdo.write(TypedKey.toTypedKey(handle, IntegerType.BIGINT).getBytes());
+      }else {
+        keyCdo.write(handle.encodedAsKey());
+      }
+    }
+    return new EncodeIndexDataResult(keyCdo.toBytes(), !distinct);
   }
 
   private static byte[] encode(long tableId, long indexId, Key[] dataKeys) {

@@ -17,12 +17,8 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
-import com.pingcap.tikv.exception.{
-  ConvertOverflowException,
-  TiBatchWriteException,
-  TiDBConvertException
-}
-import com.pingcap.tikv.key.{CommonHandle, Handle, IndexKey, IntHandle, RowKey}
+import com.pingcap.tikv.exception.{ConvertOverflowException, TiBatchWriteException, TiDBConvertException}
+import com.pingcap.tikv.key._
 import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType
@@ -225,22 +221,10 @@ object WriteUtil {
       index: TiIndexInfo,
       tiTableInfo: TiTableInfo,
       remove: Boolean): (SerializableKey, Array[Byte]) = {
-
     // NULL is only allowed in unique key, primary key does not allow NULL value
-    val encodeResult = IndexKey.encodeIndexDataValues(
-      row,
-      index.getIndexColumns,
-      handle,
-      index.isUnique && !index.isPrimary,
-      tiTableInfo)
-    val keyCdo=new CodecDataOutput()
-    keyCdo.write(
-      IndexKey.toIndexKey(locatePhysicalTable(row, tiTableInfo), index.getId,encodeResult.keys: _*).getBytes)
-    if(encodeResult.appendHandle){
-      //  append handle column if any of the index column is NULL
-      keyCdo.write(handle.encodedAsKey())
-    }
-
+    val encodeResult =
+      IndexKey.genIndexKey(locatePhysicalTable(row, tiTableInfo),
+        row, index, handle, tiTableInfo)
     val value = if (remove) {
       new Array[Byte](0)
     } else {
@@ -258,7 +242,7 @@ object WriteUtil {
         }
       }
     }
-    (new SerializableKey(keyCdo.toBytes), value)
+    (new SerializableKey(encodeResult.keys), value)
   }
 
   private def generateSecondaryIndexKey(
@@ -268,11 +252,7 @@ object WriteUtil {
       tiTableInfo: TiTableInfo,
       remove: Boolean): (SerializableKey, Array[Byte]) = {
     val keys =
-      IndexKey.encodeIndexDataValues(row, index.getIndexColumns, handle, false, tiTableInfo).keys
-    val cdo = new CodecDataOutput()
-    cdo.write(
-      IndexKey.toIndexKey(locatePhysicalTable(row, tiTableInfo), index.getId, keys: _*).getBytes)
-    cdo.write(handle.encodedAsKey())
+      IndexKey.genIndexKey(locatePhysicalTable(row, tiTableInfo), row, index, handle, tiTableInfo)
 
     val value: Array[Byte] = if (remove) {
       new Array[Byte](0)
@@ -281,7 +261,7 @@ object WriteUtil {
       value(0) = '0'
       value
     }
-    (new SerializableKey(cdo.toBytes), value)
+    (new SerializableKey(keys.keys), value)
   }
 
   /**

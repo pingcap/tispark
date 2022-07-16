@@ -404,7 +404,7 @@ class TiBatchWriteTable(
                 val oldValue = snapshot.get(keyInfo._1.bytes)
                 if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
                   val oldHandle =
-                    TableCodec.decodeUniqueIndexValueToHandleForClusteredIndexVersion1(
+                    TableCodec.decodeHandleInUniqueIndexValue(
                       oldValue,
                       isCommonHandle)
                   val oldRowValue = snapshot.get(buildRowKey(wrappedRow.row, oldHandle).bytes)
@@ -509,7 +509,7 @@ class TiBatchWriteTable(
                 if (conflictUniqueIndexValue.nonEmpty && !isNullUniqueIndexValue(
                     conflictUniqueIndexValue)) {
                   val conflictHandle =
-                    TableCodec.decodeUniqueIndexValueToHandleForClusteredIndexVersion1(
+                    TableCodec.decodeHandleInUniqueIndexValue(
                       conflictUniqueIndexValue,
                       isCommonHandle)
                   // TODO
@@ -621,21 +621,13 @@ class TiBatchWriteTable(
       handle: Handle,
       index: TiIndexInfo): (SerializableKey, Boolean) = {
     // NULL is only allowed in unique key, primary key does not allow NULL value
-    val encodeResult = IndexKey.encodeIndexDataValues(
+    val encodeResult = IndexKey.genIndexKey(
+      locatePhysicalTable(row, tiTableInfo),
       row,
-      index.getIndexColumns,
+      index,
       handle,
-      index.isUnique && !index.isPrimary,
       tiTableInfo)
-    val keys = encodeResult.keys
-    val cdo = new CodecDataOutput()
-    cdo.write(
-      IndexKey.toIndexKey(locatePhysicalTable(row, tiTableInfo), index.getId, keys: _*).getBytes)
-    if (encodeResult.appendHandle) {
-      //  append handle column if any of the index column is NULL
-      cdo.write(handle.encodedAsKey())
-    }
-    (new SerializableKey(cdo.toBytes), encodeResult.appendHandle)
+    (new SerializableKey(encodeResult.keys), encodeResult.appendHandle)
   }
 
   private def generateRowKey(

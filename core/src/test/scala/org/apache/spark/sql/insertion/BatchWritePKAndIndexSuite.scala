@@ -117,12 +117,12 @@ class BatchWritePKAndIndexSuite
   test("test duplicate unique indexes are not deleted error") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("""
-        |CREATE TABLE `t` (
-        |  `id` bigint(20),
-        |  `name` varchar(20) primary key clustered,
-        |  `age` int(11) null default null,
-        |   unique index(id)
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                       |CREATE TABLE `t` (
+                       |  `id`  int(20),
+                       |  `name` varchar(255) primary key clustered,
+                       |  `age` int(11) null default null,
+                       |   unique index(id)
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
       """.stripMargin)
     val schema = StructType(
       List(
@@ -135,7 +135,8 @@ class BatchWritePKAndIndexSuite
       "tidb.port" -> "4000",
       "tidb.user" -> "root",
       "replace" -> "true")
-    val rdd1 = sc.parallelize(Seq(Row(1, "1", 0)))
+
+    val rdd1 = sc.parallelize(Seq(Row(null, "1", 0)))
     val row1 = sqlContext.createDataFrame(rdd1, schema)
     row1.write
       .format("tidb")
@@ -144,7 +145,8 @@ class BatchWritePKAndIndexSuite
       .options(tidbOptions)
       .mode("append")
       .save()
-    val rdd2 = sc.parallelize(Seq(Row(1, "2", 0)))
+    tidbStmt.execute("ADMIN CHECK TABLE `tispark_test`.`t`")
+    val rdd2 = sc.parallelize(Seq(Row(null, "2", 0)))
     val row2 = sqlContext.createDataFrame(rdd2, schema)
     row2.write
       .format("tidb")

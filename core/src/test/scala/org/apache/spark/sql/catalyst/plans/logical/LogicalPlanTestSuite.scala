@@ -17,7 +17,9 @@
 package org.apache.spark.sql.catalyst.plans.logical
 
 import com.pingcap.tikv.meta.TiTimestamp
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
 class LogicalPlanTestSuite extends BasePlanTest {
 

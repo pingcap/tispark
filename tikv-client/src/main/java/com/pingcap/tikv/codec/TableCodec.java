@@ -24,11 +24,29 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
+import java.util.Arrays;
 import java.util.List;
 
 public class TableCodec {
+
+
+  // IndexVersionFlag is the flag used to decode the index's version info.
   public static byte IndexVersionFlag = 125;
+  // PartitionIDFlag is the flag used to decode the partition ID in global index value.
+  public static byte PartitionIDFlag = 126;
+  // CommonHandleFlag is the flag used to decode the common handle in an unique index value.
   public static byte CommonHandleFlag = 127;
+  // RestoreDataFlag is the flag that RestoreData begin with.
+  // See rowcodec.Encoder.Encode and rowcodec.row.toBytes
+  public static byte RestoreDataFlag = (byte) RowV2.CODEC_VER;
+
+  public static class IndexValueSegments {
+
+    byte[] commonHandle;
+    byte[] partitionID;
+    byte[] restoredValues;
+    byte[] intHandle;
+  }
 
   public static byte[] encodeRow(
       List<TiColumnInfo> columnInfos,
@@ -66,20 +84,18 @@ public class TableCodec {
   }
 
   /* only for unique index */
-  public static Handle decodeUniqueIndexValueToHandleForClusteredIndexVersion1(
+  public static Handle decodeHandleInUniqueIndexValue(
       byte[] value, boolean isCommonHandle) {
-    if (isCommonHandle) {
-      /**
-       * delete additional information that add to commonHandle in unique index value
-       *
-       * @see #genIndexValueForClusteredIndexVersion1(TiIndexInfo, Handle)
-       */
-      int offset = 6;
-      byte[] encode = new byte[value.length - offset];
-      System.arraycopy(value, offset, encode, 0, value.length - offset);
-      return new CommonHandle(encode);
+    if (!isCommonHandle) {
+      return new IntHandle(new CodecDataInput(value).readLong());
     }
-    return new IntHandle(new CodecDataInput(value).readLong());
+    if (getIndexVersion(value) == 1) {
+      IndexValueSegments segments = splitIndexValueForClusteredIndexVersion1(value);
+      return new CommonHandle(segments.commonHandle);
+    }
+    int handleLen = ((int) value[2]) << 8 + value[3];
+    byte[] encode = Arrays.copyOfRange(value, 4, handleLen + 4);
+    return new CommonHandle(encode);
   }
 
   /* only for unique index */
@@ -101,5 +117,32 @@ public class TableCodec {
     int hLen = encoded.length;
     cdo.writeShort(hLen);
     cdo.write(encoded);
+  }
+
+  private static int getIndexVersion(byte[] value) {
+    int tailLen = value[0];
+    if ((tailLen == 0 || tailLen == 1) && value[1] == IndexVersionFlag) {
+      return value[2];
+    }
+    return 0;
+  }
+
+  public static IndexValueSegments splitIndexValueForClusteredIndexVersion1(byte[] value) {
+    int tailLen = value[0];
+    IndexValueSegments segments = new IndexValueSegments();
+    value = Arrays.copyOfRange(value, 3, value.length - tailLen);
+    if (value.length > 0 && value[0] == CommonHandleFlag) {
+      int handleLen = ((int) value[1]) << 8 + value[2];
+      segments.commonHandle = Arrays.copyOfRange(value, 3, 3 + handleLen);
+      value = Arrays.copyOfRange(value, handleLen + 3, value.length);
+    }
+    if (value.length > 0 && value[0] == PartitionIDFlag) {
+      segments.partitionID = Arrays.copyOfRange(value, 1, 9);
+      value = Arrays.copyOfRange(value, 9, value.length);
+    }
+    if (value.length > 0 && value[0] == RestoreDataFlag) {
+      segments.restoredValues = value;
+    }
+    return segments;
   }
 }
