@@ -228,17 +228,17 @@ object WriteUtil {
     val value = if (remove) {
       new Array[Byte](0)
     } else {
-      if (encodeResult.appendHandle) {
-        val value = new Array[Byte](1)
-        value(0) = '0'
-        value
+      if (!handle.isInt) {
+        TableCodec.genIndexValueForClusteredIndexVersion1(index, handle, !encodeResult.appendHandle)
       } else {
-        if (handle.isInt) {
+        if (!encodeResult.appendHandle) {
           val valueCdo = new CodecDataOutput()
           valueCdo.writeLong(handle.intValue())
           valueCdo.toBytes
         } else {
-          TableCodec.genIndexValueForClusteredIndexVersion1(index, handle)
+          val value = new Array[Byte](1)
+          value(0) = '0'
+          value
         }
       }
     }

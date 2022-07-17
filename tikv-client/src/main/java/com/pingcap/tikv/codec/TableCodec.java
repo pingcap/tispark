@@ -89,8 +89,9 @@ public class TableCodec {
     if (!isCommonHandle) {
       return new IntHandle(new CodecDataInput(value).readLong());
     }
+    CodecDataInput codecDataInput = new CodecDataInput(value);
     if (getIndexVersion(value) == 1) {
-      IndexValueSegments segments = splitIndexValueForClusteredIndexVersion1(value);
+      IndexValueSegments segments = splitIndexValueForClusteredIndexVersion1(codecDataInput);
       return new CommonHandle(segments.commonHandle);
     }
     int handleLen = ((int) value[2]) << 8 + value[3];
@@ -99,15 +100,17 @@ public class TableCodec {
   }
 
   /* only for unique index */
-  public static byte[] genIndexValueForClusteredIndexVersion1(TiIndexInfo index, Handle handle) {
+  public static byte[] genIndexValueForClusteredIndexVersion1(TiIndexInfo index, Handle handle,
+      boolean distinct) {
     CodecDataOutput cdo = new CodecDataOutput();
     cdo.writeByte(0);
     cdo.writeByte(IndexVersionFlag);
     cdo.writeByte(1);
 
     assert (index.isUnique());
-    encodeCommonHandle(cdo, handle);
-
+    if (distinct) {
+      encodeCommonHandle(cdo, handle);
+    }
     return cdo.toBytes();
   }
 
@@ -127,21 +130,47 @@ public class TableCodec {
     return 0;
   }
 
-  public static IndexValueSegments splitIndexValueForClusteredIndexVersion1(byte[] value) {
-    int tailLen = value[0];
+  //  public static IndexValueSegments splitIndexValueForClusteredIndexVersion1(byte[] value) {
+//    int tailLen = value[0];
+//    IndexValueSegments segments = new IndexValueSegments();
+//    value = Arrays.copyOfRange(value, 3, value.length - tailLen);
+//    if (value.length > 0 && value[0] == CommonHandleFlag) {
+//      int handleLen = (((int) value[1]) << 8) + value[2];
+//      segments.commonHandle = Arrays.copyOfRange(value, 3, 3 + handleLen);
+//      value = Arrays.copyOfRange(value, handleLen + 3, value.length);
+//    }
+//    if (value.length > 0 && value[0] == PartitionIDFlag) {
+//      segments.partitionID = Arrays.copyOfRange(value, 1, 9);
+//      value = Arrays.copyOfRange(value, 9, value.length);
+//    }
+//    if (value.length > 0 && value[0] == RestoreDataFlag) {
+//      segments.restoredValues = value;
+//    }
+//    return segments;
+//  }
+  public static IndexValueSegments splitIndexValueForClusteredIndexVersion1(
+      CodecDataInput codecDataInput) {
+    int tailLen = codecDataInput.readByte();
+    // read IndexVersionFlag
+    codecDataInput.readByte();
+    // read IndexVersion
+    codecDataInput.readByte();
     IndexValueSegments segments = new IndexValueSegments();
-    value = Arrays.copyOfRange(value, 3, value.length - tailLen);
-    if (value.length > 0 && value[0] == CommonHandleFlag) {
-      int handleLen = ((int) value[1]) << 8 + value[2];
-      segments.commonHandle = Arrays.copyOfRange(value, 3, 3 + handleLen);
-      value = Arrays.copyOfRange(value, handleLen + 3, value.length);
+    if (codecDataInput.available() > 0 && codecDataInput.peekByte() == CommonHandleFlag) {
+      codecDataInput.readByte();
+      int handleLen = codecDataInput.readShort();
+      segments.commonHandle=new byte[handleLen];
+      codecDataInput.readFully(segments.commonHandle, 0, handleLen);
     }
-    if (value.length > 0 && value[0] == PartitionIDFlag) {
-      segments.partitionID = Arrays.copyOfRange(value, 1, 9);
-      value = Arrays.copyOfRange(value, 9, value.length);
+    if (codecDataInput.available() > 0 && codecDataInput.peekByte() == PartitionIDFlag) {
+      codecDataInput.readByte();
+      segments.partitionID=new byte[9];
+      codecDataInput.readFully(segments.partitionID, 0, 9);
     }
-    if (value.length > 0 && value[0] == RestoreDataFlag) {
-      segments.restoredValues = value;
+    if (codecDataInput.available() > 0 && codecDataInput.peekByte() == RestoreDataFlag) {
+      codecDataInput.readByte();
+      segments.restoredValues=new byte[codecDataInput.available()-tailLen];
+      codecDataInput.readFully(segments.restoredValues, 0, codecDataInput.available() - tailLen);
     }
     return segments;
   }
