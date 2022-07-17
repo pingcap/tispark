@@ -17,7 +17,11 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
-import com.pingcap.tikv.exception.{ConvertOverflowException, TiBatchWriteException, TiDBConvertException}
+import com.pingcap.tikv.exception.{
+  ConvertOverflowException,
+  TiBatchWriteException,
+  TiDBConvertException
+}
 import com.pingcap.tikv.key._
 import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.ObjectRowImpl
@@ -223,13 +227,15 @@ object WriteUtil {
       remove: Boolean): (SerializableKey, Array[Byte]) = {
     // NULL is only allowed in unique key, primary key does not allow NULL value
     val encodeResult =
-      IndexKey.genIndexKey(locatePhysicalTable(row, tiTableInfo),
-        row, index, handle, tiTableInfo)
+      IndexKey.genIndexKey(locatePhysicalTable(row, tiTableInfo), row, index, handle, tiTableInfo)
     val value = if (remove) {
       new Array[Byte](0)
     } else {
       if (!handle.isInt) {
-        TableCodec.genIndexValueForClusteredIndexVersion1(index, handle, !encodeResult.appendHandle)
+        TableCodec.genIndexValueForClusteredIndexVersion1(
+          index,
+          handle,
+          !encodeResult.appendHandle)
       } else {
         if (!encodeResult.appendHandle) {
           val valueCdo = new CodecDataOutput()

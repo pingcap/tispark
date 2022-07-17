@@ -404,9 +404,7 @@ class TiBatchWriteTable(
                 val oldValue = snapshot.get(keyInfo._1.bytes)
                 if (oldValue.nonEmpty && !isNullUniqueIndexValue(oldValue)) {
                   val oldHandle =
-                    TableCodec.decodeHandleInUniqueIndexValue(
-                      oldValue,
-                      isCommonHandle)
+                    TableCodec.decodeHandleInUniqueIndexValue(oldValue, isCommonHandle)
                   val oldRowValue = snapshot.get(buildRowKey(wrappedRow.row, oldHandle).bytes)
                   val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
                   rowBuf += WrappedRow(oldRow, oldHandle)
@@ -621,12 +619,8 @@ class TiBatchWriteTable(
       handle: Handle,
       index: TiIndexInfo): (SerializableKey, Boolean) = {
     // NULL is only allowed in unique key, primary key does not allow NULL value
-    val encodeResult = IndexKey.genIndexKey(
-      locatePhysicalTable(row, tiTableInfo),
-      row,
-      index,
-      handle,
-      tiTableInfo)
+    val encodeResult =
+      IndexKey.genIndexKey(locatePhysicalTable(row, tiTableInfo), row, index, handle, tiTableInfo)
     (new SerializableKey(encodeResult.keys), encodeResult.appendHandle)
   }
 

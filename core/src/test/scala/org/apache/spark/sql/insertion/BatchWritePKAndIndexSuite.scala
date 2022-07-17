@@ -160,8 +160,7 @@ class BatchWritePKAndIndexSuite
   // https://github.com/pingcap/tispark/issues/2391
   test("test bug fix incorrect uniqueIndex key when table is not intHandle") {
     tidbStmt.execute("drop table if exists t")
-    tidbStmt.execute(
-      """
+    tidbStmt.execute("""
         |CREATE TABLE `t` (
         |  `id`  int(20),
         |  `name` varchar(255) primary key clustered,

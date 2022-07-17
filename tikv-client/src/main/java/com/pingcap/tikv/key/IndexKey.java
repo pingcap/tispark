@@ -57,11 +57,7 @@ public class IndexKey extends Key {
   }
 
   public static EncodeIndexDataResult genIndexKey(
-      long physicalID,
-      Row row,
-      TiIndexInfo indexInfo,
-      Handle handle,
-      TiTableInfo tableInfo) {
+      long physicalID, Row row, TiIndexInfo indexInfo, Handle handle, TiTableInfo tableInfo) {
     // when appendHandleIfContainsNull is true, append handle column if any of the index column is
     // NULL
     boolean distinct = false;
@@ -84,10 +80,10 @@ public class IndexKey extends Key {
       Key key = TypedKey.toTypedKey(row.get(col.getOffset(), colTp), colTp, (int) col.getLength());
       keyCdo.write(key.getBytes());
     }
-    if(!distinct){
-      if(handle.isInt()){
+    if (!distinct) {
+      if (handle.isInt()) {
         keyCdo.write(TypedKey.toTypedKey(handle, IntegerType.BIGINT).getBytes());
-      }else {
+      } else {
         keyCdo.write(handle.encodedAsKey());
       }
     }
