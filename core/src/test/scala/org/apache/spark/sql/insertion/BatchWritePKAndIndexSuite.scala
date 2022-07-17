@@ -117,7 +117,7 @@ class BatchWritePKAndIndexSuite
   test("test duplicate unique indexes are not deleted error") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("""
-                       |CREATE TABLE `t` (
+                       |CREATE TABLE `tispark_test`.`t` (
                        |  `id`  int(20),
                        |  `name` varchar(255) primary key clustered,
                        |  `age` int(11) null default null,
@@ -161,7 +161,7 @@ class BatchWritePKAndIndexSuite
   test("test bug fix incorrect uniqueIndex key when table is not intHandle") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("""
-        |CREATE TABLE `t` (
+        |CREATE TABLE `tispark_test`.`t` (
         |  `id`  int(20),
         |  `name` varchar(255) primary key clustered,
         |  `age` int(11) null default null,
