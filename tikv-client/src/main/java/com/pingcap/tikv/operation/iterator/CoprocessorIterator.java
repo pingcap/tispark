@@ -97,7 +97,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         request,
         regionTasks,
         session,
-        SchemaInfer.create(dagRequest),
+        SchemaInfer.create(dagRequest.getResultTypes()),
         dagRequest.getPushDownType(),
         dagRequest.getStoreType(),
         dagRequest.getStartTs().getVersion()) {
@@ -133,7 +133,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         request,
         regionTasks,
         session,
-        SchemaInfer.create(dagRequest),
+        SchemaInfer.create(dagRequest.getResultTypes()),
         dagRequest.getPushDownType(),
         dagRequest.getStoreType(),
         dagRequest.getStartTs().getVersion()) {
@@ -225,11 +225,12 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
     // set encode type to TypeDefault because currently, only
     // CoprocessorIterator<TiChunk> support TypeChunk and TypeCHBlock encode type
     dagRequest.setEncodeType(EncodeType.TypeDefault);
+    DAGRequest request = dagRequest.buildDAGGetIndexData();
     return new DAGIterator<Handle>(
-        dagRequest.buildDAGGetIndexData(),
+        request,
         regionTasks,
         session,
-        SchemaInfer.create(dagRequest, true),
+        SchemaInfer.create(dagRequest.getResultTypes()),
         dagRequest.getPushDownType(),
         dagRequest.getStoreType(),
         dagRequest.getStartTs().getVersion()) {

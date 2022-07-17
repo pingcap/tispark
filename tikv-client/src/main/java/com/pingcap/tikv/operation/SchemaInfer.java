@@ -16,13 +16,9 @@
 
 package com.pingcap.tikv.operation;
 
-import com.pingcap.tikv.expression.ByItem;
-import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.types.DataType;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * SchemaInfer extract row's type after query is executed. It is pretty rough version. Optimization
@@ -35,18 +31,12 @@ import java.util.stream.Collectors;
 public class SchemaInfer {
   private final List<DataType> types;
 
-  private SchemaInfer(TiDAGRequest dagRequest, boolean readHandle) {
-    types = new ArrayList<>();
-    dagRequest.init(readHandle);
-    extractFieldTypes(dagRequest, readHandle);
+  private SchemaInfer(List<DataType> types) {
+    this.types = types;
   }
 
-  public static SchemaInfer create(TiDAGRequest dagRequest) {
-    return new SchemaInfer(dagRequest.copy(), false);
-  }
-
-  public static SchemaInfer create(TiDAGRequest dagRequest, boolean readHandle) {
-    return new SchemaInfer(dagRequest.copy(), readHandle);
+  public static SchemaInfer create(List<DataType> types) {
+    return new SchemaInfer(types);
   }
 
   /**
@@ -55,28 +45,7 @@ public class SchemaInfer {
    * @param dagRequest is SelectRequest
    */
   private void extractFieldTypes(TiDAGRequest dagRequest, boolean readHandle) {
-    if (readHandle) {
-      // or extract data from index read
-      types.addAll(dagRequest.getIndexDataTypes());
-    } else if (dagRequest.hasPushDownAggregate()) {
-      types.addAll(
-          dagRequest
-              .getPushDownAggregates()
-              .stream()
-              .map(Expression::getDataType)
-              .collect(Collectors.toList()));
-      // In DAG mode, if there is any group by statement in a request, all the columns specified
-      // in group by expression will be returned, so when we decode a result row, we need to pay
-      // extra attention to decoding.
-      if (dagRequest.hasPushDownGroupBy()) {
-        for (ByItem item : dagRequest.getPushDownGroupBys()) {
-          types.add(item.getExpr().getDataType());
-        }
-      }
-    } else {
-      // Extract all column type information from TiExpr
-      dagRequest.getFields().forEach(expr -> types.add(expr.getDataType()));
-    }
+    types.addAll(dagRequest.getResultTypes());
   }
 
   public DataType getType(int index) {

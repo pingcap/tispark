@@ -115,7 +115,9 @@ class LogicalPlanTestSuite extends BasePlanTest {
         println("check ok " + v.getVersion)
       }
 
-    extractDAGRequests(df).map(_.getStartTs).foreach { checkTimestamp }
+    extractDAGRequests(df).map(_.getStartTs).foreach {
+      checkTimestamp
+    }
   }
 
   test("test physical plan explain which table without cluster index") {
