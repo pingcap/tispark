@@ -28,6 +28,8 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.slf4j.LoggerFactory
 
+import java.util.concurrent.ConcurrentHashMap
+
 case class TiDBDelete(
     df: DataFrame,
     database: String,
@@ -61,6 +63,8 @@ case class TiDBDelete(
 
     val colsInDf = df.columns.toList.map(_.toLowerCase())
 
+    val physicalTableMap: ConcurrentHashMap[Int, TableCommon] = new ConcurrentHashMap()
+
     /**
      * There will be a stuck the following codes are executed after df.persist(),
      * so we use collect() to trigger action firstly.
@@ -74,17 +78,18 @@ case class TiDBDelete(
      */
     val tiRowMapRDD: RDD[(TableCommon, TiRow)] = SparkSession.active.sparkContext.makeRDD(
       df.rdd
-        .mapPartitions { rowIterator =>
+        .mapPartitions {
           val table = new TableCommon(tiTableInfo.getId, tiTableInfo.getId, tiTableInfo)
 
           if (tiTableInfo.isPartitionEnabled) {
             val pTable = PartitionedTable.newPartitionTable(table, tiTableInfo)
-            rowIterator.map { row =>
-              val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
-              // locate partition and return the physical table
-              pTable.locatePartition(tiRow) -> tiRow
-            }
-          } else {
+            rowIterator =>
+              rowIterator.map { row =>
+                val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
+                // locate partition and return the physical table
+                pTable.locatePartition(tiRow) -> tiRow
+              }
+          } else { rowIterator =>
             rowIterator.map { row =>
               //Convert Spark row to TiKV row
               val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
@@ -99,31 +104,20 @@ case class TiDBDelete(
     persistedDFList = persistDf :: persistedDFList
 
     //Extract handle
-    val deletionMapRDD: RDD[(TableCommon, WrappedRow)] = tiRowMapRDD.mapPartitions {
-      pairIterator =>
-        pairIterator.map {
-          case (table, tiRow) =>
-            table -> WrappedRow(tiRow, WriteUtil.extractHandle(tiRow, tiTableInfo))
-        }
+    val deletionMapRDD: RDD[(TableCommon, WrappedRow)] = tiRowMapRDD.map {
+      case (table, tiRow) =>
+        table -> WrappedRow(tiRow, WriteUtil.extractHandle(tiRow, tiTableInfo))
     }
 
     // encode record & index
-    val recordKVRDD: RDD[WrappedEncodedRow] = deletionMapRDD.mapPartitions { pairIterator =>
-      {
-        pairIterator.map {
-          case (table, wrappedRow) =>
-            WriteUtil.generateRecordKVToDelete(wrappedRow, table.getPhysicalTableId)
-        }
-      }
+    val recordKVRDD: RDD[WrappedEncodedRow] = deletionMapRDD.map {
+      case (table, wrappedRow) =>
+        WriteUtil.generateRecordKVToDelete(wrappedRow, table.getPhysicalTableId)
     }
 
-    val indexKVRDD: RDD[WrappedEncodedRow] = deletionMapRDD.mapPartitions { pairIterator =>
-      {
-        pairIterator.flatMap {
-          case (table, wrappedEncodedRow) =>
-            WriteUtil.generateIndexKV(wrappedEncodedRow, table, remove = true)
-        }
-      }
+    val indexKVRDD: RDD[WrappedEncodedRow] = deletionMapRDD.flatMap {
+      case (table, wrappedEncodedRow) =>
+        WriteUtil.generateIndexKV(wrappedEncodedRow, table, remove = true)
     }
 
     val keyValueRDD = (recordKVRDD ++ indexKVRDD).map(obj => (obj.encodedKey, obj.encodedValue))

@@ -643,8 +643,7 @@ class TiBatchWriteTable(
   }
 
   private def buildRowKey(row: TiRow, handle: Handle): SerializableKey = {
-    new SerializableKey(
-      RowKey.toRowKey(WriteUtil.locatePhysicalTable(row, tiTable), handle).getBytes)
+    new SerializableKey(RowKey.toRowKey(WriteUtil.locatePhysicalTable(tiTable), handle).getBytes)
   }
 
   private def buildUniqueIndexKey(
@@ -660,7 +659,7 @@ class TiBatchWriteTable(
       tiTableInfo)
     val keys = encodeResult.keys
     val indexKey =
-      IndexKey.toIndexKey(WriteUtil.locatePhysicalTable(row, tiTable), index.getId, keys: _*)
+      IndexKey.toIndexKey(WriteUtil.locatePhysicalTable(tiTable), index.getId, keys: _*)
     (new SerializableKey(indexKey.getBytes), encodeResult.appendHandle)
   }
 
@@ -673,7 +672,7 @@ class TiBatchWriteTable(
     } else {
       (
         new SerializableKey(
-          RowKey.toRowKey(WriteUtil.locatePhysicalTable(row, tiTable), handle).getBytes),
+          RowKey.toRowKey(WriteUtil.locatePhysicalTable(tiTable), handle).getBytes),
         encodeTiRow(row))
     }
   }

@@ -243,7 +243,11 @@ public class Converter {
     } else if (val instanceof String) {
       // interpret string as in local timezone
       try {
-        return new ExtendedDateTime(strToDateTime((String) val, localDateTimeFormatter));
+        String dateTime = (String) val;
+        return new ExtendedDateTime(
+            strToDateTime(
+                dateTime.startsWith("'") ? dateTime.substring(1, dateTime.length() - 1) : dateTime,
+                localDateTimeFormatter));
       } catch (Exception e) {
         throw new TypeException(String.format("Error parsing string %s to datetime", val), e);
       }

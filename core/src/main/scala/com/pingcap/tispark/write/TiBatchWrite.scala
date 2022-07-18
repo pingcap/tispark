@@ -25,8 +25,8 @@ import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler, WriteUtil}
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql._
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -170,7 +170,7 @@ class TiBatchWrite(
            * - if the table is not partitioned, the logical table is the same as the physical table.
            */
           if (tiTableInfo.isPartitionEnabled) {
-            transferToPhysicalTables(df, tiTableInfo, table, isTiDBV4, tableOptions, dbTable)
+            transferToPhysicalTables(df, tiTableInfo, table, isTiDBV4, tableOptions)
           } else {
             List(
               new TiBatchWriteTable(
@@ -336,8 +336,7 @@ class TiBatchWrite(
       tiTableInfo: TiTableInfo,
       table: TableCommon,
       isTiDBV4: Boolean,
-      options: TiDBOptions,
-      dbTable: DBTable) = {
+      options: TiDBOptions) = {
     val mm = new mutable.HashMap[TableCommon, mutable.Set[SparkRow]]
       with mutable.MultiMap[TableCommon, SparkRow]
 

@@ -31,6 +31,8 @@ import com.pingcap.tikv.partition.PartitionedTable.PartitionLocatorContext;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DateType;
 import com.pingcap.tikv.types.IntegerType;
+import java.sql.Date;
+import java.sql.Timestamp;
 
 public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorContext> {
 
@@ -68,21 +70,67 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
     }
 
     Constant constant = (Constant) node.getRight();
-    // For the range with single quote such as varchar 'AAAAA' or date '1997-09-09',
+    // For the range with single quote such as varchar 'AAAAA' or date'1995-01-01',
     // we should escape single quote to get the real string need to be compared.
-    String rawString = constant.getValue().toString();
-    if (rawString.startsWith("'")) {
-      rawString = rawString.substring(1, rawString.length() - 1);
+    String boundString = constant.getValue().toString();
+    if (data instanceof String || data instanceof Date || data instanceof Timestamp) {
+      boundString = boundString.substring(1, boundString.length() - 1);
     }
     Operator comparisonType = node.getComparisonType();
 
-    switch (comparisonType) {
-      case GREATER_EQUAL:
-        return data.toString().compareTo(rawString) >= 0;
-      case LESS_THAN:
-        return data.toString().compareTo(rawString) < 0;
-      default:
-        throw new UnsupportedOperationException("Unsupported comparison type: " + comparisonType);
+    return evaluateComparison(data, boundString, comparisonType);
+  }
+
+  private Boolean evaluateComparison(Object data, String boundString, Operator comparisonType) {
+    // MYSQL IntegerType, we can convert to long and then compare.
+    if (data instanceof Number) {
+      long dataLongValue = ((Number) data).longValue();
+      ;
+      long bound = Long.parseLong(boundString);
+      switch (comparisonType) {
+        case GREATER_EQUAL:
+          return dataLongValue >= bound;
+        case LESS_THAN:
+          return dataLongValue < bound;
+        default:
+          throw new UnsupportedOperationException("Unsupported comparison type: " + comparisonType);
+      }
+    } else if (data instanceof String) {
+      String dataStringValue = (String) data;
+      switch (comparisonType) {
+        case GREATER_EQUAL:
+          return dataStringValue.compareTo(boundString) >= 0;
+        case LESS_THAN:
+          return dataStringValue.compareTo(boundString) < 0;
+        default:
+          throw new UnsupportedOperationException("Unsupported comparison type: " + comparisonType);
+      }
+    } else if (data instanceof Date) {
+      Date dataDateValue = (Date) data;
+      Date boundDate = Date.valueOf(boundString);
+      switch (comparisonType) {
+        case GREATER_EQUAL:
+          return dataDateValue.compareTo(boundDate) >= 0;
+        case LESS_THAN:
+          return dataDateValue.compareTo(boundDate) < 0;
+        default:
+          throw new UnsupportedOperationException("Unsupported comparison type: " + comparisonType);
+      }
+    } else if (data instanceof Timestamp) {
+      // MySQLType.TypeDatetime is mapping to Spark/TimestampType.
+      Timestamp dataTimeValue = (Timestamp) data;
+      Timestamp boundDateTime = Timestamp.valueOf(boundString);
+      switch (comparisonType) {
+        case GREATER_EQUAL:
+          return dataTimeValue.compareTo(boundDateTime) >= 0;
+        case LESS_THAN:
+          return dataTimeValue.compareTo(boundDateTime) < 0;
+        default:
+          throw new UnsupportedOperationException("Unsupported comparison type: " + comparisonType);
+      }
+    } else {
+      throw new UnsupportedOperationException(
+          "Unsupported data type with partition column" + data.getClass());
     }
   }
 
@@ -94,7 +142,7 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
    */
   @Override
   public Boolean visit(Constant node, PartitionLocatorContext context) {
-    if (node.getDataType() == IntegerType.TINYINT) {
+    if (IntegerType.TINYINT.equals(node.getDataType())) {
       return (int) node.getValue() == 1;
     } else {
       throw new IllegalStateException(

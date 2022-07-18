@@ -22,7 +22,7 @@ import com.pingcap.tikv.exception.{
   TiBatchWriteException,
   TiDBConvertException
 }
-import com.pingcap.tikv.key._
+import com.pingcap.tikv.key.{CommonHandle, Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.partition.TableCommon
 import com.pingcap.tikv.row.ObjectRowImpl
@@ -131,9 +131,11 @@ object WriteUtil {
     }
   }
 
-  def generateRecordKVToDelete(wrappedRow: WrappedRow, tableId: Long): WrappedEncodedRow = {
+  def generateRecordKVToDelete(
+      wrappedRow: WrappedRow,
+      physicalTableId: Long): WrappedEncodedRow = {
     val (encodedKey, encodedValue) = (
-      new SerializableKey(RowKey.toRowKey(tableId, wrappedRow.handle).getBytes),
+      new SerializableKey(RowKey.toRowKey(physicalTableId, wrappedRow.handle).getBytes),
       new Array[Byte](0))
     WrappedEncodedRow(
       wrappedRow.row,
@@ -174,7 +176,7 @@ object WriteUtil {
       tiTable: TableCommon,
       remove: Boolean): mutable.Map[Long, mutable.Set[WrappedEncodedRow]] = {
     val tableInfo = tiTable.getTableInfo
-    listPair2multimap(tableInfo.getIndices.asScala.flatMap { index =>
+    listPair2Multimap(tableInfo.getIndices.asScala.flatMap { index =>
       if (tableInfo.isCommonHandle && index.isPrimary) {
         None
       } else {
@@ -188,7 +190,7 @@ object WriteUtil {
    *
    * @param sc
    * @param rdd
-   * @param tiTableInfo
+   * @param TableCommon
    * @param remove
    * @return
    */
@@ -274,7 +276,7 @@ object WriteUtil {
       index.isUnique && !index.isPrimary,
       tiTable.getTableInfo)
     val indexKey =
-      IndexKey.toIndexKey(locatePhysicalTable(row, tiTable), index.getId, encodeResult.keys: _*)
+      IndexKey.toIndexKey(locatePhysicalTable(tiTable), index.getId, encodeResult.keys: _*)
 
     val value = if (remove) {
       new Array[Byte](0)
@@ -307,8 +309,7 @@ object WriteUtil {
         .encodeIndexDataValues(row, index.getIndexColumns, handle, false, tiTable.getTableInfo)
         .keys
     val cdo = new CodecDataOutput()
-    cdo.write(
-      IndexKey.toIndexKey(locatePhysicalTable(row, tiTable), index.getId, keys: _*).getBytes)
+    cdo.write(IndexKey.toIndexKey(locatePhysicalTable(tiTable), index.getId, keys: _*).getBytes)
     cdo.write(handle.encodedAsKey())
 
     val value: Array[Byte] = if (remove) {
@@ -322,13 +323,10 @@ object WriteUtil {
   }
 
   /**
-   * TODO: support physical table later. Need use partition info and row value to calculate the real physical table.
-   *
-   * @param row
-   * @param tiTableInfo
+   * @param TableCommon
    * @return
    */
-  def locatePhysicalTable(row: TiRow, tiTable: TableCommon): Long = {
+  def locatePhysicalTable(tiTable: TableCommon): Long = {
     tiTable.getPhysicalTableId
   }
 
@@ -339,7 +337,7 @@ object WriteUtil {
    * @tparam B value type
    * @return
    */
-  def listPair2multimap[A, B](list: List[(A, B)]) =
+  def listPair2Multimap[A, B](list: List[(A, B)]) =
     list.foldLeft(new mutable.HashMap[A, mutable.Set[B]] with mutable.MultiMap[A, B]) {
       (acc, pair) => acc.addBinding(pair._1, pair._2)
     }
