@@ -31,8 +31,7 @@ import org.tikv.kvproto.TikvGrpc;
 import org.tikv.shade.io.grpc.ManagedChannel;
 
 public abstract class AbstractRegionStoreClient
-    extends AbstractGRPCClient<
-        TikvGrpc.TikvFutureStub, TikvGrpc.TikvBlockingStub, TikvGrpc.TikvStub>
+    extends AbstractGRPCClient<TikvGrpc.TikvBlockingStub, TikvGrpc.TikvFutureStub>
     implements RegionErrorReceiver {
 
   protected final RegionManager regionManager;
@@ -43,7 +42,7 @@ public abstract class AbstractRegionStoreClient
       TiRegion region,
       ChannelFactory channelFactory,
       TikvGrpc.TikvBlockingStub blockingStub,
-      TikvGrpc.TikvStub asyncStub,
+      TikvGrpc.TikvFutureStub asyncStub,
       RegionManager regionManager) {
     super(conf, channelFactory, blockingStub, asyncStub);
     checkNotNull(region, "Region is empty");
@@ -63,7 +62,7 @@ public abstract class AbstractRegionStoreClient
   }
 
   @Override
-  protected TikvGrpc.TikvStub getAsyncStub() {
+  protected TikvGrpc.TikvFutureStub getAsyncStub() {
     return asyncStub.withDeadlineAfter(getConf().getTimeout(), getConf().getTimeoutUnit());
   }
 
@@ -90,7 +89,7 @@ public abstract class AbstractRegionStoreClient
     String addressStr = regionManager.getStoreById(region.getLeader().getStoreId()).getAddress();
     ManagedChannel channel = channelFactory.getChannel(addressStr);
     blockingStub = TikvGrpc.newBlockingStub(channel);
-    asyncStub = TikvGrpc.newStub(channel);
+    asyncStub = TikvGrpc.newFutureStub(channel);
     return true;
   }
 
@@ -99,7 +98,7 @@ public abstract class AbstractRegionStoreClient
     String addressStr = store.getAddress();
     ManagedChannel channel = channelFactory.getChannel(addressStr);
     blockingStub = TikvGrpc.newBlockingStub(channel);
-    asyncStub = TikvGrpc.newStub(channel);
+    asyncStub = TikvGrpc.newFutureStub(channel);
     if (logger.isDebugEnabled() && region.getLeader().getStoreId() != store.getId()) {
       logger.debug(
           "store_not_match may occur? "

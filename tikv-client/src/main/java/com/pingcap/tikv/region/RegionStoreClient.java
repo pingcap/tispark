@@ -106,7 +106,7 @@ import org.tikv.kvproto.Kvrpcpb.TxnHeartBeatResponse;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
-import org.tikv.kvproto.TikvGrpc.TikvStub;
+import org.tikv.kvproto.TikvGrpc.TikvFutureStub;
 import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
 import org.tikv.shade.com.google.protobuf.ByteString;
 import org.tikv.shade.com.google.protobuf.InvalidProtocolBufferException;
@@ -144,7 +144,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       TiStoreType storeType,
       ChannelFactory channelFactory,
       TikvBlockingStub blockingStub,
-      TikvStub asyncStub,
+      TikvFutureStub asyncStub,
       RegionManager regionManager,
       PDClient pdClient,
       RegionStoreClient.RegionStoreClientBuilder clientBuilder) {
@@ -175,7 +175,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       ManagedChannel channel = channelFactory.getChannel(addressStr);
 
       TikvBlockingStub tikvBlockingStub = TikvGrpc.newBlockingStub(channel);
-      TikvStub tikvAsyncStub = TikvGrpc.newStub(channel);
+      TikvFutureStub tikvAsyncStub = TikvGrpc.newFutureStub(channel);
 
       this.lockResolverClient =
           AbstractLockResolverClient.getInstance(
@@ -1275,7 +1275,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       ManagedChannel channel = channelFactory.getChannel(addressStr);
 
       TikvBlockingStub blockingStub = TikvGrpc.newBlockingStub(channel);
-      TikvStub asyncStub = TikvGrpc.newStub(channel);
+      TikvFutureStub asyncStub = TikvGrpc.newFutureStub(channel);
 
       return new RegionStoreClient(
           conf,

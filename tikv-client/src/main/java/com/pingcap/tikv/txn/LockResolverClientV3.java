@@ -52,7 +52,7 @@ import org.tikv.kvproto.Kvrpcpb.CleanupRequest;
 import org.tikv.kvproto.Kvrpcpb.CleanupResponse;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
-import org.tikv.kvproto.TikvGrpc.TikvStub;
+import org.tikv.kvproto.TikvGrpc.TikvFutureStub;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 /** Since v3.0.5 TiDB ignores the ttl on secondary lock and will use the ttl on primary key. */
@@ -81,7 +81,7 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
       TiConfiguration conf,
       TiRegion region,
       TikvBlockingStub blockingStub,
-      TikvStub asyncStub,
+      TikvFutureStub asyncStub,
       ChannelFactory channelFactory,
       RegionManager regionManager,
       PDClient pdClient,

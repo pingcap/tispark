@@ -59,7 +59,7 @@ import org.tikv.common.region.TiRegion.RegionVerID;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
-import org.tikv.kvproto.TikvGrpc.TikvStub;
+import org.tikv.kvproto.TikvGrpc.TikvFutureStub;
 import org.tikv.shade.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
@@ -92,7 +92,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
       TiConfiguration conf,
       TiRegion region,
       TikvBlockingStub blockingStub,
-      TikvStub asyncStub,
+      TikvFutureStub asyncStub,
       ChannelFactory channelFactory,
       RegionManager regionManager,
       PDClient pdClient,
