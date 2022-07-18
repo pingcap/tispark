@@ -223,13 +223,13 @@ public class TiDAGRequest implements Serializable {
     }
 
     indexScanBuilder.setTableId(getPhysicalId()).setIndexId(indexInfo.getId());
-    dagRequestBuilder.addExecutors(indexScanExecutor.setIdxScan(indexScanBuilder).build());
-
     if (tableInfo.isCommonHandle()) {
       for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
         indexScanBuilder.addPrimaryColumnIds(tableInfo.getColumn(col.getName()).getId());
       }
     }
+
+    dagRequestBuilder.addExecutors(indexScanExecutor.setIdxScan(indexScanBuilder).build());
     addPushDownExecutorToRequest(
         dagRequestBuilder, isDoubleRead, outputOffsets, colOffsetInFieldMap);
 
@@ -276,7 +276,6 @@ public class TiDAGRequest implements Serializable {
       List<Integer> outputOffset,
       Map<String, Integer> colOffsetInFieldMap) {
     Set<Long> indexAndPrimaryColIDSet = getIndexAndPrimaryColIDSet();
-    resultTypes.clear();
     addIndexColsToScanBuilder(indexScanBuilder, colOffsetInFieldMap);
     for (ColumnRef columnRef : getFields()) {
       TiColumnInfo columnInfo = tableInfo.getColumn(columnRef.getName());
@@ -303,6 +302,9 @@ public class TiDAGRequest implements Serializable {
 
   private void addIndexColsToScanBuilder(
       IndexScan.Builder indexScanBuilder, Map<String, Integer> colOffsetInFieldMap) {
+    if (indexInfo.isUnique()) {
+      indexScanBuilder.setUnique(true);
+    }
     for (TiIndexColumn indexColumn : indexInfo.getIndexColumns()) {
       TiColumnInfo tableInfoColumn = tableInfo.getColumn(indexColumn.getName());
       // already add this col before.
@@ -327,6 +329,13 @@ public class TiDAGRequest implements Serializable {
     this.resultTypes = new ArrayList<>();
     // Add columns to scan executor
     int lastOffset = 0;
+
+    if (tableInfo.isCommonHandle()) {
+      for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
+        tblScanBuilder.addPrimaryColumnIds(tableInfo.getColumn(col.getName()).getId());
+      }
+    }
+
     for (ColumnRef col : getFields()) {
       // can't allow duplicated col added into executor.
       if (!colOffsetInFieldMap.containsKey(col.getName())) {
@@ -341,11 +350,6 @@ public class TiDAGRequest implements Serializable {
     }
     dagRequestBuilder.addExecutors(tableScanExecutor.setTblScan(tblScanBuilder));
 
-    if (tableInfo.isCommonHandle()) {
-      for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
-        tblScanBuilder.addPrimaryColumnIds(tableInfo.getColumn(col.getName()).getId());
-      }
-    }
     addPushDownExecutorToRequest(dagRequestBuilder, false, outputOffsets, colOffsetInFieldMap);
 
     return buildRequest(dagRequestBuilder, outputOffsets);
