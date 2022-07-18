@@ -142,15 +142,6 @@ public class RegionManagerTest extends PDMockServerTest {
                 StoreState.Up,
                 GrpcUtils.makeStoreLabel("k1", "v1"),
                 GrpcUtils.makeStoreLabel("k2", "v2"))));
-    //    pdServer.addGetStoreResp(
-    //        GrpcUtils.makeGetStoreResponse(
-    //            pdServer.getClusterId(),
-    //            GrpcUtils.makeStore(
-    //                storeId,
-    //                testAddress,
-    //                Metapb.StoreState.Up,
-    //                GrpcUtils.makeStoreLabel("k1", "v1"),
-    //                GrpcUtils.makeStoreLabel("k2", "v2"))));
     Pair<TiRegion, TiStore> pair = mgr.getRegionStorePairByKey(searchKey);
     assertEquals(pair.first.getId(), regionId);
     assertEquals(pair.first.getId(), storeId);

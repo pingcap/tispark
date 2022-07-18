@@ -21,6 +21,12 @@ import java.util.stream.Collectors;
 import org.tikv.common.TiConfiguration.ApiVersion;
 import org.tikv.common.apiversion.RequestKeyCodec;
 
+/**
+ * Encapsulate some the parameters that we maintain that are different from upstream into upstream
+ * library parameters to be consistent with the parameter types maintained everywhere. Upstream
+ * parameters are also converted to downstream parameters when needed. Distinguish convert/reConvert
+ * by name (downstream converts to upstream, upstream converts to downstream).
+ */
 public class ConverterUpstream {
 
   public static org.tikv.common.ReadOnlyPDClient createUpstreamPDClient(
