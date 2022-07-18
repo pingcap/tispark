@@ -37,6 +37,7 @@ public class ConverterUpstream {
     return org.tikv.common.PDClient.create(tikvConf, keyCodec, channelFactory);
   }
 
+  // TODO: covert all configuration
   public static org.tikv.common.TiConfiguration convertTiConfiguration(
       com.pingcap.tikv.TiConfiguration conf) {
     if (conf == null) {

@@ -34,7 +34,6 @@ class TiKVClientTLSSuite extends FunSuite {
       conf.setKeyFile("/config/cert/pem/client-pkcs8.key")
       val session = TiSession.getInstance(conf)
       val pdClient = session.getPDClient
-      pdClient.updateLeader()
       session.getCatalog()
       session.createSnapshot()
     }
@@ -54,7 +53,6 @@ class TiKVClientTLSSuite extends FunSuite {
       conf.setJksTrustPassword("12345678")
       val session = TiSession.getInstance(conf)
       val pdClient = session.getPDClient
-      pdClient.updateLeader()
       session.getCatalog()
       session.createSnapshot()
     }

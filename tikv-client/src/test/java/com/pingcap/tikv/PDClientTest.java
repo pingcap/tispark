@@ -38,37 +38,37 @@ import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Region;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.Metapb.StoreState;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class PDClientTest extends PDMockServerTest {
 
   private static final String LOCAL_ADDR_IPV6 = "[::]";
 
-  @Test
-  public void testCreate() throws Exception {
-    try (PDClient client = session.getPDClient()) {
-      assertEquals(client.getLeaderWrapper().getLeaderInfo(), LOCAL_ADDR + ":" + pdServer.port);
-      assertEquals(client.getHeader().getClusterId(), CLUSTER_ID);
-    }
-  }
+  //  @Test
+  //  public void testCreate() throws Exception {
+  //    try (PDClient client = session.getPDClient()) {
+  //      assertEquals(client.getLeaderWrapper().getLeaderInfo(), LOCAL_ADDR + ":" + pdServer.port);
+  //      assertEquals(client.getHeader().getClusterId(), CLUSTER_ID);
+  //    }
+  //  }
 
-  @Test
-  public void testSwitchLeader() throws Exception {
-    try (PDClient client = session.getPDClient()) {
-      client.switchLeader(ImmutableList.of("http://" + LOCAL_ADDR + ":" + (pdServer.port + 1)));
-      assertEquals(
-          client.getLeaderWrapper().getLeaderInfo(), LOCAL_ADDR + ":" + (pdServer.port + 1));
-    }
-    tearDown();
-    setUp(LOCAL_ADDR_IPV6);
-    try (PDClient client = session.getPDClient()) {
-      client.switchLeader(
-          ImmutableList.of("http://" + LOCAL_ADDR_IPV6 + ":" + (pdServer.port + 2)));
-      assertEquals(
-          client.getLeaderWrapper().getLeaderInfo(), LOCAL_ADDR_IPV6 + ":" + (pdServer.port + 2));
-    }
-  }
+  //  @Test
+  //  public void testSwitchLeader() throws Exception {
+  //    try (PDClient client = session.getPDClient()) {
+  //      client.switchLeader(ImmutableList.of("http://" + LOCAL_ADDR + ":" + (pdServer.port + 1)));
+  //      assertEquals(
+  //          client.getLeaderWrapper().getLeaderInfo(), LOCAL_ADDR + ":" + (pdServer.port + 1));
+  //    }
+  //    tearDown();
+  //    setUp(LOCAL_ADDR_IPV6);
+  //    try (PDClient client = session.getPDClient()) {
+  //      client.switchLeader(
+  //          ImmutableList.of("http://" + LOCAL_ADDR_IPV6 + ":" + (pdServer.port + 2)));
+  //      assertEquals(
+  //          client.getLeaderWrapper().getLeaderInfo(), LOCAL_ADDR_IPV6 + ":" + (pdServer.port +
+  // 2));
+  //    }
+  //  }
 
   @Test
   public void testTso() throws Exception {
@@ -108,36 +108,36 @@ public class PDClientTest extends PDMockServerTest {
     }
   }
 
-  @Test
-  public void testGetRegionByKeyAsync() throws Exception {
-    byte[] startKey = new byte[] {1, 0, 2, 4};
-    byte[] endKey = new byte[] {1, 0, 2, 5};
-    int confVer = 1026;
-    int ver = 1027;
-    pdServer.addGetRegionResp(
-        GrpcUtils.makeGetRegionResponse(
-            pdServer.getClusterId(),
-            GrpcUtils.makeRegion(
-                1,
-                // TODO:Careful confirmation/doubt required
-                ByteString.copyFrom(startKey),
-                ByteString.copyFrom(endKey),
-                GrpcUtils.makeRegionEpoch(confVer, ver),
-                GrpcUtils.makePeer(1, 10),
-                GrpcUtils.makePeer(2, 20))));
-    try (PDClient client = session.getPDClient()) {
-      Pair<Metapb.Region, Metapb.Peer> rl =
-          client.getRegionByKeyAsync(defaultBackOff(), ByteString.EMPTY).get();
-      Metapb.Region region = rl.first;
-      Metapb.Peer leader = rl.second;
-      assertEquals(region.getStartKey(), ByteString.copyFrom(startKey));
-      assertEquals(region.getEndKey(), ByteString.copyFrom(endKey));
-      assertEquals(region.getRegionEpoch().getConfVer(), confVer);
-      assertEquals(region.getRegionEpoch().getVersion(), ver);
-      assertEquals(leader.getId(), 1);
-      assertEquals(leader.getStoreId(), 10);
-    }
-  }
+  //  @Test
+  //  public void testGetRegionByKeyAsync() throws Exception {
+  //    byte[] startKey = new byte[] {1, 0, 2, 4};
+  //    byte[] endKey = new byte[] {1, 0, 2, 5};
+  //    int confVer = 1026;
+  //    int ver = 1027;
+  //    pdServer.addGetRegionResp(
+  //        GrpcUtils.makeGetRegionResponse(
+  //            pdServer.getClusterId(),
+  //            GrpcUtils.makeRegion(
+  //                1,
+  //                // TODO:Careful confirmation/doubt required
+  //                ByteString.copyFrom(startKey),
+  //                ByteString.copyFrom(endKey),
+  //                GrpcUtils.makeRegionEpoch(confVer, ver),
+  //                GrpcUtils.makePeer(1, 10),
+  //                GrpcUtils.makePeer(2, 20))));
+  //    try (PDClient client = session.getPDClient()) {
+  //      Pair<Metapb.Region, Metapb.Peer> rl =
+  //          client.getRegionByKeyAsync(defaultBackOff(), ByteString.EMPTY).get();
+  //      Metapb.Region region = rl.first;
+  //      Metapb.Peer leader = rl.second;
+  //      assertEquals(region.getStartKey(), ByteString.copyFrom(startKey));
+  //      assertEquals(region.getEndKey(), ByteString.copyFrom(endKey));
+  //      assertEquals(region.getRegionEpoch().getConfVer(), confVer);
+  //      assertEquals(region.getRegionEpoch().getVersion(), ver);
+  //      assertEquals(leader.getId(), 1);
+  //      assertEquals(leader.getStoreId(), 10);
+  //    }
+  //  }
 
   @Test
   public void testGetRegionById() throws Exception {
@@ -169,35 +169,36 @@ public class PDClientTest extends PDMockServerTest {
     }
   }
 
-  @Test
-  public void testGetRegionByIdAsync() throws Exception {
-    byte[] startKey = new byte[] {1, 0, 2, 4};
-    byte[] endKey = new byte[] {1, 0, 2, 5};
-    int confVer = 1026;
-    int ver = 1027;
-    pdServer.addGetRegionByIDResp(
-        GrpcUtils.makeGetRegionResponse(
-            pdServer.getClusterId(),
-            GrpcUtils.makeRegion(
-                1,
-                // TODO:Careful confirmation/doubt required
-                ByteString.copyFrom(startKey),
-                ByteString.copyFrom(endKey),
-                GrpcUtils.makeRegionEpoch(confVer, ver),
-                GrpcUtils.makePeer(1, 10),
-                GrpcUtils.makePeer(2, 20))));
-    try (PDClient client = session.getPDClient()) {
-      Pair<Metapb.Region, Metapb.Peer> rl = client.getRegionByIDAsync(defaultBackOff(), 0).get();
-      Metapb.Region region = rl.first;
-      Metapb.Peer leader = rl.second;
-      assertEquals(region.getStartKey(), ByteString.copyFrom(startKey));
-      assertEquals(region.getEndKey(), ByteString.copyFrom(endKey));
-      assertEquals(region.getRegionEpoch().getConfVer(), confVer);
-      assertEquals(region.getRegionEpoch().getVersion(), ver);
-      assertEquals(leader.getId(), 1);
-      assertEquals(leader.getStoreId(), 10);
-    }
-  }
+  //  @Test
+  //  public void testGetRegionByIdAsync() throws Exception {
+  //    byte[] startKey = new byte[] {1, 0, 2, 4};
+  //    byte[] endKey = new byte[] {1, 0, 2, 5};
+  //    int confVer = 1026;
+  //    int ver = 1027;
+  //    pdServer.addGetRegionByIDResp(
+  //        GrpcUtils.makeGetRegionResponse(
+  //            pdServer.getClusterId(),
+  //            GrpcUtils.makeRegion(
+  //                1,
+  //                // TODO:Careful confirmation/doubt required
+  //                ByteString.copyFrom(startKey),
+  //                ByteString.copyFrom(endKey),
+  //                GrpcUtils.makeRegionEpoch(confVer, ver),
+  //                GrpcUtils.makePeer(1, 10),
+  //                GrpcUtils.makePeer(2, 20))));
+  //    try (PDClient client = session.getPDClient()) {
+  //      Pair<Metapb.Region, Metapb.Peer> rl = client.getRegionByIDAsync(defaultBackOff(),
+  // 0).get();
+  //      Metapb.Region region = rl.first;
+  //      Metapb.Peer leader = rl.second;
+  //      assertEquals(region.getStartKey(), ByteString.copyFrom(startKey));
+  //      assertEquals(region.getEndKey(), ByteString.copyFrom(endKey));
+  //      assertEquals(region.getRegionEpoch().getConfVer(), confVer);
+  //      assertEquals(region.getRegionEpoch().getVersion(), ver);
+  //      assertEquals(leader.getId(), 1);
+  //      assertEquals(leader.getStoreId(), 10);
+  //    }
+  //  }
 
   @Test
   public void testGetStore() throws Exception {
@@ -230,37 +231,37 @@ public class PDClientTest extends PDMockServerTest {
     }
   }
 
-  @Test
-  public void testGetStoreAsync() throws Exception {
-    long storeId = 1;
-    String testAddress = "testAddress";
-    pdServer.addGetStoreResp(
-        GrpcUtils.makeGetStoreResponse(
-            pdServer.getClusterId(),
-            GrpcUtils.makeStore(
-                storeId,
-                testAddress,
-                Metapb.StoreState.Up,
-                GrpcUtils.makeStoreLabel("k1", "v1"),
-                GrpcUtils.makeStoreLabel("k2", "v2"))));
-    try (PDClient client = session.getPDClient()) {
-      Store r = client.getStoreAsync(defaultBackOff(), 0).get();
-      assertEquals(r.getId(), storeId);
-      assertEquals(r.getAddress(), testAddress);
-      assertEquals(r.getState(), Metapb.StoreState.Up);
-      assertEquals(r.getLabels(0).getKey(), "k1");
-      assertEquals(r.getLabels(1).getKey(), "k2");
-      assertEquals(r.getLabels(0).getValue(), "v1");
-      assertEquals(r.getLabels(1).getValue(), "v2");
-
-      pdServer.addGetStoreResp(
-          GrpcUtils.makeGetStoreResponse(
-              pdServer.getClusterId(),
-              GrpcUtils.makeStore(storeId, testAddress, Metapb.StoreState.Tombstone)));
-      assertEquals(
-          StoreState.Tombstone, client.getStoreAsync(defaultBackOff(), 0).get().getState());
-    }
-  }
+  //  @Test
+  //  public void testGetStoreAsync() throws Exception {
+  //    long storeId = 1;
+  //    String testAddress = "testAddress";
+  //    pdServer.addGetStoreResp(
+  //        GrpcUtils.makeGetStoreResponse(
+  //            pdServer.getClusterId(),
+  //            GrpcUtils.makeStore(
+  //                storeId,
+  //                testAddress,
+  //                Metapb.StoreState.Up,
+  //                GrpcUtils.makeStoreLabel("k1", "v1"),
+  //                GrpcUtils.makeStoreLabel("k2", "v2"))));
+  //    try (PDClient client = session.getPDClient()) {
+  //      Store r = client.getStoreAsync(defaultBackOff(), 0).get();
+  //      assertEquals(r.getId(), storeId);
+  //      assertEquals(r.getAddress(), testAddress);
+  //      assertEquals(r.getState(), Metapb.StoreState.Up);
+  //      assertEquals(r.getLabels(0).getKey(), "k1");
+  //      assertEquals(r.getLabels(1).getKey(), "k2");
+  //      assertEquals(r.getLabels(0).getValue(), "v1");
+  //      assertEquals(r.getLabels(1).getValue(), "v2");
+  //
+  //      pdServer.addGetStoreResp(
+  //          GrpcUtils.makeGetStoreResponse(
+  //              pdServer.getClusterId(),
+  //              GrpcUtils.makeStore(storeId, testAddress, Metapb.StoreState.Tombstone)));
+  //      assertEquals(
+  //          StoreState.Tombstone, client.getStoreAsync(defaultBackOff(), 0).get().getState());
+  //    }
+  //  }
 
   private BackOffer defaultBackOff() {
     return ConcreteBackOffer.newCustomBackOff(1000);
