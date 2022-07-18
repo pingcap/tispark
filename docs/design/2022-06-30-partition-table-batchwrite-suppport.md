@@ -30,6 +30,8 @@ still gets treated as a single table by the SQL layer.
 The main goal is to reduce the amount of data read for particular SQL operations so that overall
 response time is reduced while it also can be used to accomplish a number of various objectives.
 
+Currently, TiSpark support read the range and hash partition table from TiDB.
+
 ### The feature-level implementation of partitioning in TiDB
 
 Currently, TiDB supports Range partitioning, List partitioning, List COLUMNS partitioning, and Hash
