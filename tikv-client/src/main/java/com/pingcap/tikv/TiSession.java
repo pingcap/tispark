@@ -413,7 +413,7 @@ public class TiSession implements AutoCloseable {
     for (Map.Entry<TiRegion, List<ByteString>> entry : groupKeys.entrySet()) {
 
       Pair<TiRegion, TiStore> pair =
-          getRegionManager().getRegionStorePairByKey(entry.getKey().getStartKey());
+          new Pair<>(getRegionManager().getRegionStorePairByKey(entry.getKey().getStartKey()));
       TiRegion region = pair.first;
       TiStore store = pair.second;
       List<ByteString> splits =

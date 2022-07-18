@@ -80,7 +80,7 @@ public class RangeSplitter {
           handlesInCurRegion = new ArrayList<>();
         }
         Pair<TiRegion, TiStore> regionStorePair =
-            regionManager.getRegionStorePairByKey(ByteString.copyFrom(key.getBytes()));
+            new Pair<>(regionManager.getRegionStorePairByKey(ByteString.copyFrom(key.getBytes())));
         curRegion = regionStorePair.first;
         idToRegionStorePair.put(curRegion.getId(), regionStorePair);
         endKey = curRegion.getEndKey().toByteArray();
@@ -176,7 +176,7 @@ public class RangeSplitter {
     while (true) {
       // TODO:Careful confirmation/doubt required
       Pair<TiRegion, TiStore> regionStorePair =
-          regionManager.getRegionStorePairByKey(range.getStart(), storeType);
+          new Pair<>(regionManager.getRegionStorePairByKey(range.getStart(), storeType));
 
       if (regionStorePair == null) {
         throw new NullPointerException(

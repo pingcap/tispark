@@ -120,7 +120,7 @@ public class TTLManager {
   }
 
   private void sendTxnHeartBeat(BackOffer bo, long ttl) {
-    Pair<TiRegion, TiStore> pair = regionManager.getRegionStorePairByKey(primaryLock);
+    Pair<TiRegion, TiStore> pair = new Pair<>(regionManager.getRegionStorePairByKey(primaryLock));
     TiRegion tiRegion = pair.first;
     TiStore store = pair.second;
 

@@ -146,7 +146,8 @@ public class TwoPhaseCommitter {
 
   private void doPrewritePrimaryKeyWithRetry(BackOffer backOffer, ByteString key, ByteString value)
       throws TiBatchWriteException {
-    Pair<TiRegion, TiStore> pair = this.regionManager.getRegionStorePairByKey(key, backOffer);
+    Pair<TiRegion, TiStore> pair =
+        new Pair<>(this.regionManager.getRegionStorePairByKey(key, backOffer));
     TiRegion tiRegion = pair.first;
 
     Kvrpcpb.Mutation mutation;
@@ -200,7 +201,8 @@ public class TwoPhaseCommitter {
 
   private void doCommitPrimaryKeyWithRetry(BackOffer backOffer, ByteString key, long commitTs)
       throws TiBatchWriteException {
-    Pair<TiRegion, TiStore> pair = this.regionManager.getRegionStorePairByKey(key, backOffer);
+    Pair<TiRegion, TiStore> pair =
+        new Pair<>(this.regionManager.getRegionStorePairByKey(key, backOffer));
     TiRegion tiRegion = pair.first;
     List<ByteString> keys = new ArrayList<>();
     keys.add(key);

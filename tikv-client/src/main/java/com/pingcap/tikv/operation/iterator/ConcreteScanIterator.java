@@ -84,7 +84,7 @@ public class ConcreteScanIterator extends ScanIterator {
   private ByteString resolveCurrentLock(Kvrpcpb.KvPair current) {
     logger.warn(String.format("resolve current key error %s", current.getError().toString()));
     Pair<TiRegion, TiStore> pair =
-        builder.getRegionManager().getRegionStorePairByKey(current.getKey());
+        new Pair<>(builder.getRegionManager().getRegionStorePairByKey(current.getKey()));
     TiRegion region = pair.first;
     TiStore store = pair.second;
     BackOffer backOffer =

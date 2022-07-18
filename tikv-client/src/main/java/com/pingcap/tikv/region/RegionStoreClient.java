@@ -1301,7 +1301,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
 
     public synchronized RegionStoreClient build(ByteString key, TiStoreType storeType)
         throws GrpcException {
-      Pair<TiRegion, TiStore> pair = regionManager.getRegionStorePairByKey(key, storeType);
+      Pair<TiRegion, TiStore> pair =
+          new Pair<>(regionManager.getRegionStorePairByKey(key, storeType));
       return build(pair.first, pair.second, storeType);
     }
 
