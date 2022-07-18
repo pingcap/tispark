@@ -490,27 +490,23 @@ public class TiDAGRequest implements Serializable {
     addPushDownGroupBys();
     addPushDownAggregates();
 
-    // adding output offsets for aggs
     outputOffsets.clear();
+    resultTypes = new ArrayList<>();
+
+    // adding output offsets for aggs
     for (int i = 0; i < getAggregates().size(); i++) {
       outputOffsets.add(i);
+      resultTypes.add(pushDownAggregates.get(i).getDataType());
     }
 
     // adding output offsets for group by
     int currentMaxOutputOffset = outputOffsets.get(outputOffsets.size() - 1) + 1;
-    for (int i = 0; i < getGroupByItems().size(); i++) {
-      outputOffsets.add(currentMaxOutputOffset + i);
-    }
-    resultTypes = new ArrayList<>();
-    resultTypes.addAll(
-        getPushDownAggregates().stream().map(Expression::getDataType).collect(Collectors.toList()));
     // In DAG mode, if there is any group by statement in a request, all the columns specified
     // in group by expression will be returned, so when we decode a result row, we need to pay
     // extra attention to decoding.
-    if (hasPushDownGroupBy()) {
-      for (ByItem item : getPushDownGroupBys()) {
-        resultTypes.add(item.getExpr().getDataType());
-      }
+    for (int i = 0; i < getGroupByItems().size(); i++) {
+      outputOffsets.add(currentMaxOutputOffset + i);
+      resultTypes.add(groupByItems.get(i).getExpr().getDataType());
     }
   }
 
@@ -854,7 +850,7 @@ public class TiDAGRequest implements Serializable {
   }
 
   private void clearPushDownInfo() {
-    resultTypes.clear();
+    resultTypes = new ArrayList<>();
     pushDownFilters.clear();
     pushDownAggregates.clear();
     pushDownGroupBys.clear();
