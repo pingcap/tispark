@@ -115,14 +115,14 @@ class BatchWritePKAndIndexSuite
 
   // https://github.com/pingcap/tispark/issues/2452
   test("test duplicate unique indexes are not deleted error") {
-    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute("drop table if exists `tispark_test`.`t`")
     tidbStmt.execute("""
-                       |CREATE TABLE `tispark_test`.`t` (
-                       |  `id`  int(20),
-                       |  `name` varchar(255) primary key clustered,
-                       |  `age` int(11) null default null,
-                       |   unique index(id)
-                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+        |CREATE TABLE `tispark_test`.`t` (
+        |  `id`  int(20),
+        |  `name` varchar(255) primary key clustered,
+        |  `age` int(11) null default null,
+        |   unique index(id)
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
       """.stripMargin)
     val schema = StructType(
       List(
@@ -159,7 +159,7 @@ class BatchWritePKAndIndexSuite
 
   // https://github.com/pingcap/tispark/issues/2391
   test("test bug fix incorrect uniqueIndex key when table is not intHandle") {
-    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute("drop table if exists `tispark_test`.`t`")
     tidbStmt.execute("""
         |CREATE TABLE `tispark_test`.`t` (
         |  `id`  int(20),
