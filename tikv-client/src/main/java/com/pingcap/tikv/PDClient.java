@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv;
 
-import static com.pingcap.tikv.operation.PDErrorHandler.getRegionResponseErrorExtractor;
 import static com.pingcap.tikv.pd.PDError.buildFromPdpbError;
 import static org.tikv.shade.com.google.common.base.Preconditions.checkNotNull;
 
@@ -45,17 +44,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.common.HostMapping;
+import org.tikv.common.ReadOnlyPDClient;
 import org.tikv.common.TiConfiguration.ReplicaRead;
 import org.tikv.common.apiversion.RequestKeyCodec;
 import org.tikv.common.meta.TiTimestamp;
-import org.tikv.common.util.FutureObserver;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Region;
@@ -72,9 +70,6 @@ import org.tikv.kvproto.Pdpb.GetMembersRequest;
 import org.tikv.kvproto.Pdpb.GetMembersResponse;
 import org.tikv.kvproto.Pdpb.GetOperatorRequest;
 import org.tikv.kvproto.Pdpb.GetOperatorResponse;
-import org.tikv.kvproto.Pdpb.GetRegionByIDRequest;
-import org.tikv.kvproto.Pdpb.GetRegionRequest;
-import org.tikv.kvproto.Pdpb.GetRegionResponse;
 import org.tikv.kvproto.Pdpb.GetStoreRequest;
 import org.tikv.kvproto.Pdpb.GetStoreResponse;
 import org.tikv.kvproto.Pdpb.OperatorStatus;
@@ -257,33 +252,6 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
     return finished;
   }
 
-  @Override
-  public Future<Pair<Metapb.Region, Metapb.Peer>> getRegionByKeyAsync(
-      BackOffer backOffer, ByteString key) {
-    FutureObserver<Pair<Metapb.Region, Metapb.Peer>, GetRegionResponse> responseObserver =
-        new FutureObserver<>(resp -> new Pair<>(resp.getRegion(), resp.getLeader()));
-    Supplier<GetRegionRequest> request =
-        () -> GetRegionRequest.newBuilder().setHeader(header).setRegionKey(key).build();
-    PDErrorHandler<GetRegionResponse> handler =
-        new PDErrorHandler<>(getRegionResponseErrorExtractor, this);
-    callAsyncWithRetry(backOffer, PDGrpc.getGetRegionMethod(), request, responseObserver, handler);
-    return responseObserver.getFuture();
-  }
-
-  // TODO:Careful confirmation/doubt required ,should hava async method?
-  @Override
-  public Future<Pair<Metapb.Region, Metapb.Peer>> getRegionByIDAsync(BackOffer backOffer, long id) {
-    FutureObserver<Pair<Metapb.Region, Metapb.Peer>, GetRegionResponse> responseObserver =
-        new FutureObserver<>(resp -> new Pair<>(resp.getRegion(), resp.getLeader()));
-    Supplier<GetRegionByIDRequest> request =
-        () -> GetRegionByIDRequest.newBuilder().setHeader(header).setRegionId(id).build();
-    PDErrorHandler<GetRegionResponse> handler =
-        new PDErrorHandler<>(getRegionResponseErrorExtractor, this);
-    callAsyncWithRetry(
-        backOffer, PDGrpc.getGetRegionByIDMethod(), request, responseObserver, handler);
-    return responseObserver.getFuture();
-  }
-
   private Supplier<GetStoreRequest> buildGetStoreReq(long storeId) {
     return () -> GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
   }
@@ -295,20 +263,6 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
   private <T> PDErrorHandler<GetStoreResponse> buildPDErrorHandler() {
     return new PDErrorHandler<>(
         r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null, this);
-  }
-
-  // TODO:Careful confirmation/doubt required ,should hava async method?
-  @Override
-  public Future<Store> getStoreAsync(BackOffer backOffer, long storeId) {
-    FutureObserver<Store, GetStoreResponse> responseObserver =
-        new FutureObserver<>(GetStoreResponse::getStore);
-    callAsyncWithRetry(
-        backOffer,
-        PDGrpc.getGetStoreMethod(),
-        buildGetStoreReq(storeId),
-        responseObserver,
-        buildPDErrorHandler());
-    return responseObserver.getFuture();
   }
 
   @Override

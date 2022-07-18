@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.txn;
 
-import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
@@ -32,6 +31,7 @@ import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.ReadOnlyPDClient;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.region.TiRegion;
 import org.tikv.common.region.TiStore;

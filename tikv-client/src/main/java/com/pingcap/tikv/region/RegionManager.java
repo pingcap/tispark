@@ -21,7 +21,6 @@ package com.pingcap.tikv.region;
 import static com.pingcap.tikv.codec.KeyUtils.formatBytesUTF8;
 import static org.tikv.common.region.RegionManager.GET_REGION_BY_KEY_REQUEST_LATENCY;
 
-import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.GrpcException;
@@ -35,6 +34,7 @@ import java.util.List;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.ReadOnlyPDClient;
 import org.tikv.common.codec.KeyUtils;
 import org.tikv.common.exception.InvalidStoreException;
 import org.tikv.common.log.SlowLogSpan;
