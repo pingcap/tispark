@@ -18,7 +18,7 @@ And the associated supported partition types to be supported in this feature are
 - [Range partitioning](https://docs.pingcap.com/tidb/dev/partitioned-table#range-partitioning)
 - [Hash partitioning](https://docs.pingcap.com/tidb/dev/partitioned-table#hash-partitioning)
 
-And the parititon expression must be under contions as bellow:
+And the parititon expression must be under condtions as bellow:
 + column expression
 + `YEAR($argument)` where the argument is a column and its type is datetime or string literal
 that can be parsed as datetime.
@@ -61,7 +61,7 @@ List partitioning, List COLUMNS partitioning are generally available in V6.1 rec
 complicated. Considering the workload of this feature, we have decide to support them in the future.
 In this feature, we only focus on Range partitioning and Hash partitioning.
 
-Currently TiSpark only support YEAR function, so the parititon expression must be under contions as bellow:
+Currently TiSpark only support YEAR function, so the parititon expression must be under conditions as bellow:
 + column expression
 + `YEAR($argument)` where the argument is a column and its type is datetime or string literal
 that can be parsed as datetime.
