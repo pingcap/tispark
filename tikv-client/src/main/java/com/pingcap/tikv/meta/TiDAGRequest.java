@@ -282,6 +282,12 @@ public class TiDAGRequest implements Serializable {
       TiColumnInfo columnInfo = tableInfo.getColumn(columnRef.getName());
       // IndexReader fields col must in primary key or index key.
       if (indexAndPrimaryColIDSet.contains(columnInfo.getId())) {
+        Integer pos = colOffsetInFieldMap.get(columnInfo.getName());
+        if (pos != null) {
+          outputOffset.add(pos);
+          resultTypes.add(columnInfo.getType());
+          continue;
+        }
         ColumnInfo.Builder colBuild = ColumnInfo.newBuilder(columnInfo.toProto(tableInfo));
         colOffsetInFieldMap.put(columnInfo.getName(), indexScanBuilder.getColumnsCount());
         outputOffset.add(indexScanBuilder.getColumnsCount());
