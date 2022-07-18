@@ -61,7 +61,6 @@ import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
 import org.tikv.kvproto.PDGrpc.PDFutureStub;
-import org.tikv.kvproto.PDGrpc.PDStub;
 import org.tikv.kvproto.Pdpb;
 import org.tikv.kvproto.Pdpb.Error;
 import org.tikv.kvproto.Pdpb.ErrorType;
@@ -82,7 +81,7 @@ import org.tikv.shade.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.tikv.shade.com.google.protobuf.ByteString;
 import org.tikv.shade.io.grpc.ManagedChannel;
 
-public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, PDStub>
+public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDFutureStub>
     implements ReadOnlyPDClient {
 
   private static final String TIFLASH_TABLE_SYNC_PROGRESS_PATH = "/tiflash/table/sync";
@@ -343,7 +342,7 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
           new LeaderWrapper(
               leaderUrlStr,
               PDGrpc.newBlockingStub(clientChannel),
-              PDGrpc.newStub(clientChannel),
+              PDGrpc.newFutureStub(clientChannel),
               System.nanoTime());
     } catch (IllegalArgumentException e) {
       logger.error("Error updating leader. " + leaderUrlStr, e);
@@ -400,7 +399,7 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
             new LeaderWrapper(
                 leaderUrlStr,
                 PDGrpc.newBlockingStub(clientChannel),
-                PDGrpc.newStub(clientChannel),
+                PDGrpc.newFutureStub(clientChannel),
                 System.nanoTime());
       } catch (IllegalArgumentException e) {
         logger.error("Error updating leader. " + leaderUrlStr, e);
@@ -475,7 +474,7 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
   }
 
   @Override
-  protected PDStub getAsyncStub() {
+  protected PDFutureStub getAsyncStub() {
     if (leaderWrapper == null) {
       throw new GrpcException("PDClient may not be initialized");
     }
@@ -526,13 +525,13 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
 
     private final String leaderInfo;
     private final PDBlockingStub blockingStub;
-    private final PDStub asyncStub;
+    private final PDFutureStub asyncStub;
     private final long createTime;
 
     LeaderWrapper(
         String leaderInfo,
         PDGrpc.PDBlockingStub blockingStub,
-        PDGrpc.PDStub asyncStub,
+        PDGrpc.PDFutureStub asyncStub,
         long createTime) {
       this.leaderInfo = leaderInfo;
       this.blockingStub = blockingStub;
@@ -548,7 +547,7 @@ public class PDClient extends AbstractGRPCClient<PDFutureStub, PDBlockingStub, P
       return blockingStub;
     }
 
-    PDStub getAsyncStub() {
+    PDFutureStub getAsyncStub() {
       return asyncStub;
     }
 

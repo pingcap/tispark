@@ -43,16 +43,14 @@ import org.tikv.shade.io.grpc.stub.StreamObserver;
 
 public abstract class AbstractGRPCClient<
         // TODO:Careful confirmation/doubt required ,unused to use now. if should to replace?
-        FutureStubT extends AbstractFutureStub<FutureStubT>,
         BlockingStubT extends AbstractStub<BlockingStubT>,
-        StubT extends AbstractStub<StubT>>
+        FutureStubT extends AbstractFutureStub<FutureStubT>>
     implements AutoCloseable {
   protected final Logger logger = LoggerFactory.getLogger(this.getClass());
   protected final ChannelFactory channelFactory;
   protected TiConfiguration conf;
   protected BlockingStubT blockingStub;
-  protected StubT asyncStub;
-  protected FutureStubT asyncFutureStub;
+  protected FutureStubT asyncStub;
   protected long timeout;
 
   protected AbstractGRPCClient(TiConfiguration conf, ChannelFactory channelFactory) {
@@ -65,7 +63,7 @@ public abstract class AbstractGRPCClient<
       TiConfiguration conf,
       ChannelFactory channelFactory,
       BlockingStubT blockingStub,
-      StubT asyncStub) {
+      FutureStubT asyncStub) {
     this.conf = conf;
     this.timeout = conf.getTimeout();
     this.channelFactory = channelFactory;
@@ -117,7 +115,7 @@ public abstract class AbstractGRPCClient<
         .create(handler)
         .callWithRetry(
             () -> {
-              StubT stub = getAsyncStub();
+              FutureStubT stub = getAsyncStub();
               ClientCalls.asyncUnaryCall(
                   stub.getChannel().newCall(method, stub.getCallOptions()),
                   requestFactory.get(),
@@ -141,7 +139,7 @@ public abstract class AbstractGRPCClient<
             .create(handler)
             .callWithRetry(
                 () -> {
-                  StubT stub = getAsyncStub();
+                  FutureStubT stub = getAsyncStub();
                   return asyncBidiStreamingCall(
                       stub.getChannel().newCall(method, stub.getCallOptions()), responseObserver);
                 },
@@ -175,7 +173,7 @@ public abstract class AbstractGRPCClient<
 
   protected abstract BlockingStubT getBlockingStub();
 
-  protected abstract StubT getAsyncStub();
+  protected abstract FutureStubT getAsyncStub();
 
   public long getTimeout() {
     return this.timeout;
