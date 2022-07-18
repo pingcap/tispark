@@ -155,6 +155,7 @@ class BatchWritePKAndIndexSuite
       .mode("append")
       .save()
     tidbStmt.execute("ADMIN CHECK TABLE `tispark_test`.`t`")
+    assert(spark.sql("select * from `tispark_test`.`t`").count() == 1)
   }
 
   // https://github.com/pingcap/tispark/issues/2391
@@ -198,7 +199,7 @@ class BatchWritePKAndIndexSuite
       .options(tidbOptions)
       .mode("append")
       .save()
-    assert(spark.sql("select * from t").count() == 2)
+    assert(spark.sql("select * from `tispark_test`.`t`").count() == 2)
   }
 
   private def insertAndReplace(schema: Schema): Unit = {
