@@ -18,6 +18,7 @@ package com.pingcap.tikv.util;
 
 import static org.junit.Assert.assertEquals;
 
+import com.pingcap.tikv.PDMockServerTest;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.key.Handle;
@@ -44,7 +45,7 @@ import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.shade.com.google.common.collect.ImmutableList;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
-public class RangeSplitterTest {
+public class RangeSplitterTest extends PDMockServerTest {
   private static KeyRange keyRange(Long s, Long e) {
     ByteString sKey = ByteString.EMPTY;
     ByteString eKey = ByteString.EMPTY;
@@ -282,14 +283,14 @@ public class RangeSplitterTest {
     private final Map<KeyRange, TiRegion> mockRegionMap;
 
     MockRegionManager(List<KeyRange> ranges) {
-      super(null, null);
+      super(session.getConf(), session.getPDClient());
       mockRegionMap =
           ranges.stream().collect(Collectors.toMap(kr -> kr, kr -> region(ranges.indexOf(kr), kr)));
     }
 
     @Override
-    public Pair<TiRegion, TiStore> getRegionStorePairByKey(
-        ByteString key, TiStoreType storeType, BackOffer backOffer) {
+    public org.tikv.common.util.Pair<TiRegion, TiStore> getRegionStorePairByKey(
+        ByteString key, TiStoreType storeType, org.tikv.common.util.BackOffer backOffer) {
       for (Map.Entry<KeyRange, TiRegion> entry : mockRegionMap.entrySet()) {
         KeyRange range = entry.getKey();
         if (KeyRangeUtils.makeRange(range.getStart(), range.getEnd()).contains(Key.toRawKey(key))) {
