@@ -45,7 +45,7 @@ public class CatalogTest extends PDMockServerTest {
     super.setUp();
     kvServer = new KVMockServer();
     kvServer.start(
-        // TODO:Careful confirmation/doubt required ,how to new TiRegion?
+        //   how to new fit TiRegion there
         new TiRegion(
             ConverterUpstream.convertTiConfiguration(session.getConf())
                 .setIsolationLevel(IsolationLevel.RC)

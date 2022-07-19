@@ -105,6 +105,7 @@ public class RangeSplitterTest extends PDMockServerTest {
             .setEndKey(range.getEnd())
             .addPeers(Peer.getDefaultInstance())
             .build();
+    // why set StoreId=0?
     List<TiStore> stores =
         ImmutableList.of(new TiStore(Metapb.Store.newBuilder().setId(0).build()));
     TiConfiguration conf =

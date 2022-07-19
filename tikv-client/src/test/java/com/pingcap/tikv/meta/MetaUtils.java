@@ -200,7 +200,7 @@ public class MetaUtils {
     }
 
     public static List<TiStore> getStores() {
-      // TODO:Careful confirmation/doubt required ,how to change it?
+      // Copied from upstream tests. Don't know why these values are used.
       List<TiStore> stores =
           ImmutableList.of(
               new TiStore(

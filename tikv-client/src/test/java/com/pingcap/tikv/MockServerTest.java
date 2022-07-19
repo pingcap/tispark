@@ -19,6 +19,7 @@ package com.pingcap.tikv;
 import com.pingcap.tikv.util.ConverterUpstream;
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.Before;
 import org.tikv.common.region.TiRegion;
 import org.tikv.common.region.TiStore;
@@ -45,24 +46,25 @@ public class MockServerTest extends PDMockServerTest {
             .setEndKey(ByteString.EMPTY)
             .addPeers(Metapb.Peer.newBuilder().setId(11).setStoreId(13))
             .build();
-
-    // TODO:Careful confirmation/doubt required
-    List<TiStore> s =
+    // Copied from upstream tests. Don't know why these values are used.
+    List<Metapb.Store> s =
         ImmutableList.of(
-            new TiStore(
-                Metapb.Store.newBuilder()
-                    .setAddress("localhost:1234")
-                    .setVersion("5.0.0")
-                    .setId(13)
-                    .build()));
+            Metapb.Store.newBuilder()
+                .setAddress("localhost:1234")
+                .setVersion("5.0.0")
+                .setId(13)
+                .build());
     region =
         new TiRegion(
             ConverterUpstream.convertTiConfiguration(session.getConf()),
             r,
             r.getPeers(0),
             r.getPeersList(),
-            s);
+            s.stream().map(TiStore::new).collect(Collectors.toList()));
     pdServer.addGetRegionResp(Pdpb.GetRegionResponse.newBuilder().setRegion(r).build());
+    for (Metapb.Store store : s) {
+      pdServer.addGetStoreResp(Pdpb.GetStoreResponse.newBuilder().setStore(store).build());
+    }
     server = new KVMockServer();
     port = server.start(region);
   }
