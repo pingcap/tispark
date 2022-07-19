@@ -6,7 +6,7 @@ TiSpark delete feature provides the ability to delete bypass TiDB with spark SQL
 To use delete in TiSpark, make sure you have configured Spark catalogs in `spark-defaults.conf`
 ```
 spark.sql.catalog.tidb_catalog  org.apache.spark.sql.catalyst.catalog.TiCatalog
-spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_adress}
+spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_address}
 ```
 
 ## Requirement
