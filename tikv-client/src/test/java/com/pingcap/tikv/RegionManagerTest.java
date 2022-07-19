@@ -90,16 +90,9 @@ public class RegionManagerTest extends PDMockServerTest {
     TiRegion regionToSearch = mgr.getRegionByKey(searchKey);
     assertEquals(region, regionToSearch);
 
-    // TODO:Careful confirmation/doubt required
-    // This will in turn invoke rpc and results in an error
-    // since we set just one rpc response
+    // because use upstream regionManager, so if the key not exists, return null
     TiRegion errValue = mgr.getRegionByKey(searchKeyNotExists);
     assertNull(errValue);
-    //    try {
-    //      TiRegion err = mgr.getRegionByKey(searchKeyNotExists);
-    //      fail();
-    //    } catch (Exception ignored) {
-    //    }
   }
 
   @Test
@@ -173,7 +166,7 @@ public class RegionManagerTest extends PDMockServerTest {
                 GrpcUtils.makeStoreLabel("k1", "v1"),
                 GrpcUtils.makeStoreLabel("k2", "v2"))));
 
-    // TODO:Careful confirmation/doubt required
+    // because use upstream regionManager, so if the id not exists, throw exception
     try {
       mgr.getStoreById(storeId + 1);
       fail();

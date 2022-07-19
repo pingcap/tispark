@@ -174,7 +174,7 @@ public class RangeSplitter {
     Map<Long, Pair<TiRegion, TiStore>> idToRegion = new HashMap<>();
 
     while (true) {
-      // TODO:Careful confirmation/doubt required
+      // region manager behavior is different for  before.We don't need to check exception.
       Pair<TiRegion, TiStore> regionStorePair =
           new Pair<>(regionManager.getRegionStorePairByKey(range.getStart(), storeType));
 
