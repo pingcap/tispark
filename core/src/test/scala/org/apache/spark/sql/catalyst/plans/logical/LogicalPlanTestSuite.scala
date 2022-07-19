@@ -176,7 +176,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     } else {
       val config =
         tidbStmt.executeQuery("show config where type='tidb' and name='alter-primary-key'")
-      if (!config.next() && config.getString(4).toLowerCase() == "true") {
+      if (!config.next() || config.getString(4).toLowerCase() == "true") {
         cancel("TiDB config alter-primary-key must be false")
       }
       tidbStmt.execute("""
