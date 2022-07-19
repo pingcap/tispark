@@ -35,7 +35,7 @@ Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](http
 We will not provide the `mysql-connector-java` dependency because of the limit of the GPL license.
 
 The following versions of TiSpark's jar will no longer include `mysql-connector-java`.
-- TiSpark > 3.0.1 for TiSpark 3.0.x
+- TiSpark > 3.0.1
 - TiSpark > 2.5.1 for TiSpark 2.5.x
 - TiSpark > 2.4.3 for TiSpark 2.4.x
 
