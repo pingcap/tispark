@@ -26,11 +26,11 @@ import org.scalatest.{FunSuite, Matchers}
 import org.scalatest.Matchers.{be, convertToAnyShouldWrapper, have, noException, the}
 
 class HostMappingSuite extends FunSuite {
-  val TIKV_HOST_MAPPING: String = "spark.tispark.tikv.host_mapping"
+  val HOST_MAPPING: String = "spark.tispark.host_mapping"
 
   test("Host map configuration test") {
     val conf: SparkConf = new SparkConf(false)
-    conf.set(TIKV_HOST_MAPPING, "host1:1;host2:2;host3:3")
+    conf.set(HOST_MAPPING, "host1:1;host2:2;host3:3")
     val tiConf: TiConfiguration = new TiConfiguration()
     TiUtil.sparkConfToTiConfWithoutPD(conf, tiConf)
     assert(tiConf.getHostMapping.asInstanceOf[UriHostMapping].getHostMapping.get("host1") == "1")
@@ -39,7 +39,7 @@ class HostMappingSuite extends FunSuite {
 
   test("Host map configuration with empty") {
     val conf: SparkConf = new SparkConf(false)
-    conf.set(TIKV_HOST_MAPPING, "")
+    conf.set(HOST_MAPPING, "")
     val tiConf: TiConfiguration = new TiConfiguration()
     TiUtil.sparkConfToTiConfWithoutPD(conf, tiConf)
     assert(tiConf.getHostMapping.asInstanceOf[UriHostMapping].getHostMapping == null)
@@ -48,7 +48,7 @@ class HostMappingSuite extends FunSuite {
   test("Host map configuration test with wrong host map") {
     the[IllegalArgumentException] thrownBy {
       val conf: SparkConf = new SparkConf(false)
-      conf.set(TIKV_HOST_MAPPING, "host1=1;host2=2;host3=3")
+      conf.set(HOST_MAPPING, "host1=1;host2=2;host3=3")
       val tiConf: TiConfiguration = new TiConfiguration()
       TiUtil.sparkConfToTiConfWithoutPD(conf, tiConf)
     } should have message "Invalid host mapping string: " + "host1=1;host2=2;host3=3"
@@ -64,7 +64,7 @@ class HostMappingSuite extends FunSuite {
       conf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
       conf.set("spark.sql.catalog.tidb_catalog", TiCatalog.className)
       conf.set("spark.sql.catalog.tidb_catalog.pd.addresses", fakePdAddresses + port)
-      conf.set(TIKV_HOST_MAPPING, fakePdAddresses + ":" + pdAddresses)
+      conf.set(HOST_MAPPING, fakePdAddresses + ":" + pdAddresses)
       val sc = new SparkContext("local[4]", "host-mapping-test", conf)
       val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
       spark.sql("use tidb_catalog")

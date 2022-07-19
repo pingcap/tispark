@@ -227,8 +227,8 @@ object TiUtil {
       tiConf.setConnRecycleTimeInSeconds(conf.get(TiConfigConst.TIKV_CONN_RECYCLE_TIME))
     }
 
-    if (conf.contains(TiConfigConst.TIKV_HOST_MAPPING)) {
-      tiConf.setHostMapping(new UriHostMapping(conf.get(TiConfigConst.TIKV_HOST_MAPPING)))
+    if (conf.contains(TiConfigConst.HOST_MAPPING)) {
+      tiConf.setHostMapping(new UriHostMapping(conf.get(TiConfigConst.HOST_MAPPING)))
     } else {
       tiConf.setHostMapping(new UriHostMapping(""))
     }

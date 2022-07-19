@@ -75,5 +75,5 @@ object TiConfigConst {
 
   val TELEMETRY_ENABEL: String = "spark.tispark.telemetry.enable"
 
-  val TIKV_HOST_MAPPING: String = "spark.tispark.tikv.host_mapping"
+  val HOST_MAPPING: String = "spark.tispark.host_mapping"
 }
