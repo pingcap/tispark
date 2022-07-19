@@ -121,4 +121,18 @@ public class PartitionLocatorTest {
     assertFalse(locator.evaluateComparison("LoNg", "loNg", Operator.GREATER_EQUAL));
     assertTrue(locator.evaluateComparison("LoNg", "loNg", Operator.LESS_THAN));
   }
+
+  @Test
+  public void testByte() {
+    PartitionLocator locator = new PartitionLocator();
+    // =
+    assertTrue(locator.evaluateComparison("long".getBytes(), "long", Operator.GREATER_EQUAL));
+    assertFalse(locator.evaluateComparison("long".getBytes(), "long", Operator.LESS_THAN));
+    // >
+    assertTrue(locator.evaluateComparison("long".getBytes(), "loNg", Operator.GREATER_EQUAL));
+    assertFalse(locator.evaluateComparison("long".getBytes(), "long", Operator.LESS_THAN));
+    // <
+    assertFalse(locator.evaluateComparison("LoNg".getBytes(), "loNg", Operator.GREATER_EQUAL));
+    assertTrue(locator.evaluateComparison("LoNg".getBytes(), "loNg", Operator.LESS_THAN));
+  }
 }
