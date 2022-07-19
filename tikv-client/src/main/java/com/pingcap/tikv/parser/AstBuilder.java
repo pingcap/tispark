@@ -33,7 +33,10 @@ import com.pingcap.tikv.parser.MySqlParser.ExpressionContext;
 import com.pingcap.tikv.parser.MySqlParser.FunctionNameBaseContext;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.RealType;
+import com.pingcap.tikv.types.StringType;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.binary.Hex;
 
 // AstBuilder will convert ParseTree into Ast Node.
 // In tikv java client, we only need to parser expression
@@ -151,6 +154,22 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   }
 
   @Override
+  public Expression visitHexadecimalLiteral(MySqlParser.HexadecimalLiteralContext ctx) {
+    if (ctx.HEXADECIMAL_LITERAL() != null) {
+      String text = ctx.HEXADECIMAL_LITERAL().getSymbol().getText();
+      text = text.substring(2, text.length() - 1);
+      try {
+        // use String to compare with hexadecimal literal.
+        return Constant.create(new String(Hex.decodeHex(text)), StringType.VARCHAR);
+      } catch (DecoderException e) {
+        throw new RuntimeException(e);
+      }
+    } else {
+      throw new UnsupportedSyntaxException(ctx.toString() + " is not supported yet");
+    }
+  }
+
+  @Override
   public Expression visitConstant(MySqlParser.ConstantContext ctx) {
     if (ctx.nullLiteral != null) {
       return Constant.create(null);
@@ -171,6 +190,10 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
     if (ctx.REAL_LITERAL() != null) {
       return Constant.create(
           Doubles.tryParse(ctx.REAL_LITERAL().getSymbol().getText()), RealType.REAL);
+    }
+
+    if (ctx.hexadecimalLiteral() != null) {
+      return visitHexadecimalLiteral(ctx.hexadecimalLiteral());
     }
 
     throw new UnsupportedSyntaxException(ctx.toString() + "not supported constant");

@@ -169,9 +169,7 @@ public class PartitionedTable implements Serializable {
       ColumnRef columnRef = (ColumnRef) originalExpr;
       columnRef.resolve(logicalTable.getTableInfo());
       // Hash partition only support int types, they all can convert to Number
-      Number id =
-          (Number)
-              row.get(columnRef.getColumnInfo().getOffset(), columnRef.getColumnInfo().getType());
+      Number id = (Number) row.get(columnRef.getColumnOffset(), columnRef.getDataType());
       int partitionId = (int) (id.longValue() % physicalTables.length);
       return physicalTables[partitionId];
     } else if (originalExpr instanceof FuncCallExpr) {

@@ -88,7 +88,9 @@ public class BytesType extends DataType {
 
   private byte[] convertToBytes(Object value) throws ConvertNotSupportException {
     byte[] result;
-    if (value instanceof Boolean) {
+    if (value instanceof byte[]) {
+      result = (byte[]) value;
+    } else if (value instanceof Boolean) {
       if ((Boolean) value) {
         result = new byte[] {49};
       } else {

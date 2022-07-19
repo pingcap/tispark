@@ -177,6 +177,9 @@ class PartitionWriteSuite extends BaseTiSparkTest {
    * - append and delete
    * - replace and delete
    * - date type replace and delete
+   * - datetime type replace and delete
+   * - binary type replace
+   * - varbinary type replace
    */
   test("range column append and delete test") {
     tidbStmt.execute(
@@ -365,6 +368,82 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     checkJDBCResult(deleteResultJDBC, Array(Array(Date.valueOf("1995-08-08"), "John")))
   }
 
+  test("varbinary type range column replace test") {
+    tidbStmt.execute(
+      s"create table `$database`.`$table` (id bigint, name varbinary(16) unique key) partition by range columns(name) (" +
+        s"partition p0 values less than (X'424242424242')," +
+        s"partition p1 values less than (X'525252525252')," +
+        s"partition p2 values less than MAXVALUE)")
+
+    tidbStmt.execute(
+      s"insert into `$database`.`$table` values (5, 'Apple'), (25, 'John'), (29, 'Mike')")
+    val data: RDD[Row] = sc.makeRDD(List(Row(57L, "Apple"), Row(65L, "John"), Row(15L, "Jack")))
+    val schema: StructType =
+      StructType(List(StructField("id", LongType), StructField("name", StringType)))
+    val df = sqlContext.createDataFrame(data, schema)
+    df.write
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", database)
+      .option("table", table)
+      .option("replace", "true")
+      .mode("append")
+      .save()
+
+    val insertResultJDBC = tidbStmt.executeQuery(s"select * from `$database`.`$table`")
+    val insertResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    insertResultSpark.collect().map { row =>
+      Row(row.getLong(0), new String(row.get(1).asInstanceOf[Array[Byte]]))
+    } should contain theSameElementsAs Array(
+      Row(57L, "Apple"),
+      Row(65L, "John"),
+      Row(15L, "Jack"),
+      Row(29, "Mike"))
+    checkJDBCResult(
+      insertResultJDBC,
+      Array(Array(57L, "Apple"), Array(65L, "John"), Array(15L, "Jack"), Array(29, "Mike")))
+  }
+
+  test("binary type range column replace test") {
+    tidbStmt.execute(
+      s"create table `$database`.`$table` (id bigint, name binary(6) unique key) partition by range columns(name) (" +
+        s"partition p0 values less than (X'424242424242')," +
+        s"partition p1 values less than (X'525252525252')," +
+        s"partition p2 values less than MAXVALUE)")
+
+    tidbStmt.execute(
+      s"insert into `$database`.`$table` values (5, 'Apple'), (25, 'John'), (29, 'Mike')")
+    val data: RDD[Row] = sc.makeRDD(List(Row(57L, "Apple"), Row(65L, "John"), Row(15L, "Jack")))
+    val schema: StructType =
+      StructType(List(StructField("id", LongType), StructField("name", StringType)))
+    val df = sqlContext.createDataFrame(data, schema)
+    df.write
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", database)
+      .option("table", table)
+      .option("replace", "true")
+      .mode("append")
+      .save()
+
+    val insertResultJDBC = tidbStmt.executeQuery(s"select * from `$database`.`$table`")
+    val insertResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    insertResultSpark.collect().map { row =>
+      Row(row.getLong(0), new String(row.get(1).asInstanceOf[Array[Byte]]))
+    } should contain theSameElementsAs Array(
+      Row(57L, "Apple\u0000"),
+      Row(65L, "John\u0000\u0000"),
+      Row(15L, "Jack\u0000\u0000"),
+      Row(29, "Mike\u0000\u0000"))
+    checkJDBCResult(
+      insertResultJDBC,
+      Array(
+        Array(57L, "Apple\u0000"),
+        Array(65L, "John\u0000\u0000"),
+        Array(15L, "Jack\u0000\u0000"),
+        Array(29, "Mike\u0000\u0000")))
+  }
+
   /**
    * range partition
    * - append and delete
@@ -540,7 +619,10 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     while (resultJDBC.next()) {
       var row: Seq[AnyRef] = Seq()
       for (i <- 1 to rsMetaData.getColumnCount) {
-        row = row :+ resultJDBC.getObject(i)
+        resultJDBC.getObject(i) match {
+          case x: Array[Byte] => row = row :+ new String(x)
+          case _ => row = row :+ resultJDBC.getObject(i)
+        }
       }
       sqlData = sqlData :+ row
     }

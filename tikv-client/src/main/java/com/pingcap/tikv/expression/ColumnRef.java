@@ -27,7 +27,7 @@ import java.util.Objects;
 public class ColumnRef extends Expression {
 
   private final String name;
-  private TiColumnInfo columnInfo;
+  private int columnOffset = -1;
 
   @Deprecated
   public ColumnRef(String name) {
@@ -68,8 +68,12 @@ public class ColumnRef extends Expression {
     return name.toLowerCase();
   }
 
-  public TiColumnInfo getColumnInfo() {
-    return columnInfo;
+  public int getColumnOffset() {
+    if (columnOffset < 0) {
+      throw new IllegalStateException("Invalid column offset: " + columnOffset);
+    }
+
+    return columnOffset;
   }
 
   public void resolve(TiTableInfo table) {
@@ -78,6 +82,7 @@ public class ColumnRef extends Expression {
       if (col.matchName(name)) {
         this.dataType = col.getType();
         columnInfo = col;
+        this.columnOffset = columnInfo.getOffset();
         break;
       }
     }
@@ -89,8 +94,6 @@ public class ColumnRef extends Expression {
     if (columnInfo.getId() == 0) {
       throw new TiExpressionException("Zero Id is not a referable column id");
     }
-
-    this.columnInfo = columnInfo;
   }
 
   public boolean matchName(String name) {

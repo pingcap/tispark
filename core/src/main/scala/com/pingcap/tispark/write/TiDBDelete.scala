@@ -28,8 +28,6 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.slf4j.LoggerFactory
 
-import java.util.concurrent.ConcurrentHashMap
-
 case class TiDBDelete(
     df: DataFrame,
     database: String,
@@ -62,8 +60,6 @@ case class TiDBDelete(
     }
 
     val colsInDf = df.columns.toList.map(_.toLowerCase())
-
-    val physicalTableMap: ConcurrentHashMap[Int, TableCommon] = new ConcurrentHashMap()
 
     /**
      * There will be a stuck the following codes are executed after df.persist(),

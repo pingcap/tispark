@@ -50,7 +50,7 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
     if (left instanceof ColumnRef) {
       ColumnRef columnRef = (ColumnRef) left;
       columnRef.resolve(tableInfo);
-      data = row.get(columnRef.getColumnInfo().getOffset(), columnRef.getColumnInfo().getType());
+      data = row.get(columnRef.getColumnOffset(), columnRef.getDataType());
     } else if (left instanceof FuncCallExpr) {
       // TODO: support more function partition
       FuncCallExpr partitionFuncExpr = (FuncCallExpr) left;
@@ -74,14 +74,16 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
     // we should escape single quote to get the real string need to be compared.
     String boundString = constant.getValue().toString();
     if (data instanceof String || data instanceof Date || data instanceof Timestamp) {
-      boundString = boundString.substring(1, boundString.length() - 1);
+      if (boundString.startsWith("'") && boundString.endsWith("'")) {
+        boundString = boundString.substring(1, boundString.length() - 1);
+      }
     }
     Operator comparisonType = node.getComparisonType();
 
     return evaluateComparison(data, boundString, comparisonType);
   }
 
-  private Boolean evaluateComparison(Object data, String boundString, Operator comparisonType) {
+  Boolean evaluateComparison(Object data, String boundString, Operator comparisonType) {
     // MYSQL IntegerType, we can convert to long and then compare.
     if (data instanceof Number) {
       long dataLongValue = ((Number) data).longValue();
@@ -97,6 +99,16 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
       }
     } else if (data instanceof String) {
       String dataStringValue = (String) data;
+      switch (comparisonType) {
+        case GREATER_EQUAL:
+          return dataStringValue.compareTo(boundString) >= 0;
+        case LESS_THAN:
+          return dataStringValue.compareTo(boundString) < 0;
+        default:
+          throw new UnsupportedOperationException("Unsupported comparison type: " + comparisonType);
+      }
+    } else if (data instanceof byte[]) {
+      String dataStringValue = new String((byte[]) data);
       switch (comparisonType) {
         case GREATER_EQUAL:
           return dataStringValue.compareTo(boundString) >= 0;
