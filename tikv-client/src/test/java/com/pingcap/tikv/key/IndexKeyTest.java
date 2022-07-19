@@ -142,8 +142,8 @@ public class IndexKeyTest {
               new DataType[] {StringType.VARCHAR}, new Object[] {row.get(1, StringType.VARCHAR)});
       IndexKey.EncodeIndexDataResult result =
           IndexKey.genIndexKey(1, row, indexInfo1, handle, tableInfo);
-      assertEquals(expectations.get(i).first, result.appendHandle);
-      assertArrayEquals(expectations.get(i).second, result.keys);
+      assertEquals(expectations.get(i).first, result.distinct);
+      assertArrayEquals(expectations.get(i).second, result.indexKey);
     }
   }
 
@@ -224,8 +224,8 @@ public class IndexKeyTest {
       Handle handle = new IntHandle(((Number) row.get(1, IntegerType.BIGINT)).longValue());
       IndexKey.EncodeIndexDataResult result =
           IndexKey.genIndexKey(1, row, indexInfo1, handle, tableInfo);
-      assertEquals(expectations.get(i).first, result.appendHandle);
-      assertArrayEquals(expectations.get(i).second, result.keys);
+      assertEquals(expectations.get(i).first, result.distinct);
+      assertArrayEquals(expectations.get(i).second, result.indexKey);
     }
   }
 

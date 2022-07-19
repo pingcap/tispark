@@ -621,7 +621,7 @@ class TiBatchWriteTable(
     // NULL is only allowed in unique key, primary key does not allow NULL value
     val encodeResult =
       IndexKey.genIndexKey(locatePhysicalTable(row, tiTableInfo), row, index, handle, tiTableInfo)
-    (new SerializableKey(encodeResult.keys), encodeResult.appendHandle)
+    (new SerializableKey(encodeResult.indexKey), encodeResult.distinct)
   }
 
   private def generateRowKey(

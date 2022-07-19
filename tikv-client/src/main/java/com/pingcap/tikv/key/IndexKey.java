@@ -43,13 +43,13 @@ public class IndexKey extends Key {
   }
 
   public static class EncodeIndexDataResult {
-    public EncodeIndexDataResult(byte[] keys, boolean appendHandle) {
-      this.keys = keys;
-      this.appendHandle = appendHandle;
+    public EncodeIndexDataResult(byte[] indexKey, boolean distinct) {
+      this.indexKey = indexKey;
+      this.distinct = distinct;
     }
 
-    public byte[] keys;
-    public boolean appendHandle;
+    public byte[] indexKey;
+    public boolean distinct;
   }
 
   public static IndexKey toIndexKey(long tableId, long indexId, Key... dataKeys) {
@@ -58,8 +58,9 @@ public class IndexKey extends Key {
 
   public static EncodeIndexDataResult genIndexKey(
       long physicalID, Row row, TiIndexInfo indexInfo, Handle handle, TiTableInfo tableInfo) {
-    // when appendHandleIfContainsNull is true, append handle column if any of the index column is
-    // NULL
+    // When the index is not a unique index,
+    // or when the index is a unique index and the index value contains null,
+    // set distinct=false and append handle to index key.
     boolean distinct = false;
     List<TiIndexColumn> indexColumns = indexInfo.getIndexColumns();
     if (indexInfo.isUnique()) {
@@ -76,7 +77,8 @@ public class IndexKey extends Key {
     keyCdo.write(IndexKey.toIndexKey(physicalID, indexInfo.getId()).getBytes());
     for (TiIndexColumn col : indexColumns) {
       DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
-      // truncate index's if necessary
+      // TODO
+      // truncate index value when index is prefix index.
       Key key = TypedKey.toTypedKey(row.get(col.getOffset(), colTp), colTp, (int) col.getLength());
       keyCdo.write(key.getBytes());
     }

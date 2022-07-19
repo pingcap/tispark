@@ -16,12 +16,8 @@
 
 package com.pingcap.tispark.utils
 
-import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
-import com.pingcap.tikv.exception.{
-  ConvertOverflowException,
-  TiBatchWriteException,
-  TiDBConvertException
-}
+import com.pingcap.tikv.codec.TableCodec
+import com.pingcap.tikv.exception.{ConvertOverflowException, TiBatchWriteException, TiDBConvertException}
 import com.pingcap.tikv.key._
 import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.ObjectRowImpl
@@ -183,10 +179,9 @@ object WriteUtil {
       index: TiIndexInfo,
       tiTableInfo: TiTableInfo,
       remove: Boolean): RDD[WrappedEncodedRow] = {
-    if (index.isUnique) {
       rdd.map { row =>
         val (encodedKey, encodedValue) =
-          generateUniqueIndexKey(row.row, row.handle, index, tiTableInfo, remove)
+          generateIndexKeyAndValue(row.row, row.handle, index, tiTableInfo, remove)
         WrappedEncodedRow(
           row.row,
           row.handle,
@@ -196,78 +191,31 @@ object WriteUtil {
           index.getId,
           remove)
       }
-    } else {
-      rdd.map { row =>
-        val (encodedKey, encodedValue) =
-          generateSecondaryIndexKey(row.row, row.handle, index, tiTableInfo, remove)
-        WrappedEncodedRow(
-          row.row,
-          row.handle,
-          encodedKey,
-          encodedValue,
-          isIndex = true,
-          index.getId,
-          remove)
-      }
-    }
   }
 
   /**
    * construct unique index and non-unique index and value to be inserted into TiKV
    * NOTE:
-   *      pk is not handle case is equivalent to unique index.
-   *      for non-unique index, handle will be encoded as part of index key. In contrast, unique
-   *      index encoded handle to value.
+   * pk is not handle case is equivalent to unique index.
+   * for non-unique index, handle will be encoded as part of index key. In contrast, unique
+   * index encoded handle to value.
    */
-  private def generateUniqueIndexKey(
-      row: TiRow,
-      handle: Handle,
-      index: TiIndexInfo,
-      tiTableInfo: TiTableInfo,
-      remove: Boolean): (SerializableKey, Array[Byte]) = {
-    // NULL is only allowed in unique key, primary key does not allow NULL value
-    val encodeResult =
+  private def generateIndexKeyAndValue(
+                                        row: TiRow,
+                                        handle: Handle,
+                                        index: TiIndexInfo,
+                                        tiTableInfo: TiTableInfo,
+                                        remove: Boolean): (SerializableKey, Array[Byte]) = {
+    val encodeIndexResult =
       IndexKey.genIndexKey(locatePhysicalTable(row, tiTableInfo), row, index, handle, tiTableInfo)
+
     val value = if (remove) {
       new Array[Byte](0)
     } else {
-      if (!handle.isInt) {
-        TableCodec.genIndexValueForClusteredIndexVersion1(
-          index,
-          handle,
-          !encodeResult.appendHandle)
-      } else {
-        if (!encodeResult.appendHandle) {
-          val valueCdo = new CodecDataOutput()
-          valueCdo.writeLong(handle.intValue())
-          valueCdo.toBytes
-        } else {
-          val value = new Array[Byte](1)
-          value(0) = '0'
-          value
-        }
-      }
+      TableCodec.genIndexValue(handle, encodeIndexResult.distinct)
     }
-    (new SerializableKey(encodeResult.keys), value)
-  }
 
-  private def generateSecondaryIndexKey(
-      row: TiRow,
-      handle: Handle,
-      index: TiIndexInfo,
-      tiTableInfo: TiTableInfo,
-      remove: Boolean): (SerializableKey, Array[Byte]) = {
-    val keys =
-      IndexKey.genIndexKey(locatePhysicalTable(row, tiTableInfo), row, index, handle, tiTableInfo)
-
-    val value: Array[Byte] = if (remove) {
-      new Array[Byte](0)
-    } else {
-      val value = new Array[Byte](1)
-      value(0) = '0'
-      value
-    }
-    (new SerializableKey(keys.keys), value)
+    (new SerializableKey(encodeIndexResult.indexKey), value)
   }
 
   /**
