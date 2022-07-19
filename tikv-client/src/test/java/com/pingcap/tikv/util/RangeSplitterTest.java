@@ -99,7 +99,8 @@ public class RangeSplitterTest extends PDMockServerTest {
     Metapb.Region meta =
         Metapb.Region.newBuilder()
             .setId(id)
-            // TODO:Careful confirmation/doubt required
+            // No encoding key is required now. Maybe upstream will do the coding itself internally.
+            // Not sure when encodeKey should be done
             .setStartKey(range.getStart())
             .setEndKey(range.getEnd())
             .addPeers(Peer.getDefaultInstance())
