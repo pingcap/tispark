@@ -145,3 +145,8 @@ interface.
 - Range partitioning with YEAR() function
 - Range partitioning with unsupported functions
 - Range Column partitioning with DATE type
+- Range Column partitioning with BINARY type
+- Range Column partitioning with VARBINARY type
+- Range Column partitioning with VARCHAR type
+
+
