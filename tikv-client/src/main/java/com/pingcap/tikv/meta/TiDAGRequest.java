@@ -417,12 +417,15 @@ public class TiDAGRequest implements Serializable {
   private Set<Long> getIndexAndPrimaryColIDSet() {
     // IndexReader fields col must in primary key or index key.
     Set<Long> indexAndPrimaryColIDSet = new HashSet<>();
-    if (!tableInfo.isCommonHandle()) {
-      indexAndPrimaryColIDSet.add(handleColumn.getColumnId());
-    } else {
+    if (tableInfo.isCommonHandle()) {
       for (TiIndexColumn indexColumn : tableInfo.getPrimaryKey().getIndexColumns()) {
         indexAndPrimaryColIDSet.add(tableInfo.getColumn(indexColumn.getName()).getId());
       }
+      indexAndPrimaryColIDSet.add(handleColumn.getColumnId());
+    } else if (tableInfo.isPkHandle()) {
+      indexAndPrimaryColIDSet.add(tableInfo.getPKIsHandleColumn().getId());
+    } else {
+      indexAndPrimaryColIDSet.add(handleColumn.getColumnId());
     }
     for (TiIndexColumn indexColumn : indexInfo.getIndexColumns()) {
       indexAndPrimaryColIDSet.add(tableInfo.getColumn(indexColumn.getName()).getId());
