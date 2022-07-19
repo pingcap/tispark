@@ -340,13 +340,13 @@ public class TiDAGRequest implements Serializable {
       // can't allow duplicated col added into executor.
       if (!colOffsetInFieldMap.containsKey(col.getName())) {
         TiColumnInfo columnInfo = tableInfo.getColumn(col.getName());
-        // column offset should be in accordance with fields
-        outputOffsets.add(lastOffset);
         colOffsetInFieldMap.put(col.getName(), lastOffset);
-        resultTypes.add(columnInfo.getType());
         lastOffset++;
         tblScanBuilder.addColumns(columnInfo.toProto(tableInfo));
       }
+      // column offset should be in accordance with fields
+      outputOffsets.add(colOffsetInFieldMap.get(col.getName()));
+      resultTypes.add(tableInfo.getColumn(col.getName()).getType());
     }
     dagRequestBuilder.addExecutors(tableScanExecutor.setTblScan(tblScanBuilder));
 
