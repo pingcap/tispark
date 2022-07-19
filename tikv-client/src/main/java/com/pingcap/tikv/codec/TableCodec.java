@@ -103,14 +103,11 @@ public class TableCodec {
     return new CommonHandle(encode);
   }
 
-  public static byte[] genIndexValue(
-      Handle handle, boolean distinct) {
+  public static byte[] genIndexValue(Handle handle, boolean distinct) {
     if (!handle.isInt()) {
-      //TODO
+      // TODO
       // We need to implement the encoding of the index value version 0 when handle is not int.
-      return TableCodec.genIndexValueForClusteredIndexVersion1(
-          handle,
-          distinct);
+      return TableCodec.genIndexValueForClusteredIndexVersion1(handle, distinct);
     }
     // When handle is int, the index encode is version 0.
     if (distinct) {
@@ -118,11 +115,10 @@ public class TableCodec {
       valueCdo.writeLong(handle.intValue());
       return valueCdo.toBytes();
     }
-    return new byte[]{'0'};
+    return new byte[] {'0'};
   }
 
-  public static byte[] genIndexValueForClusteredIndexVersion1(
-      Handle handle, boolean distinct) {
+  public static byte[] genIndexValueForClusteredIndexVersion1(Handle handle, boolean distinct) {
     CodecDataOutput cdo = new CodecDataOutput();
     cdo.writeByte(0);
     cdo.writeByte(IndexVersionFlag);

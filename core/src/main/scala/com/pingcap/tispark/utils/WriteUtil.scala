@@ -17,7 +17,11 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.codec.TableCodec
-import com.pingcap.tikv.exception.{ConvertOverflowException, TiBatchWriteException, TiDBConvertException}
+import com.pingcap.tikv.exception.{
+  ConvertOverflowException,
+  TiBatchWriteException,
+  TiDBConvertException
+}
 import com.pingcap.tikv.key._
 import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.ObjectRowImpl
@@ -179,18 +183,18 @@ object WriteUtil {
       index: TiIndexInfo,
       tiTableInfo: TiTableInfo,
       remove: Boolean): RDD[WrappedEncodedRow] = {
-      rdd.map { row =>
-        val (encodedKey, encodedValue) =
-          generateIndexKeyAndValue(row.row, row.handle, index, tiTableInfo, remove)
-        WrappedEncodedRow(
-          row.row,
-          row.handle,
-          encodedKey,
-          encodedValue,
-          isIndex = true,
-          index.getId,
-          remove)
-      }
+    rdd.map { row =>
+      val (encodedKey, encodedValue) =
+        generateIndexKeyAndValue(row.row, row.handle, index, tiTableInfo, remove)
+      WrappedEncodedRow(
+        row.row,
+        row.handle,
+        encodedKey,
+        encodedValue,
+        isIndex = true,
+        index.getId,
+        remove)
+    }
   }
 
   /**
@@ -201,11 +205,11 @@ object WriteUtil {
    * index encoded handle to value.
    */
   private def generateIndexKeyAndValue(
-                                        row: TiRow,
-                                        handle: Handle,
-                                        index: TiIndexInfo,
-                                        tiTableInfo: TiTableInfo,
-                                        remove: Boolean): (SerializableKey, Array[Byte]) = {
+      row: TiRow,
+      handle: Handle,
+      index: TiIndexInfo,
+      tiTableInfo: TiTableInfo,
+      remove: Boolean): (SerializableKey, Array[Byte]) = {
     val encodeIndexResult =
       IndexKey.genIndexKey(locatePhysicalTable(row, tiTableInfo), row, index, handle, tiTableInfo)
 
