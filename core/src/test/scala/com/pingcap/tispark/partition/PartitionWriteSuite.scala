@@ -410,7 +410,7 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     val deleteResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
     deleteResultSpark.collect().map { row =>
       Row(row.getLong(0), new String(row.get(1).asInstanceOf[Array[Byte]]))
-    }  should contain theSameElementsAs Array(Row(65L, "John"))
+    } should contain theSameElementsAs Array(Row(65L, "John"))
     checkJDBCResult(deleteResultJDBC, Array(Array(65L, "John")))
   }
 
@@ -460,7 +460,7 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     val deleteResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
     deleteResultSpark.collect().map { row =>
       Row(row.getLong(0), new String(row.get(1).asInstanceOf[Array[Byte]]))
-    }  should contain theSameElementsAs Array(Row(65L, "John\u0000\u0000"))
+    } should contain theSameElementsAs Array(Row(65L, "John\u0000\u0000"))
     checkJDBCResult(deleteResultJDBC, Array(Array(65L, "John\u0000\u0000")))
   }
 
