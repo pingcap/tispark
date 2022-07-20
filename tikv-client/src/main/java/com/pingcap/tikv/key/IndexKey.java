@@ -63,21 +63,13 @@ public class IndexKey extends Key {
     // set distinct=false and append handle to index key.
     boolean distinct = false;
     List<TiIndexColumn> indexColumns = indexInfo.getIndexColumns();
-    if (indexInfo.isUnique()) {
+    if (indexInfo.isUnique() && !containNullInUniqueIndexValue(row, tableInfo, indexColumns)) {
       distinct = true;
-      for (TiIndexColumn col : indexColumns) {
-        DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
-        if (row.get(col.getOffset(), colTp) == null) {
-          distinct = false;
-          break;
-        }
-      }
     }
     CodecDataOutput keyCdo = new CodecDataOutput();
     keyCdo.write(IndexKey.toIndexKey(physicalID, indexInfo.getId()).getBytes());
     for (TiIndexColumn col : indexColumns) {
       DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
-      // TODO
       // truncate index value when index is prefix index.
       Key key = TypedKey.toTypedKey(row.get(col.getOffset(), colTp), colTp, (int) col.getLength());
       keyCdo.write(key.getBytes());
@@ -89,7 +81,18 @@ public class IndexKey extends Key {
         keyCdo.write(handle.encodedAsKey());
       }
     }
-    return new EncodeIndexDataResult(keyCdo.toBytes(), !distinct);
+    return new EncodeIndexDataResult(keyCdo.toBytes(), distinct);
+  }
+
+  private static boolean containNullInUniqueIndexValue(
+      Row row, TiTableInfo tableInfo, List<TiIndexColumn> indexColumns) {
+    for (TiIndexColumn col : indexColumns) {
+      DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
+      if (row.get(col.getOffset(), colTp) == null) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static byte[] encode(long tableId, long indexId, Key[] dataKeys) {

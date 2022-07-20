@@ -17,7 +17,7 @@
 package com.pingcap.tispark.write
 
 import com.pingcap.tikv.allocator.RowIDAllocator
-import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
+import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta._
@@ -256,6 +256,7 @@ class TiBatchWriteTable(
                             generateDataToBeRemovedRddV1(distinctWrappedRowRdd, startTimeStamp)
                           }).persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
       persistedRDDList = conflictRows :: persistedRDDList
+
       if (!options.replace && !conflictRows.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
       }
@@ -467,7 +468,7 @@ class TiBatchWriteTable(
           val keyList = new util.ArrayList[Array[Byte]]()
           batch.foreach { wrappedRow =>
             val encodeResult = buildUniqueIndexKey(wrappedRow.row, wrappedRow.handle, index)
-            if (!encodeResult._2) {
+            if (encodeResult._2) {
               // only add the key if handle is not appended, since if handle is appened,
               // the value must be a new value
               keyList.add(encodeResult._1.bytes)
@@ -490,6 +491,26 @@ class TiBatchWriteTable(
           }
         }
 
+        def buildRowKeyFromConflictIndexRow(
+            conflictIndexRow: java.util.List[BytePairWrapper]): mutable.Set[Array[Byte]] = {
+          val conflictRowKey = mutable.Set.empty[Array[Byte]]
+          for (i <- 0 until conflictIndexRow.size) {
+            val conflictUniqueIndexValue = conflictIndexRow.get(i).getValue
+            if (conflictUniqueIndexValue.nonEmpty && !isNullUniqueIndexValue(
+                conflictUniqueIndexValue)) {
+              val conflictHandle =
+                TableCodec.decodeHandleInUniqueIndexValue(
+                  conflictUniqueIndexValue,
+                  isCommonHandle)
+              // TODO
+              // change to use physical id
+              val conflictUniqueIndexRowKey = RowKey.toRowKey(tiTableInfo.getId, conflictHandle);
+              conflictRowKey.add(conflictUniqueIndexRowKey.getBytes)
+            }
+          }
+          conflictRowKey
+        }
+
         def processNextBatch(): Unit = {
           rowBuf = mutable.ListBuffer.empty[WrappedRow]
           val mayConflictRowKeys = mutable.Set.empty[Array[Byte]]
@@ -502,21 +523,7 @@ class TiBatchWriteTable(
               // get all conflict unique index`s value
               val conflictUniqueIndexRows =
                 snapshot.batchGet(options.batchGetBackOfferMS, batchIndices)
-              for (i <- 0 until conflictUniqueIndexRows.size) {
-                val conflictUniqueIndexValue = conflictUniqueIndexRows.get(i).getValue
-                if (conflictUniqueIndexValue.nonEmpty && !isNullUniqueIndexValue(
-                    conflictUniqueIndexValue)) {
-                  val conflictHandle =
-                    TableCodec.decodeHandleInUniqueIndexValue(
-                      conflictUniqueIndexValue,
-                      isCommonHandle)
-                  // TODO
-                  // change to use physical id
-                  val conflictUniqueIndexRowKey =
-                    RowKey.toRowKey(tiTableInfo.getId, conflictHandle);
-                  mayConflictRowKeys.add(conflictUniqueIndexRowKey.getBytes)
-                }
-              }
+              mayConflictRowKeys ++= buildRowKeyFromConflictIndexRow(conflictUniqueIndexRows)
             }
           }
 
