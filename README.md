@@ -151,9 +151,8 @@ customer.write
 .save()
 ```
 
-<<<<<<< HEAD
 See [here](./docs/datasource_api_userguide.md) for more details.
-=======
+
 ## About mysql-connector-java
 
 We will not provide the `mysql-connector-java` dependency because of the limit of the GPL license.
@@ -171,9 +170,6 @@ Now, TiSpark needs `mysql-connector-java` for writing and auth. Please import `m
 ```
 spark-submit --jars tispark-assembly-3.0_2.12-3.1.0-SNAPSHOT.jar,mysql-connector-java-8.0.29.jar
 ```
-
-## Feature Support
->>>>>>> 6fc3c00c2 (GPL fix (#2457))
 
 ## Configuration
 
@@ -291,15 +287,7 @@ For more details about the test, see [here](./core/src/test/Readme.md).
 
 4. `Null in aggregration` is not supported, e.g. `select sum(null) from t group by col1`.
 
-5. The dependency `tispark-assembly` should not be packaged into `JAR of JARS` file (for example, build with spring-boot-maven-plugin), or you will get `ClassNotFoundException`. You can solve it by adding `spark-wrapper-spark-version` in your dependency or constructing another forms of jar file.
-
-6. TiSpark doesn't support collations now. `new_collations_enabled_on_first_bootstrap` should not be set to `true`.
-
-7. TiSpark doesn't support TLS now. You can't connect TiDB with TLS.
-
-8. TiSpark doesn't support collations now. `new_collations_enabled_on_first_bootstrap` should not be set to `true`.
-
-9. If `spark.sql.ansi.enabled` is false an overflow of sum(bigint) will not cause an error but “wrap” the result, or you can cast bigint to decimal to avoid the overflow.
+5.  The dependency `tispark-assembly` should not be packaged into `JAR of JARS` file (for example, build with spring-boot-maven-plugin), or you will get `ClassNotFoundException`. You can solve it by adding `spark-wrapper-spark-version` in your dependency or constructing another forms of jar file.
 
 ## Follow us
 
