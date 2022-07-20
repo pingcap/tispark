@@ -153,6 +153,24 @@ customer.write
 
 See [here](./docs/datasource_api_userguide.md) for more details.
 
+## About mysql-connector-java
+
+We will not provide the `mysql-connector-java` dependency because of the limit of the GPL license.
+
+The following versions of TiSpark's jar will no longer include `mysql-connector-java`.
+- TiSpark > 3.0.1
+- TiSpark > 2.5.1 for TiSpark 2.5.x
+- TiSpark > 2.4.3 for TiSpark 2.4.x
+
+Now, TiSpark needs `mysql-connector-java` for writing and auth. Please import `mysql-connector-java` manually when you need to write or auth.
+
+- you can import it by putting the jar into spark jars file
+
+- you can also import it when you submit spark job like
+```
+spark-submit --jars tispark-assembly-3.0_2.12-3.1.0-SNAPSHOT.jar,mysql-connector-java-8.0.29.jar
+```
+
 ## Configuration
 
 The configurations in the table below can be put together with `spark-defaults.conf` or passed in the same way as other Spark configuration properties.
