@@ -64,10 +64,12 @@ public class PartitionedTable implements Serializable {
     TableCommon[] physicalTables = new TableCommon[partitionDefs.size()];
     for (int i = 0; i < partitionDefs.size(); i++) {
       TiPartitionDef tiPartitionDef = partitionDefs.get(i);
-      physicalTables[i] = new TableCommon(
-          logicalTable.getLogicalTableId(),
-          tiPartitionDef.getId(),
-          logicalTable.getTableInfo());;
+      physicalTables[i] =
+          new TableCommon(
+              logicalTable.getLogicalTableId(),
+              tiPartitionDef.getId(),
+              logicalTable.getTableInfo());
+      ;
     }
 
     return new PartitionedTable(
