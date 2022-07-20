@@ -60,7 +60,8 @@ public class SchemaInferTest {
     tiDAGRequest.addRequiredColumn(name);
     tiDAGRequest.setTableInfo(table);
     tiDAGRequest.setStartTs(ts);
-    List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
+    tiDAGRequest.buildDAGGetTableData();
+    List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest.getResultTypes()).getTypes();
     assertEquals(1, dataTypes.size());
     assertEquals(StringType.VARCHAR.getClass(), dataTypes.get(0).getClass());
   }
@@ -73,7 +74,8 @@ public class SchemaInferTest {
     tiDAGRequest.addAggregate(sum);
     tiDAGRequest.setTableInfo(table);
     tiDAGRequest.setStartTs(ts);
-    List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
+    tiDAGRequest.buildDAGGetTableData();
+    List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest.getResultTypes()).getTypes();
     assertEquals(1, dataTypes.size());
     assertEquals(IntegerType.INT.getClass(), dataTypes.get(0).getClass());
   }
@@ -100,7 +102,8 @@ public class SchemaInferTest {
     // select sum(number) from t1 group by name;
     List<TiDAGRequest> dagRequests = makeSelectDAGReq(simpleGroupBy, complexGroupBy);
     for (TiDAGRequest req : dagRequests) {
-      List<DataType> dataTypes = SchemaInfer.create(req).getTypes();
+      req.buildDAGGetTableData();
+      List<DataType> dataTypes = SchemaInfer.create(req.getResultTypes()).getTypes();
       assertEquals(2, dataTypes.size());
       assertEquals(IntegerType.BIGINT.getClass(), dataTypes.get(0).getClass());
       assertEquals(IntegerType.BIGINT.getClass(), dataTypes.get(1).getClass());
