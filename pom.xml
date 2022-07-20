@@ -10,7 +10,7 @@
 
     <groupId>com.pingcap.tispark</groupId>
     <artifactId>tispark-parent</artifactId>
-    <version>${revision}</version>
+    <version>3.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>TiSpark Project Parent POM</name>
     <url>http://github.copm/pingcap/tispark</url>
@@ -80,7 +80,7 @@
         <scalafmt.skip>true</scalafmt.skip>
         <scalatest.version>3.0.8</scalatest.version>
         <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
-        <mysql.connector.version>5.1.49</mysql.connector.version>
+        <mysql.connector.version>8.0.29</mysql.connector.version>
         <gpg.keyname>fake gpg keyname</gpg.keyname>
         <gpg.skip>true</gpg.skip>
         <javadoc.skip>true</javadoc.skip>
@@ -92,7 +92,6 @@
         <scalaj.version>2.3.0</scalaj.version>
         <lombok.version>1.18.22</lombok.version>
         <someModule.test.excludes></someModule.test.excludes>
-        <revision>3.1.0-SNAPSHOT</revision>
     </properties>
     <repositories>
         <repository>
@@ -228,6 +227,8 @@
                         <parallel>suites</parallel>
                         <useUnlimitedThreads>true</useUnlimitedThreads>
                         <forkMode>always</forkMode>
+                        <trimStackTrace>false</trimStackTrace>
+                        <useFile>false</useFile>
                         <excludes>
                             <exclude>${someModule.test.excludes}</exclude>
                         </excludes>

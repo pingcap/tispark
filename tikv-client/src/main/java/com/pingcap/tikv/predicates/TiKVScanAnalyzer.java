@@ -38,7 +38,7 @@ import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiDAGRequest;
-import com.pingcap.tikv.meta.TiDAGRequest.IndexScanType;
+import com.pingcap.tikv.meta.TiDAGRequest.ScanType;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiPartitionDef;
@@ -213,7 +213,7 @@ public class TiKVScanAnalyzer {
     // Set DAG Request's store type as minPlan's store type.
     dagRequest.setStoreType(minPlanStoreType);
 
-    dagRequest.addRanges(minPlan.getKeyRanges());
+    dagRequest.addRanges(minPlan.getKeyRanges(), minPlan.getRangeFilters());
     dagRequest.setPrunedParts(minPlan.getPrunedParts());
     dagRequest.addFilters(new ArrayList<>(minPlan.getFilters()));
     if (minPlan.isIndexScan()) {
@@ -276,7 +276,10 @@ public class TiKVScanAnalyzer {
     if (index == null || index.isFakePrimaryKey()) {
       planBuilder
           .setDoubleRead(false)
-          .setKeyRanges(buildTableScanKeyRange(table, irs, prunedParts));
+          .setKeyRanges(
+              buildTableScanKeyRange(table, irs, prunedParts),
+              result.getPointPredicates(),
+              result.getRangePredicate());
       if (useTiFlash) {
         // TiFlash is a columnar storage engine
         long colSize =
@@ -297,7 +300,10 @@ public class TiKVScanAnalyzer {
           .setDoubleRead(!isCoveringIndex(columnList, index, table.isPkHandle()))
           // table name, index and handle column
           .calculateCostAndEstimateCount(tableStatistics, conditions, irs, indexSize, tableColSize)
-          .setKeyRanges(buildIndexScanKeyRange(table, index, irs, prunedParts))
+          .setKeyRanges(
+              buildIndexScanKeyRange(table, index, irs, prunedParts),
+              result.getPointPredicates(),
+              result.getRangePredicate())
           .build();
     }
   }
@@ -539,6 +545,7 @@ public class TiKVScanAnalyzer {
   public static class TiKVScanPlan {
 
     private final Map<Long, List<KeyRange>> keyRanges;
+    private final List<Expression> rangeFilters;
     private final Set<Expression> filters;
     private final double cost;
     private final TiIndexInfo index;
@@ -549,6 +556,7 @@ public class TiKVScanAnalyzer {
 
     private TiKVScanPlan(
         Map<Long, List<KeyRange>> keyRanges,
+        List<Expression> rangeFilters,
         Set<Expression> filters,
         TiIndexInfo index,
         double cost,
@@ -557,6 +565,7 @@ public class TiKVScanAnalyzer {
         List<TiPartitionDef> partDefs,
         TiStoreType storeType) {
       this.filters = filters;
+      this.rangeFilters = rangeFilters;
       this.keyRanges = keyRanges;
       this.cost = cost;
       this.index = index;
@@ -572,6 +581,10 @@ public class TiKVScanAnalyzer {
 
     public Map<Long, List<KeyRange>> getKeyRanges() {
       return keyRanges;
+    }
+
+    public List<Expression> getRangeFilters() {
+      return rangeFilters;
     }
 
     public Set<Expression> getFilters() {
@@ -607,6 +620,7 @@ public class TiKVScanAnalyzer {
       private final String tableName;
       private final Logger logger = LoggerFactory.getLogger(getClass().getName());
       private Map<Long, List<KeyRange>> keyRanges;
+      private List<Expression> rangeFilters;
       private Set<Expression> filters;
       private double cost;
       private TiIndexInfo index;
@@ -623,8 +637,16 @@ public class TiKVScanAnalyzer {
         return new Builder(tableName);
       }
 
-      public Builder setKeyRanges(Map<Long, List<KeyRange>> keyRanges) {
+      public Builder setKeyRanges(
+          Map<Long, List<KeyRange>> keyRanges,
+          List<Expression> pointPredicate,
+          Optional<Expression> rangePredicate) {
         this.keyRanges = keyRanges;
+        if (rangeFilters == null) {
+          rangeFilters = new ArrayList<Expression>();
+        }
+        rangeFilters.addAll(pointPredicate);
+        rangePredicate.ifPresent(expression -> rangeFilters.add(expression));
         return this;
       }
 
@@ -666,6 +688,7 @@ public class TiKVScanAnalyzer {
       public TiKVScanPlan build() {
         return new TiKVScanPlan(
             keyRanges,
+            rangeFilters,
             filters,
             index,
             cost,
@@ -675,19 +698,19 @@ public class TiKVScanAnalyzer {
             storeType);
       }
 
-      private void debug(IndexScanType scanType) {
+      private void debug(ScanType scanType) {
         String plan, desc;
         switch (scanType) {
-          case TABLE_SCAN:
-            plan = "TableScan";
+          case TABLE_READER:
+            plan = "TableReader";
             desc = storeType.toString();
             break;
-          case INDEX_SCAN:
-            plan = "IndexScan";
+          case INDEX_LOOKUP:
+            plan = "IndexLookUp";
             desc = index.getName();
             break;
-          case COVERING_INDEX_SCAN:
-            plan = "CoveringIndexScan";
+          case INDEX_READER:
+            plan = "IndexReader";
             desc = index.getName();
             break;
           default:
@@ -715,7 +738,7 @@ public class TiKVScanAnalyzer {
         if (tableStatistics != null) {
           estimatedRowCount = tableStatistics.getCount();
         }
-        debug(IndexScanType.TABLE_SCAN);
+        debug(ScanType.TABLE_READER);
         return this;
       }
 
@@ -744,10 +767,10 @@ public class TiKVScanAnalyzer {
 
           if (isDoubleRead) {
             cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
-            debug(IndexScanType.INDEX_SCAN);
+            debug(ScanType.INDEX_LOOKUP);
           } else {
             cost *= indexSize * INDEX_SCAN_COST_FACTOR;
-            debug(IndexScanType.COVERING_INDEX_SCAN);
+            debug(ScanType.INDEX_READER);
           }
         }
         return this;

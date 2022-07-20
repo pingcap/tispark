@@ -1,0 +1,42 @@
+name: alter-primary-key-false-test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Java adopt sample
+    steps:
+
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'adopt'
+          cache: maven
+
+      - name: add host and copy properties
+        run: |
+          echo -e "127.0.0.1   pd0 \n127.0.0.1   tikv0" | sudo tee -a /etc/hosts
+          sudo cp -r config /config
+          sed -i 's/^alter-primary-key.*/alter-primary-key=false/g'  ./config/tidb-4.0.toml 
+          echo "spark.sql.catalog.tidb_catalog=org.apache.spark.sql.catalyst.catalog.TiCatalog" > tidb_config.properties
+          mv tidb_config.properties core/src/test/resources/tidb_config.properties
+
+      - name: build docker
+        run: docker-compose -f docker-compose-4.0.yaml up -d
+
+      - name: build
+        run: mvn clean package -Dmaven.test.skip=true -B
+
+      - name: test
+        run: mvn test -am -pl core -Dtest=moo -DwildcardSuites=org.apache.spark.sql.catalyst.plans.logical.LogicalPlanTestSuite -DfailIfNoTests=false
