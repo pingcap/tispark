@@ -119,7 +119,6 @@ TiSpark natively supports writing data to TiKV via Spark Data Source API and gua
 
 For example:
 
-<<<<<<< HEAD
 ```scala
 // tispark will send `lock table` command to TiDB via JDBC
 val tidbOptions: Map[String, String] = Map(
@@ -129,7 +128,20 @@ val tidbOptions: Map[String, String] = Map(
   "tidb.user" -> "root",
   "spark.tispark.pd.addresses" -> "127.0.0.1:2379"
 )
-=======
+
+val customer = spark.sql("select * from customer limit 100000")
+
+customer.write
+.format("tidb")
+.option("database", "tpch_test")
+.option("table", "cust_test_select")
+.options(tidbOptions)
+.mode("append")
+.save()
+```
+
+See [here](./docs/datasource_api_userguide.md) for more details.
+
 ## About mysql-connector-java
 
 We will not provide the `mysql-connector-java` dependency because of the limit of the GPL license.
@@ -147,22 +159,6 @@ Now, TiSpark needs `mysql-connector-java` for writing and auth. Please import `m
 ```
 spark-submit --jars tispark-assembly-3.0_2.12-3.1.0-SNAPSHOT.jar,mysql-connector-java-8.0.29.jar
 ```
-
-## Feature Support
->>>>>>> 6fc3c00c2 (GPL fix (#2457))
-
-val customer = spark.sql("select * from customer limit 100000")
-
-customer.write
-.format("tidb")
-.option("database", "tpch_test")
-.option("table", "cust_test_select")
-.options(tidbOptions)
-.mode("append")
-.save()
-```
-
-See [here](./docs/datasource_api_userguide.md) for more details.
 
 ## Configuration
 
