@@ -18,7 +18,6 @@ package com.pingcap.tikv.util;
 
 import java.util.Objects;
 import java.util.stream.Collectors;
-import org.tikv.common.TiConfiguration.ApiVersion;
 import org.tikv.common.apiversion.RequestKeyCodec;
 
 /**
@@ -37,22 +36,67 @@ public class ConverterUpstream {
     return org.tikv.common.PDClient.create(tikvConf, keyCodec, channelFactory);
   }
 
-  // TODO: covert all configuration
   public static org.tikv.common.TiConfiguration convertTiConfiguration(
       com.pingcap.tikv.TiConfiguration conf) {
+    org.tikv.common.TiConfiguration tikvConf;
+
+    // pdaddrs
+    // tispark --- null
+    // client-java -- "127.0.0.1:2379"
     if (conf == null) {
-      // TODO:Careful confirmation/doubt required ,return null? required to add more
-      return null;
+      tikvConf = org.tikv.common.TiConfiguration.createDefault();
+    } else {
+      tikvConf =
+          org.tikv.common.TiConfiguration.createDefault(
+              conf.getPdAddrs().stream().map(Objects::toString).collect(Collectors.joining(",")));
     }
-    org.tikv.common.TiConfiguration tikvConf =
-        org.tikv.common.TiConfiguration.createDefault(
-            conf.getPdAddrs().stream().map(Objects::toString).collect(Collectors.joining(",")));
+
+    //   timeout
+    //       tispark 10 TimeUnit.MINUTES
+    //       client-java  200 TimeUnit.MILLISECONDS
     // s --> ms
-    tikvConf.setTimeout(conf.getTimeout() * 1000L);
+    tikvConf.setTimeout(conf.getTimeoutUnit().toMillis(conf.getTimeout()));
+
+    // maxFrameSize
+    //        tispark 2GB
+    //         client-java 512MB
+    tikvConf.setMaxFrameSize(conf.getMaxFrameSize());
+
+    // ScanBatchSize
+    //      tispark-- 10480
+    //      client-java --10240
+    //    can't set
+    //        tikvConf.setScanBathSize(conf.getScanBatchSize());
+
+    // same -----------------------------------
+
+    tikvConf.setIndexScanBatchSize(conf.getIndexScanBatchSize());
+    tikvConf.setIndexScanConcurrency(conf.getIndexScanConcurrency());
+    tikvConf.setTableScanConcurrency(conf.getTableScanConcurrency());
     tikvConf.setKvClientConcurrency(conf.getKvClientConcurrency());
-    tikvConf.setIsolationLevel(conf.getIsolationLevel());
+    tikvConf.setConnRecycleTimeInSeconds(Math.toIntExact(conf.getConnRecycleTime()));
+    tikvConf.setCertReloadIntervalInSeconds(conf.getCertReloadInterval());
+
+    // same
+    tikvConf.setBatchGetConcurrency(conf.getBatchGetConcurrency());
+    tikvConf.setBatchPutConcurrency(conf.getBatchPutConcurrency());
+    tikvConf.setBatchDeleteConcurrency(conf.getBatchDeleteConcurrency());
+    tikvConf.setBatchScanConcurrency(conf.getBatchScanConcurrency());
+    tikvConf.setDeleteRangeConcurrency(conf.getDeleteRangeConcurrency());
     tikvConf.setCommandPriority(conf.getCommandPriority());
-    tikvConf.setApiVersion(ApiVersion.V1);
+    tikvConf.setIsolationLevel(conf.getIsolationLevel());
+    tikvConf.setShowRowId(conf.isShowRowId());
+    tikvConf.setDBPrefix(conf.getDBPrefix());
+    // jks
+    tikvConf.setTlsEnable(conf.isTlsEnable());
+    tikvConf.setTrustCertCollectionFile(conf.getTrustCertCollectionFile());
+    tikvConf.setKeyCertChainFile(conf.getKeyCertChainFile());
+    tikvConf.setKeyFile(conf.getKeyFile());
+    tikvConf.setJksKeyPath(conf.getJksKeyPath());
+    tikvConf.setJksKeyPassword(conf.getJksKeyPassword());
+    tikvConf.setJksTrustPath(conf.getJksTrustPath());
+    tikvConf.setJksTrustPassword(conf.getJksTrustPassword());
+    tikvConf.setJksEnable(conf.isJksEnable());
     return tikvConf;
   }
 
@@ -99,7 +143,6 @@ public class ConverterUpstream {
 
   public static org.tikv.common.util.BackOffFunction.BackOffFuncType convertBackOffFunctionType(
       com.pingcap.tikv.util.BackOffFunction.BackOffFuncType funcType) {
-    // TODO:Careful confirmation/doubt required , safe to convert
     return org.tikv.common.util.BackOffFunction.BackOffFuncType.valueOf(funcType.name());
   }
 }
