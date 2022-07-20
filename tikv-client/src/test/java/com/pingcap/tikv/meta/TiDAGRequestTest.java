@@ -17,6 +17,7 @@
 package com.pingcap.tikv.meta;
 
 import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.greaterEqual;
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -35,6 +36,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Test;
@@ -136,7 +138,7 @@ public class TiDAGRequestTest {
     dagRequest.setLimit(0);
     dagRequest.setTableInfo(table);
     dagRequest.setStartTs(new TiTimestamp(0, 1));
-    dagRequest.buildTableScan();
+    dagRequest.buildDAGGetTableData();
   }
 
   @Test
@@ -175,7 +177,8 @@ public class TiDAGRequestTest {
                     Coprocessor.KeyRange.newBuilder()
                         .setStart(ByteString.copyFromUtf8("startkey"))
                         .setEnd(ByteString.copyFromUtf8("endkey"))
-                        .build())));
+                        .build())),
+            new ArrayList<>(ImmutableList.of(greaterEqual(col1, c1), lessEqual(col1, c2))));
 
     ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream();
     ObjectOutputStream oos = new ObjectOutputStream(byteOutStream);

@@ -74,6 +74,7 @@ public class DAGIteratorTest extends MockServerTest {
     req.addRequiredColumn(ColumnRef.create("c1", IntegerType.INT));
     req.addRequiredColumn(ColumnRef.create("c2", StringType.VARCHAR));
     req.setStartTs(new TiTimestamp(0, 1));
+    req.buildDAGGetTableData();
 
     List<KeyRange> keyRanges =
         ImmutableList.of(
@@ -95,7 +96,7 @@ public class DAGIteratorTest extends MockServerTest {
       assertEquals("iterator has next should be true", true, false);
     } else {
       Row r = iter.next();
-      SchemaInfer infer = SchemaInfer.create(req);
+      SchemaInfer infer = SchemaInfer.create(req.getResultTypes());
       assertEquals(r.get(0, infer.getType(0)), 666L);
       assertEquals(r.get(1, infer.getType(1)), "value1");
     }

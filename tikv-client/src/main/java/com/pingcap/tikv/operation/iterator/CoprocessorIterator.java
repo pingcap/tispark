@@ -87,11 +87,17 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
     // set encode type to TypeDefault because currently, only
     // CoprocessorIterator<TiChunk> support TypeChunk and TypeCHBlock encode type
     dagRequest.setEncodeType(EncodeType.TypeDefault);
+    DAGRequest request;
+    if (dagRequest.hasIndex()) {
+      request = dagRequest.buildDAGGetIndexData();
+    } else {
+      request = dagRequest.buildDAGGetTableData();
+    }
     return new DAGIterator<Row>(
-        dagRequest.buildTableScan(),
+        request,
         regionTasks,
         session,
-        SchemaInfer.create(dagRequest),
+        SchemaInfer.create(dagRequest.getResultTypes()),
         dagRequest.getPushDownType(),
         dagRequest.getStoreType(),
         dagRequest.getStartTs().getVersion()) {
@@ -117,11 +123,17 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
   public static CoprocessorIterator<TiChunk> getTiChunkIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session, int numOfRows) {
     TiDAGRequest dagRequest = req.copy();
+    DAGRequest request;
+    if (!dagRequest.isDoubleRead() && dagRequest.hasIndex()) {
+      request = dagRequest.buildDAGGetIndexData();
+    } else {
+      request = dagRequest.buildDAGGetTableData();
+    }
     return new DAGIterator<TiChunk>(
-        dagRequest.buildTableScan(),
+        request,
         regionTasks,
         session,
-        SchemaInfer.create(dagRequest),
+        SchemaInfer.create(dagRequest.getResultTypes()),
         dagRequest.getPushDownType(),
         dagRequest.getStoreType(),
         dagRequest.getStartTs().getVersion()) {
@@ -213,11 +225,12 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
     // set encode type to TypeDefault because currently, only
     // CoprocessorIterator<TiChunk> support TypeChunk and TypeCHBlock encode type
     dagRequest.setEncodeType(EncodeType.TypeDefault);
+    DAGRequest request = dagRequest.buildDAGGetIndexData();
     return new DAGIterator<Handle>(
-        dagRequest.buildIndexScan(),
+        request,
         regionTasks,
         session,
-        SchemaInfer.create(dagRequest, true),
+        SchemaInfer.create(dagRequest.getResultTypes()),
         dagRequest.getPushDownType(),
         dagRequest.getStoreType(),
         dagRequest.getStartTs().getVersion()) {

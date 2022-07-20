@@ -51,7 +51,7 @@ class InvisibleIndexSuite extends BasePlanTest {
         "insert into t_invisible_index values(1, 1),(2, 2),(3, 3),(4, 4),(5, 5),(6, 6)")
       tidbStmt.execute("analyze table t_invisible_index")
       val df = spark.sql("select * from t_invisible_index where a = 1")
-      checkIsIndexScan(df, "t_invisible_index")
+      checkIsIndexLookUp(df, "t_invisible_index")
       checkIndex(df, "idx_a")
     }
 
@@ -65,7 +65,7 @@ class InvisibleIndexSuite extends BasePlanTest {
       tidbStmt.execute("analyze table t_invisible_index")
       val df = spark.sql("select * from t_invisible_index where a = 1")
       intercept[TestFailedException] {
-        checkIsIndexScan(df, "t_invisible_index")
+        checkIsIndexLookUp(df, "t_invisible_index")
         checkIndex(df, "idx_a")
       }
 
