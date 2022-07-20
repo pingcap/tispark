@@ -135,14 +135,15 @@ class LogicalPlanTestSuite extends BasePlanTest {
     if (version.isEmpty) {
       fail("TiDB version can not be empty")
     }
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     if (version.get.toString.compareTo("v5") > 0) {
       tidbStmt.execute("""
                          |CREATE TABLE `t1` (
-                         |  `a` BIGINT(20) NOT NULL,
+                         |  `a` BIGINT UNSIGNED  NOT NULL,
                          |  `b` varchar(255) NOT NULL,
                          |  `c` varchar(255) DEFAULT NULL,
-                         |   PRIMARY KEY (`a`) clustered
-                         |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+                         |  PRIMARY KEY (`a`) CLUSTERED
+                         |  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
     } else {
       val config =
         tidbStmt.executeQuery("show config where type='tidb' and name='alter-primary-key'")
@@ -151,21 +152,12 @@ class LogicalPlanTestSuite extends BasePlanTest {
       }
       tidbStmt.execute("""
                          |CREATE TABLE `t1` (
-                         |  `a` INT(20) NOT NULL,
+                         |  `a` BIGINT UNSIGNED  NOT NULL,
                          |  `b` varchar(255) NOT NULL,
                          |  `c` varchar(255) DEFAULT NULL,
-                         |   PRIMARY KEY (`a`)
-                         |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+                         |  PRIMARY KEY (`a`)
+                         |  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
     }
-
-    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    tidbStmt.execute("""
-        |CREATE TABLE `t1` (
-        |  `a` BIGINT UNSIGNED  NOT NULL,
-        |  `b` varchar(255) NOT NULL,
-        |  `c` varchar(255) DEFAULT NULL,
-        |  PRIMARY KEY (`a`) CLUSTERED
-        |  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
     val rs = tidbStmt.executeQuery(
       "select tidb_table_id from information_schema.tables where  table_name='t1'")
     if (!rs.next()) {
