@@ -80,7 +80,7 @@
         <scalatest.version>3.0.8</scalatest.version>
         <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
         <mysql.connector.version>8.0.29</mysql.connector.version>
-        <gpg.keyname>fake gpg keyname</gpg.keyname>
+        <gpg.pub.key>fake gpg keyname</gpg.pub.key>
         <gpg.skip>true</gpg.skip>
         <javadoc.skip>true</javadoc.skip>
         <skipFetchTestData>false</skipFetchTestData>
