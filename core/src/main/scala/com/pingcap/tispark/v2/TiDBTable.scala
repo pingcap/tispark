@@ -281,6 +281,7 @@ object TiDBTable {
           s"'${timestampFormatter.format(timestampValue)}'"
         case dateValue: Date => "'" + dateValue + "'"
         case dateValue: LocalDate => "'" + dateValue + "'"
+        case arrayByte: Array[Byte] => "'" + new String(arrayByte) + "'"
         case arrayValue: Array[Any] => arrayValue.map(compileValue).mkString(", ")
         case _ => value
       }
