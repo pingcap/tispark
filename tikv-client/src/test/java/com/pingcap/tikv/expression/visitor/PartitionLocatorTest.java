@@ -27,7 +27,7 @@ public class PartitionLocatorTest {
 
   @Test
   public void testTimeStamp() {
-    PartitionLocator locator = new PartitionLocator();
+    RangePartitionLocator locator = new RangePartitionLocator();
     // =
     assertTrue(
         locator.evaluateComparison(
@@ -59,7 +59,7 @@ public class PartitionLocatorTest {
 
   @Test
   public void testDate() {
-    PartitionLocator locator = new PartitionLocator();
+    RangePartitionLocator locator = new RangePartitionLocator();
     // =
     assertTrue(
         locator.evaluateComparison(
@@ -82,7 +82,7 @@ public class PartitionLocatorTest {
 
   @Test
   public void testShort() {
-    PartitionLocator locator = new PartitionLocator();
+    RangePartitionLocator locator = new RangePartitionLocator();
     // =
     assertTrue(locator.evaluateComparison((short) 56, "56", Operator.GREATER_EQUAL));
     assertFalse(locator.evaluateComparison((short) 56, "56", Operator.LESS_THAN));
@@ -96,7 +96,7 @@ public class PartitionLocatorTest {
 
   @Test
   public void testLong() {
-    PartitionLocator locator = new PartitionLocator();
+    RangePartitionLocator locator = new RangePartitionLocator();
     // =
     assertTrue(locator.evaluateComparison((long) 56, "56", Operator.GREATER_EQUAL));
     assertFalse(locator.evaluateComparison((long) 56, "56", Operator.LESS_THAN));
@@ -110,7 +110,7 @@ public class PartitionLocatorTest {
 
   @Test
   public void testString() {
-    PartitionLocator locator = new PartitionLocator();
+    RangePartitionLocator locator = new RangePartitionLocator();
     // =
     assertTrue(locator.evaluateComparison("long", "long", Operator.GREATER_EQUAL));
     assertFalse(locator.evaluateComparison("long", "long", Operator.LESS_THAN));
@@ -124,7 +124,7 @@ public class PartitionLocatorTest {
 
   @Test
   public void testByte() {
-    PartitionLocator locator = new PartitionLocator();
+    RangePartitionLocator locator = new RangePartitionLocator();
     // =
     assertTrue(locator.evaluateComparison("long".getBytes(), "long", Operator.GREATER_EQUAL));
     assertFalse(locator.evaluateComparison("long".getBytes(), "long", Operator.LESS_THAN));

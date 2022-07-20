@@ -337,7 +337,7 @@ class TiBatchWrite(
       table: TableCommon,
       isTiDBV4: Boolean,
       options: TiDBOptions) = {
-    val mm = new mutable.HashMap[TableCommon, mutable.Set[SparkRow]]
+    val physicalTable2Rows = new mutable.HashMap[TableCommon, mutable.Set[SparkRow]]
       with mutable.MultiMap[TableCommon, SparkRow]
 
     val pTable = PartitionedTable.newPartitionTable(table, tiTableInfo)
@@ -345,10 +345,10 @@ class TiBatchWrite(
     df.collect()
       .foreach(row => {
         val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
-        mm.addBinding(pTable.locatePartition(tiRow), row)
+        physicalTable2Rows.addBinding(pTable.locatePartition(tiRow), row)
       })
 
-    mm.map {
+    physicalTable2Rows.map {
       case (tableCommon, rowSet) =>
         val data: RDD[SparkRow] = tiContext.sparkSession.sparkContext.makeRDD(rowSet.toSeq)
         val dfPartitioned: DataFrame =

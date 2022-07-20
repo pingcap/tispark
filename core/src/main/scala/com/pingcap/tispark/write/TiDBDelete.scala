@@ -75,6 +75,8 @@ case class TiDBDelete(
     val tiRowMapRDD: RDD[(TableCommon, TiRow)] = SparkSession.active.sparkContext.makeRDD(
       df.rdd
         .mapPartitions {
+          // Since using mapPartitions and making table construction out of rowIterator logic,
+          // each partition will construct a new logical table and associated physical tables.
           val table = new TableCommon(tiTableInfo.getId, tiTableInfo.getId, tiTableInfo)
 
           if (tiTableInfo.isPartitionEnabled) {

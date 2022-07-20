@@ -23,7 +23,7 @@ import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.FuncCallExpr;
 import com.pingcap.tikv.expression.PartitionPruner;
-import com.pingcap.tikv.expression.visitor.PartitionLocator;
+import com.pingcap.tikv.expression.visitor.RangePartitionLocator;
 import com.pingcap.tikv.meta.TiPartitionDef;
 import com.pingcap.tikv.meta.TiPartitionInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
@@ -46,7 +46,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 public class PartitionedTable implements Serializable {
 
-  private static final PartitionLocator partitionLocator = new PartitionLocator();
+  private static final RangePartitionLocator partitionLocator = new RangePartitionLocator();
 
   private final TableCommon logicalTable;
 
@@ -64,12 +64,10 @@ public class PartitionedTable implements Serializable {
     TableCommon[] physicalTables = new TableCommon[partitionDefs.size()];
     for (int i = 0; i < partitionDefs.size(); i++) {
       TiPartitionDef tiPartitionDef = partitionDefs.get(i);
-      TableCommon temp =
-          new TableCommon(
-              logicalTable.getLogicalTableId(),
-              tiPartitionDef.getId(),
-              logicalTable.getTableInfo());
-      physicalTables[i] = temp;
+      physicalTables[i] = new TableCommon(
+          logicalTable.getLogicalTableId(),
+          tiPartitionDef.getId(),
+          logicalTable.getTableInfo());;
     }
 
     return new PartitionedTable(

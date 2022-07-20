@@ -34,7 +34,7 @@ import com.pingcap.tikv.types.IntegerType;
 import java.sql.Date;
 import java.sql.Timestamp;
 
-public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorContext> {
+public class RangePartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorContext> {
 
   /**
    * For ComparisonBinaryExpression such as <br>
@@ -87,7 +87,6 @@ public class PartitionLocator extends DefaultVisitor<Boolean, PartitionLocatorCo
     // MYSQL IntegerType, we can convert to long and then compare.
     if (data instanceof Number) {
       long dataLongValue = ((Number) data).longValue();
-      ;
       long bound = Long.parseLong(boundString);
       switch (comparisonType) {
         case GREATER_EQUAL:
