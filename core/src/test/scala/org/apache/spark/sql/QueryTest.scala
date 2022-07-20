@@ -21,13 +21,13 @@ package org.apache.spark.sql
 import java.sql.{Date, Timestamp}
 import java.text.SimpleDateFormat
 import java.util.TimeZone
-
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.execution.columnar.InMemoryRelation
 import org.apache.spark.sql.types.StructField
 
+import java.time.LocalDateTime
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
@@ -303,6 +303,11 @@ abstract class QueryTest extends SparkFunSuite {
         value.asInstanceOf[BigDecimal].setScale(2, BigDecimal.RoundingMode.HALF_UP)
       case _: Date if colType.equalsIgnoreCase("YEAR") =>
         value.toString.split("-")(0)
+      // mysql-connector-j 8.0.29 it will return LocalDateTime for datetime type
+      // mysql-connector-j 5.1.47 will return Timestamp for datetime type
+      // here we just convert LocalDateTime to Timestamp because tispark will return Timestamp now
+      case v: LocalDateTime =>
+        Timestamp.valueOf(v)
       case default =>
         default
     }
