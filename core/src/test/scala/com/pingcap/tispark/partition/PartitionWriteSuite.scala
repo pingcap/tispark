@@ -402,6 +402,16 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     checkJDBCResult(
       insertResultJDBC,
       Array(Array(57L, "Apple"), Array(65L, "John"), Array(15L, "Jack"), Array(29, "Mike")))
+
+    spark.sql(
+      s"delete from `tidb_catalog`.`$database`.`$table` where name < 'John' or name = 'Mike'")
+
+    val deleteResultJDBC = tidbStmt.executeQuery(s"select * from `$database`.`$table`")
+    val deleteResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    deleteResultSpark.collect().map { row =>
+      Row(row.getLong(0), new String(row.get(1).asInstanceOf[Array[Byte]]))
+    }  should contain theSameElementsAs Array(Row(65L, "John"))
+    checkJDBCResult(deleteResultJDBC, Array(Array(65L, "John")))
   }
 
   test("binary type range column replace test") {
@@ -442,6 +452,16 @@ class PartitionWriteSuite extends BaseTiSparkTest {
         Array(65L, "John\u0000\u0000"),
         Array(15L, "Jack\u0000\u0000"),
         Array(29, "Mike\u0000\u0000")))
+
+    spark.sql(
+      s"delete from `tidb_catalog`.`$database`.`$table` where name < 'John\u0000\u0000' or name = 'Mike\u0000\u0000'")
+
+    val deleteResultJDBC = tidbStmt.executeQuery(s"select * from `$database`.`$table`")
+    val deleteResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    deleteResultSpark.collect().map { row =>
+      Row(row.getLong(0), new String(row.get(1).asInstanceOf[Array[Byte]]))
+    }  should contain theSameElementsAs Array(Row(65L, "John\u0000\u0000"))
+    checkJDBCResult(deleteResultJDBC, Array(Array(65L, "John\u0000\u0000")))
   }
 
   /**
