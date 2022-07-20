@@ -12,7 +12,6 @@
             <includes>
                 <include>com.pingcap.tispark:tispark-core-internal:jar</include>
                 <include>com.pingcap.tikv:tikv-client:jar</include>
-                <include>mysql:mysql-connector-java:jar</include>
             </includes>
             <unpack>true</unpack>
         </dependencySet>

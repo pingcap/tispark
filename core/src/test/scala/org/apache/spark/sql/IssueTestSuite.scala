@@ -103,7 +103,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     val query = "select * from t"
     spark.sql(s"explain $query").show(false)
     spark.sql(query).show(false)
-    runTest(query, skipJDBC = true)
+    runTest(query, skipTiDB = true)
   }
 
   test("test GregorianCalendar + clustered index") {
@@ -170,7 +170,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     val query = "select * from t"
     spark.sql(s"explain $query").show(false)
     spark.sql(query).show(false)
-    runTest(query, skipJDBC = true)
+    runTest(query, skipTiDB = true)
     spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "false")
   }
 
