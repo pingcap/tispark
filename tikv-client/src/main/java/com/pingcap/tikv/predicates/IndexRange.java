@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.predicates;
 
-import com.fasterxml.jackson.databind.util.TypeKey;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.TypedKey;
