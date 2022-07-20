@@ -45,6 +45,7 @@ import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.sql.{SQLContext, execution}
 import org.slf4j.LoggerFactory
 
+import java.nio.charset.StandardCharsets
 import java.sql.{Date, SQLException, Timestamp}
 import java.time.{Instant, LocalDate}
 import java.util
@@ -281,7 +282,7 @@ object TiDBTable {
           s"'${timestampFormatter.format(timestampValue)}'"
         case dateValue: Date => "'" + dateValue + "'"
         case dateValue: LocalDate => "'" + dateValue + "'"
-        case arrayByte: Array[Byte] => "'" + new String(arrayByte) + "'"
+        case arrayByte: Array[Byte] => "'" + new String(arrayByte, StandardCharsets.UTF_8) + "'"
         case arrayValue: Array[Any] => arrayValue.map(compileValue).mkString(", ")
         case _ => value
       }

@@ -31,6 +31,7 @@ import com.pingcap.tikv.partition.PartitionedTable.PartitionLocatorContext;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DateType;
 import com.pingcap.tikv.types.IntegerType;
+import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Timestamp;
 
@@ -107,7 +108,7 @@ public class RangePartitionLocator extends DefaultVisitor<Boolean, PartitionLoca
           throw new UnsupportedOperationException("Unsupported comparison type: " + comparisonType);
       }
     } else if (data instanceof byte[]) {
-      String dataStringValue = new String((byte[]) data);
+      String dataStringValue = new String((byte[]) data, StandardCharsets.UTF_8);
       switch (comparisonType) {
         case GREATER_EQUAL:
           return dataStringValue.compareTo(boundString) >= 0;

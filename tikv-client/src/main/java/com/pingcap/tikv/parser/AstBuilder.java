@@ -34,6 +34,7 @@ import com.pingcap.tikv.parser.MySqlParser.FunctionNameBaseContext;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.RealType;
 import com.pingcap.tikv.types.StringType;
+import java.nio.charset.StandardCharsets;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
@@ -160,7 +161,8 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
       text = text.substring(2, text.length() - 1);
       try {
         // use String to compare with hexadecimal literal.
-        return Constant.create(new String(Hex.decodeHex(text)), StringType.VARCHAR);
+        return Constant.create(
+            new String(Hex.decodeHex(text), StandardCharsets.UTF_8), StringType.VARCHAR);
       } catch (DecoderException e) {
         throw new RuntimeException(e);
       }

@@ -30,7 +30,6 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 
 object TiBatchWrite {
   type SparkRow = org.apache.spark.sql.Row
@@ -197,13 +196,10 @@ class TiBatchWrite(
     tiBatchWriteTables.foreach(_.persist())
 
     // check empty
-    var allEmpty = true
-    tiBatchWriteTables.foreach { table =>
-      if (!table.isDFEmpty) {
-        allEmpty = false
-      }
+    tiBatchWriteTables = tiBatchWriteTables.filter { table =>
+      !table.isDFEmpty
     }
-    if (allEmpty) {
+    if (tiBatchWriteTables.isEmpty) {
       logger.warn("data is empty!")
       return
     }
@@ -337,22 +333,15 @@ class TiBatchWrite(
       table: TableCommon,
       isTiDBV4: Boolean,
       options: TiDBOptions) = {
-    val physicalTable2Rows = new mutable.HashMap[TableCommon, mutable.Set[SparkRow]]
-      with mutable.MultiMap[TableCommon, SparkRow]
-
     val pTable = PartitionedTable.newPartitionTable(table, tiTableInfo)
     val colsInDf = df.columns.toList.map(_.toLowerCase())
-    df.collect()
-      .foreach(row => {
-        val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
-        physicalTable2Rows.addBinding(pTable.locatePartition(tiRow), row)
-      })
 
-    physicalTable2Rows.map {
-      case (tableCommon, rowSet) =>
-        val data: RDD[SparkRow] = tiContext.sparkSession.sparkContext.makeRDD(rowSet.toSeq)
-        val dfPartitioned: DataFrame =
-          tiContext.sqlContext.createDataFrame(data, df.schema)
+    pTable.getPhysicalTables
+      .map(table => {
+        val dfPartitioned = df.filter(
+          row =>
+            table.equals(
+              pTable.locatePartition(WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf))))
         new TiBatchWriteTable(
           dfPartitioned,
           tiContext,
@@ -360,8 +349,9 @@ class TiBatchWrite(
           tiConf,
           tiDBJDBCClient,
           isTiDBV4,
-          tableCommon)
-    }.toList
+          table)
+      })
+      .toList
   }
 
   private def getRegionSplitPoints(
