@@ -74,21 +74,20 @@ case class TiDBDelete(
      */
     val tiRowMapRDD: RDD[(TableCommon, TiRow)] = SparkSession.active.sparkContext.makeRDD(
       df.rdd
-        .mapPartitions {
+        .mapPartitions { partition =>
           // Since using mapPartitions and making table construction out of rowIterator logic,
           // each partition will construct a new logical table and associated physical tables.
           val table = new TableCommon(tiTableInfo.getId, tiTableInfo.getId, tiTableInfo)
 
           if (tiTableInfo.isPartitionEnabled) {
             val pTable = PartitionedTable.newPartitionTable(table, tiTableInfo)
-            rowIterator =>
-              rowIterator.map { row =>
-                val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
-                // locate partition and return the physical table
-                pTable.locatePartition(tiRow) -> tiRow
-              }
-          } else { rowIterator =>
-            rowIterator.map { row =>
+            partition.map { row =>
+              val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
+              // locate partition and return the physical table
+              pTable.locatePartition(tiRow) -> tiRow
+            }
+          } else {
+            partition.map { row =>
               //Convert Spark row to TiKV row
               val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
               table -> tiRow
