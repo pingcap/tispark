@@ -83,7 +83,6 @@ public class TableCodec {
     return new IntHandle(new CodecDataInput(value).readLong());
   }
 
-  /* only for unique index */
   public static Handle decodeHandleInUniqueIndexValue(byte[] value, boolean isCommonHandle) {
     if (!isCommonHandle) {
       if (value.length <= MaxOldEncodeValueLen) {
@@ -106,7 +105,7 @@ public class TableCodec {
   public static byte[] genIndexValue(Handle handle, boolean distinct) {
     if (!handle.isInt()) {
       // TODO
-      // We need to implement the encoding of the index value version 0 when handle is not int.
+      //  We need to implement the encoding of the index value version 0 when handle is not int.
       return TableCodec.genIndexValueForClusteredIndexVersion1(handle, distinct);
     }
     // When handle is int, the index encode is version 0.
