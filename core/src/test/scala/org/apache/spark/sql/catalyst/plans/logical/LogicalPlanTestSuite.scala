@@ -130,6 +130,34 @@ class LogicalPlanTestSuite extends BasePlanTest {
 
   // https://github.com/pingcap/tispark/issues/2290
   test("fix cannot encode row key with non-long type") {
+    val tiSparkTeleInfo = TiSparkTeleInfo.getTiSparkTeleInfo()
+    val version = tiSparkTeleInfo.get("tidb_version")
+    if (version.isEmpty) {
+      fail("TiDB version can not be empty")
+    }
+    if (version.get.toString.compareTo("v5") > 0) {
+      tidbStmt.execute("""
+                         |CREATE TABLE `t1` (
+                         |  `a` BIGINT(20) NOT NULL,
+                         |  `b` varchar(255) NOT NULL,
+                         |  `c` varchar(255) DEFAULT NULL,
+                         |   PRIMARY KEY (`a`) clustered
+                         |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    } else {
+      val config =
+        tidbStmt.executeQuery("show config where type='tidb' and name='alter-primary-key'")
+      if (!config.next() || config.getString(4).toLowerCase() == "true") {
+        cancel("TiDB config alter-primary-key must be false")
+      }
+      tidbStmt.execute("""
+                         |CREATE TABLE `t1` (
+                         |  `a` INT(20) NOT NULL,
+                         |  `b` varchar(255) NOT NULL,
+                         |  `c` varchar(255) DEFAULT NULL,
+                         |   PRIMARY KEY (`a`)
+                         |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    }
+
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     tidbStmt.execute("""
         |CREATE TABLE `t1` (
