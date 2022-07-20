@@ -22,6 +22,8 @@ import org.apache.spark.sql.{BaseTiSparkTest, Row}
 import org.scalatest.Matchers.{contain, convertToAnyShouldWrapper, have, the}
 
 import java.sql.{Date, ResultSet, Timestamp}
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class PartitionWriteSuite extends BaseTiSparkTest {
 
@@ -297,13 +299,15 @@ class PartitionWriteSuite extends BaseTiSparkTest {
       Row(Timestamp.valueOf("1995-08-08 15:15:15"), "John"),
       Row(Timestamp.valueOf("1993-08-22 15:15:15"), "Jack"),
       Row(Timestamp.valueOf("1999-06-04 15:15:15"), "Mike"))
+
+    val f = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     checkJDBCResult(
       insertResultJDBC,
       Array(
-        Array(Timestamp.valueOf("1995-06-15 15:15:15"), "Luo"),
-        Array(Timestamp.valueOf("1995-08-08 15:15:15"), "John"),
-        Array(Timestamp.valueOf("1993-08-22 15:15:15"), "Jack"),
-        Array(Timestamp.valueOf("1999-06-04 15:15:15"), "Mike")))
+        Array(LocalDateTime.from(f.parse("1995-06-15 15:15:15")), "Luo"),
+        Array(LocalDateTime.from(f.parse("1995-08-08 15:15:15")), "John"),
+        Array(LocalDateTime.from(f.parse("1993-08-22 15:15:15")), "Jack"),
+        Array(LocalDateTime.from(f.parse("1999-06-04 15:15:15")), "Mike")))
 
     spark.sql(
       s"delete from `tidb_catalog`.`$database`.`$table` where birthday <= '1995-06-15 15:15:15' or name = 'Mike'")
@@ -314,7 +318,7 @@ class PartitionWriteSuite extends BaseTiSparkTest {
       Row(Timestamp.valueOf("1995-08-08 15:15:15"), "John"))
     checkJDBCResult(
       deleteResultJDBC,
-      Array(Array(Timestamp.valueOf("1995-08-08 15:15:15"), "John")))
+      Array(Array(LocalDateTime.from(f.parse("1995-08-08 15:15:15")), "John")))
   }
 
   test("date type range column partition replace and delete test") {
