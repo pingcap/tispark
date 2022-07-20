@@ -119,7 +119,7 @@ public class IndexKeyTest {
                 tableInfo.getId(), indexInfo1.getId(), TypedKey.toTypedKey(1, IntegerType.BIGINT))
             .getBytes());
     testRows.add(row1);
-    expectations.add(new Pair<>(false, codecDataOutputRow1.toBytes()));
+    expectations.add(new Pair<>(true, codecDataOutputRow1.toBytes()));
 
     Object[] row2 = new Object[] {null, "2"};
     CodecDataOutput codecDataOutputRow2 = new CodecDataOutput();
@@ -133,7 +133,7 @@ public class IndexKeyTest {
         CommonHandle.newCommonHandle(new DataType[] {StringType.VARCHAR}, new Object[] {"2"})
             .encodedAsKey());
     testRows.add(row2);
-    expectations.add(new Pair<>(true, codecDataOutputRow2.toBytes()));
+    expectations.add(new Pair<>(false, codecDataOutputRow2.toBytes()));
 
     for (int i = 0; i < testRows.size(); i++) {
       Row row = ObjectRowImpl.create(testRows.get(i));
@@ -205,7 +205,7 @@ public class IndexKeyTest {
                 tableInfo.getId(), indexInfo1.getId(), TypedKey.toTypedKey(1, IntegerType.BIGINT))
             .getBytes());
     testRows.add(row1);
-    expectations.add(new Pair<>(false, codecDataOutputRow1.toBytes()));
+    expectations.add(new Pair<>(true, codecDataOutputRow1.toBytes()));
 
     Object[] row2 = new Object[] {null, 2};
     CodecDataOutput codecDataOutputRow2 = new CodecDataOutput();
@@ -217,7 +217,7 @@ public class IndexKeyTest {
                 TypedKey.toTypedKey(2, IntegerType.BIGINT))
             .getBytes());
     testRows.add(row2);
-    expectations.add(new Pair<>(true, codecDataOutputRow2.toBytes()));
+    expectations.add(new Pair<>(false, codecDataOutputRow2.toBytes()));
 
     for (int i = 0; i < testRows.size(); i++) {
       Row row = ObjectRowImpl.create(testRows.get(i));
