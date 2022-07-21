@@ -77,3 +77,5 @@ tikv-client/src/main/java/com/pingcap/tikv/parser/*.tokens
 
 # ignore log4j config
 log4j.properties
+.run
+.vscode
