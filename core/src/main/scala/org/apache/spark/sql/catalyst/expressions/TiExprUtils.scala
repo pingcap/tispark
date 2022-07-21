@@ -96,8 +96,9 @@ object TiExprUtils {
               dagRequest.getFields.head
             }
           }
-
-          dagRequest.addRequiredColumn(firstColRef)
+          if (!dagRequest.getFields.isEmpty) {
+            dagRequest.addRequiredColumn(firstColRef)
+          }
           // we need to push down Constant(1) for count(1) or count(*)
           Constant.create(1, null)
         } else {
