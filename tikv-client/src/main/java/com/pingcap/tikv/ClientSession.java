@@ -4,7 +4,7 @@ import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.util.ConverterUpstream;
 import java.util.function.Function;
 import lombok.Getter;
-import org.tikv.common.Snapshot;
+import com.pingcap.tikv.Snapshot;
 import org.tikv.common.event.CacheInvalidateEvent;
 import org.tikv.common.meta.TiTimestamp;
 
@@ -12,7 +12,7 @@ import org.tikv.common.meta.TiTimestamp;
 public class ClientSession {
   private final TiConfiguration conf;
   private final org.tikv.common.TiSession tikvSession;
-  private volatile Catalog catalog;
+  private final Catalog catalog;
 
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
   /**
@@ -29,7 +29,13 @@ public class ClientSession {
     this.tikvSession =
         org.tikv.common.TiSession.create(ConverterUpstream.convertTiConfiguration(config));
     this.catalog =
-        new Catalog(tikvSession::createSnapshot, config.isShowRowId(), config.getDBPrefix());
+        new Catalog(this::createSnapshot, config.isShowRowId(), config.getDBPrefix());
+  }
+
+  public Snapshot createSnapshot() {
+    //checkIsClosed();
+
+    return new Snapshot(this.tikvSession.getTimestamp(), this.conf);
   }
 
   public synchronized Catalog getOrCreateSnapShotCatalog(TiTimestamp ts) {
@@ -44,7 +50,7 @@ public class ClientSession {
   }
 
   public Snapshot createSnapshotWithSnapshotTimestamp() {
-    return new Snapshot(snapshotTimestamp, this.tikvSession);
+    return new Snapshot(snapshotTimestamp, conf);
   }
 
   private volatile TiTimestamp snapshotTimestamp;

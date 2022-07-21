@@ -35,6 +35,9 @@ import org.tikv.kvproto.Pdpb.TsoResponse;
 import org.tikv.shade.io.grpc.Server;
 import org.tikv.shade.io.grpc.ServerBuilder;
 import org.tikv.shade.io.grpc.Status;
+import org.tikv.shade.io.grpc.health.v1.HealthCheckRequest;
+import org.tikv.shade.io.grpc.health.v1.HealthCheckResponse;
+import org.tikv.shade.io.grpc.health.v1.HealthGrpc;
 import org.tikv.shade.io.grpc.stub.StreamObserver;
 
 public class PDMockServer extends PDGrpc.PDImplBase {
@@ -134,12 +137,25 @@ public class PDMockServer extends PDGrpc.PDImplBase {
     }
   }
 
+  private static class HealCheck extends HealthGrpc.HealthImplBase {
+    @Override
+    public void check(
+        HealthCheckRequest request, StreamObserver<HealthCheckResponse> responseObserver) {
+      responseObserver.onNext(
+          HealthCheckResponse.newBuilder()
+              .setStatus(HealthCheckResponse.ServingStatus.SERVING)
+              .build());
+      responseObserver.onCompleted();
+    }
+  }
+
   public void start(long clusterId) throws IOException {
     try (ServerSocket s = new ServerSocket(0)) {
       port = s.getLocalPort();
     }
     this.clusterId = clusterId;
-    server = ServerBuilder.forPort(port).addService(this).build().start();
+    server =
+        ServerBuilder.forPort(port).addService(new HealCheck()).addService(this).build().start();
 
     Runtime.getRuntime().addShutdownHook(new Thread(PDMockServer.this::stop));
   }

@@ -27,7 +27,7 @@ import com.pingcap.tikv.types.DataType
 import com.pingcap.tispark.statistics.StatisticsHelper.shouldUpdateHistogram
 import com.pingcap.tispark.statistics.estimate.{DefaultTableSizeEstimator, TableSizeEstimator}
 import org.slf4j.LoggerFactory
-import org.tikv.common.Snapshot
+import com.pingcap.tikv.Snapshot
 import org.tikv.shade.com.google.common.cache.CacheBuilder
 
 import scala.collection.JavaConversions._
@@ -274,11 +274,11 @@ object StatisticsManager {
       }
     }
 
-  protected def initialize(tiSession: ClientSession): Unit = {
-    session = tiSession
-    snapshot = tiSession.getTikvSession.createSnapshot()
-    catalog = tiSession.getCatalog
-    dbPrefix = tiSession.getConf.getDBPrefix
+  protected def initialize(clientSession: ClientSession): Unit = {
+    session = clientSession
+    snapshot = clientSession.createSnapshot()
+    catalog = clientSession.getCatalog
+    dbPrefix = clientSession.getConf.getDBPrefix
     // An estimator used to calculate table size.
     tableSizeEstimator = DefaultTableSizeEstimator
     val mysqlDB = catalog.getDatabaseFromCache(s"${dbPrefix}mysql")

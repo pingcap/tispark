@@ -25,7 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutorCompletionService;
-import org.tikv.common.Snapshot;
+import com.pingcap.tikv.Snapshot;
 import org.tikv.common.TiConfiguration;
 import org.tikv.common.TiSession;
 import org.tikv.common.util.RangeSplitter;

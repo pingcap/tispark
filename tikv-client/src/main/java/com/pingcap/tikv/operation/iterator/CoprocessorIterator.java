@@ -219,14 +219,14 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
    * @param session TiSession
    * @return a DAGIterator to be processed
    */
-  public static CoprocessorIterator<Handle> getHandleIterator(
+  public static CoprocessorIterator<Long> getHandleIterator (
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     TiDAGRequest dagRequest = req.copy();
     // set encode type to TypeDefault because currently, only
     // CoprocessorIterator<TiChunk> support TypeChunk and TypeCHBlock encode type
     dagRequest.setEncodeType(EncodeType.TypeDefault);
     DAGRequest request = dagRequest.buildDAGGetIndexData();
-    return new DAGIterator<Handle>(
+    return new DAGIterator<Long>(
         request,
         regionTasks,
         session,
@@ -235,18 +235,8 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         dagRequest.getStoreType(),
         dagRequest.getStartTs().getVersion()) {
       @Override
-      public Handle next() {
-        Row row = rowReader.readRow(handleTypes);
-        Object[] data = new Object[handleTypes.length];
-        for (int i = 0; i < handleTypes.length; i++) {
-          data[i] = row.get(i, handleTypes[i]);
-        }
-
-        if (handleTypes.length == 1 && handleTypes[0] == IntegerType.BIGINT) {
-          return new IntHandle((long) data[0]);
-        } else {
-          return CommonHandle.newCommonHandle(handleTypes, data);
-        }
+      public Long next() {
+          return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);
       }
     };
   }

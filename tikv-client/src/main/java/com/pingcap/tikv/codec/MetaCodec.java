@@ -26,7 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tikv.common.Snapshot;
+import com.pingcap.tikv.Snapshot;
 import org.tikv.common.util.Pair;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;

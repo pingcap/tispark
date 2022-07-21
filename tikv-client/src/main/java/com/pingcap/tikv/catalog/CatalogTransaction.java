@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tikv.common.Snapshot;
+import com.pingcap.tikv.Snapshot;
 import org.tikv.common.util.Pair;
 import org.tikv.shade.com.google.common.collect.ImmutableList;
 import org.tikv.shade.com.google.protobuf.ByteString;

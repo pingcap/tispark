@@ -20,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.KVMockServer;
 import com.pingcap.tikv.PDMockServerTest;
 import com.pingcap.tikv.meta.MetaUtils.MetaMockHelper;
@@ -32,8 +33,8 @@ import java.util.stream.Collectors;
 import org.junit.Before;
 import org.junit.Test;
 import org.tikv.common.region.TiRegion;
-import org.tikv.kvproto.Kvrpcpb.CommandPri;
-import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
+import org.tikv.common.region.TiStore;
+import org.tikv.kvproto.Metapb;
 
 public class CatalogTest extends PDMockServerTest {
   KVMockServer kvServer;
@@ -43,12 +44,20 @@ public class CatalogTest extends PDMockServerTest {
   public void setUp() throws IOException {
     super.setUp();
     kvServer = new KVMockServer();
+    List<Metapb.Store> s =
+        ImmutableList.of(
+            Metapb.Store.newBuilder()
+                .setAddress("localhost:1234")
+                .setVersion("5.0.0")
+                .setId(13)
+                .build());
     kvServer.start(
         new TiRegion(
+            session.getConf(),
             MetaMockHelper.region,
             MetaMockHelper.region.getPeers(0),
-            IsolationLevel.RC,
-            CommandPri.Low));
+            MetaMockHelper.region.getPeersList(),
+            s.stream().map(TiStore::new).collect(Collectors.toList())));
   }
 
   @Test
@@ -60,7 +69,7 @@ public class CatalogTest extends PDMockServerTest {
     helper.addDatabase(130, "global_temp");
     helper.addDatabase(264, "TPCH_001");
 
-    Catalog cat = session.getCatalog();
+    Catalog cat = clientSession.getCatalog();
     List<TiDBInfo> dbs = cat.listDatabases();
     List<String> names = dbs.stream().map(TiDBInfo::getName).sorted().collect(Collectors.toList());
     assertEquals(2, dbs.size());
@@ -96,7 +105,7 @@ public class CatalogTest extends PDMockServerTest {
     helper.addTable(130, 42, "test");
     helper.addTable(130, 43, "test1");
 
-    Catalog cat = session.getCatalog();
+    Catalog cat = clientSession.getCatalog();
     TiDBInfo db = cat.getDatabase("gLObal_temp");
     List<TiTableInfo> tables = cat.listTables(db);
     List<String> names =

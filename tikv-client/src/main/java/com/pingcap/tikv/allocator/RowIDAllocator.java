@@ -36,7 +36,7 @@ import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.common.BytePairWrapper;
-import org.tikv.common.Snapshot;
+import com.pingcap.tikv.Snapshot;
 import org.tikv.common.TiSession;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.util.BackOffFunction;
@@ -113,12 +113,12 @@ public final class RowIDAllocator implements Serializable {
     RowIDAllocator allocator = new RowIDAllocator(table.getMaxShardRowIDBits(), dbId, step, conf);
     if (unsigned) {
       allocator.initUnsigned(
-          ClientSession.getInstance(conf).getTikvSession().createSnapshot(),
+          ClientSession.getInstance(conf).createSnapshot(),
           table.getId(),
           table.getMaxShardRowIDBits());
     } else {
       allocator.initSigned(
-          ClientSession.getInstance(conf).getTikvSession().createSnapshot(),
+          ClientSession.getInstance(conf).createSnapshot(),
           table.getId(),
           table.getMaxShardRowIDBits());
     }

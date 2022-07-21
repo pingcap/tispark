@@ -30,7 +30,7 @@ public class CatalogTransactionTest extends CatalogTest {
     MetaMockHelper helper = new MetaMockHelper(pdServer, kvServer);
     helper.preparePDForRegionRead();
     helper.setSchemaVersion(666);
-    CatalogTransaction trx = new CatalogTransaction(session.createSnapshot());
+    CatalogTransaction trx = new CatalogTransaction(clientSession.createSnapshot());
     assertEquals(666, trx.getLatestSchemaVersion());
   }
 
@@ -41,7 +41,7 @@ public class CatalogTransactionTest extends CatalogTest {
     helper.addDatabase(130, "global_temp");
     helper.addDatabase(264, "TPCH_001");
 
-    CatalogTransaction trx = new CatalogTransaction(session.createSnapshot());
+    CatalogTransaction trx = new CatalogTransaction(clientSession.createSnapshot());
     List<TiDBInfo> dbs = trx.getDatabases();
     assertEquals(2, dbs.size());
     assertEquals(130, dbs.get(0).getId());
@@ -64,7 +64,7 @@ public class CatalogTransactionTest extends CatalogTest {
       helper.addDatabase(263 + i, String.format("TPCH_%03d", i));
     }
 
-    CatalogTransaction trx = new CatalogTransaction(session.createSnapshot());
+    CatalogTransaction trx = new CatalogTransaction(clientSession.createSnapshot());
     List<TiDBInfo> dbs = trx.getDatabases();
     assertEquals(201, dbs.size());
     assertEquals(130, dbs.get(0).getId());
@@ -92,7 +92,7 @@ public class CatalogTransactionTest extends CatalogTest {
     helper.addTable(130, 42, "test");
     helper.addTable(130, 43, "test1");
 
-    CatalogTransaction trx = new CatalogTransaction(session.createSnapshot());
+    CatalogTransaction trx = new CatalogTransaction(clientSession.createSnapshot());
     List<TiTableInfo> tables = trx.getTables(130);
     assertEquals(2, tables.size());
     assertEquals("test", tables.get(0).getName());
