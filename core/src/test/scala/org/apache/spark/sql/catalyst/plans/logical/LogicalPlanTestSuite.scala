@@ -16,6 +16,7 @@
 
 package org.apache.spark.sql.catalyst.plans.logical
 
+import com.pingcap.tikv.StoreVersion
 import com.pingcap.tikv.codec.KeyUtils
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.{greaterEqual, lessEqual}
 import com.pingcap.tikv.expression.{ColumnRef, Constant, Expression, LogicalBinaryExpression}
@@ -51,8 +52,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
 
   test("fix Residual Filter containing wrong info") {
     val df = spark
-      .sql("select * from full_data_type_table where tp_mediumint>0 order by tp_int")
-    df.explain(true)
+      .sql("select * from full_data_type_table where tp_mediumint > 0 order by tp_int")
     if (extractDAGRequests(df).head.toString.contains("Residual Filters")) {
       fail("Residual Filters should not appear")
     }
@@ -129,13 +129,8 @@ class LogicalPlanTestSuite extends BasePlanTest {
 
   // https://github.com/pingcap/tispark/issues/2290
   test("fix cannot encode row key with non-long type") {
-    val tiSparkTeleInfo = TiSparkTeleInfo.getTiSparkTeleInfo()
-    val version = tiSparkTeleInfo.get("tidb_version")
-    if (version.isEmpty) {
-      fail("TiDB version can not be empty")
-    }
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    if (version.get.toString.compareTo("v5") > 0) {
+    if (StoreVersion.minTiKVVersion("5", this.ti.tiSession.getPDClient)) {
       tidbStmt.execute("""
                          |CREATE TABLE `t1` (
                          |  `a` BIGINT UNSIGNED  NOT NULL,
