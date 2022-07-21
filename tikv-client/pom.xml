@@ -255,26 +255,6 @@
                             <outputDirectory>${proto.folder}</outputDirectory>
                             <resources>
                                 <resource>
-                                    <directory>${basedir}/kvproto/include</directory>
-                                    <includes>
-                                        <include>**/gogoproto/**</include>
-                                    </includes>
-                                </resource>
-                                <resource>
-                                    <directory>${basedir}/kvproto/include</directory>
-                                    <includes>
-                                        <include>*.proto</include>
-                                    </includes>
-                                </resource>
-                                <resource>
-                                    <directory>${basedir}/kvproto/proto</directory>
-                                    <filtering>true</filtering>
-                                </resource>
-                                <resource>
-                                    <directory>${basedir}/raft-rs/proto/proto</directory>
-                                    <filtering>true</filtering>
-                                </resource>
-                                <resource>
                                     <directory>${basedir}/tipb/proto</directory>
                                     <filtering>true</filtering>
                                 </resource>
@@ -494,6 +474,39 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.google.code.maven-replacer-plugin</groupId>
+                <artifactId>replacer</artifactId>
+                <version>1.5.3</version>
+                <executions>
+                    <execution>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>replace</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <ignoreMissingFile>false</ignoreMissingFile>
+                    <includes>
+                        <include>${basedir}/target/generated-sources/protobuf/**</include>
+                    </includes>
+                    <replacements>
+                        <replacement>
+                            <token>io.grpc</token>
+                            <value>org.tikv.shade.io.grpc</value>
+                        </replacement>
+                        <replacement>
+                            <token>com.google</token>
+                            <value>org.tikv.shade.com.google</value>
+                        </replacement>
+                        <replacement>
+                            <token>io.netty</token>
+                            <value>org.tikv.shade.io.netty</value>
+                        </replacement>
+                    </replacements>
+                </configuration>
             </plugin>
         </plugins>
     </build>

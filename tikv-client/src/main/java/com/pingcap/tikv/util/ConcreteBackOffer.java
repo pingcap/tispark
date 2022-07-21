@@ -18,7 +18,6 @@
 
 package com.pingcap.tikv.util;
 
-import com.google.common.base.Preconditions;
 import com.pingcap.tikv.exception.GrpcException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.shade.com.google.common.base.Preconditions;
 
 public class ConcreteBackOffer implements BackOffer {
   private static final Logger logger = LoggerFactory.getLogger(ConcreteBackOffer.class);

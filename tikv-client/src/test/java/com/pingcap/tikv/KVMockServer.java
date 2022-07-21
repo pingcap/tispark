@@ -18,19 +18,19 @@ package com.pingcap.tikv;
 
 import static com.pingcap.tikv.key.Key.toRawKey;
 
-import com.google.common.collect.ImmutableList;
-import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.region.TiRegion;
-import io.grpc.Server;
-import io.grpc.ServerBuilder;
-import io.grpc.Status;
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Errorpb;
@@ -40,6 +40,12 @@ import org.tikv.kvproto.Errorpb.ServerIsBusy;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.Context;
 import org.tikv.kvproto.TikvGrpc;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
+import org.tikv.shade.com.google.protobuf.ByteString;
+import org.tikv.shade.io.grpc.Server;
+import org.tikv.shade.io.grpc.ServerBuilder;
+import org.tikv.shade.io.grpc.Status;
+import org.tikv.shade.io.grpc.stub.StreamObserver;
 
 public class KVMockServer extends TikvGrpc.TikvImplBase {
 
@@ -101,8 +107,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   @Override
   public void rawGet(
-      org.tikv.kvproto.Kvrpcpb.RawGetRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.RawGetResponse> responseObserver) {
+      Kvrpcpb.RawGetRequest request, StreamObserver<Kvrpcpb.RawGetResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       ByteString key = request.getKey();
@@ -190,8 +195,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   @Override
   public void kvGet(
-      org.tikv.kvproto.Kvrpcpb.GetRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.GetResponse> responseObserver) {
+      Kvrpcpb.GetRequest request, StreamObserver<Kvrpcpb.GetResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       if (request.getVersion() == 0) {
@@ -222,8 +226,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   @Override
   public void kvScan(
-      org.tikv.kvproto.Kvrpcpb.ScanRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.ScanResponse> responseObserver) {
+      Kvrpcpb.ScanRequest request, StreamObserver<Kvrpcpb.ScanResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       if (request.getVersion() == 0) {
@@ -263,8 +266,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   @Override
   public void kvBatchGet(
-      org.tikv.kvproto.Kvrpcpb.BatchGetRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.BatchGetResponse> responseObserver) {
+      Kvrpcpb.BatchGetRequest request, StreamObserver<Kvrpcpb.BatchGetResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       if (request.getVersion() == 0) {
@@ -298,8 +300,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   @Override
   public void coprocessor(
-      org.tikv.kvproto.Coprocessor.Request requestWrap,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Coprocessor.Response> responseObserver) {
+      Coprocessor.Request requestWrap, StreamObserver<Coprocessor.Response> responseObserver) {
     try {
       verifyContext(requestWrap.getContext());
 
@@ -346,8 +347,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   @Override
   public void kvPrewrite(
-      org.tikv.kvproto.Kvrpcpb.PrewriteRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.PrewriteResponse> responseObserver) {
+      Kvrpcpb.PrewriteRequest request, StreamObserver<Kvrpcpb.PrewriteResponse> responseObserver) {
     Kvrpcpb.PrewriteResponse.Builder builder = Kvrpcpb.PrewriteResponse.newBuilder();
     ByteString key = request.getPrimaryLock();
     Integer errorCode = errorMap.remove(key);

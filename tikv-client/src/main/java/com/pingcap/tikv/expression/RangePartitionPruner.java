@@ -18,7 +18,6 @@ package com.pingcap.tikv.expression;
 
 import static com.pingcap.tikv.expression.PartitionPruner.extractLogicalOrComparisonExpr;
 
-import com.google.common.collect.RangeSet;
 import com.pingcap.tikv.exception.UnsupportedPartitionExprException;
 import com.pingcap.tikv.exception.UnsupportedSyntaxException;
 import com.pingcap.tikv.expression.visitor.PartAndFilterExprRewriter;
@@ -34,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import org.tikv.shade.com.google.common.collect.RangeSet;
 
 @SuppressWarnings("UnstableApiUsage")
 public class RangePartitionPruner {

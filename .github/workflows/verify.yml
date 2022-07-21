@@ -66,4 +66,4 @@ jobs:
           cache: maven
       - name: ut
         run: |
-          lsmod | grep -qw ipv6 && mvn test -am -pl tikv-client -DsomeModule.test.excludes="**/txn/*" -B || mvn test -am -pl tikv-client -DsomeModule.test.excludes="**/txn/*,**/PDClientTest.java" -B
+          lsmod | grep -qw ipv6 && timeout 30m mvn clean test -am -pl tikv-client -DsomeModule.test.excludes="**/txn/*" -B || timeout 30m mvn clean test -am -pl tikv-client -DsomeModule.test.excludes="**/txn/*,**/PDClientTest.java" -B

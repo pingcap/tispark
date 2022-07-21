@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.codec;
 
-import com.google.common.primitives.Longs;
+import org.tikv.shade.com.google.common.primitives.Longs;
 
 public class CodecDataOutputLittleEndian extends CodecDataOutput {
   public CodecDataOutputLittleEndian() {

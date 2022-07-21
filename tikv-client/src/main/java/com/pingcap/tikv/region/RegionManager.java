@@ -22,9 +22,6 @@ import static com.pingcap.tikv.codec.KeyUtils.formatBytesUTF8;
 import static com.pingcap.tikv.codec.KeyUtils.getEncodedKey;
 import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
 
-import com.google.common.collect.RangeMap;
-import com.google.common.collect.TreeRangeMap;
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.GrpcException;
@@ -44,6 +41,9 @@ import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.Metapb.StoreState;
+import org.tikv.shade.com.google.common.collect.RangeMap;
+import org.tikv.shade.com.google.common.collect.TreeRangeMap;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 @SuppressWarnings("UnstableApiUsage")
 public class RegionManager {

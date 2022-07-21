@@ -20,7 +20,6 @@ import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertTrue;
 import static junit.framework.TestCase.fail;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.StoreVersion;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
@@ -47,6 +46,7 @@ import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.Mutation;
 import org.tikv.kvproto.Kvrpcpb.Op;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 abstract class LockResolverTest {
   protected static final long LARGE_LOCK_TTL = BackOffer.GET_MAX_BACKOFF + 2 * 1000;

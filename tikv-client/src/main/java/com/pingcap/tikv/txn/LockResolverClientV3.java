@@ -20,7 +20,6 @@ package com.pingcap.tikv.txn;
 
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.KeyException;
@@ -54,6 +53,7 @@ import org.tikv.kvproto.Kvrpcpb.CleanupResponse;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import org.tikv.kvproto.TikvGrpc.TikvStub;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 /** Since v3.0.5 TiDB ignores the ttl on secondary lock and will use the ttl on primary key. */
 public class LockResolverClientV3 extends AbstractRegionStoreClient

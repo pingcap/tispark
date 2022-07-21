@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.txn;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.GrpcException;
@@ -32,12 +31,13 @@ import com.pingcap.tikv.txn.type.ClientRPCResult;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import io.grpc.StatusRuntimeException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Metapb;
+import org.tikv.shade.com.google.protobuf.ByteString;
+import org.tikv.shade.io.grpc.StatusRuntimeException;
 
 /** KV client of transaction APIs for GET/PUT/DELETE/SCAN */
 public class TxnKVClient implements AutoCloseable {

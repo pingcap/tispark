@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.parser;
 
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
@@ -33,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class TiParserTest {
 

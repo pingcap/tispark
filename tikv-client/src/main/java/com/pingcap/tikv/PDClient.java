@@ -16,13 +16,10 @@
 
 package com.pingcap.tikv;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.pingcap.tikv.operation.PDErrorHandler.getRegionResponseErrorExtractor;
 import static com.pingcap.tikv.pd.PDError.buildFromPdpbError;
+import static org.tikv.shade.com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.KeyUtils;
@@ -43,7 +40,6 @@ import io.etcd.jetcd.Client;
 import io.etcd.jetcd.KeyValue;
 import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.options.GetOption;
-import io.grpc.ManagedChannel;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -82,6 +78,10 @@ import org.tikv.kvproto.Pdpb.ScatterRegionResponse;
 import org.tikv.kvproto.Pdpb.Timestamp;
 import org.tikv.kvproto.Pdpb.TsoRequest;
 import org.tikv.kvproto.Pdpb.TsoResponse;
+import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
+import org.tikv.shade.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.tikv.shade.com.google.protobuf.ByteString;
+import org.tikv.shade.io.grpc.ManagedChannel;
 
 public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     implements ReadOnlyPDClient {

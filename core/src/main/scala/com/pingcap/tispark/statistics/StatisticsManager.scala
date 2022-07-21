@@ -18,7 +18,7 @@
 
 package com.pingcap.tispark.statistics
 
-import com.google.common.cache.CacheBuilder
+import org.tikv.shade.com.google.common.cache.CacheBuilder
 import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.Row

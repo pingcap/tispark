@@ -21,7 +21,6 @@ package com.pingcap.tikv.operation;
 import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
 import static org.junit.Assert.assertEquals;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.CatalogTransaction;
 import com.pingcap.tikv.expression.AggregateFunction;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
@@ -37,6 +36,7 @@ import com.pingcap.tikv.types.StringType;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class SchemaInferTest {
   private final String table29 =

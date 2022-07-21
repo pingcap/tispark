@@ -16,10 +16,10 @@
 
 package com.pingcap.tikv.txn.type;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.region.TiRegion;
 import java.util.ArrayList;
 import java.util.List;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class BatchKeys {
   private final TiRegion region;

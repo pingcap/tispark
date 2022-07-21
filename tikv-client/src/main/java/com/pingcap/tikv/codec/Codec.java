@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.codec;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static org.tikv.shade.com.google.common.base.Preconditions.checkArgument;
 
 import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.exception.CodecException;

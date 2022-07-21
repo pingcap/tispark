@@ -16,16 +16,13 @@
 
 package com.pingcap.tikv;
 
-import io.grpc.Server;
-import io.grpc.ServerBuilder;
-import io.grpc.Status;
-import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.Deque;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingDeque;
 import org.tikv.kvproto.PDGrpc;
+import org.tikv.kvproto.Pdpb;
 import org.tikv.kvproto.Pdpb.GetMembersRequest;
 import org.tikv.kvproto.Pdpb.GetMembersResponse;
 import org.tikv.kvproto.Pdpb.GetRegionByIDRequest;
@@ -35,6 +32,10 @@ import org.tikv.kvproto.Pdpb.GetStoreRequest;
 import org.tikv.kvproto.Pdpb.GetStoreResponse;
 import org.tikv.kvproto.Pdpb.TsoRequest;
 import org.tikv.kvproto.Pdpb.TsoResponse;
+import org.tikv.shade.io.grpc.Server;
+import org.tikv.shade.io.grpc.ServerBuilder;
+import org.tikv.shade.io.grpc.Status;
+import org.tikv.shade.io.grpc.stub.StreamObserver;
 
 public class PDMockServer extends PDGrpc.PDImplBase {
   private final Deque<java.util.Optional<GetMembersResponse>> getMembersResp =
@@ -123,8 +124,8 @@ public class PDMockServer extends PDGrpc.PDImplBase {
 
   @Override
   public void getAllStores(
-      org.tikv.kvproto.Pdpb.GetAllStoresRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Pdpb.GetAllStoresResponse> responseObserver) {
+      Pdpb.GetAllStoresRequest request,
+      StreamObserver<Pdpb.GetAllStoresResponse> responseObserver) {
     try {
       responseObserver.onNext(null);
       responseObserver.onCompleted();

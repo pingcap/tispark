@@ -16,12 +16,12 @@
 
 package com.pingcap.tikv.codec;
 
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.types.IntegerType;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class TableCodecTest {
   @Rule public ExpectedException expectedEx = ExpectedException.none();
