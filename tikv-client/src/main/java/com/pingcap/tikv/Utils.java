@@ -16,13 +16,13 @@
 
 package com.pingcap.tikv;
 
-import com.google.common.collect.ImmutableMap;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.tikv.shade.com.google.common.collect.ImmutableMap;
 
 public class Utils {
   // org.apache.spark.network.util.JavaUtils

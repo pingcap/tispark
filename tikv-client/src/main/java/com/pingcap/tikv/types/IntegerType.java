@@ -18,7 +18,6 @@
 
 package com.pingcap.tikv.types;
 
-import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
@@ -30,6 +29,7 @@ import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.math.BigDecimal;
+import org.tikv.shade.com.google.common.primitives.UnsignedLong;
 
 public class IntegerType extends DataType {
   public static final IntegerType TINYINT = new IntegerType(MySQLType.TypeTiny);

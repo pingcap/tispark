@@ -18,7 +18,6 @@
 
 package com.pingcap.tikv.region;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.KeyUtils;
@@ -36,6 +35,7 @@ import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Region;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class TiRegion implements Serializable {
   private final Region meta;

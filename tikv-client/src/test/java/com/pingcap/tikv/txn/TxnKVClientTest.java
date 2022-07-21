@@ -19,7 +19,6 @@ package com.pingcap.tikv.txn;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.doThrow;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
@@ -30,6 +29,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class TxnKVClientTest {
 

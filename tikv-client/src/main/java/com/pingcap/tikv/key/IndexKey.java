@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.key;
 
-import com.google.common.base.Joiner;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
@@ -26,6 +25,7 @@ import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import java.util.List;
+import org.tikv.shade.com.google.common.base.Joiner;
 
 public class IndexKey extends Key {
   private static final byte[] IDX_PREFIX_SEP = new byte[] {'_', 'i'};

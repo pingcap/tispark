@@ -16,8 +16,6 @@
 
 package com.pingcap.tikv.meta;
 
-import com.google.common.collect.ImmutableList;
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.GrpcUtils;
 import com.pingcap.tikv.KVMockServer;
 import com.pingcap.tikv.PDMockServer;
@@ -32,6 +30,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.tikv.kvproto.Metapb;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class MetaUtils {
   public static class TableBuilder {

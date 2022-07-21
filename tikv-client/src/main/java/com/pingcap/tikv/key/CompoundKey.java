@@ -16,10 +16,10 @@
 
 package com.pingcap.tikv.key;
 
-import com.google.common.base.Joiner;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import java.util.ArrayList;
 import java.util.List;
+import org.tikv.shade.com.google.common.base.Joiner;
 
 public class CompoundKey extends Key {
 

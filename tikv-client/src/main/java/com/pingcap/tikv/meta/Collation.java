@@ -16,8 +16,8 @@
 
 package com.pingcap.tikv.meta;
 
-import com.google.common.collect.ImmutableMap;
 import java.util.Map;
+import org.tikv.shade.com.google.common.collect.ImmutableMap;
 
 public class Collation {
   public static final int DEF_COLLATION_CODE = 83;

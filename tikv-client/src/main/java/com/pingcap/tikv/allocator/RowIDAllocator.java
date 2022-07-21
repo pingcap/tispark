@@ -17,8 +17,6 @@ package com.pingcap.tikv.allocator;
 
 import static com.pingcap.tikv.util.BackOffer.ROW_ID_ALLOCATOR_BACKOFF;
 
-import com.google.common.primitives.UnsignedLongs;
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.BytePairWrapper;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.TiConfiguration;
@@ -46,6 +44,8 @@ import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.shade.com.google.common.primitives.UnsignedLongs;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 /**
  * RowIDAllocator read current start from TiKV and write back 'start+step' back to TiKV. It designs

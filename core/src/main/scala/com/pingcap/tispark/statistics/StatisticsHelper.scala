@@ -18,7 +18,7 @@
 
 package com.pingcap.tispark.statistics
 
-import com.google.common.primitives.UnsignedLong
+import org.tikv.shade.com.google.common.primitives.UnsignedLong
 import com.pingcap.tikv.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
 import com.pingcap.tikv.key.Key
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType

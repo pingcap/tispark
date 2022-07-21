@@ -20,10 +20,8 @@ package com.pingcap.tikv;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ChannelFactory.CertWatcher;
-import io.grpc.ManagedChannel;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +29,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.Test;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
+import org.tikv.shade.io.grpc.ManagedChannel;
 
 public class ChannelFactoryTest {
   private final AtomicLong ts = new AtomicLong(System.currentTimeMillis());

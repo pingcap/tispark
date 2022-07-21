@@ -18,12 +18,12 @@
 
 package com.pingcap.tikv.types;
 
-import com.google.common.collect.ImmutableMap;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.Map;
+import org.tikv.shade.com.google.common.collect.ImmutableMap;
 
 public class DataTypeFactory {
   private static final Map<MySQLType, Constructor<? extends DataType>> dataTypeCreatorMap;
