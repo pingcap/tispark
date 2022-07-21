@@ -16,11 +16,14 @@
 
 package com.pingcap.tispark.telemetry
 
-import com.pingcap.tikv.util.ConcreteBackOffer
-import com.pingcap.tikv.{TiConfiguration, TiSession, TwoPhaseCommitter}
+import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark.utils.{SystemInfoUtil, TiUtil}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
+import org.tikv.common.TiSession
+import org.tikv.common.util.ConcreteBackOffer
+import org.tikv.txn.TwoPhaseCommitter
+
 import java.util.UUID
 
 /**
@@ -43,9 +46,12 @@ class TeleMsg(sparkSession: SparkSession) {
 
   private def generateTrackId(): String = {
     try {
-      val conf = TiConfiguration.createDefault(pdAddr.get)
+
+      val clientSession =
+        ClientSession.getInstance(TiConfiguration.createDefault(pdAddr.get))
+      val conf = clientSession.getConf
       TiUtil.sparkConfToTiConfWithoutPD(SparkSession.active.sparkContext.getConf, conf)
-      val tiSession = TiSession.getInstance(conf)
+      val tiSession = clientSession.getTikvSession
       val snapShot = tiSession.createSnapshot()
       val value = snapShot.get(TRACK_ID.getBytes("UTF-8"))
 
@@ -53,7 +59,7 @@ class TeleMsg(sparkSession: SparkSession) {
         return new String(value, "UTF-8")
 
       val uuid = TRACK_ID_PREFIX + UUID.randomUUID().toString
-      putKeyValue(TRACK_ID, uuid, conf, tiSession)
+      putKeyValue(TRACK_ID, uuid, tiSession)
       uuid
     } catch {
       case e: Throwable =>
@@ -62,14 +68,10 @@ class TeleMsg(sparkSession: SparkSession) {
     }
   }
 
-  private def putKeyValue(
-      key: String,
-      value: String,
-      conf: TiConfiguration,
-      tiSession: TiSession): Unit = {
+  private def putKeyValue(key: String, value: String, tiSession: TiSession): Unit = {
     val startTS = tiSession.getTimestamp.getVersion
     try {
-      val twoPhaseCommitter = new TwoPhaseCommitter(conf, startTS)
+      val twoPhaseCommitter = new TwoPhaseCommitter(tiSession, startTS)
       val backOffer = ConcreteBackOffer.newCustomBackOff(1000)
       twoPhaseCommitter.prewritePrimaryKey(
         backOffer,

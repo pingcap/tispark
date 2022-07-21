@@ -19,6 +19,7 @@ package com.pingcap.tikv;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import java.util.Arrays;
+import org.tikv.common.Version;
 import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Region;
 import org.tikv.kvproto.Metapb.RegionEpoch;

@@ -24,7 +24,7 @@ import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import com.pingcap.tikv.meta.TiColumnInfo;
-import com.pingcap.tikv.util.JsonUtils;
+import org.tikv.common.util.JsonUtils;
 
 public class JsonType extends DataType {
 

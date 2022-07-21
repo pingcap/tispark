@@ -21,10 +21,10 @@ import static java.util.Objects.requireNonNull;
 
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.util.FastByteComparisons;
 import com.pingcap.tikv.util.LogDesensitization;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
+import org.tikv.common.util.FastByteComparisons;
 import org.tikv.shade.com.google.common.primitives.Bytes;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
@@ -42,7 +42,7 @@ public class Key implements Comparable<Key> {
     this.infFlag = (value.length == 0 ? 1 : 0) * (negative ? -1 : 1);
   }
 
-  protected Key(byte[] value) {
+  public Key(byte[] value) {
     this(value, false);
   }
 

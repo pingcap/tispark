@@ -16,15 +16,15 @@
 
 package com.pingcap.tispark.v2
 
-import com.pingcap.tikv.TiSession
+import com.pingcap.tikv.ClientSession
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.key.Handle
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
+import com.pingcap.tikv.handle.Handle
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
+import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
 import com.pingcap.tispark.v2.sink.TiDBWriteBuilder
 import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions}
-import com.pingcap.tispark.TiTableReference
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.catalyst.util.{DateTimeUtils, TimestampFormatter}
@@ -38,41 +38,23 @@ import org.apache.spark.sql.connector.read.ScanBuilder
 import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, SparkPlan}
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.sources.{
-  AlwaysFalse,
-  AlwaysTrue,
-  And,
-  EqualNullSafe,
-  EqualTo,
-  Filter,
-  GreaterThan,
-  GreaterThanOrEqual,
-  In,
-  IsNotNull,
-  IsNull,
-  LessThan,
-  LessThanOrEqual,
-  Not,
-  Or,
-  StringContains,
-  StringEndsWith,
-  StringStartsWith
-}
+import org.apache.spark.sql.sources._
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.sql.{SQLContext, execution}
 import org.slf4j.LoggerFactory
+import org.tikv.common.meta.TiTimestamp
 
 import java.sql.{Date, SQLException, Timestamp}
 import java.time.{Instant, LocalDate}
 import java.util
 import java.util.Collections
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import collection.JavaConverters._
 
 case class TiDBTable(
-    session: TiSession,
+    session: ClientSession,
     tableRef: TiTableReference,
     table: TiTableInfo,
     var ts: TiTimestamp = null,
@@ -179,7 +161,7 @@ case class TiDBTable(
     }
 
     // TODO It's better to use the start_ts of read. We can't get it now.
-    val startTs = session.getTimestamp.getVersion
+    val startTs = session.getTikvSession.getTimestamp.getVersion
     logger.info(s"startTS: $startTs")
 
     // Query data from TiKV (ByPass TiDB)
@@ -209,7 +191,7 @@ object TiDBTable {
   private def getDagRequestToRegionTaskExec(
       dagRequest: TiDAGRequest,
       output: Seq[Attribute],
-      session: TiSession,
+      session: ClientSession,
       sqlContext: SQLContext,
       tableRef: TiTableReference): SparkPlan = {
     import scala.collection.JavaConverters._
@@ -232,7 +214,7 @@ object TiDBTable {
           attributeRef,
           tiConf,
           tableRef,
-          session,
+          session.getTikvSession,
           sqlContext.sparkSession)
     })
 
@@ -245,14 +227,14 @@ object TiDBTable {
       TiUtil.getChunkBatchSize(sqlContext),
       dagRequest,
       session.getConf,
-      session.getTimestamp,
+      session.getTikvSession.getTimestamp,
       sqlContext.sparkSession)
   }
 
   private def getLogicalPlanToRDD(
       dagRequest: TiDAGRequest,
       output: Seq[Attribute],
-      session: TiSession,
+      session: ClientSession,
       sqlContext: SQLContext,
       tableRef: TiTableReference): List[TiRowRDD] = {
     import scala.collection.JavaConverters._
@@ -268,7 +250,7 @@ object TiDBTable {
         tiConf,
         output,
         tableRef,
-        session,
+        session.getTikvSession,
         sqlContext.sparkSession)
     })
     tiRDDs.toList

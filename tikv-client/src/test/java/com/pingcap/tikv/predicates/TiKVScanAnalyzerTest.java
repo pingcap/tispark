@@ -28,7 +28,7 @@ import static org.junit.Assert.assertTrue;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.key.IntHandle;
+import com.pingcap.tikv.handle.IntHandle;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.meta.CIStr;
 import com.pingcap.tikv.meta.IndexType;

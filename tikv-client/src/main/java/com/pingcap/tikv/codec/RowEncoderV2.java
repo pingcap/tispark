@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.codec;
 
-import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.Codec.DecimalCodec;
 import com.pingcap.tikv.codec.Codec.EnumCodec;
@@ -34,6 +33,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import org.joda.time.DateTimeZone;
+import org.tikv.common.ExtendedDateTime;
 
 public class RowEncoderV2 {
   private static final long SIGN_MASK = 0x8000000000000000L;

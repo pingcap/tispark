@@ -18,11 +18,14 @@ package com.pingcap.tispark.utils
 
 import com.pingcap.tikv._
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.util.ConcreteBackOffer
 import com.pingcap.tispark.write.{SerializableKey, TiDBOptions}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.slf4j.LoggerFactory
+import org.tikv.common.meta.TiTimestamp
+import org.tikv.common.util.ConcreteBackOffer
+import org.tikv.common.{BytePairWrapper, ByteWrapper, StoreVersion}
+import org.tikv.txn.{TTLManager, TwoPhaseCommitter}
 
 import scala.collection.JavaConverters._
 
@@ -43,7 +46,9 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
   // Init tiConf and tiSession
   // PdAddress get from spark config
   private val tiConf = TwoPhaseCommitHepler.generateTiConf(options)
-  @transient private lazy val tiSession = TiSession.getInstance(tiConf)
+
+  @transient private lazy val clientSession = ClientSession.getInstance(tiConf)
+  @transient private lazy val tiSession = clientSession.getTikvSession
 
   // Init lockTTLSeconds and ttlManager
   private val tikvSupportUpdateTTL: Boolean =
@@ -59,15 +64,10 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
     logger.info("start to prewritePrimaryKey")
 
     ti2PCClient = new TwoPhaseCommitter(
-      tiConf,
+      tiSession,
       startTs,
-      lockTTLSeconds * 1000 + TTLManager.calculateUptime(tiSession.createTxnClient(), startTs),
-      options.txnPrewriteBatchSize,
-      options.txnCommitBatchSize,
-      options.writeBufferSize,
-      options.writeThreadPerTask,
-      options.retryCommitSecondaryKey,
-      options.prewriteMaxRetryTimes)
+      lockTTLSeconds * 1000 + tiSession.createTxnClient().getTimestamp.getPhysical - TiTimestamp
+        .extractPhysical(startTs))
 
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(options.prewriteBackOfferMS)
@@ -86,16 +86,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
 
     secondaryKeysRDD.foreachPartition { iterator =>
       val ti2PCClientOnExecutor =
-        new TwoPhaseCommitter(
-          tiConf,
-          startTs,
-          lockTTLSeconds * 1000,
-          options.txnPrewriteBatchSize,
-          options.txnCommitBatchSize,
-          options.writeBufferSize,
-          options.writeThreadPerTask,
-          options.retryCommitSecondaryKey,
-          options.prewriteMaxRetryTimes)
+        new TwoPhaseCommitter(tiSession, startTs, lockTTLSeconds * 1000)
 
       val pairs = iterator.map { keyValue =>
         new BytePairWrapper(keyValue._1.bytes, keyValue._2)
@@ -195,17 +186,8 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
     if (!options.skipCommitSecondaryKey) {
       logger.info("start to commitSecondaryKeys")
       secondaryKeysRDD.foreachPartition { iterator =>
-        val ti2PCClientOnExecutor = new TwoPhaseCommitter(
-          tiConf,
-          startTs,
-          lockTTLSeconds * 1000,
-          options.txnPrewriteBatchSize,
-          options.txnCommitBatchSize,
-          options.writeBufferSize,
-          options.writeThreadPerTask,
-          options.retryCommitSecondaryKey,
-          options.prewriteMaxRetryTimes)
-
+        val ti2PCClientOnExecutor =
+          new TwoPhaseCommitter(tiSession, startTs, lockTTLSeconds * 1000)
         val keys = iterator.map { keyValue =>
           new ByteWrapper(keyValue._1.bytes)
         }.asJava
@@ -236,7 +218,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
       if (ttlManager != null) {
         ttlManager.close()
       }
-      ttlManager = new TTLManager(tiConf, startTs, primaryKey.bytes)
+      ttlManager = new TTLManager(tiSession, startTs, primaryKey.bytes)
       ttlManager.keepAlive()
     }
   }

@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.EncodeType;
-import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.columnar.BatchedTiChunkColumnVector;
@@ -30,22 +29,19 @@ import com.pingcap.tikv.columnar.TiChunkColumnVector;
 import com.pingcap.tikv.columnar.TiColumnVector;
 import com.pingcap.tikv.columnar.TiRowColumnVector;
 import com.pingcap.tikv.columnar.datatypes.CHType;
-import com.pingcap.tikv.key.CommonHandle;
-import com.pingcap.tikv.key.Handle;
-import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.CHTypeMapping;
-import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import org.tikv.common.TiSession;
+import org.tikv.common.util.RangeSplitter.RegionTask;
 
 public abstract class CoprocessorIterator<T> implements Iterator<T> {
   protected final TiSession session;
@@ -219,14 +215,14 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
    * @param session TiSession
    * @return a DAGIterator to be processed
    */
-  public static CoprocessorIterator<Handle> getHandleIterator(
+  public static CoprocessorIterator<Long> getHandleIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     TiDAGRequest dagRequest = req.copy();
     // set encode type to TypeDefault because currently, only
     // CoprocessorIterator<TiChunk> support TypeChunk and TypeCHBlock encode type
     dagRequest.setEncodeType(EncodeType.TypeDefault);
     DAGRequest request = dagRequest.buildDAGGetIndexData();
-    return new DAGIterator<Handle>(
+    return new DAGIterator<Long>(
         request,
         regionTasks,
         session,
@@ -235,18 +231,8 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         dagRequest.getStoreType(),
         dagRequest.getStartTs().getVersion()) {
       @Override
-      public Handle next() {
-        Row row = rowReader.readRow(handleTypes);
-        Object[] data = new Object[handleTypes.length];
-        for (int i = 0; i < handleTypes.length; i++) {
-          data[i] = row.get(i, handleTypes[i]);
-        }
-
-        if (handleTypes.length == 1 && handleTypes[0] == IntegerType.BIGINT) {
-          return new IntHandle((long) data[0]);
-        } else {
-          return CommonHandle.newCommonHandle(handleTypes, data);
-        }
+      public Long next() {
+        return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);
       }
     };
   }

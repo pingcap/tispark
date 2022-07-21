@@ -16,13 +16,13 @@
 
 package com.pingcap.tispark.write
 
-import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tikv.meta.TiTableInfo
+import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark.utils.TiUtil.sparkConfToTiConf
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TwoPhaseCommitHepler, WriteUtil}
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.{SparkConf, SparkContext}
 import org.slf4j.LoggerFactory
 
 case class TiDBDelete(
@@ -34,7 +34,7 @@ case class TiDBDelete(
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  @transient lazy val tiSession: TiSession = getTiSessionFromSparkConf
+  @transient lazy val tiSession: ClientSession = getTiSessionFromSparkConf
 
   // Call copyTableWithRowId to
   // 1.match the schema of dataframe
@@ -147,10 +147,10 @@ case class TiDBDelete(
     }
   }
 
-  private def getTiSessionFromSparkConf: TiSession = {
+  private def getTiSessionFromSparkConf: ClientSession = {
     val sparkConf: SparkConf = SparkContext.getOrCreate().getConf
     val tiConf: TiConfiguration = sparkConfToTiConf(sparkConf, Option.empty)
-    TiSession.getInstance(tiConf)
+    ClientSession.getInstance(tiConf)
   }
 
 }

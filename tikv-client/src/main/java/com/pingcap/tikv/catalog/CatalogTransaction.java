@@ -28,12 +28,12 @@ import com.pingcap.tikv.codec.MetaCodec;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.util.Pair;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.util.Pair;
 import org.tikv.shade.com.google.common.collect.ImmutableList;
 import org.tikv.shade.com.google.protobuf.ByteString;
 

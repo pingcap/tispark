@@ -18,8 +18,8 @@ package com.pingcap.tikv.codec;
 
 import static org.junit.Assert.assertTrue;
 
-import com.pingcap.tikv.key.Handle;
-import com.pingcap.tikv.key.IntHandle;
+import com.pingcap.tikv.handle.Handle;
+import com.pingcap.tikv.handle.IntHandle;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;

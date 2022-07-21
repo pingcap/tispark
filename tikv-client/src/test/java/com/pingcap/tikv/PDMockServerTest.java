@@ -19,10 +19,12 @@ package com.pingcap.tikv;
 import java.io.IOException;
 import org.junit.After;
 import org.junit.Before;
+import org.tikv.common.TiSession;
 
 public abstract class PDMockServerTest {
   protected static final String LOCAL_ADDR = "127.0.0.1";
   static final long CLUSTER_ID = 1024;
+  protected static ClientSession clientSession;
   protected static TiSession session;
   protected PDMockServer pdServer;
 
@@ -41,7 +43,8 @@ public abstract class PDMockServerTest {
             GrpcUtils.makeMember(2, "http://" + addr + ":" + (pdServer.port + 1)),
             GrpcUtils.makeMember(3, "http://" + addr + ":" + (pdServer.port + 2))));
     TiConfiguration conf = TiConfiguration.createDefault(addr + ":" + pdServer.port);
-    session = TiSession.getInstance(conf);
+    clientSession = ClientSession.getInstance(conf);
+    session = clientSession.getTikvSession();
   }
 
   @After

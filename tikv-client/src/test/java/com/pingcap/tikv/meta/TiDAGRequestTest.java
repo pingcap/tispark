@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Test;
+import org.tikv.common.meta.TiTimestamp;
 import org.tikv.kvproto.Coprocessor;
 import org.tikv.shade.com.google.common.collect.ImmutableList;
 import org.tikv.shade.com.google.common.collect.ImmutableMap;

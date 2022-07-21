@@ -14,18 +14,29 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.util;
+package com.pingcap.tikv.handle;
 
-import com.pingcap.tikv.meta.TiTimestamp;
+import java.io.Serializable;
 
-public final class TsoUtils {
-  public static boolean isExpired(long lockTS, long ttl) {
-    // Because the UNIX time in milliseconds is in long style and will
-    // not exceed to become the negative number, so the comparison is correct
-    return untilExpired(lockTS, ttl) <= 0;
-  }
+public interface Handle extends Serializable {
 
-  public static long untilExpired(long lockTS, long ttl) {
-    return TiTimestamp.extractPhysical(lockTS) + ttl - System.currentTimeMillis();
-  }
+  boolean isInt();
+
+  long intValue();
+
+  Handle next();
+
+  int compare(Handle h);
+
+  byte[] encoded();
+
+  byte[] encodedAsKey();
+
+  int len();
+
+  int numCols();
+
+  byte[] encodedCol(int idx);
+
+  Object[] data();
 }

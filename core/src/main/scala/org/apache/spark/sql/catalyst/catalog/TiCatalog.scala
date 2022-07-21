@@ -16,11 +16,10 @@
 
 package org.apache.spark.sql.catalyst.catalog
 
-import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{MetaManager, TiTableReference}
+import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark.auth.TiAuthorization
-import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable
+import com.pingcap.tispark.{MetaManager, TiTableReference}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{NoSuchNamespaceException, NoSuchTableException}
 import org.apache.spark.sql.connector.catalog._
@@ -28,6 +27,7 @@ import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.slf4j.LoggerFactory
+import org.tikv.common.TiSession
 
 import java.util
 
@@ -39,6 +39,7 @@ object TiCatalog {
 }
 
 class TiCatalog extends TableCatalog with SupportsNamespaces {
+  private var clientSession: Option[ClientSession] = None
   private var tiSession: Option[TiSession] = None
   var meta: Option[MetaManager] = None
   private var _name: Option[String] = None
@@ -66,9 +67,9 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
     logger.info(s"Initialize TiCatalog with name: $name, pd address: $pdAddress")
     val conf = TiConfiguration.createDefault(pdAddress)
-    val session = TiSession.getInstance(conf)
-    meta = Some(new MetaManager(session.getCatalog))
-    tiSession = Some(session)
+    val clientSession = ClientSession.getInstance(conf)
+    meta = Some(new MetaManager(clientSession.getCatalog))
+    tiSession = Some(clientSession.getTikvSession)
   }
 
   override def name(): String = _name.get
@@ -131,7 +132,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
       .getTable(dbName, ident.name)
       .getOrElse(throw new NoSuchTableException(dbName, ident.name))
 
-    TiDBTable(tiSession.get, TiTableReference(dbName, ident.name), table)(
+    TiDBTable(clientSession.get, TiTableReference(dbName, ident.name), table)(
       SparkSession.active.sqlContext)
   }
 

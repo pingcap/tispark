@@ -21,33 +21,36 @@ import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getRowIter
 import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getTiChunkIterator;
 
 import com.pingcap.tikv.columnar.TiChunk;
-import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiDAGRequest;
-import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
 import com.pingcap.tikv.operation.iterator.IndexScanIterator;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.RangeSplitter;
-import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import org.tikv.common.BytePairWrapper;
+import org.tikv.common.TiSession;
+import org.tikv.common.meta.TiTimestamp;
+import org.tikv.common.util.ConcreteBackOffer;
+import org.tikv.common.util.RangeSplitter;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.shade.com.google.protobuf.ByteString;
+import org.tikv.txn.KVClient;
 
 public class Snapshot {
   private final TiTimestamp timestamp;
+  private final ClientSession clientSession;
   private final TiSession session;
   private final TiConfiguration conf;
 
   public Snapshot(@Nonnull TiTimestamp timestamp, TiConfiguration conf) {
     this.timestamp = timestamp;
     this.conf = conf;
-    this.session = TiSession.getInstance(conf);
+    this.clientSession = ClientSession.getInstance(conf);
+    this.session = clientSession.getTikvSession();
   }
 
   public TiSession getSession() {
@@ -70,10 +73,7 @@ public class Snapshot {
 
   public ByteString get(ByteString key) {
     try (KVClient client =
-        new KVClient(
-            session.getConf(),
-            session.getRegionStoreClientBuilder(),
-            session.getThreadPoolForBatchGet())) {
+        new KVClient(session.getConf(), session.getRegionStoreClientBuilder(), session)) {
       return client.get(key, timestamp.getVersion());
     }
   }
@@ -84,10 +84,7 @@ public class Snapshot {
       list.add(ByteString.copyFrom(key));
     }
     try (KVClient client =
-        new KVClient(
-            session.getConf(),
-            session.getRegionStoreClientBuilder(),
-            session.getThreadPoolForBatchGet())) {
+        new KVClient(session.getConf(), session.getRegionStoreClientBuilder(), session)) {
       List<KvPair> kvPairList =
           client.batchGet(
               ConcreteBackOffer.newCustomBackOff(backOffer), list, timestamp.getVersion());
@@ -102,7 +99,7 @@ public class Snapshot {
   }
 
   public Iterator<TiChunk> tableReadChunk(
-      TiDAGRequest dagRequest, List<RegionTask> tasks, int numOfRows) {
+      TiDAGRequest dagRequest, List<RangeSplitter.RegionTask> tasks, int numOfRows) {
     if (dagRequest.isDoubleRead()) {
       throw new UnsupportedOperationException(
           "double read case should first read handle in row-wise fashion");
@@ -132,9 +129,10 @@ public class Snapshot {
    * @param tasks RegionTasks of the coprocessor request to send
    * @return Row iterator to iterate over resulting rows
    */
-  private Iterator<Row> tableReadRow(TiDAGRequest dagRequest, List<RegionTask> tasks) {
+  private Iterator<Row> tableReadRow(
+      TiDAGRequest dagRequest, List<RangeSplitter.RegionTask> tasks) {
     if (dagRequest.isDoubleRead()) {
-      Iterator<Handle> iter = getHandleIterator(dagRequest, tasks, getSession());
+      Iterator<Long> iter = getHandleIterator(dagRequest, tasks, getSession());
       return new IndexScanIterator(this, dagRequest, iter);
     } else {
       return getRowIterator(dagRequest, tasks, getSession());
@@ -149,7 +147,8 @@ public class Snapshot {
    * @param tasks RegionTask of the coprocessor request to send
    * @return Row iterator to iterate over resulting rows
    */
-  public Iterator<Handle> indexHandleRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
+  public Iterator<Long> indexHandleRead(
+      TiDAGRequest dagRequest, List<RangeSplitter.RegionTask> tasks) {
     return getHandleIterator(dagRequest, tasks, session);
   }
 
@@ -162,7 +161,7 @@ public class Snapshot {
   public Iterator<KvPair> scanPrefix(ByteString prefix) {
     ByteString nextPrefix = Key.toRawKey(prefix).nextPrefix().toByteString();
     return new ConcreteScanIterator(
-        session.getConf(),
+        clientSession.getConf(),
         session.getRegionStoreClientBuilder(),
         prefix,
         nextPrefix,

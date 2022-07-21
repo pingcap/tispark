@@ -17,8 +17,8 @@
 package com.pingcap.tikv.predicates;
 
 import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 import static java.util.Objects.requireNonNull;
+import static org.tikv.common.util.KeyRangeUtils.makeCoprocRange;
 import static org.tikv.shade.com.google.common.base.Preconditions.checkArgument;
 
 import com.pingcap.tidb.tipb.EncodeType;
@@ -37,12 +37,9 @@ import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiPartitionDef;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.meta.TiTimestamp;
-import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.types.MySQLType;
-import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -53,6 +50,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.meta.TiTimestamp;
+import org.tikv.common.region.TiStoreType;
+import org.tikv.common.util.Pair;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
 import org.tikv.shade.com.google.common.collect.BoundType;
