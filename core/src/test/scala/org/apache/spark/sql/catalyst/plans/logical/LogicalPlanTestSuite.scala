@@ -17,10 +17,11 @@
 package org.apache.spark.sql.catalyst.plans.logical
 
 import com.pingcap.tikv.codec.KeyUtils
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
+import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tispark.telemetry.TiSparkTeleInfo
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 import org.apache.spark.sql.execution.{ExplainMode, SimpleMode}
+import org.tikv.common.meta.TiTimestamp
 import org.tikv.kvproto.Coprocessor
 
 import java.util

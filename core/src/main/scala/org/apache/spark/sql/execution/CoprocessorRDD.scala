@@ -16,15 +16,11 @@
 
 package org.apache.spark.sql.execution
 
-import java.util
-import java.util.concurrent.{Callable, ExecutorCompletionService}
 import com.pingcap.tikv.columnar.{TiChunk, TiColumnarBatchHelper}
 import com.pingcap.tikv.key.Handle
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
+import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.operation.iterator.CoprocessorIterator
-import com.pingcap.tikv.util.RangeSplitter.RegionTask
-import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
-import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.rdd.RDD
@@ -36,8 +32,13 @@ import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
 import org.apache.spark.sql.tispark.TiRDD
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.slf4j.LoggerFactory
+import org.tikv.common.meta.TiTimestamp
+import org.tikv.common.util.RangeSplitter.RegionTask
+import org.tikv.common.util.{KeyRangeUtils, RangeSplitter}
 import org.tikv.kvproto.Coprocessor.KeyRange
 
+import java.util
+import java.util.concurrent.{Callable, ExecutorCompletionService}
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
@@ -181,8 +182,9 @@ case class ColumnarRegionTaskExec(
       : (Int, Iterator[InternalRow]) => Iterator[InternalRow] = { (_, iter) =>
     // For each partition, we do some initialization work
     val logger = LoggerFactory.getLogger(getClass.getName)
-    val session = TiSession.getInstance(tiConf)
-    session.injectCallBackFunc(callBackFunc)
+    val clientSession = ClientSession.getInstance(tiConf)
+    val session = clientSession.getTikvSession
+    clientSession.injectCallBackFunc(callBackFunc)
     val batchSize = tiConf.getIndexScanBatchSize
     val downgradeThreshold = tiConf.getDowngradeThreshold
 

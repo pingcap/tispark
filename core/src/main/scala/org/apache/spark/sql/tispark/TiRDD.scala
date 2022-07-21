@@ -20,13 +20,14 @@ import com.pingcap.tikv._
 import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.types.Converter
-import com.pingcap.tikv.util.RangeSplitter
-import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.Partition
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
+import org.tikv.common.TiSession
+import org.tikv.common.util.RangeSplitter
+import org.tikv.common.util.RangeSplitter.RegionTask
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

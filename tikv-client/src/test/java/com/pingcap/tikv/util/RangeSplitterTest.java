@@ -21,25 +21,30 @@ import static org.junit.Assert.assertEquals;
 
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.RowKey.DecodeResult.Status;
-import com.pingcap.tikv.region.RegionManager;
-import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.region.TiStoreType;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.Test;
+import org.tikv.common.key.Handle;
+import org.tikv.common.region.RegionManager;
+import org.tikv.common.region.TiRegion;
+import org.tikv.common.region.TiStoreType;
+import org.tikv.common.util.BackOffer;
+import org.tikv.common.util.KeyRangeUtils;
+import org.tikv.common.util.Pair;
+import org.tikv.common.util.RangeSplitter;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Kvrpcpb.CommandPri;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Peer;
+import org.tikv.kvproto.Metapb.Store;
 import org.tikv.shade.com.google.common.collect.ImmutableList;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
@@ -282,7 +287,7 @@ public class RangeSplitterTest {
     }
 
     @Override
-    public Pair<TiRegion, Metapb.Store> getRegionStorePairByKey(
+    public Pair<TiRegion, Store> getRegionStorePairByKey(
         ByteString key, TiStoreType storeType, BackOffer backOffer) {
       for (Map.Entry<KeyRange, TiRegion> entry : mockRegionMap.entrySet()) {
         KeyRange range = entry.getKey();

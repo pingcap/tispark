@@ -16,8 +16,8 @@
 
 package com.pingcap.tispark.write
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv._
+import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler}
@@ -26,6 +26,8 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{DataFrame, SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
+import org.tikv.common.{StoreVersion, TiDBJDBCClient, TiSession}
+import org.tikv.txn.TTLManager
 
 import scala.collection.JavaConverters._
 

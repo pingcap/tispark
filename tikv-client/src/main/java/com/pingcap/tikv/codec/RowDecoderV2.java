@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.codec;
 
-import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.Codec.DecimalCodec;
 import com.pingcap.tikv.codec.Codec.EnumCodec;
@@ -24,7 +23,6 @@ import com.pingcap.tikv.codec.Codec.SetCodec;
 import com.pingcap.tikv.exception.CodecException;
 import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.util.JsonUtils;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
@@ -32,6 +30,8 @@ import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 import org.joda.time.DateTimeZone;
+import org.tikv.common.ExtendedDateTime;
+import org.tikv.common.util.JsonUtils;
 
 public class RowDecoderV2 {
 

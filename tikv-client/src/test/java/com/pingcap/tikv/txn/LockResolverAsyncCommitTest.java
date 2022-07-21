@@ -19,13 +19,13 @@ package com.pingcap.tikv.txn;
 import static junit.framework.Assert.assertTrue;
 import static junit.framework.TestCase.assertEquals;
 
-import com.pingcap.tikv.Version;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.Assert;
 import org.junit.Test;
+import org.tikv.common.Version;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import org.tikv.shade.com.google.protobuf.ByteString;
 

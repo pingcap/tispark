@@ -27,6 +27,7 @@ import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
 import com.pingcap.tikv.types.{BytesType, IntegerType}
 import org.slf4j.LoggerFactory
+import org.tikv.common.meta.TiTimestamp
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable

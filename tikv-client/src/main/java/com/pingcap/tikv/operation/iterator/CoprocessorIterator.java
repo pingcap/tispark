@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.EncodeType;
-import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.columnar.BatchedTiChunkColumnVector;
@@ -41,11 +40,12 @@ import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.CHTypeMapping;
-import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import org.tikv.common.TiSession;
+import org.tikv.common.util.RangeSplitter.RegionTask;
 
 public abstract class CoprocessorIterator<T> implements Iterator<T> {
   protected final TiSession session;

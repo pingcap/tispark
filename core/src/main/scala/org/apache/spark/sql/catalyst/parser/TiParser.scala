@@ -63,9 +63,9 @@ case class TiParser(
     val meta = getOrElseInitTiCatalog.meta.get
     val timeStamp = TiUtil.getTiDBSnapshot(sparkSession)
     val catalog = if (timeStamp.isEmpty) {
-      tiContext.tiSession.getCatalog
+      tiContext.clientSession.getCatalog
     } else {
-      tiContext.tiSession.getOrCreateSnapShotCatalog(timeStamp.get)
+      tiContext.clientSession.getOrCreateSnapShotCatalog(timeStamp.get)
     }
     meta.reloadCatalog(catalog)
   }

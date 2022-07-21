@@ -24,7 +24,6 @@ import static com.pingcap.tikv.types.TimeType.MINUTE;
 import static com.pingcap.tikv.types.TimeType.SECOND;
 import static java.util.Objects.requireNonNull;
 
-import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
@@ -39,6 +38,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.tikv.common.ExtendedDateTime;
 import org.tikv.shade.com.google.common.primitives.UnsignedLong;
 
 public class Converter {

@@ -27,6 +27,7 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 import org.slf4j.Logger
+import org.tikv.common.TiSession
 
 import scala.collection.JavaConversions._
 
@@ -52,8 +53,9 @@ class TiRowRDD(
       checkTimezone()
 
       private val tiPartition = split.asInstanceOf[TiPartition]
-      private val session = TiSession.getInstance(tiConf)
-      session.injectCallBackFunc(callBackFunc)
+      private val clientSession = ClientSession.getInstance(tiConf)
+      private val session = clientSession.getTikvSession
+      clientSession.injectCallBackFunc(callBackFunc)
       private val snapshot = session.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks
 

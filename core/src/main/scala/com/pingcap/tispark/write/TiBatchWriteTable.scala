@@ -22,7 +22,7 @@ import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta._
-import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient, TiSession}
+import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
@@ -31,6 +31,8 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{TiContext, _}
 import org.slf4j.LoggerFactory
+import org.tikv.common.{BytePairWrapper, TiDBJDBCClient, TiSession}
+import org.tikv.common.meta.TiTimestamp
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -406,7 +408,8 @@ class TiBatchWriteTable(
       startTs: TiTimestamp): RDD[WrappedRow] = {
     rdd
       .mapPartitions { wrappedRows =>
-        val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs.getPrevious)
+        val snapshot =
+          ClientSession.getInstance(tiConf).getTikvSession.createSnapshot(startTs.getPrevious)
         wrappedRows.map { wrappedRow =>
           val rowBuf = mutable.ListBuffer.empty[WrappedRow]
           //  check handle key
@@ -443,7 +446,8 @@ class TiBatchWriteTable(
       rdd: RDD[WrappedRow],
       startTs: TiTimestamp): RDD[WrappedRow] = {
     rdd.mapPartitions { wrappedRows =>
-      val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs.getPrevious)
+      val snapshot =
+        ClientSession.getInstance(tiConf).getTikvSession.createSnapshot(startTs.getPrevious)
       var rowBuf = mutable.ListBuffer.empty[WrappedRow]
       var rowBufIterator = rowBuf.iterator
 

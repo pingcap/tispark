@@ -18,7 +18,6 @@ package com.pingcap.tikv.codec;
 
 import static org.tikv.shade.com.google.common.base.Preconditions.checkArgument;
 
-import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.exception.CodecException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
@@ -41,6 +40,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.IllegalInstantException;
 import org.joda.time.LocalDate;
 import org.joda.time.LocalDateTime;
+import org.tikv.common.ExtendedDateTime;
 
 public class Codec {
 
