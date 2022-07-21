@@ -76,13 +76,13 @@ Spark 3.0, 3.1, and 3.2. So we need to write code for each one.
 To be specific, we will use V1WriteBuilder  in 3.0 and 3.1, and use V1Write in 3.2.
 
 ### Why not V2 write model
-There is a deduplicate operation in TiSpark which will handle the problem that data have same unique key.
+There is a deduplicate operation in TiSpark that will handle the problem that data have the same unique key.
 DataSource V2 will split data into different executors, and we can't control it. This may lead to different
-executors write data with same unique key and cause data corruption.
+executors writing data with the same unique key and cause data corruption.
 
-Other problem is about region split. Currently, we split region to enable parallel write, each executor will write data to only one
-region. Since we can't control how to split data in DataSource V2, each executor may receive data which
-should be written to different region. If we don't do region split, it may cause performance issue. If we do, region split will be
+Another problem is about region split. Currently, we split regions to enable parallel write, each executor will write data to only one
+region. Since we can't control how to split data in DataSource V2, each executor may receive data that
+should be written to different regions. If we don't do region split, it may cause performance issue. If we do, region split will be
 done in every executor which also causes performance issue.
 
 
