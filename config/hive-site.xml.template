@@ -32,7 +32,7 @@
 
 <property>
   <name>javax.jdo.option.ConnectionDriverName</name>
-  <value>com.mysql.cj.jdbc.Driver</value>
+  <value>com.mysql.jdbc.Driver</value>
   <description>Driver class name for a JDBC metastore</description>
 </property>
 
