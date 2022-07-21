@@ -13,6 +13,7 @@
   * [Get write options](#get-write-options)
   * [Implement V2 interface using V1 code](#implement-v2-interface-using-v1-code)
   * [Compatible with different Spark versions](#compatible-with-different-spark-versions)
+  * [Why not V2 write model](#why-not-v2-write-model)
 - [Compatibility](#compatibility)
 - [Test Design](#test-design)
   * [Functional Tests](#functional-tests)
@@ -92,7 +93,7 @@ done in every executor which also causes performance issue.
 ## Test Design
 
 ### Functional Tests
-- INSERT SQL write data test
+- INSERT SQL write test
 - Auth test
 - Can't affect writing data by DataSource API
 
@@ -105,3 +106,5 @@ done in every executor which also causes performance issue.
 | 3.0           | V1WriteBuilder | 
 | 3.1           | V1WriteBuilder |
 | 3.2           | V1Write        | 
+
+
