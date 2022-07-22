@@ -29,8 +29,6 @@ import org.apache.spark.sql.execution.{ExplainMode, SimpleMode}
 import org.tikv.kvproto.Coprocessor
 
 import java.util
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 class LogicalPlanTestSuite extends BasePlanTest {
 
@@ -130,16 +128,16 @@ class LogicalPlanTestSuite extends BasePlanTest {
   // https://github.com/pingcap/tispark/issues/2290
   test("fix cannot encode row key with non-long type") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    if (StoreVersion.minTiKVVersion("4", this.ti.tiSession.getPDClient)) {
+    if (StoreVersion.minTiKVVersion("5.0.0", this.ti.tiSession.getPDClient)) {
       tidbStmt.execute("""
-                         |CREATE TABLE `t1` (
-                         |  `a` BIGINT UNSIGNED  NOT NULL,
-                         |  `b` varchar(255) NOT NULL,
-                         |  `c` varchar(255) DEFAULT NULL,
-                         |  PRIMARY KEY (`a`) CLUSTERED
-                         |  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+          |CREATE TABLE `t1` (
+          |  `a` BIGINT UNSIGNED  NOT NULL,
+          |  `b` varchar(255) NOT NULL,
+          |  `c` varchar(255) DEFAULT NULL,
+          |  PRIMARY KEY (`a`) CLUSTERED
+          |  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
     } else {
-      if(isEnableAlterPrimaryKey){
+      if (isEnableAlterPrimaryKey) {
         cancel("TiDB config alter-primary-key must be false")
       }
       tidbStmt.execute("""
@@ -153,7 +151,10 @@ class LogicalPlanTestSuite extends BasePlanTest {
     tidbStmt.execute(
       " INSERT INTO t1 VALUES(0, 'aa', 'aa'), ( 9223372036854775807, 'bb', 'bb'), ( 9223372036854775808, 'cc', 'cc'), ( 18446744073709551615, 'dd', 'dd')")
 
-    def checkResultAndExpression(sql: String, valueExpectation: List[String], expressionExpectation: Expression): Unit = {
+    def checkResultAndExpression(
+        sql: String,
+        valueExpectation: List[String],
+        expressionExpectation: Expression): Unit = {
       val df = spark.sql(sql)
       val dag = extractDAGRequests(df).head
       val rangeFilter = dag.getRangeFilter
@@ -181,7 +182,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     val expressionExpectation1 = LogicalBinaryExpression.and(
       greaterEqual(new ColumnRef("a", dataType), Constant.create(0, dataType)),
       lessEqual(new ColumnRef("a", dataType), Constant.create(Long.MaxValue, dataType)))
-     checkResultAndExpression(situation1, valueExpectation1, expressionExpectation1)
+    checkResultAndExpression(situation1, valueExpectation1, expressionExpectation1)
 
     val situation2 = "SELECT a FROM t1 WHERE a >= 0 and a<= 9223372036854775808 order by a"
     val valueExpectation2 = List[String]("0", "9223372036854775807", "9223372036854775808")
@@ -190,41 +191,37 @@ class LogicalPlanTestSuite extends BasePlanTest {
       lessEqual(
         new ColumnRef("a", dataType),
         Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType)))
-     checkResultAndExpression(situation2, valueExpectation2, expressionExpectation2)
+    checkResultAndExpression(situation2, valueExpectation2, expressionExpectation2)
 
     val situation3 = "SELECT a FROM t1 WHERE a >= 0 order by a"
-    val valueExpectation3 = List[String](
-      "0",
-      "9223372036854775807",
-      "9223372036854775808",
-      "18446744073709551615")
-    val expressionExpectation3 = greaterEqual(
-      new ColumnRef("a", dataType),
-      Constant.create(0, IntegerType.BIGINT))
-     checkResultAndExpression(situation3, valueExpectation3, expressionExpectation3)
+    val valueExpectation3 =
+      List[String]("0", "9223372036854775807", "9223372036854775808", "18446744073709551615")
+    val expressionExpectation3 =
+      greaterEqual(new ColumnRef("a", dataType), Constant.create(0, IntegerType.BIGINT))
+    checkResultAndExpression(situation3, valueExpectation3, expressionExpectation3)
 
-    val situation4 = "SELECT a FROM t1 WHERE a >= 9223372036854775807 and a<=9223372036854775808 order by a"
+    val situation4 =
+      "SELECT a FROM t1 WHERE a >= 9223372036854775807 and a<=9223372036854775808 order by a"
     val valueExpectation4 = List[String]("9223372036854775807", "9223372036854775808")
     val expressionExpectation4 = LogicalBinaryExpression.and(
       greaterEqual(new ColumnRef("a", dataType), Constant.create(Long.MaxValue, dataType)),
       lessEqual(
         new ColumnRef("a", dataType),
         Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType)))
-     checkResultAndExpression(situation4, valueExpectation4, expressionExpectation4)
+    checkResultAndExpression(situation4, valueExpectation4, expressionExpectation4)
 
     val situation5 = "SELECT a FROM t1 WHERE a<=9223372036854775808 order by a"
     val valueExpectation5 = List[String]("0", "9223372036854775807", "9223372036854775808")
     val expressionExpectation5 = lessEqual(
       new ColumnRef("a", dataType),
       Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType))
-     checkResultAndExpression(situation5, valueExpectation5, expressionExpectation5)
+    checkResultAndExpression(situation5, valueExpectation5, expressionExpectation5)
 
     val situation6 = "SELECT a FROM t1 WHERE a <= 9223372036854775807 order by a"
     val valueExpectation6 = List[String]("0", "9223372036854775807")
-    val expressionExpectation6 = lessEqual(
-      new ColumnRef("a", dataType),
-      Constant.create(Long.MaxValue, dataType))
-     checkResultAndExpression(situation6, valueExpectation6, expressionExpectation6)
+    val expressionExpectation6 =
+      lessEqual(new ColumnRef("a", dataType), Constant.create(Long.MaxValue, dataType))
+    checkResultAndExpression(situation6, valueExpectation6, expressionExpectation6)
 
     val situation7 = "SELECT a FROM t1 WHERE a >= 9223372036854775808 and a<=9223372036854775809"
     val valueExpectation7 = List[String]("9223372036854775808")
@@ -235,30 +232,24 @@ class LogicalPlanTestSuite extends BasePlanTest {
       lessEqual(
         new ColumnRef("a", dataType),
         Constant.create(new java.math.BigDecimal("9223372036854775809"), dataType)))
-     checkResultAndExpression(situation7, valueExpectation7, expressionExpectation7)
+    checkResultAndExpression(situation7, valueExpectation7, expressionExpectation7)
 
     val situation8 = "SELECT a FROM t1 WHERE a >= 9223372036854775808"
     val valueExpectation8 = List[String]("9223372036854775808", "18446744073709551615")
     val expressionExpectation8 = greaterEqual(
       new ColumnRef("a", dataType),
       Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType))
-     checkResultAndExpression(situation8, valueExpectation8, expressionExpectation8)
+    checkResultAndExpression(situation8, valueExpectation8, expressionExpectation8)
 
     val situation9 = "SELECT a FROM t1 order by a"
-    val valueExpectation9 = List[String](
-      "0",
-      "9223372036854775807",
-      "9223372036854775808",
-      "18446744073709551615")
-     checkResultAndExpression(situation9, valueExpectation9, null)
+    val valueExpectation9 =
+      List[String]("0", "9223372036854775807", "9223372036854775808", "18446744073709551615")
+    checkResultAndExpression(situation9, valueExpectation9, null)
   }
-
-
 
   test("test physical plan explain which table without cluster index") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    tidbStmt.execute(
-      """
+    tidbStmt.execute("""
         |CREATE TABLE `t1` (
         |  `a` BIGINT(20) NOT NULL,
         |  `b` varchar(255) NOT NULL,
@@ -640,7 +631,6 @@ class LogicalPlanTestSuite extends BasePlanTest {
     checkIsIndexLookUp(df, "t")
     checkIndex(df, "artical_id")
   }
-
 
   override def afterAll(): Unit =
     try {

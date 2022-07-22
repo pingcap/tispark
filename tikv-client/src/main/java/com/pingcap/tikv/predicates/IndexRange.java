@@ -58,9 +58,6 @@ public class IndexRange {
   }
 
   private boolean isUnsignedLongKey(Key key) {
-    if (key == null) {
-      return false;
-    }
     if (key instanceof TypedKey) {
       DataType type = ((TypedKey) key).getType();
       if (type instanceof IntegerType) {
