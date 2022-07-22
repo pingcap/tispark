@@ -22,7 +22,7 @@ import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta._
-import com.pingcap.tikv.{ClientSession, TiConfiguration}
+import com.pingcap.tikv.{ClientSession, TiConfiguration, TiDBJDBCClient}
 import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
@@ -31,7 +31,7 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{TiContext, _}
 import org.slf4j.LoggerFactory
-import org.tikv.common.{BytePairWrapper, TiDBJDBCClient, TiSession}
+import org.tikv.common.{BytePairWrapper, TiSession}
 import org.tikv.common.meta.TiTimestamp
 
 import scala.collection.JavaConverters._
@@ -49,6 +49,7 @@ class TiBatchWriteTable(
 
   import com.pingcap.tispark.write.TiBatchWrite._
   @transient private val tiSession = tiContext.tiSession
+  @transient private val clientSession = tiContext.clientSession
   // only fetch row format version once for each batch write process
   private val enableNewRowFormat: Boolean =
     if (isTiDBV4) tiDBJDBCClient.getRowFormatVersion == 2 else false
@@ -70,8 +71,8 @@ class TiBatchWriteTable(
   @transient private var persistedRDDList: List[RDD[_]] = Nil
 
   tiTableRef = options.getTiTableRef(tiConf)
-  tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
-  tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
+  tiDBInfo = clientSession.getCatalog.getDatabase(tiTableRef.databaseName)
+  tiTableInfo = clientSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
 
   if (tiTableInfo == null) {
     throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)

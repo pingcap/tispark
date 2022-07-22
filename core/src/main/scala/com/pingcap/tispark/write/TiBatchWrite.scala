@@ -26,7 +26,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{DataFrame, SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
-import org.tikv.common.{StoreVersion, TiDBJDBCClient, TiSession}
+import org.tikv.common.{StoreVersion, TiSession}
 import org.tikv.txn.TTLManager
 
 import scala.collection.JavaConverters._

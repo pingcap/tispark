@@ -8,7 +8,7 @@ import org.tikv.common.event.CacheInvalidateEvent;
 import org.tikv.common.meta.TiTimestamp;
 
 @Getter
-public class ClientSession {
+public class ClientSession implements AutoCloseable {
   private final TiConfiguration conf;
   private final org.tikv.common.TiSession tikvSession;
   private final Catalog catalog;
@@ -32,7 +32,6 @@ public class ClientSession {
 
   public Snapshot createSnapshot() {
     // checkIsClosed();
-
     return new Snapshot(this.tikvSession.getTimestamp(), this.conf);
   }
 
@@ -56,5 +55,10 @@ public class ClientSession {
 
   public static ClientSession getInstance(com.pingcap.tikv.TiConfiguration config) {
     return new ClientSession(config);
+  }
+
+  @Override
+  public void close() throws Exception {
+    tikvSession.close();
   }
 }
