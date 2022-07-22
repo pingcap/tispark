@@ -18,6 +18,8 @@
 
 package org.apache.spark.sql.test
 
+import com.pingcap.tikv.TiDBJDBCClient
+
 import java.io.File
 import java.sql.{Connection, Date, Statement}
 import java.util.{Locale, Properties, TimeZone}
@@ -33,7 +35,7 @@ import org.apache.spark.{SharedSparkContext, SparkConf, SparkFunSuite}
 import org.joda.time.DateTimeZone
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
-import org.tikv.common.{StoreVersion, TiDBJDBCClient, Version}
+import org.tikv.common.{StoreVersion, Version}
 
 import scala.collection.mutable.ArrayBuffer
 

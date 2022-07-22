@@ -21,7 +21,7 @@ import com.pingcap.tispark.datasource.BaseBatchWriteWithoutDropTableTest
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
-import org.tikv.common.TTLManager
+import org.tikv.txn.TTLManager
 
 class LockTimeoutSuite extends BaseBatchWriteWithoutDropTableTest("test_lock_timeout") {
   private val row1 = Row(1, "Hello")

@@ -29,12 +29,12 @@ class InvisibleIndexSuite extends BasePlanTest {
     tidbStmt.execute("drop table if exists t_invisible_index")
     tidbStmt.execute("create table t_invisible_index(a int, index idx_a(a))")
     val tiTableInfo1 =
-      ti.tiSession.getCatalog.getTable(dbPrefix + "tispark_test", "t_invisible_index")
+      ti.clientSession.getCatalog.getTable(dbPrefix + "tispark_test", "t_invisible_index")
     assert(!tiTableInfo1.getIndices(true).get(0).isInvisible)
 
     tidbStmt.execute("alter table t_invisible_index alter index idx_a invisible")
     val tiTableInfo2 =
-      ti.tiSession.getCatalog.getTable(dbPrefix + "tispark_test", "t_invisible_index")
+      ti.clientSession.getCatalog.getTable(dbPrefix + "tispark_test", "t_invisible_index")
     assert(tiTableInfo2.getIndices(true).get(0).isInvisible)
   }
 
@@ -80,7 +80,7 @@ class InvisibleIndexSuite extends BasePlanTest {
       tidbStmt.execute("alter table t_invisible_index alter index idx_a invisible")
 
       val tiTableInfo =
-        ti.tiSession.getCatalog.getTable(dbPrefix + "tispark_test", "t_invisible_index")
+        ti.clientSession.getCatalog.getTable(dbPrefix + "tispark_test", "t_invisible_index")
       result = tiTableInfo.getIndices(true).get(0).isInvisible
     } catch {
       case e: Throwable => result = false
