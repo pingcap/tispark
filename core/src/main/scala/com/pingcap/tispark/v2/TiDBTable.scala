@@ -25,6 +25,7 @@ import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
 import com.pingcap.tispark.v2.sink.TiDBWriteBuilder
 import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions}
+import org.apache.commons.codec.binary.Hex
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.catalyst.util.{DateTimeUtils, TimestampFormatter}
@@ -45,7 +46,6 @@ import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.sql.{SQLContext, execution}
 import org.slf4j.LoggerFactory
 
-import java.nio.charset.StandardCharsets
 import java.sql.{Date, SQLException, Timestamp}
 import java.time.{Instant, LocalDate}
 import java.util
@@ -282,7 +282,7 @@ object TiDBTable {
           s"'${timestampFormatter.format(timestampValue)}'"
         case dateValue: Date => "'" + dateValue + "'"
         case dateValue: LocalDate => "'" + dateValue + "'"
-        case arrayByte: Array[Byte] => "'" + new String(arrayByte, StandardCharsets.UTF_8) + "'"
+        case arrayByte: Array[Byte] => "X'" + Hex.encodeHexString(arrayByte) + "'"
         case arrayValue: Array[Any] => arrayValue.map(compileValue).mkString(", ")
         case _ => value
       }

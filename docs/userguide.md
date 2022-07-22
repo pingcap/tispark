@@ -357,6 +357,10 @@ There are two ways to write into partition table:
 1. Use datasource API to write into partition table which supports replace and append semantics.
 2. Use delete statement with Spark SQL.
 
+> [!NOTE]
+> Currently the charset only supported is utf8mb4 and [`new_collations_enabled_on_first_bootstrap`](https://docs.pingcap.com/tidb/dev/tidb-configuration-file#new_collations_enabled_on_first_bootstrap)
+> need to be set to `false` in TiDB.
+
 ## Common port numbers used by Spark cluster
 
 |Port Name| Default Port Number   | Configuration Property   | Notes|
