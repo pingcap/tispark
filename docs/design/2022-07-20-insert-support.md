@@ -10,7 +10,7 @@
 - [API](#api)
 - [Detailed Design](#detailed-design)
   * [Add new capability](#add-new-capability)
-  * [Get write options](#get-write-options)
+  * [Remove write options](#remove-write-options)
   * [Implement V2 interface using V1 code](#implement-v2-interface-using-v1-code)
   * [Compatible with different Spark versions](#compatible-with-different-spark-versions)
   * [Why not V2 write model](#why-not-v2-write-model)
@@ -51,17 +51,18 @@ spark.sql("insert into tidb_db.db.table values(x, x...)(y, y...)...")
 ## Detailed Design
 Here are the main steps:
 - Add new capability
-- Get write options
+- remove write options
 - Implement V2 interface using V1 code
 - Compatible with different Spark versions
 
 ### Add new capability
 Spark will check the capabilities of TiDBTable. If we don't add corresponding capability, Spark will throw an exception.
 
-### Get write options
+### Remove write options
 Different from writing using DataSource API, Spark SQL can't get required information like tidb address and username.
-Users need to indicate required information before writing data by `spark.conf.set(key, value)`.
-Then we can get it.
+We use it to create a JDBC client to connect with TiDB, but we only need to use the JDBC client to update statics now.
+
+So we are going to remove the options check before writing and useless JDBC client code.
 
 ### Implement V2 interface using V1 code
 Spark DataSource V2 is evolving and not suitable for TiSpark write model currently.
