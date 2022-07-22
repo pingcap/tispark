@@ -414,7 +414,7 @@ public class TiKVScanAnalyzer {
   }
 
   private ScanRange buildTableScanKeyRangePerId(long id, IndexRange ir) {
-    if (ir.isUnsignedKey()) {
+    if (ir.isUnsignedLongIndexRange()) {
       return buildTableScanUnsignedKeyRangePerId(id, ir);
     } else {
       return buildTableScanSignedKeyRangePerId(id, ir);
