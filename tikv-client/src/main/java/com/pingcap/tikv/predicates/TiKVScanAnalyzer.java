@@ -69,6 +69,8 @@ public class TiKVScanAnalyzer {
   private static final long TABLE_PREFIX_SIZE = 8;
   private static final long INDEX_PREFIX_SIZE = 8;
 
+  private static final BigDecimal MAX_SIGNED_LONG=new BigDecimal(Long.MAX_VALUE);
+
   @VisibleForTesting
   public static ScanSpec extractConditions(
       List<Expression> conditions, TiTableInfo table, TiIndexInfo index) {
@@ -352,22 +354,22 @@ public class TiKVScanAnalyzer {
 
   private ScanRange buildTableScanUnsignedKeyRangePerId(long id, IndexRange ir) {
     BigDecimal max = new BigDecimal(Long.MAX_VALUE);
-    Key signedStartKey = RowKey.toRowKey(id, new IntHandle(max.longValue())).nextPrefix();
-    Key unsignedStartKey = RowKey.toRowKey(id, new IntHandle(max.longValue() + 1));
-    Key signedEndKey = RowKey.toRowKey(id, new IntHandle(max.longValue())).nextPrefix();
-    Key unsignedEndKey = RowKey.toRowKey(id, new IntHandle(max.longValue() + 1));
+    Key signedStartKey = RowKey.toRowKey(id, new IntHandle(MAX_SIGNED_LONG.longValue())).nextPrefix();
+    Key signedEndKey = RowKey.toRowKey(id, new IntHandle(MAX_SIGNED_LONG.longValue())).nextPrefix();
+    Key unsignedStartKey = RowKey.toRowKey(id, new IntHandle(MAX_SIGNED_LONG.longValue() + 1));
+    Key unsignedEndKey = RowKey.toRowKey(id, new IntHandle(MAX_SIGNED_LONG.longValue() + 1));
     if (ir.hasAccessKey()) {
       checkArgument(
           !ir.hasRange(), "Table scan must have one and only one access condition / point");
       Key key = ir.getAccessKey();
       checkArgument(key instanceof TypedKey, "Table scan key range must be typed key");
       BigDecimal value = (BigDecimal) ((TypedKey) key).getValue();
-      if (value.compareTo(max) > 0) {
+      if (value.compareTo(MAX_SIGNED_LONG) > 0) {
         unsignedStartKey = RowKey.toRowKey(id, new IntHandle(value.longValue()));
         unsignedEndKey = unsignedStartKey.nextPrefix();
       } else {
         signedStartKey = RowKey.toRowKey(id, new IntHandle(value.longValue()));
-        signedEndKey = unsignedStartKey.nextPrefix();
+        signedEndKey = signedStartKey.nextPrefix();
       }
     } else if (ir.hasRange()) {
       Range<TypedKey> r = ir.getRange();
@@ -376,7 +378,7 @@ public class TiKVScanAnalyzer {
       } else {
         /** {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)} */
         BigDecimal startValue = (BigDecimal) r.lowerEndpoint().getValue();
-        if (startValue.compareTo(max) > 0) {
+        if (startValue.compareTo(MAX_SIGNED_LONG) > 0) {
           unsignedStartKey = RowKey.toRowKey(id, new IntHandle(startValue.longValue()));
           if (r.lowerBoundType().equals(BoundType.OPEN)) {
             unsignedStartKey = unsignedStartKey.nextPrefix();
@@ -389,13 +391,12 @@ public class TiKVScanAnalyzer {
         }
       }
       if (!r.hasUpperBound()) {
-        signedEndKey = RowKey.toRowKey(id, new IntHandle(max.longValue())).nextPrefix();
-        // unsinged_max=0xffffffffffffffffL
+        // unsigned_max=0xffffffffffffffffL
         unsignedEndKey = RowKey.toRowKey(id, new IntHandle(0xffffffffffffffffL)).nextPrefix();
       } else {
         /** {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)} */
         BigDecimal endValue = (BigDecimal) r.upperEndpoint().getValue();
-        if (endValue.compareTo(max) > 0) {
+        if (endValue.compareTo(MAX_SIGNED_LONG) > 0) {
           unsignedEndKey = RowKey.toRowKey(id, new IntHandle(endValue.longValue()));
           if (r.upperBoundType().equals(BoundType.CLOSED)) {
             unsignedEndKey = unsignedEndKey.nextPrefix();
