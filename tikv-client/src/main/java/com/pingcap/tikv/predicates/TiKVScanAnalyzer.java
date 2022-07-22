@@ -69,7 +69,8 @@ public class TiKVScanAnalyzer {
   private static final long TABLE_PREFIX_SIZE = 8;
   private static final long INDEX_PREFIX_SIZE = 8;
 
-  private static final BigDecimal MAX_SIGNED_LONG=new BigDecimal(Long.MAX_VALUE);
+  private static final BigDecimal MAX_SIGNED_LONG = new BigDecimal(Long.MAX_VALUE);
+  private static final BigDecimal MIN_UNSIGNED_LONG = MAX_SIGNED_LONG.add(new BigDecimal(1));
 
   @VisibleForTesting
   public static ScanSpec extractConditions(
@@ -353,11 +354,11 @@ public class TiKVScanAnalyzer {
   }
 
   private ScanRange buildTableScanUnsignedKeyRangePerId(long id, IndexRange ir) {
-    BigDecimal max = new BigDecimal(Long.MAX_VALUE);
-    Key signedStartKey = RowKey.toRowKey(id, new IntHandle(MAX_SIGNED_LONG.longValue())).nextPrefix();
-    Key signedEndKey = RowKey.toRowKey(id, new IntHandle(MAX_SIGNED_LONG.longValue())).nextPrefix();
-    Key unsignedStartKey = RowKey.toRowKey(id, new IntHandle(MAX_SIGNED_LONG.longValue() + 1));
-    Key unsignedEndKey = RowKey.toRowKey(id, new IntHandle(MAX_SIGNED_LONG.longValue() + 1));
+    Key signedStartKey = RowKey.createMin(id);
+    Key signedEndKey = RowKey.createMin(id);
+    Key unsignedStartKey = RowKey.toRowKey(id, new IntHandle(MIN_UNSIGNED_LONG.longValue()));
+    Key unsignedEndKey = RowKey.toRowKey(id, new IntHandle(MIN_UNSIGNED_LONG.longValue()));
+    boolean containSignedPart = false;
     if (ir.hasAccessKey()) {
       checkArgument(
           !ir.hasRange(), "Table scan must have one and only one access condition / point");
@@ -374,6 +375,7 @@ public class TiKVScanAnalyzer {
     } else if (ir.hasRange()) {
       Range<TypedKey> r = ir.getRange();
       if (!r.hasLowerBound()) {
+        containSignedPart = true;
         signedStartKey = RowKey.toRowKey(id, new IntHandle(0));
       } else {
         /** {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)} */
@@ -384,6 +386,7 @@ public class TiKVScanAnalyzer {
             unsignedStartKey = unsignedStartKey.nextPrefix();
           }
         } else {
+          containSignedPart = true;
           signedStartKey = RowKey.toRowKey(id, new IntHandle(startValue.longValue()));
           if (r.lowerBoundType().equals(BoundType.OPEN)) {
             signedStartKey = signedStartKey.nextPrefix();
@@ -393,6 +396,11 @@ public class TiKVScanAnalyzer {
       if (!r.hasUpperBound()) {
         // unsigned_max=0xffffffffffffffffL
         unsignedEndKey = RowKey.toRowKey(id, new IntHandle(0xffffffffffffffffL)).nextPrefix();
+        if (containSignedPart) {
+          signedEndKey =
+              RowKey.toRowKey(id, new IntHandle(MAX_SIGNED_LONG.longValue())).nextPrefix();
+          unsignedStartKey = RowKey.toRowKey(id, new IntHandle(MIN_UNSIGNED_LONG.longValue()));
+        }
       } else {
         /** {@link com.pingcap.tikv.types.IntegerType#decodeNotNull(int, CodecDataInput)} */
         BigDecimal endValue = (BigDecimal) r.upperEndpoint().getValue();
@@ -400,6 +408,11 @@ public class TiKVScanAnalyzer {
           unsignedEndKey = RowKey.toRowKey(id, new IntHandle(endValue.longValue()));
           if (r.upperBoundType().equals(BoundType.CLOSED)) {
             unsignedEndKey = unsignedEndKey.nextPrefix();
+          }
+          if (containSignedPart) {
+            signedEndKey =
+                RowKey.toRowKey(id, new IntHandle(MAX_SIGNED_LONG.longValue())).nextPrefix();
+            unsignedStartKey = RowKey.toRowKey(id, new IntHandle(MIN_UNSIGNED_LONG.longValue()));
           }
         } else {
           signedEndKey = RowKey.toRowKey(id, new IntHandle(endValue.longValue()));
@@ -790,6 +803,10 @@ public class TiKVScanAnalyzer {
     public ScanRange(
         Key signedStartKey, Key signedEndKey, Key unsignedStartKey, Key unsignedEndKey) {
       signedKeyRange = new Pair<>(signedStartKey, signedEndKey);
+      unSignedKeyRange = Optional.of(new Pair<>(unsignedStartKey, unsignedEndKey));
+    }
+
+    public void setUnsignedKeyRange(Key unsignedStartKey, Key unsignedEndKey) {
       unSignedKeyRange = Optional.of(new Pair<>(unsignedStartKey, unsignedEndKey));
     }
   }
