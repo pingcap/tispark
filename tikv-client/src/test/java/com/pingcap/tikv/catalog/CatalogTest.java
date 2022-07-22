@@ -53,7 +53,7 @@ public class CatalogTest extends PDMockServerTest {
                 .build());
     kvServer.start(
         new TiRegion(
-            session.getConf(),
+            clientSession.getTikvSession().getConf(),
             MetaMockHelper.region,
             MetaMockHelper.region.getPeers(0),
             MetaMockHelper.region.getPeersList(),

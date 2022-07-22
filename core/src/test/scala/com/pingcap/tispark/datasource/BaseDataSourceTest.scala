@@ -244,12 +244,12 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
   }
 
   protected def allocateID(size: Long): RowIDAllocator = {
-    val tiDBInfo = ti.tiSession.getCatalog.getDatabase(databaseWithPrefix)
-    val tiTableInfo = ti.tiSession.getCatalog.getTable(databaseWithPrefix, table)
+    val tiDBInfo = ti.clientSession.getCatalog.getDatabase(databaseWithPrefix)
+    val tiTableInfo = ti.clientSession.getCatalog.getTable(databaseWithPrefix, table)
     RowIDAllocator.create(
       tiDBInfo.getId,
       tiTableInfo,
-      ti.tiSession.getConf,
+      ti.clientSession.getConf,
       tiTableInfo.isAutoIncColUnsigned,
       size)
   }
