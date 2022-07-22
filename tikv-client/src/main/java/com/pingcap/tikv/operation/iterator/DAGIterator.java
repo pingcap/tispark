@@ -22,6 +22,7 @@ import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tidb.tipb.SelectResponse;
+import com.pingcap.tikv.ClientSession;
 import com.pingcap.tikv.exception.RegionTaskException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
@@ -36,14 +37,13 @@ import java.util.Queue;
 import java.util.concurrent.ExecutorCompletionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tikv.common.TiSession;
 import org.tikv.common.region.RegionStoreClient;
 import org.tikv.common.region.TiRegion;
 import org.tikv.common.region.TiStore;
 import org.tikv.common.region.TiStoreType;
 import org.tikv.common.util.BackOffer;
 import org.tikv.common.util.ConcreteBackOffer;
-import org.tikv.common.util.RangeSplitter;
+import org.tikv.common.util.RangeSplitter.RegionTask;
 import org.tikv.kvproto.Coprocessor;
 
 public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
@@ -59,22 +59,26 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
 
   DAGIterator(
       DAGRequest req,
-      List<RangeSplitter.RegionTask> regionTasks,
-      TiSession session,
+      List<RegionTask> regionTasks,
+      ClientSession clientSession,
       SchemaInfer infer,
       PushDownType pushDownType,
       TiStoreType storeType,
       long startTs) {
-    super(req, regionTasks, session, infer);
+    super(req, regionTasks, clientSession, infer);
     this.pushDownType = pushDownType;
     this.storeType = storeType;
     this.startTs = startTs;
     switch (pushDownType) {
       case NORMAL:
-        dagService = new ExecutorCompletionService<>(session.getThreadPoolForTableScan());
+        dagService =
+            new ExecutorCompletionService<>(
+                clientSession.getTikvSession().getThreadPoolForTableScan());
         break;
       case STREAMING:
-        streamingService = new ExecutorCompletionService<>(session.getThreadPoolForTableScan());
+        streamingService =
+            new ExecutorCompletionService<>(
+                clientSession.getTikvSession().getThreadPoolForTableScan());
         break;
     }
     submitTasks();
@@ -82,7 +86,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
 
   @Override
   void submitTasks() {
-    for (RangeSplitter.RegionTask task : regionTasks) {
+    for (RegionTask task : regionTasks) {
       switch (pushDownType) {
         case STREAMING:
           streamingService.submit(() -> processByStreaming(task));
@@ -194,8 +198,8 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     return advanceNextResponse();
   }
 
-  private SelectResponse process(RangeSplitter.RegionTask regionTask) {
-    Queue<RangeSplitter.RegionTask> remainTasks = new ArrayDeque<>();
+  private SelectResponse process(RegionTask regionTask) {
+    Queue<RegionTask> remainTasks = new ArrayDeque<>();
     Queue<SelectResponse> responseQueue = new ArrayDeque<>();
     remainTasks.add(regionTask);
     BackOffer backOffer = ConcreteBackOffer.newCopNextMaxBackOff();
@@ -204,7 +208,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     // In case of one region task spilt into several others, we ues a queue to properly handle all
     // the remaining tasks.
     while (!remainTasks.isEmpty()) {
-      RangeSplitter.RegionTask task = remainTasks.poll();
+      RegionTask task = remainTasks.poll();
       if (task == null) {
         continue;
       }
@@ -214,9 +218,12 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
 
       try {
         RegionStoreClient client =
-            session.getRegionStoreClientBuilder().build(region, store, storeType);
+            clientSession
+                .getTikvSession()
+                .getRegionStoreClientBuilder()
+                .build(region, store, storeType);
         client.addResolvedLocks(startTs, resolvedLocks);
-        Collection<RangeSplitter.RegionTask> tasks =
+        Collection<RegionTask> tasks =
             client.coprocess(backOffer, dagRequest, ranges, responseQueue, startTs);
         if (tasks != null) {
           remainTasks.addAll(tasks);
@@ -248,14 +255,18 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     return SelectResponse.newBuilder().addAllChunks(resultChunk).setEncodeType(encodeType).build();
   }
 
-  private Iterator<SelectResponse> processByStreaming(RangeSplitter.RegionTask regionTask) {
+  private Iterator<SelectResponse> processByStreaming(RegionTask regionTask) {
     List<Coprocessor.KeyRange> ranges = regionTask.getRanges();
     TiRegion region = regionTask.getRegion();
     TiStore store = regionTask.getStore();
 
     RegionStoreClient client;
     try {
-      client = session.getRegionStoreClientBuilder().build(region, store, storeType);
+      client =
+          clientSession
+              .getTikvSession()
+              .getRegionStoreClientBuilder()
+              .build(region, store, storeType);
       Iterator<SelectResponse> responseIterator =
           client.coprocessStreaming(dagRequest, ranges, startTs);
       if (responseIterator == null) {

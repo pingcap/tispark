@@ -21,6 +21,7 @@ import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getRowIter
 import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getTiChunkIterator;
 
 import com.pingcap.tikv.columnar.TiChunk;
+import com.pingcap.tikv.handle.Handle;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
@@ -42,19 +43,22 @@ import org.tikv.txn.KVClient;
 
 public class Snapshot {
   private final TiTimestamp timestamp;
+
+  public ClientSession getClientSession() {
+    return clientSession;
+  }
+
   private final ClientSession clientSession;
-  private final TiSession session;
   private final TiConfiguration conf;
 
   public Snapshot(@Nonnull TiTimestamp timestamp, TiConfiguration conf) {
     this.timestamp = timestamp;
     this.conf = conf;
     this.clientSession = ClientSession.getInstance(conf);
-    this.session = clientSession.getTikvSession();
   }
 
   public TiSession getSession() {
-    return session;
+    return clientSession.getTikvSession();
   }
 
   public long getVersion() {
@@ -73,7 +77,8 @@ public class Snapshot {
 
   public ByteString get(ByteString key) {
     try (KVClient client =
-        new KVClient(session.getConf(), session.getRegionStoreClientBuilder(), session)) {
+        new KVClient(
+            getSession().getConf(), getSession().getRegionStoreClientBuilder(), getSession())) {
       return client.get(key, timestamp.getVersion());
     }
   }
@@ -84,7 +89,8 @@ public class Snapshot {
       list.add(ByteString.copyFrom(key));
     }
     try (KVClient client =
-        new KVClient(session.getConf(), session.getRegionStoreClientBuilder(), session)) {
+        new KVClient(
+            getSession().getConf(), getSession().getRegionStoreClientBuilder(), getSession())) {
       List<KvPair> kvPairList =
           client.batchGet(
               ConcreteBackOffer.newCustomBackOff(backOffer), list, timestamp.getVersion());
@@ -104,7 +110,7 @@ public class Snapshot {
       throw new UnsupportedOperationException(
           "double read case should first read handle in row-wise fashion");
     } else {
-      return getTiChunkIterator(dagRequest, tasks, getSession(), numOfRows);
+      return getTiChunkIterator(dagRequest, tasks, getClientSession(), numOfRows);
     }
   }
   /**
@@ -116,7 +122,7 @@ public class Snapshot {
   public Iterator<Row> tableReadRow(TiDAGRequest dagRequest, long physicalId) {
     return tableReadRow(
         dagRequest,
-        RangeSplitter.newSplitter(session.getRegionManager())
+        RangeSplitter.newSplitter(getSession().getRegionManager())
             .splitRangeByRegion(
                 dagRequest.getRangesByPhysicalId(physicalId), dagRequest.getStoreType()));
   }
@@ -132,10 +138,10 @@ public class Snapshot {
   private Iterator<Row> tableReadRow(
       TiDAGRequest dagRequest, List<RangeSplitter.RegionTask> tasks) {
     if (dagRequest.isDoubleRead()) {
-      Iterator<Long> iter = getHandleIterator(dagRequest, tasks, getSession());
+      Iterator<Handle> iter = getHandleIterator(dagRequest, tasks, getClientSession());
       return new IndexScanIterator(this, dagRequest, iter);
     } else {
-      return getRowIterator(dagRequest, tasks, getSession());
+      return getRowIterator(dagRequest, tasks, getClientSession());
     }
   }
 
@@ -147,9 +153,9 @@ public class Snapshot {
    * @param tasks RegionTask of the coprocessor request to send
    * @return Row iterator to iterate over resulting rows
    */
-  public Iterator<Long> indexHandleRead(
+  public Iterator<Handle> indexHandleRead(
       TiDAGRequest dagRequest, List<RangeSplitter.RegionTask> tasks) {
-    return getHandleIterator(dagRequest, tasks, session);
+    return getHandleIterator(dagRequest, tasks, getClientSession());
   }
 
   /**
@@ -162,7 +168,7 @@ public class Snapshot {
     ByteString nextPrefix = Key.toRawKey(prefix).nextPrefix().toByteString();
     return new ConcreteScanIterator(
         clientSession.getConf(),
-        session.getRegionStoreClientBuilder(),
+        getSession().getRegionStoreClientBuilder(),
         prefix,
         nextPrefix,
         timestamp.getVersion());

@@ -109,7 +109,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val ts = if (TiUtil.getTiDBSnapshot(sparkSession).isEmpty) {
       tiContext.tiSession.getTimestamp
     } else {
-      tiContext.tiSession.getSnapshotTimestamp
+      tiContext.clientSession.getSnapshotTimestamp
     }
     if (plan.isStreaming) {
       // We should use a new timestamp for next batch execution.
