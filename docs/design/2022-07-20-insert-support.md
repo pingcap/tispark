@@ -72,9 +72,10 @@ We can use this interface to implement INSERT SQL without rewriting all write co
 
 ### Compatible with different Spark versions
 The interface we used to combine DataSource V1 and DataSource V2 is different between
-Spark 3.0, 3.1, and 3.2. So we need to write code for each one.
+Spark 3.0, 3.1, and 3.2. So we need to write code for each version. Then we can use reflection to get object of
+corresponding version。
 
-To be specific, we will use V1WriteBuilder  in 3.0 and 3.1, and use V1Write in 3.2.
+To be specific, we will use V1WriteBuilder in 3.0 and 3.1, and use V1Write in 3.2.
 
 ### Why not V2 write model
 There is a deduplicate operation in TiSpark that will handle the problem that data have the same unique key.
