@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.key;
+package com.pingcap.tikv.handle;
 
 import java.io.Serializable;
 

@@ -42,7 +42,7 @@ public class Key implements Comparable<Key> {
     this.infFlag = (value.length == 0 ? 1 : 0) * (negative ? -1 : 1);
   }
 
-  protected Key(byte[] value) {
+  public Key(byte[] value) {
     this(value, false);
   }
 

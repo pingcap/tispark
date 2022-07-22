@@ -20,7 +20,8 @@ import java.util
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
+import com.pingcap.tikv.handle.{Handle, IntHandle}
+import com.pingcap.tikv.key.{IndexKey, RowKey}
 import com.pingcap.tikv.meta._
 import com.pingcap.tikv.{ClientSession, TiConfiguration, TiDBJDBCClient}
 import com.pingcap.tispark.TiTableReference

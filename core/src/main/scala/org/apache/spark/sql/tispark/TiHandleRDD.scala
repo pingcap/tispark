@@ -16,7 +16,7 @@
 
 package org.apache.spark.sql.tispark
 
-import com.pingcap.tikv.key.Handle
+import com.pingcap.tikv.handle.Handle
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark.utils.TiUtil
@@ -62,7 +62,7 @@ class TiHandleRDD(
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val clientSession = ClientSession.getInstance(tiConf)
       private val session = clientSession.getTikvSession
-      private val snapshot = session.createSnapshot(dagRequest.getStartTs)
+      private val snapshot = clientSession.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks
 
       private val handleIterator = snapshot.indexHandleRead(dagRequest, tasks)

@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.key;
+package com.pingcap.tikv.handle;
 
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.CodecException;
+import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.MySQLType;

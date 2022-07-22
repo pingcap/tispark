@@ -22,7 +22,8 @@ import com.pingcap.tikv.exception.{
   TiBatchWriteException,
   TiDBConvertException
 }
-import com.pingcap.tikv.key.{CommonHandle, Handle, IndexKey, IntHandle, RowKey}
+import com.pingcap.tikv.handle.{CommonHandle, Handle, IntHandle}
+import com.pingcap.tikv.key.{IndexKey, RowKey}
 import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType

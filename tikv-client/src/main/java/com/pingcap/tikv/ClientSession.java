@@ -35,6 +35,11 @@ public class ClientSession implements AutoCloseable {
     return new Snapshot(this.tikvSession.getTimestamp(), this.conf);
   }
 
+  public Snapshot createSnapshot(TiTimestamp ts) {
+    //     checkIsClosed();
+    return new Snapshot(ts, this.conf);
+  }
+
   public synchronized Catalog getOrCreateSnapShotCatalog(TiTimestamp ts) {
     snapshotTimestamp = ts;
     if (snapshotCatalog == null) {

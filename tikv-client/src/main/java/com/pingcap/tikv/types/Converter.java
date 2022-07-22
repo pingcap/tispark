@@ -27,7 +27,7 @@ import static java.util.Objects.requireNonNull;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
-import com.pingcap.tikv.key.Handle;
+import com.pingcap.tikv.handle.Handle;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
