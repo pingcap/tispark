@@ -19,8 +19,8 @@ package org.apache.spark.sql.extensions
 import com.pingcap.tidb.tipb.EncodeType
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression._
-import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.meta.TiDAGRequest
+import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
 import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.TiConfigConst
@@ -106,7 +106,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val ts = if (TiUtil.getTiDBSnapshot(sparkSession).isEmpty) {
       tiContext.tiSession.getTimestamp
     } else {
-      tiContext.tiSession.getSnapshotTimestamp
+      tiContext.clientSession.getSnapshotTimestamp
     }
 
     if (plan.isStreaming) {

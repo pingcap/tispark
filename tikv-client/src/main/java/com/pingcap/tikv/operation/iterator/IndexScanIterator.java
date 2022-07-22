@@ -16,23 +16,23 @@
 
 package com.pingcap.tikv.operation.iterator;
 
+import com.pingcap.tikv.ClientSession;
 import com.pingcap.tikv.Snapshot;
+import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.handle.Handle;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.row.Row;
-import gnu.trove.list.array.TLongArrayList;
+import com.pingcap.tikv.util.RangeSplitter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutorCompletionService;
-import org.tikv.common.TiConfiguration;
-import org.tikv.common.TiSession;
-import org.tikv.common.util.RangeSplitter;
 import org.tikv.common.util.RangeSplitter.RegionTask;
 
 public class IndexScanIterator implements Iterator<Row> {
-  private final Iterator<Long> handleIterator;
+  private final Iterator<Handle> handleIterator;
   private final TiDAGRequest dagReq;
   private final Snapshot snapshot;
   private final ExecutorCompletionService<Iterator<Row>> completionService;
@@ -40,18 +40,19 @@ public class IndexScanIterator implements Iterator<Row> {
   private Iterator<Row> rowIterator;
   private int batchCount = 0;
 
-  public IndexScanIterator(Snapshot snapshot, TiDAGRequest req, Iterator<Long> handleIterator) {
-    TiSession session = snapshot.getSession();
-    TiConfiguration conf = session.getConf();
+  public IndexScanIterator(Snapshot snapshot, TiDAGRequest req, Iterator<Handle> handleIterator) {
+    ClientSession clientSession = snapshot.getClientSession();
+    TiConfiguration conf = clientSession.getConf();
     this.dagReq = req;
     this.handleIterator = handleIterator;
     this.snapshot = snapshot;
     this.batchSize = conf.getIndexScanBatchSize();
-    this.completionService = new ExecutorCompletionService<>(session.getThreadPoolForIndexScan());
+    this.completionService =
+        new ExecutorCompletionService<>(clientSession.getTikvSession().getThreadPoolForIndexScan());
   }
 
-  private TLongArrayList feedBatch() {
-    TLongArrayList handles = new TLongArrayList(512);
+  private List<Handle> feedBatch() {
+    List<Handle> handles = new ArrayList<>(512);
     while (handleIterator.hasNext()) {
       handles.add(handleIterator.next());
       if (batchSize <= handles.size()) {
@@ -65,19 +66,19 @@ public class IndexScanIterator implements Iterator<Row> {
   public boolean hasNext() {
     try {
       if (rowIterator == null) {
-        TiSession session = snapshot.getSession();
+        ClientSession clientSession = snapshot.getClientSession();
         while (handleIterator.hasNext()) {
-          TLongArrayList handles = feedBatch();
+          List<Handle> handles = feedBatch();
           batchCount++;
           completionService.submit(
               () -> {
                 List<RegionTask> tasks = new ArrayList<>();
                 List<Long> ids = dagReq.getPrunedPhysicalIds();
                 tasks.addAll(
-                    RangeSplitter.newSplitter(session.getRegionManager())
+                    RangeSplitter.newSplitter(clientSession.getTikvSession().getRegionManager())
                         .splitAndSortHandlesByRegion(ids, handles));
 
-                return CoprocessorIterator.getRowIterator(dagReq, tasks, session);
+                return CoprocessorIterator.getRowIterator(dagReq, tasks, clientSession);
               });
         }
         while (batchCount > 0) {

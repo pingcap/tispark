@@ -40,6 +40,11 @@ public class ClientSession implements AutoCloseable {
     return new Snapshot(ts, this.conf);
   }
 
+  public TiTimestamp getSnapshotVersion() {
+    // snapshotTimestamp or tikvSession.getTimeStamp
+    return snapshotTimestamp;
+  }
+
   public synchronized Catalog getOrCreateSnapShotCatalog(TiTimestamp ts) {
     snapshotTimestamp = ts;
     if (snapshotCatalog == null) {

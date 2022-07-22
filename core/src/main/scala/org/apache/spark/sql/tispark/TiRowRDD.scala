@@ -54,9 +54,8 @@ class TiRowRDD(
 
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val clientSession = ClientSession.getInstance(tiConf)
-      private val session = clientSession.getTikvSession
       clientSession.injectCallBackFunc(callBackFunc)
-      private val snapshot = session.createSnapshot(dagRequest.getStartTs)
+      private val snapshot = clientSession.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks
 
       private val iterator =
