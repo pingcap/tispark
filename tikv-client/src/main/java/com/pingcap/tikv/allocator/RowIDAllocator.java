@@ -16,6 +16,7 @@
 package com.pingcap.tikv.allocator;
 
 import com.pingcap.tikv.ClientSession;
+import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
@@ -36,7 +37,6 @@ import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.common.BytePairWrapper;
-import com.pingcap.tikv.Snapshot;
 import org.tikv.common.TiSession;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.util.BackOffFunction;

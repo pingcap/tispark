@@ -29,16 +29,12 @@ import com.pingcap.tikv.columnar.TiChunkColumnVector;
 import com.pingcap.tikv.columnar.TiColumnVector;
 import com.pingcap.tikv.columnar.TiRowColumnVector;
 import com.pingcap.tikv.columnar.datatypes.CHType;
-import com.pingcap.tikv.key.CommonHandle;
-import com.pingcap.tikv.key.Handle;
-import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.CHTypeMapping;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -219,7 +215,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
    * @param session TiSession
    * @return a DAGIterator to be processed
    */
-  public static CoprocessorIterator<Long> getHandleIterator (
+  public static CoprocessorIterator<Long> getHandleIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     TiDAGRequest dagRequest = req.copy();
     // set encode type to TypeDefault because currently, only
@@ -236,7 +232,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         dagRequest.getStartTs().getVersion()) {
       @Override
       public Long next() {
-          return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);
+        return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);
       }
     };
   }

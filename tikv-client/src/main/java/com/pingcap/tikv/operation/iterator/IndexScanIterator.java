@@ -16,6 +16,7 @@
 
 package com.pingcap.tikv.operation.iterator;
 
+import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.row.Row;
@@ -25,7 +26,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutorCompletionService;
-import com.pingcap.tikv.Snapshot;
 import org.tikv.common.TiConfiguration;
 import org.tikv.common.TiSession;
 import org.tikv.common.util.RangeSplitter;

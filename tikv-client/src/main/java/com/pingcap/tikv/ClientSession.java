@@ -4,7 +4,6 @@ import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.util.ConverterUpstream;
 import java.util.function.Function;
 import lombok.Getter;
-import com.pingcap.tikv.Snapshot;
 import org.tikv.common.event.CacheInvalidateEvent;
 import org.tikv.common.meta.TiTimestamp;
 
@@ -28,12 +27,11 @@ public class ClientSession {
     this.conf = config;
     this.tikvSession =
         org.tikv.common.TiSession.create(ConverterUpstream.convertTiConfiguration(config));
-    this.catalog =
-        new Catalog(this::createSnapshot, config.isShowRowId(), config.getDBPrefix());
+    this.catalog = new Catalog(this::createSnapshot, config.isShowRowId(), config.getDBPrefix());
   }
 
   public Snapshot createSnapshot() {
-    //checkIsClosed();
+    // checkIsClosed();
 
     return new Snapshot(this.tikvSession.getTimestamp(), this.conf);
   }
