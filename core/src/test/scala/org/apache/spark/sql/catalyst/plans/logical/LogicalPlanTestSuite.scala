@@ -152,17 +152,22 @@ class LogicalPlanTestSuite extends BasePlanTest {
                          |  PRIMARY KEY (`a`)
                          |  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
     }
-    val rs = tidbStmt.executeQuery(
-      "select tidb_table_id from information_schema.tables where  table_name='t1'")
-    if (!rs.next()) {
-      fail("fail to find table id of t1")
-    }
-    val tableId = rs.getLong("tidb_table_id")
     tidbStmt.execute(
       " INSERT INTO t1 VALUES(0, 'aa', 'aa'), ( 9223372036854775807, 'bb', 'bb'), ( 9223372036854775808, 'cc', 'cc'), ( 18446744073709551615, 'dd', 'dd')")
-    val situations = new ListBuffer[String]
-    val valueExpectations = new ListBuffer[List[String]]
-    val expressionExpectations = new ListBuffer[Expression]
+
+    def nonlongTestHandle(sql: String, valueExpectation: List[String], expressionExpectation: Expression): Unit = {
+      val df = spark.sql(sql)
+      val dag = extractDAGRequests(df).head
+      val rangeFilter = dag.getRangeFilter
+      val value = df.collect()
+      for (x <- value.indices) {
+        assert(value(x)(0).toString.equals(valueExpectation(x)))
+      }
+      if (rangeFilter.size() == 1) {
+        assert(rangeFilter.get(0).toString.equals(expressionExpectation.toString))
+      }
+    }
+
     val holder = new InternalTypeHolder(
       MySQLType.TypeLonglong.getTypeCode,
       DataType.PriKeyFlag + DataType.UnsignedFlag + DataType.NoDefaultValueFlag,
@@ -171,97 +176,96 @@ class LogicalPlanTestSuite extends BasePlanTest {
       "utf8_bin",
       "",
       null)
-    val dataType = DataTypeFactory.of(holder)
 
-    situations += "SELECT a FROM t1 WHERE a >= 0 and a <= 9223372036854775807 order by a"
-    valueExpectations += List[String]("0", "9223372036854775807")
-    expressionExpectations += LogicalBinaryExpression.and(
+    val dataType = DataTypeFactory.of(holder)
+    val situation1 = "SELECT a FROM t1 WHERE a >= 0 and a <= 9223372036854775807 order by a"
+    val valueExpectation1 = List[String]("0", "9223372036854775807")
+    val expressionExpectation1 = LogicalBinaryExpression.and(
       greaterEqual(new ColumnRef("a", dataType), Constant.create(0, dataType)),
       lessEqual(new ColumnRef("a", dataType), Constant.create(Long.MaxValue, dataType)))
+    nonlongTestHandle(situation1, valueExpectation1, expressionExpectation1)
 
-    situations += "SELECT a FROM t1 WHERE a >= 0 and a<= 9223372036854775808 order by a"
-    valueExpectations += List[String]("0", "9223372036854775807", "9223372036854775808")
-    expressionExpectations += LogicalBinaryExpression.and(
+    val situation2 = "SELECT a FROM t1 WHERE a >= 0 and a<= 9223372036854775808 order by a"
+    val valueExpectation2 = List[String]("0", "9223372036854775807", "9223372036854775808")
+    val expressionExpectation2 = LogicalBinaryExpression.and(
       greaterEqual(new ColumnRef("a", dataType), Constant.create(0, dataType)),
       lessEqual(
         new ColumnRef("a", dataType),
         Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType)))
+    nonlongTestHandle(situation2, valueExpectation2, expressionExpectation2)
 
-    situations += "SELECT a FROM t1 WHERE a >= 0 order by a"
-    valueExpectations += List[String](
+    val situation3 = "SELECT a FROM t1 WHERE a >= 0 order by a"
+    val valueExpectation3 = List[String](
       "0",
       "9223372036854775807",
       "9223372036854775808",
       "18446744073709551615")
-    expressionExpectations += greaterEqual(
+    val expressionExpectation3 = greaterEqual(
       new ColumnRef("a", dataType),
       Constant.create(0, IntegerType.BIGINT))
+    nonlongTestHandle(situation3, valueExpectation3, expressionExpectation3)
 
-    situations += "SELECT a FROM t1 WHERE a >= 9223372036854775807 and a<=9223372036854775808 order by a"
-    valueExpectations += List[String]("9223372036854775807", "9223372036854775808")
-    expressionExpectations += LogicalBinaryExpression.and(
+    val situation4 = "SELECT a FROM t1 WHERE a >= 9223372036854775807 and a<=9223372036854775808 order by a"
+    val valueExpectation4 = List[String]("9223372036854775807", "9223372036854775808")
+    val expressionExpectation4 = LogicalBinaryExpression.and(
       greaterEqual(new ColumnRef("a", dataType), Constant.create(Long.MaxValue, dataType)),
       lessEqual(
         new ColumnRef("a", dataType),
         Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType)))
+    nonlongTestHandle(situation4, valueExpectation4, expressionExpectation4)
 
-    situations += "SELECT a FROM t1 WHERE a<=9223372036854775808 order by a"
-    valueExpectations += List[String]("0", "9223372036854775807", "9223372036854775808")
-    expressionExpectations += lessEqual(
+    val situation5 = "SELECT a FROM t1 WHERE a<=9223372036854775808 order by a"
+    val valueExpectation5 = List[String]("0", "9223372036854775807", "9223372036854775808")
+    val expressionExpectation5 = lessEqual(
       new ColumnRef("a", dataType),
       Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType))
+    nonlongTestHandle(situation5, valueExpectation5, expressionExpectation5)
 
-    situations += "SELECT a FROM t1 WHERE a <= 9223372036854775807 order by a"
-    valueExpectations += List[String]("0", "9223372036854775807")
-    expressionExpectations += lessEqual(
+    val situation6 = "SELECT a FROM t1 WHERE a <= 9223372036854775807 order by a"
+    val valueExpectation6 = List[String]("0", "9223372036854775807")
+    val expressionExpectation6 = lessEqual(
       new ColumnRef("a", dataType),
       Constant.create(Long.MaxValue, dataType))
+    nonlongTestHandle(situation6, valueExpectation6, expressionExpectation6)
 
-    situations += "SELECT a FROM t1 WHERE a >= 9223372036854775808 and a<=9223372036854775809"
-    valueExpectations += List[String]("9223372036854775808")
-    expressionExpectations += LogicalBinaryExpression.and(
+    val situation7 = "SELECT a FROM t1 WHERE a >= 9223372036854775808 and a<=9223372036854775809"
+    val valueExpectation7 = List[String]("9223372036854775808")
+    val expressionExpectation7 = LogicalBinaryExpression.and(
       greaterEqual(
         new ColumnRef("a", dataType),
         Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType)),
       lessEqual(
         new ColumnRef("a", dataType),
         Constant.create(new java.math.BigDecimal("9223372036854775809"), dataType)))
+    nonlongTestHandle(situation7, valueExpectation7, expressionExpectation7)
 
-    situations += "SELECT a FROM t1 WHERE a >= 9223372036854775808"
-    valueExpectations += List[String]("9223372036854775808", "18446744073709551615")
-    expressionExpectations += greaterEqual(
+    val situation8 = "SELECT a FROM t1 WHERE a >= 9223372036854775808"
+    val valueExpectation8 = List[String]("9223372036854775808", "18446744073709551615")
+    val expressionExpectation8 = greaterEqual(
       new ColumnRef("a", dataType),
       Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType))
+    nonlongTestHandle(situation8, valueExpectation8, expressionExpectation8)
 
-    situations += "SELECT a FROM t1 order by a"
-    valueExpectations += List[String](
+    val situation9 = "SELECT a FROM t1 order by a"
+    val valueExpectation9 = List[String](
       "0",
       "9223372036854775807",
       "9223372036854775808",
       "18446744073709551615")
-
-    for (i <- situations.indices) {
-      val df = spark.sql(situations(i))
-      val dag = extractDAGRequests(df).head
-      val rangeFilter = dag.getRangeFilter
-      val value = df.collect()
-      for (x <- value.indices) {
-        assert(value(x)(0).toString.equals(valueExpectations(i)(x)))
-      }
-      if (rangeFilter.size() == 1) {
-        assert(rangeFilter.get(0).toString.equals(expressionExpectations(i).toString))
-      }
-    }
+    nonlongTestHandle(situation9, valueExpectation9, null)
   }
+
+
 
   test("test physical plan explain which table without cluster index") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    tidbStmt.execute("""
-                       |CREATE TABLE `t1` (
-                       |  `a` BIGINT(20) NOT NULL,
-                       |  `b` varchar(255) NOT NULL,
-                       |  `c` varchar(255) DEFAULT NULL
-                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    tidbStmt.execute(
+      """
+        |CREATE TABLE `t1` (
+        |  `a` BIGINT(20) NOT NULL,
+        |  `b` varchar(255) NOT NULL,
+        |  `c` varchar(255) DEFAULT NULL
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
 
     // TableScan with Selection and without RangeFilter.
     val df1 = spark.sql("select * from t1 where a>0 and b>'aa'")
@@ -638,6 +642,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     checkIsIndexLookUp(df, "t")
     checkIndex(df, "artical_id")
   }
+
 
   override def afterAll(): Unit =
     try {
