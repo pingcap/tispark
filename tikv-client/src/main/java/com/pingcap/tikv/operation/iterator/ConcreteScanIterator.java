@@ -21,7 +21,7 @@ package com.pingcap.tikv.operation.iterator;
 import static java.util.Objects.requireNonNull;
 
 import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.exception.GrpcException;
+import org.tikv.common.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.key.Key;
