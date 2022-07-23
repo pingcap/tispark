@@ -38,7 +38,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-import org.tikv.common.ExtendedDateTime;
+import com.pingcap.tikv.codec.ExtendedDateTime;
 import org.tikv.shade.com.google.common.primitives.UnsignedLong;
 
 public class Converter {

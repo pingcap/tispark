@@ -28,7 +28,7 @@ import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.sql.Timestamp;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
-import org.tikv.common.ExtendedDateTime;
+import com.pingcap.tikv.codec.ExtendedDateTime;
 
 public abstract class AbstractDateTimeType extends DataType {
 
