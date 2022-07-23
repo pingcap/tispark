@@ -16,11 +16,11 @@
 
 package com.pingcap.tikv.util;
 
-import org.tikv.common.exception.GrpcException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Assert;
 import org.junit.Test;
+import org.tikv.common.exception.GrpcException;
 import org.tikv.common.util.BackOffFunction;
 import org.tikv.common.util.BackOffFunction.BackOffFuncType;
 import org.tikv.common.util.ConcreteBackOffer;
