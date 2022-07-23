@@ -49,12 +49,10 @@ public class Snapshot {
   }
 
   private final ClientSession clientSession;
-  private final TiConfiguration conf;
 
-  public Snapshot(@Nonnull TiTimestamp timestamp, TiConfiguration conf) {
+  public Snapshot(@Nonnull TiTimestamp timestamp, ClientSession clientSession) {
     this.timestamp = timestamp;
-    this.conf = conf;
-    this.clientSession = ClientSession.getInstance(conf);
+    this.clientSession = clientSession;
   }
 
   public TiSession getSession() {
@@ -175,6 +173,6 @@ public class Snapshot {
   }
 
   public TiConfiguration getConf() {
-    return conf;
+    return clientSession.getConf();
   }
 }

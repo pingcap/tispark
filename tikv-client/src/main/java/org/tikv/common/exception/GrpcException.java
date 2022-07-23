@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.exception;
+package org.tikv.common.exception;
 
 public class GrpcException extends RuntimeException {
   public GrpcException(Exception e) {

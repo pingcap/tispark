@@ -48,12 +48,12 @@ public class ClientSession implements AutoCloseable {
 
   public Snapshot createSnapshot() {
     // checkIsClosed();
-    return new Snapshot(this.tikvSession.getTimestamp(), this.conf);
+    return new Snapshot(this.tikvSession.getTimestamp(), this);
   }
 
   public Snapshot createSnapshot(TiTimestamp ts) {
     //     checkIsClosed();
-    return new Snapshot(ts, this.conf);
+    return new Snapshot(ts, this);
   }
 
   public TiTimestamp getSnapshotVersion() {
@@ -73,7 +73,7 @@ public class ClientSession implements AutoCloseable {
   }
 
   public Snapshot createSnapshotWithSnapshotTimestamp() {
-    return new Snapshot(snapshotTimestamp, conf);
+    return new Snapshot(snapshotTimestamp, this);
   }
 
   private volatile TiTimestamp snapshotTimestamp;
