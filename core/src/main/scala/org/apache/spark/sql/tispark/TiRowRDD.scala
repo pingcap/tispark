@@ -27,7 +27,6 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 import org.slf4j.Logger
-import org.tikv.common.TiSession
 
 import scala.collection.JavaConversions._
 
@@ -35,12 +34,11 @@ class TiRowRDD(
     override val dagRequest: TiDAGRequest,
     override val physicalId: Long,
     val chunkBatchSize: Int,
-    override val tiConf: TiConfiguration,
     val output: Seq[Attribute],
     override val tableRef: TiTableReference,
-    @transient private val session: TiSession,
+    @transient private val clientSession: ClientSession,
     @transient private val sparkSession: SparkSession)
-    extends TiRDD(dagRequest, physicalId, tiConf, tableRef, session, sparkSession) {
+    extends TiRDD(dagRequest, physicalId, tableRef, clientSession, sparkSession) {
 
   protected val logger: Logger = log
 
@@ -51,9 +49,7 @@ class TiRowRDD(
   override def compute(split: Partition, context: TaskContext): Iterator[InternalRow] =
     new Iterator[ColumnarBatch] {
       checkTimezone()
-
       private val tiPartition = split.asInstanceOf[TiPartition]
-      private val clientSession = ClientSession.getInstance(tiConf)
       clientSession.injectCallBackFunc(callBackFunc)
       private val snapshot = clientSession.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks

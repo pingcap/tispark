@@ -25,7 +25,6 @@ import org.apache.spark.Partition
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
-import org.tikv.common.TiSession
 import org.tikv.common.util.RangeSplitter
 import org.tikv.common.util.RangeSplitter.RegionTask
 
@@ -36,12 +35,12 @@ import scala.collection.mutable.ListBuffer
 abstract class TiRDD(
     val dagRequest: TiDAGRequest,
     val physicalId: Long,
-    val tiConf: TiConfiguration,
     val tableRef: TiTableReference,
-    @transient private val session: TiSession,
+    @transient private val clientSession: ClientSession,
     @transient private val sparkSession: SparkSession)
     extends RDD[InternalRow](sparkSession.sparkContext, Nil) {
 
+  private val tiConf = clientSession.getConf
   private lazy val partitionPerSplit = tiConf.getPartitionPerSplit
 
   protected def checkTimezone(): Unit = {
@@ -54,7 +53,7 @@ abstract class TiRDD(
 
   override protected def getPartitions: Array[Partition] = {
     val keyWithRegionTasks = RangeSplitter
-      .newSplitter(session.getRegionManager)
+      .newSplitter(clientSession.getTikvSession.getRegionManager)
       .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId), dagRequest.getStoreType)
 
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
