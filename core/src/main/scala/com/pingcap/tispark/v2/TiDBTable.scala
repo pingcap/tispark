@@ -191,7 +191,7 @@ object TiDBTable {
   private def getDagRequestToRegionTaskExec(
       dagRequest: TiDAGRequest,
       output: Seq[Attribute],
-      session: ClientSession,
+      clientSession: ClientSession,
       sqlContext: SQLContext,
       tableRef: TiTableReference): SparkPlan = {
     import scala.collection.JavaConverters._
@@ -204,7 +204,7 @@ object TiDBTable {
         ArrayType(ObjectType(classOf[Handle]), containsNull = false),
         nullable = false,
         Metadata.empty)())
-    val tiConf = session.getConf
+    val tiConf = clientSession.getConf
     tiConf.setPartitionPerSplit(TiUtil.getPartitionPerSplit(sqlContext))
     ids.foreach(id => {
       tiHandleRDDs +=
@@ -212,9 +212,8 @@ object TiDBTable {
           dagRequest,
           id,
           attributeRef,
-          tiConf,
           tableRef,
-          session.getTikvSession,
+          clientSession,
           sqlContext.sparkSession)
     })
 
@@ -226,31 +225,30 @@ object TiDBTable {
       output,
       TiUtil.getChunkBatchSize(sqlContext),
       dagRequest,
-      session.getConf,
-      session.getTikvSession.getTimestamp,
+      clientSession.getConf,
+      clientSession.getTikvSession.getTimestamp,
       sqlContext.sparkSession)
   }
 
   private def getLogicalPlanToRDD(
       dagRequest: TiDAGRequest,
       output: Seq[Attribute],
-      session: ClientSession,
+      clientSession: ClientSession,
       sqlContext: SQLContext,
       tableRef: TiTableReference): List[TiRowRDD] = {
     import scala.collection.JavaConverters._
     val ids = dagRequest.getPrunedPhysicalIds.asScala
     val tiRDDs = new ListBuffer[TiRowRDD]
-    val tiConf = session.getConf
+    val tiConf = clientSession.getConf
     tiConf.setPartitionPerSplit(TiUtil.getPartitionPerSplit(sqlContext))
     ids.foreach(id => {
       tiRDDs += new TiRowRDD(
         dagRequest.copyReqWithPhysicalId(id),
         id,
         TiUtil.getChunkBatchSize(sqlContext),
-        tiConf,
         output,
         tableRef,
-        session.getTikvSession,
+        clientSession,
         sqlContext.sparkSession)
     })
     tiRDDs.toList

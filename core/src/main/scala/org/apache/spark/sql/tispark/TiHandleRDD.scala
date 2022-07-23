@@ -45,11 +45,10 @@ class TiHandleRDD(
     override val dagRequest: TiDAGRequest,
     override val physicalId: Long,
     val output: Seq[Attribute],
-    override val tiConf: TiConfiguration,
     override val tableRef: TiTableReference,
-    @transient private val session: TiSession,
+    @transient private val clientSession: ClientSession,
     @transient private val sparkSession: SparkSession)
-    extends TiRDD(dagRequest, physicalId, tiConf, tableRef, session, sparkSession) {
+    extends TiRDD(dagRequest, physicalId, tableRef, clientSession, sparkSession) {
 
   private val outputTypes = output.map(_.dataType)
   private val converters =
@@ -60,13 +59,11 @@ class TiHandleRDD(
       checkTimezone()
 
       private val tiPartition = split.asInstanceOf[TiPartition]
-      private val clientSession = ClientSession.getInstance(tiConf)
-      private val session = clientSession.getTikvSession
       private val snapshot = clientSession.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks
 
       private val handleIterator = snapshot.indexHandleRead(dagRequest, tasks)
-      private val regionManager = session.getRegionManager
+      private val regionManager = clientSession.getTikvSession.getRegionManager
       private lazy val handleList = {
         val lst = new util.ArrayList[Handle]()
         handleIterator.asScala.foreach {
