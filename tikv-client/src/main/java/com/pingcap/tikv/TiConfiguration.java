@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv;
 
-import com.pingcap.tikv.pd.PDUtils;
+import org.tikv.common.pd.PDUtils;
 import com.pingcap.tikv.types.Converter;
 import java.io.Serializable;
 import java.net.URI;
