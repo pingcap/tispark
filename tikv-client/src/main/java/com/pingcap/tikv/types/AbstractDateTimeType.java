@@ -22,13 +22,13 @@ import com.pingcap.tikv.codec.Codec.DateCodec;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.codec.ExtendedDateTime;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.sql.Timestamp;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
-import org.tikv.common.ExtendedDateTime;
 
 public abstract class AbstractDateTimeType extends DataType {
 

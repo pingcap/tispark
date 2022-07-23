@@ -20,6 +20,7 @@ import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
 
 import com.pingcap.tikv.codec.Codec.DateCodec;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
+import com.pingcap.tikv.codec.ExtendedDateTime;
 import com.pingcap.tikv.columnar.datatypes.CHType;
 import com.pingcap.tikv.types.AbstractDateTimeType;
 import com.pingcap.tikv.types.BytesType;
@@ -31,7 +32,6 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
-import org.tikv.common.ExtendedDateTime;
 
 public class TiBlockColumnVector extends TiColumnVector {
   long offsetsAddr;

@@ -23,6 +23,7 @@ import static com.pingcap.tikv.types.Converter.UTC_TIME_FORMATTER;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.codec.ExtendedDateTime;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
@@ -30,7 +31,6 @@ import java.sql.Timestamp;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDateTime;
-import org.tikv.common.ExtendedDateTime;
 
 /**
  * Timestamp in TiDB is represented as packed long including year/month and etc. When stored, it is

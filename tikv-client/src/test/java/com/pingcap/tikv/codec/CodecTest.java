@@ -43,7 +43,6 @@ import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.junit.Test;
-import org.tikv.common.ExtendedDateTime;
 import org.tikv.shade.com.google.common.primitives.UnsignedLong;
 
 public class CodecTest {

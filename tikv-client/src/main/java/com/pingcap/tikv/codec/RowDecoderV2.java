@@ -30,7 +30,6 @@ import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 import org.joda.time.DateTimeZone;
-import org.tikv.common.ExtendedDateTime;
 import org.tikv.common.util.JsonUtils;
 
 public class RowDecoderV2 {

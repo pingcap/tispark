@@ -40,7 +40,6 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.IllegalInstantException;
 import org.joda.time.LocalDate;
 import org.joda.time.LocalDateTime;
-import org.tikv.common.ExtendedDateTime;
 
 public class Codec {
 
