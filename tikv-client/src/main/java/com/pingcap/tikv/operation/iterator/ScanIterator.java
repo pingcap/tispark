@@ -19,11 +19,11 @@ package com.pingcap.tikv.operation.iterator;
 import static java.util.Objects.requireNonNull;
 
 import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
 import java.util.Iterator;
 import java.util.List;
 import org.tikv.common.exception.GrpcException;
+import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.region.RegionStoreClient.RegionStoreClientBuilder;
 import org.tikv.common.region.TiRegion;
 import org.tikv.kvproto.Kvrpcpb;

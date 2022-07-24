@@ -19,9 +19,9 @@
 package com.pingcap.tikv.operation.iterator;
 
 import com.pingcap.tidb.tipb.Chunk;
-import com.pingcap.tikv.exception.TiClientInternalException;
 import java.util.Iterator;
 import java.util.List;
+import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public abstract class ChunkIterator<T> implements Iterator<T> {

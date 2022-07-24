@@ -24,7 +24,6 @@ import com.pingcap.tidb.tipb.FieldType;
 import com.pingcap.tidb.tipb.ScalarFuncSig;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.AggregateFunction;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
 import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
@@ -53,6 +52,7 @@ import com.pingcap.tikv.types.TimeType;
 import com.pingcap.tikv.types.TimestampType;
 import java.util.Map;
 import java.util.Objects;
+import org.tikv.common.exception.TiExpressionException;
 import org.tikv.shade.com.google.common.collect.ImmutableMap;
 
 public class ProtoConverter extends Visitor<Expr, Object> {

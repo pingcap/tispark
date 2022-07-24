@@ -21,12 +21,12 @@ package com.pingcap.tikv.operation.iterator;
 import static java.util.Objects.requireNonNull;
 
 import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.exception.KeyException;
-import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.key.Key;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.common.exception.GrpcException;
+import org.tikv.common.exception.KeyException;
+import org.tikv.common.exception.TiKVException;
 import org.tikv.common.region.RegionStoreClient;
 import org.tikv.common.region.RegionStoreClient.RegionStoreClientBuilder;
 import org.tikv.common.region.TiRegion;

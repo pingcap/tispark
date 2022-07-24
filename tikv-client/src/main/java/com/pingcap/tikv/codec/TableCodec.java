@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.codec;
 
-import com.pingcap.tikv.exception.CodecException;
 import com.pingcap.tikv.handle.CommonHandle;
 import com.pingcap.tikv.handle.Handle;
 import com.pingcap.tikv.handle.IntHandle;
@@ -25,6 +24,7 @@ import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
 import java.util.List;
+import org.tikv.common.exception.CodecException;
 
 public class TableCodec {
   public static byte IndexVersionFlag = 125;

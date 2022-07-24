@@ -18,10 +18,10 @@ package com.pingcap.tikv.handle;
 
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.CodecException;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import java.util.Arrays;
+import org.tikv.common.exception.CodecException;
 
 public class IntHandle implements Handle {
   private final long handle;

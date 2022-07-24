@@ -22,7 +22,6 @@ import static org.tikv.common.util.KeyRangeUtils.makeCoprocRange;
 import static org.tikv.shade.com.google.common.base.Preconditions.checkArgument;
 
 import com.pingcap.tidb.tipb.EncodeType;
-import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.PartitionPruner;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
@@ -50,6 +49,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.exception.TiClientInternalException;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.region.TiStoreType;
 import org.tikv.common.util.Pair;

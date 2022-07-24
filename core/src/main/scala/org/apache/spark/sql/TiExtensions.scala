@@ -17,7 +17,6 @@
 package org.apache.spark.sql
 
 import com.pingcap.tispark.TiConfigConst.TELEMETRY_ENABEL
-import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tispark.TiSparkInfo
 import com.pingcap.tispark.telemetry.TelemetryRule
 import org.apache.spark.sql.catalyst.analyzer.{TiAuthRuleFactory, TiAuthorizationRule}
@@ -25,6 +24,8 @@ import org.apache.spark.sql.catalyst.catalog.TiCatalog
 import org.apache.spark.sql.catalyst.parser.TiParserFactory
 import org.apache.spark.sql.catalyst.planner.TiStrategyFactory
 import org.slf4j.LoggerFactory
+import org.tikv.common.exception
+import org.tikv.common.exception.TiInternalException
 
 import scala.collection.mutable
 
@@ -75,7 +76,7 @@ object TiExtensions {
       .find(pair => TiCatalog.className.equals(pair._2)) match {
       case None =>
         logger.error("TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
-        throw new TiInternalException(
+        throw new exception.TiInternalException(
           "TiSpark must work with TiCatalog. Please add TiCatalog in spark conf.")
       case _ =>
     }

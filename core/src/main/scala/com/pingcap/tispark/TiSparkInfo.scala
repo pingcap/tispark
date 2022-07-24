@@ -16,8 +16,9 @@
 
 package com.pingcap.tispark
 
-import com.pingcap.tikv.exception.TiInternalException
 import org.slf4j.LoggerFactory
+import org.tikv.common.exception
+import org.tikv.common.exception.TiInternalException
 
 object TiSparkInfo {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
@@ -43,7 +44,7 @@ object TiSparkInfo {
     logger.info(info)
     if (!versionSupport()) {
       logger.error("Current TiSpark Version is not compatible with current Spark Version!")
-      throw new TiInternalException("")
+      throw new exception.TiInternalException("")
     }
   }
 }

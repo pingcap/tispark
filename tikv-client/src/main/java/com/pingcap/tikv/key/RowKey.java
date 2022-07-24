@@ -21,12 +21,12 @@ import static com.pingcap.tikv.codec.Codec.IntegerCodec.writeLong;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.handle.CommonHandle;
 import com.pingcap.tikv.handle.Handle;
 import com.pingcap.tikv.handle.IntHandle;
 import java.io.Serializable;
+import org.tikv.common.exception.TiClientInternalException;
+import org.tikv.common.exception.TiExpressionException;
 
 public class RowKey extends Key implements Serializable {
   private static final byte[] REC_PREFIX_SEP = new byte[] {'_', 'r'};

@@ -17,7 +17,6 @@
 package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
-import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.types.Converter
 import com.pingcap.tispark.{TiPartition, TiTableReference}
@@ -25,6 +24,8 @@ import org.apache.spark.Partition
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
+import org.tikv.common.exception
+import org.tikv.common.exception.TiInternalException
 import org.tikv.common.util.RangeSplitter
 import org.tikv.common.util.RangeSplitter.RegionTask
 
@@ -45,7 +46,7 @@ abstract class TiRDD(
 
   protected def checkTimezone(): Unit = {
     if (!tiConf.getLocalTimeZone.equals(Converter.getLocalTimezone)) {
-      throw new TiInternalException(
+      throw new exception.TiInternalException(
         "timezone are different! driver: " + tiConf.getLocalTimeZone + " executor:" + Converter.getLocalTimezone +
           " please set user.timezone in spark.driver.extraJavaOptions and spark.executor.extraJavaOptions")
     }

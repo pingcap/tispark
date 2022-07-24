@@ -17,7 +17,6 @@
 package com.pingcap.tispark.write
 
 import com.pingcap.tikv._
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler}
@@ -26,7 +25,8 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{DataFrame, SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
-import org.tikv.common.{StoreVersion, TiSession}
+import org.tikv.common.exception.TiBatchWriteException
+import org.tikv.common.{StoreVersion, TiSession, exception}
 import org.tikv.txn.TTLManager
 
 import scala.collection.JavaConverters._
@@ -61,7 +61,7 @@ object TiBatchWrite {
         tiDBOptions.checkWriteRequired()
         new TiBatchWrite(dataToWrite, tiContext, tiDBOptions).write()
       case None =>
-        throw new TiBatchWriteException("TiExtensions is disable!")
+        throw new exception.TiBatchWriteException("TiExtensions is disable!")
     }
   }
 }
@@ -133,7 +133,7 @@ class TiBatchWrite(
 
     // check if write enable
     if (!tiContext.tiConf.isWriteEnable) {
-      throw new TiBatchWriteException(
+      throw new exception.TiBatchWriteException(
         "tispark batch write is disabled! set spark.tispark.write.enable to enable.")
     }
 
@@ -192,7 +192,7 @@ class TiBatchWrite(
         if (tiContext.tiConf.isWriteWithoutLockTable) {
           logger.warn("write tidb-2.x or 3.x without lock table enabled! only for test!")
         } else {
-          throw new TiBatchWriteException(
+          throw new exception.TiBatchWriteException(
             "current tidb does not support LockTable or is disabled!")
         }
       }
@@ -409,7 +409,7 @@ class TiBatchWrite(
   private def checkConnectionLost(): Unit = {
     if (useTableLock) {
       if (tiDBJDBCClient.isClosed) {
-        throw new TiBatchWriteException("tidb's jdbc connection is lost!")
+        throw new exception.TiBatchWriteException("tidb's jdbc connection is lost!")
       }
     }
   }

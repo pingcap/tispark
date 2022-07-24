@@ -19,8 +19,6 @@ package com.pingcap.tikv.codec;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.Codec.DecimalCodec;
 import com.pingcap.tikv.codec.Codec.EnumCodec;
-import com.pingcap.tikv.exception.CodecException;
-import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
@@ -33,6 +31,8 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import org.joda.time.DateTimeZone;
+import org.tikv.common.exception.CodecException;
+import org.tikv.common.exception.TypeException;
 
 public class RowEncoderV2 {
   private static final long SIGN_MASK = 0x8000000000000000L;

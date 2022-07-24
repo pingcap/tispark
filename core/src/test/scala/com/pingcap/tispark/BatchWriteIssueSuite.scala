@@ -16,7 +16,6 @@
 
 package com.pingcap.tispark
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
@@ -28,6 +27,7 @@ import org.apache.spark.sql.types.{
   StructType,
   TimestampType
 }
+import org.tikv.common.exception.TiBatchWriteException
 
 class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
 

@@ -19,7 +19,6 @@ package com.pingcap.tikv.handle;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.CodecException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
@@ -32,6 +31,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.joda.time.Days;
 import org.joda.time.LocalDate;
+import org.tikv.common.exception.CodecException;
 import org.tikv.common.util.FastByteComparisons;
 
 public class CommonHandle implements Handle {

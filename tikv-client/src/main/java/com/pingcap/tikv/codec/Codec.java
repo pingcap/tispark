@@ -18,10 +18,6 @@ package com.pingcap.tikv.codec;
 
 import static org.tikv.shade.com.google.common.base.Preconditions.checkArgument;
 
-import com.pingcap.tikv.exception.CodecException;
-import com.pingcap.tikv.exception.ConvertOverflowException;
-import com.pingcap.tikv.exception.InvalidCodecFormatException;
-import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.types.BytesType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DecimalType;
@@ -40,6 +36,10 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.IllegalInstantException;
 import org.joda.time.LocalDate;
 import org.joda.time.LocalDateTime;
+import org.tikv.common.exception.CodecException;
+import org.tikv.common.exception.ConvertOverflowException;
+import org.tikv.common.exception.InvalidCodecFormatException;
+import org.tikv.common.exception.TypeException;
 
 public class Codec {
 

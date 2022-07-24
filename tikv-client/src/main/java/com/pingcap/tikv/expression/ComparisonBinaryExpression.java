@@ -25,12 +25,12 @@ import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.NO
 import static java.util.Objects.requireNonNull;
 import static org.tikv.shade.com.google.common.base.Preconditions.checkArgument;
 
-import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import java.util.List;
 import java.util.Objects;
+import org.tikv.common.exception.TiExpressionException;
 import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class ComparisonBinaryExpression extends Expression {

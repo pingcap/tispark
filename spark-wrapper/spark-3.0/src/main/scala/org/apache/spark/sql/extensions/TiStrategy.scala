@@ -17,7 +17,6 @@
 package org.apache.spark.sql.extensions
 
 import com.pingcap.tidb.tipb.EncodeType
-import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
@@ -55,6 +54,8 @@ import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.internal.SQLConf
 import org.joda.time.{DateTime, DateTimeZone}
+import org.tikv.common.exception
+import org.tikv.common.exception.IgnoreUnsupportedTypeException
 import org.tikv.common.meta.TiTimestamp
 import org.tikv.common.region.TiStoreType
 
@@ -243,7 +244,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       }
 
     if (notAllowPushDown) {
-      throw new IgnoreUnsupportedTypeException(
+      throw new exception.IgnoreUnsupportedTypeException(
         "Unsupported type found in fields: " + typeBlockList)
     } else {
       if (dagRequest.isDoubleRead) {

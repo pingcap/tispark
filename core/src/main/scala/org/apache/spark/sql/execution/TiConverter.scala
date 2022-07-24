@@ -16,9 +16,10 @@
 
 package org.apache.spark.sql.execution
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.types._
 import org.apache.spark.sql
+import org.tikv.common.exception
+import org.tikv.common.exception.TiBatchWriteException
 
 object TiConverter {
   type TiDataType = com.pingcap.tikv.types.DataType
@@ -91,7 +92,7 @@ object TiConverter {
       //case v: scala.collection.Map[_, _] =>
       //case v: org.apache.spark.sql.Row   =>
       case _ =>
-        throw new TiBatchWriteException(
+        throw new exception.TiBatchWriteException(
           s"do not support converting SparkSQL Data Type ${value.getClass} to TiDB Data Type!")
     }
     result

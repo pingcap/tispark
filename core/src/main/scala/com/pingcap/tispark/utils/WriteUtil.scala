@@ -17,11 +17,6 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
-import com.pingcap.tikv.exception.{
-  ConvertOverflowException,
-  TiBatchWriteException,
-  TiDBConvertException
-}
 import com.pingcap.tikv.handle.{CommonHandle, Handle, IntHandle}
 import com.pingcap.tikv.key.{IndexKey, RowKey}
 import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
@@ -31,6 +26,12 @@ import com.pingcap.tispark.write.TiBatchWrite.{SparkRow, TiRow}
 import com.pingcap.tispark.write.{SerializableKey, WrappedEncodedRow, WrappedRow}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.tikv.common.exception
+import org.tikv.common.exception.{
+  ConvertOverflowException,
+  TiBatchWriteException,
+  TiDBConvertException
+}
 
 import scala.collection.JavaConverters._
 
@@ -61,11 +62,11 @@ object WriteUtil {
           colsMapInTiDB(colsInDf(i)).getType.convertToTiDBType(sparkRow(i)))
       } catch {
         case e: ConvertOverflowException =>
-          throw new ConvertOverflowException(
+          throw new exception.ConvertOverflowException(
             e.getMessage,
-            new TiDBConvertException(colsMapInTiDB(colsInDf(i)).getName, e))
+            new exception.TiDBConvertException(colsMapInTiDB(colsInDf(i)).getName, e))
         case e: Throwable =>
-          throw new TiDBConvertException(colsMapInTiDB(colsInDf(i)).getName, e)
+          throw new exception.TiDBConvertException(colsMapInTiDB(colsInDf(i)).getName, e)
       }
     }
     tiRow
@@ -106,7 +107,7 @@ object WriteUtil {
         .asInstanceOf[java.lang.Long]
       new IntHandle(id)
     } else {
-      throw new TiBatchWriteException(
+      throw new exception.TiBatchWriteException(
         "Cannot extract handle from non-isCommonHandle and non-isPkHandle")
     }
   }
