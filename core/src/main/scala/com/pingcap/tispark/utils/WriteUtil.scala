@@ -180,7 +180,7 @@ object WriteUtil {
       if (tableInfo.isCommonHandle && index.isPrimary) {
         None
       } else {
-        Some((index.getId, generateIndex(rdd, index, tiTable, remove)))
+        Some((index.getId,generateIndex(rdd, index, tiTable, remove)))
       }
     }.toList)
   }
@@ -220,17 +220,21 @@ object WriteUtil {
       tiTable: TableCommon,
       remove: Boolean): RDD[WrappedEncodedRow] = {
     rdd.map { row =>
-      val (encodedKey, encodedValue) =
-        generateIndexKeyAndValue(row.row, row.handle, index, tiTableInfo, remove)
-      WrappedEncodedRow(
-        row.row,
-        row.handle,
-        encodedKey,
-        encodedValue,
-        isIndex = true,
-        index.getId,
-        remove)
+      generateIndex(row,index, tiTable, remove)
     }
+  }
+
+  private def generateIndex(row: WrappedRow,index: TiIndexInfo, tiTable: TableCommon, remove: Boolean ) = {
+    val (encodedKey, encodedValue) =
+      generateIndexKeyAndValue(row.row, row.handle, index, tiTable, remove)
+    WrappedEncodedRow(
+      row.row,
+      row.handle,
+      encodedKey,
+      encodedValue,
+      isIndex = true,
+      index.getId,
+      remove)
   }
 
   /**
@@ -247,7 +251,7 @@ object WriteUtil {
       tiTable: TableCommon,
       remove: Boolean): (SerializableKey, Array[Byte]) = {
     val encodeIndexResult =
-      IndexKey.genIndexKey(locatePhysicalTable(row, tiTableInfo), row, index, handle, tiTableInfo)
+      IndexKey.genIndexKey(locatePhysicalTable(tiTable), row, index, handle,tiTable.getTableInfo)
 
     val value = if (remove) {
       new Array[Byte](0)
