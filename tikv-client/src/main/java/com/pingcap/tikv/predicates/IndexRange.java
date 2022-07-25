@@ -46,7 +46,7 @@ public class IndexRange {
 
   public boolean isUnsignedLongIndexRange() {
     if (hasAccessKey()) {
-      isUnsignedLongKey(accessKey);
+      return isUnsignedLongKey(accessKey);
     }
     if (range.hasLowerBound()) {
       return isUnsignedLongKey(range.lowerEndpoint());
