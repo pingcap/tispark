@@ -84,7 +84,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
       primaryKey: SerializableKey): Unit = {
     logger.info("start to prewriteSecondaryKeys")
 
-    secondaryKeysRDD.foreachPartition { iterator =>
+    secondaryKeysRDD.foreachPartition { partition =>
       val ti2PCClientOnExecutor =
         new TwoPhaseCommitter(
           tiConf,
@@ -97,7 +97,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
           options.retryCommitSecondaryKey,
           options.prewriteMaxRetryTimes)
 
-      val pairs = iterator.map { keyValue =>
+      val pairs = partition.map { keyValue =>
         new BytePairWrapper(keyValue._1.bytes, keyValue._2)
       }.asJava
 
@@ -194,7 +194,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
       commitTs: Long): Unit = {
     if (!options.skipCommitSecondaryKey) {
       logger.info("start to commitSecondaryKeys")
-      secondaryKeysRDD.foreachPartition { iterator =>
+      secondaryKeysRDD.foreachPartition { partition =>
         val ti2PCClientOnExecutor = new TwoPhaseCommitter(
           tiConf,
           startTs,
@@ -206,7 +206,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
           options.retryCommitSecondaryKey,
           options.prewriteMaxRetryTimes)
 
-        val keys = iterator.map { keyValue =>
+        val keys = partition.map { keyValue =>
           new ByteWrapper(keyValue._1.bytes)
         }.asJava
 

@@ -17,10 +17,9 @@
 package org.apache.spark.sql.catalyst.catalog
 
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{MetaManager, TiTableReference}
 import com.pingcap.tispark.auth.TiAuthorization
-import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable
+import com.pingcap.tispark.{MetaManager, TiTableReference}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{NoSuchNamespaceException, NoSuchTableException}
 import org.apache.spark.sql.connector.catalog._

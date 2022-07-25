@@ -180,6 +180,11 @@
             <artifactId>netty-handler</artifactId>
             <version>4.1.48.Final</version>
         </dependency>
+      <dependency>
+        <groupId>commons-codec</groupId>
+        <artifactId>commons-codec</artifactId>
+        <version>1.15</version>
+      </dependency>
     </dependencies>
     <build>
         <resources>
