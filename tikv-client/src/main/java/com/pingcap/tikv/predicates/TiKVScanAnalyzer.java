@@ -477,7 +477,7 @@ public class TiKVScanAnalyzer {
       List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
       indexRanges.forEach(
           (ir) -> {
-            ScanRange range = buildTableScanKeyRangePerId(id, ir,pkHandleDatatype);
+            ScanRange range = buildTableScanKeyRangePerId(id, ir, pkHandleDatatype);
             Optional<Pair<Key, Key>> signedKeyRange = range.signedKeyRange;
             Optional<Pair<Key, Key>> unsignedKeyRange = range.unSignedKeyRange;
             if (signedKeyRange.isPresent()) {
