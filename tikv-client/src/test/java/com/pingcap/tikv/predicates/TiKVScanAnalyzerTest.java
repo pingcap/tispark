@@ -234,7 +234,10 @@ public class TiKVScanAnalyzerTest {
     List<Expression> situation8 = ImmutableList.of();
     byte[][] expectation8 =
         new byte[][] {
-          RowKey.createMin(6).getBytes(), RowKey.createBeyondMax(6).getBytes(),
+            RowKey.toRowKey(6, new IntHandle(0)).getBytes(),
+            RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).nextPrefix().getBytes(),
+            RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
+            RowKey.toRowKey(6, new IntHandle(0xffffffffffffffffL)).nextPrefix().getBytes(),
         };
     situations.add(situation8);
     expectations.add(expectation8);
@@ -248,8 +251,8 @@ public class TiKVScanAnalyzerTest {
           RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
           RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).nextPrefix().getBytes(),
         };
-    situations.add(situation7);
-    expectations.add(expectation7);
+    situations.add(situation9);
+    expectations.add(expectation9);
 
     for (int i = 0; i < situations.size(); i++) {
       List<Expression> situation = situations.get(i);
