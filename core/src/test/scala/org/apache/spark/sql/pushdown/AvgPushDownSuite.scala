@@ -35,7 +35,7 @@ class AvgPushDownSuite extends BasePushDownSuite() {
 
   private val notPush = Seq[String]("select avg(tp_float) from ")
 
-  test("Test - Ave push down pk") {
+  test("Test - Avg push down pk") {
     val tableName = "full_data_type_table_pk"
     push.foreach { query =>
       val sql = query + tableName
