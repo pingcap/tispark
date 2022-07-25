@@ -26,7 +26,7 @@ import com.pingcap.tikv.types.{DataType, DataTypeFactory, IntegerType, MySQLType
 import com.pingcap.tispark.telemetry.TiSparkTeleInfo
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 import org.apache.spark.sql.execution.{ExplainMode, SimpleMode}
-import org.scalatest.Matchers.{be, convertToAnyShouldWrapper}
+import org.scalatest.Matchers.{be, contain, convertToAnyShouldWrapper}
 import org.tikv.kvproto.Coprocessor
 
 import java.util
@@ -159,10 +159,8 @@ class LogicalPlanTestSuite extends BasePlanTest {
       val df = spark.sql(sql)
       val dag = extractDAGRequests(df).head
       val rangeFilter = dag.getRangeFilter
-      val value = df.collect()
-      for (x <- value.indices) {
-        value(x)(0).toString should be(valueExpectation(x))
-      }
+      val value = df.select("a").collect().map(_(0).toString).toList
+      value should contain theSameElementsAs valueExpectation
       if (rangeFilter.size() == 1) {
         rangeFilter.get(0).toString should be(expressionExpectation.toString)
       }
