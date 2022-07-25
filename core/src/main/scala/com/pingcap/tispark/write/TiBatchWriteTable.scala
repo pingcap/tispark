@@ -237,7 +237,7 @@ class TiBatchWriteTable(
       }
       val insertRowRdd = generateRecordKV(distinctWrappedRowRdd, remove = false)
       val insertIndexRdd =
-        WriteUtil.generateIndexKVRDD(sc, distinctWrappedRowRdd,tiTable, remove = false)
+        WriteUtil.generateIndexKVRDD(sc, distinctWrappedRowRdd, tiTable, remove = false)
 
       // The rows that exist in the current TiDB that conflict
       // with the primary key or unique index of the inserted rows.
@@ -257,7 +257,7 @@ class TiBatchWriteTable(
       }
 
       val deleteRowRDD = generateRecordKV(conflictRows, remove = true)
-      val deleteIndexRDD = WriteUtil.generateIndexKVRDD(sc, conflictRows,tiTable, remove = true)
+      val deleteIndexRDD = WriteUtil.generateIndexKVRDD(sc, conflictRows, tiTable, remove = true)
 
       (unionInsertDelete(insertRowRdd, deleteRowRDD) ++
         unionInsertDelete(insertIndexRdd, deleteIndexRDD)).map(obj =>
@@ -266,7 +266,7 @@ class TiBatchWriteTable(
     } else {
       val insertRowRdd = generateRecordKV(wrappedRowRdd, remove = false)
       val insertIndexRdd =
-        WriteUtil.generateIndexKVRDD(sc, wrappedRowRdd,tiTable, remove = false)
+        WriteUtil.generateIndexKVRDD(sc, wrappedRowRdd, tiTable, remove = false)
       (insertRowRdd ++ insertIndexRdd).map(obj => (obj.encodedKey, obj.encodedValue))
     }
 
@@ -495,7 +495,8 @@ class TiBatchWriteTable(
                 TableCodec.decodeHandleInUniqueIndexValue(
                   conflictUniqueIndexValue,
                   isCommonHandle)
-              val conflictUniqueIndexRowKey = RowKey.toRowKey(locatePhysicalTable(tiTable), conflictHandle);
+              val conflictUniqueIndexRowKey =
+                RowKey.toRowKey(locatePhysicalTable(tiTable), conflictHandle);
               conflictRowKey.add(conflictUniqueIndexRowKey.getBytes)
             }
           }
