@@ -20,7 +20,7 @@ package org.apache.spark.sql.pushdown
  * AVG only push down when count and sum can push down
  * year type is not tested, because spark jdbc not support
  */
-class AvePushDownSuite extends BasePushDownSuite() {
+class AvgPushDownSuite extends BasePushDownSuite() {
 
   private val push = Seq[String](
     "select avg(id_dt) from ",
