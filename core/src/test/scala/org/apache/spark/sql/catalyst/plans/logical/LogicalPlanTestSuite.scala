@@ -26,6 +26,7 @@ import com.pingcap.tikv.types.{DataType, DataTypeFactory, IntegerType, MySQLType
 import com.pingcap.tispark.telemetry.TiSparkTeleInfo
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 import org.apache.spark.sql.execution.{ExplainMode, SimpleMode}
+import org.scalatest.Matchers.convertToAnyShouldWrapper
 import org.tikv.kvproto.Coprocessor
 
 import java.util
@@ -160,10 +161,10 @@ class LogicalPlanTestSuite extends BasePlanTest {
       val rangeFilter = dag.getRangeFilter
       val value = df.collect()
       for (x <- value.indices) {
-        assert(value(x)(0).toString.equals(valueExpectation(x)))
+        value(x)(0).toString should valueExpectation(x)
       }
       if (rangeFilter.size() == 1) {
-        assert(rangeFilter.get(0).toString.equals(expressionExpectation.toString))
+        rangeFilter.get(0).toString should === (expressionExpectation.toString)
       }
     }
 

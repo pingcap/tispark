@@ -19,8 +19,6 @@ package com.pingcap.tikv.predicates;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.TypedKey;
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.IntegerType;
 
 public class IndexRange {
 
@@ -42,29 +40,6 @@ public class IndexRange {
 
   public boolean hasRange() {
     return range != null;
-  }
-
-  public boolean isUnsignedLongIndexRange() {
-    if (hasAccessKey()) {
-      return isUnsignedLongKey(accessKey);
-    }
-    if (range.hasLowerBound()) {
-      return isUnsignedLongKey(range.lowerEndpoint());
-    }
-    if (range.hasUpperBound()) {
-      return isUnsignedLongKey(range.upperEndpoint());
-    }
-    return false;
-  }
-
-  private boolean isUnsignedLongKey(Key key) {
-    if (key instanceof TypedKey) {
-      DataType type = ((TypedKey) key).getType();
-      if (type instanceof IntegerType) {
-        return ((IntegerType) type).isUnsignedLong();
-      }
-    }
-    return false;
   }
 
   public Range<TypedKey> getRange() {

@@ -47,6 +47,7 @@ import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
+import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.MySQLType;
 import com.pingcap.tikv.util.Pair;
 import java.math.BigDecimal;
@@ -409,7 +410,7 @@ public class TiKVScanAnalyzer {
                 ? endKey
                 : (endKey.equals(MAX_UNSIGNED_LONG)
                     ? BEYOND_UNSIGNED_LONG
-                    : endKey.add(new BigDecimal(1)));
+                    : endKey.add(BigDecimal.ONE));
       } else {
         endOpenKey = BEYOND_UNSIGNED_LONG;
       }
@@ -460,8 +461,9 @@ public class TiKVScanAnalyzer {
     }
   }
 
-  private ScanRange buildTableScanKeyRangePerId(long id, IndexRange ir) {
-    if (ir.isUnsignedLongIndexRange()) {
+  private ScanRange buildTableScanKeyRangePerId(
+      long id, IndexRange ir, IntegerType pkHandleDataType) {
+    if (pkHandleDataType.isUnsignedLong()) {
       return buildTableScanUnsignedKeyRangePerId(id, ir);
     } else {
       return buildTableScanSignedKeyRangePerId(id, ir);
@@ -469,13 +471,13 @@ public class TiKVScanAnalyzer {
   }
 
   private Map<Long, List<KeyRange>> buildTableScanKeyRangeWithIds(
-      List<Long> ids, List<IndexRange> indexRanges) {
+      List<Long> ids, List<IndexRange> indexRanges, IntegerType pkHandleDatatype) {
     Map<Long, List<KeyRange>> idRanges = new HashMap<>(ids.size());
     for (Long id : ids) {
       List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
       indexRanges.forEach(
           (ir) -> {
-            ScanRange range = buildTableScanKeyRangePerId(id, ir);
+            ScanRange range = buildTableScanKeyRangePerId(id, ir,pkHandleDatatype);
             Optional<Pair<Key, Key>> signedKeyRange = range.signedKeyRange;
             Optional<Pair<Key, Key>> unsignedKeyRange = range.unSignedKeyRange;
             if (signedKeyRange.isPresent()) {
@@ -494,19 +496,29 @@ public class TiKVScanAnalyzer {
   }
 
   @VisibleForTesting
-  Map<Long, List<KeyRange>> buildTableScanKeyRange(
+  public Map<Long, List<KeyRange>> buildTableScanKeyRange(
       TiTableInfo table, List<IndexRange> indexRanges, List<TiPartitionDef> prunedParts) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
-
-    if (table.isPartitionEnabled()) {
-      List<Long> ids = new ArrayList<>();
-      for (TiPartitionDef pDef : prunedParts) {
-        ids.add(pDef.getId());
+    if (!table.isCommonHandle()) {
+      IntegerType pkHandleDatatype;
+      if (table.isPkHandle()) {
+        pkHandleDatatype = (IntegerType) table.getPKIsHandleColumn().getType();
+      } else {
+        pkHandleDatatype = IntegerType.ROW_ID_TYPE;
       }
-      return buildTableScanKeyRangeWithIds(ids, indexRanges);
+      if (table.isPartitionEnabled()) {
+        List<Long> ids = new ArrayList<>();
+        for (TiPartitionDef pDef : prunedParts) {
+          ids.add(pDef.getId());
+        }
+        return buildTableScanKeyRangeWithIds(ids, indexRanges, pkHandleDatatype);
+      } else {
+        return buildTableScanKeyRangeWithIds(
+            ImmutableList.of(table.getId()), indexRanges, pkHandleDatatype);
+      }
     } else {
-      return buildTableScanKeyRangeWithIds(ImmutableList.of(table.getId()), indexRanges);
+      throw new TiClientInternalException("common handle is not support now");
     }
   }
 
