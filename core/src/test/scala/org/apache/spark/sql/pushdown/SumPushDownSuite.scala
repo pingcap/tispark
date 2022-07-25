@@ -1,5 +1,4 @@
 /*
- *
  * Copyright 2022 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,15 +12,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package org.apache.spark.sql.pushdown
 
-import org.apache.spark.sql.catalyst.plans.BasePlanTest
-
 /**
- * support type (MYSQLTYPE):smallint,bigint,decimal,mediumint,real(double),tinyint,int,double
+ * support type (MYSQLTYPE):smallint,bigint,decimal,mediumint,real(double),tinyint,int,double,year
 
  * unsupported type: char,float,datatime,varchar,timestamp
  * because Spark cast them to double,cast can't be pushed down to tikv
@@ -30,9 +26,10 @@ import org.apache.spark.sql.catalyst.plans.BasePlanTest
  * 1. check whether sum is pushed down
  * 2. check whether the result is right(equals to spark jdbc or equals to tidb)
  */
-class SumPushDownSuite extends BasePlanTest {
+class SumPushDownSuite extends BasePushDownSuite {
 
   private val allCases = Seq[String](
+<<<<<<< HEAD
     "select sum(tp_smallint) from full_data_type_table_cluster",
     "select sum(tp_bigint) from full_data_type_table_cluster",
     "select sum(tp_decimal) from full_data_type_table_cluster",
@@ -77,16 +74,47 @@ class SumPushDownSuite extends BasePlanTest {
         PRIMARY KEY (`id_dt`)/*T![clustered_index] CLUSTERED */
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
       """)
+=======
+    "select sum(tp_smallint) from ",
+    "select sum(tp_bigint) from ",
+    "select sum(tp_decimal) from ",
+    "select sum(tp_mediumint) from ",
+    "select sum(tp_real) from ",
+    "select sum(tp_tinyint) from ",
+    "select sum(id_dt) from ",
+    "select sum(tp_int) from ",
+    "select sum(tp_double) from ")
+>>>>>>> 803fc5943 (Fix count/avg push down (#2445))
 
+  test("Test - Sum push down with pk") {
+    val tableName = "full_data_type_table_pk"
     allCases.foreach { query =>
-      val df = spark.sql(query)
+      val sql = query + tableName
+      val df = spark.sql(sql)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
         fail(
           s"sum is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
             df).head.toString)
       }
-      runTest(query)
+      runTest(sql)
     }
   }
 
+<<<<<<< HEAD
+=======
+  test("Test - Sum push down no pk") {
+    val tableName = "full_data_type_table_no_pk"
+    allCases.foreach { query =>
+      val sql = query + tableName
+      val df = spark.sql(sql)
+      if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
+        fail(
+          s"sum is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+            df).head.toString)
+      }
+      runTest(sql)
+    }
+  }
+
+>>>>>>> 803fc5943 (Fix count/avg push down (#2445))
 }
