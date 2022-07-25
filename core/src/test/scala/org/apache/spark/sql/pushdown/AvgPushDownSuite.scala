@@ -17,54 +17,59 @@
 package org.apache.spark.sql.pushdown
 
 /**
- * support type (MYSQLTYPE):smallint,bigint,decimal,mediumint,real(double),tinyint,int,double,year
-
- * unsupported type: char,float,datatime,varchar,timestamp
- * because Spark cast them to double,cast can't be pushed down to tikv
- *
- * This test will
- * 1. check whether sum is pushed down
- * 2. check whether the result is right(equals to spark jdbc or equals to tidb)
+ * AVG only push down when count and sum can push down
+ * year type is not tested, because spark jdbc not support
  */
-class SumPushDownSuite extends BasePushDownSuite {
+class AvgPushDownSuite extends BasePushDownSuite() {
 
-  private val allCases = Seq[String](
-    "select sum(tp_smallint) from ",
-    "select sum(tp_bigint) from ",
-    "select sum(tp_decimal) from ",
-    "select sum(tp_mediumint) from ",
-    "select sum(tp_real) from ",
-    "select sum(tp_tinyint) from ",
-    "select sum(id_dt) from ",
-    "select sum(tp_int) from ",
-    "select sum(tp_double) from ")
+  private val push = Seq[String](
+    "select avg(id_dt) from ",
+    "select avg(tp_bigint) from ",
+    "select avg(tp_decimal) from ",
+    "select avg(tp_double) from ",
+    "select avg(tp_int) from ",
+    "select avg(tp_mediumint) from ",
+    "select avg(tp_real) from ",
+    "select avg(tp_smallint) from ",
+    "select avg(tp_tinyint) from ")
 
-  test("Test - Sum push down with pk") {
+  private val notPush = Seq[String]("select avg(tp_float) from ")
+
+  test("Test - Avg push down pk") {
     val tableName = "full_data_type_table_pk"
-    allCases.foreach { query =>
+    push.foreach { query =>
       val sql = query + tableName
       val df = spark.sql(sql)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
         fail(
-          s"sum is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+          s"avg is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
             df).head.toString)
       }
       runTest(sql)
     }
+
+    notPush.foreach { query =>
+      val sql = query + tableName
+      runTest(sql)
+    }
   }
 
-  test("Test - Sum push down no pk") {
+  test("Test - Avg push down no pk") {
     val tableName = "full_data_type_table_no_pk"
-    allCases.foreach { query =>
+    push.foreach { query =>
       val sql = query + tableName
       val df = spark.sql(sql)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
         fail(
-          s"sum is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+          s"avg is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
             df).head.toString)
       }
       runTest(sql)
     }
-  }
 
+    notPush.foreach { query =>
+      val sql = query + tableName
+      runTest(sql)
+    }
+  }
 }
