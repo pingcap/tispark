@@ -20,10 +20,9 @@ import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
-import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
-import com.pingcap.tispark.v2.sink.TiDBWriteBuilder
-import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions}
+import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions, TiDBWriter}
 import com.pingcap.tispark.TiTableReference
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
@@ -129,6 +128,7 @@ case class TiDBTable(
   override def capabilities(): util.Set[TableCapability] = {
     val capabilities = new util.HashSet[TableCapability]
     capabilities.add(TableCapability.BATCH_READ)
+    capabilities.add(TableCapability.V1_BATCH_WRITE)
     capabilities
   }
 
@@ -144,10 +144,16 @@ case class TiDBTable(
 
   override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = {
     var scalaMap = info.options().asScala.toMap
-    // TODO https://github.com/pingcap/tispark/issues/2269 we need to move TiDB dependencies which will block insert SQL.
-    // if we don't support it before release, insert SQL should throw exception in catalyst
+    // For insert SQL
     if (scalaMap.isEmpty) {
-      throw new TiBatchWriteException("tidbOption is neccessary.")
+//      scalaMap += (TiDBOptions.TIDB_ADDRESS -> sqlContext.getConf(TiDBOptions.TIDB_ADDRESS))
+//      scalaMap += (TiDBOptions.TIDB_PORT -> sqlContext.getConf(TiDBOptions.TIDB_PORT))
+//      scalaMap += (TiDBOptions.TIDB_USER -> sqlContext.getConf(TiDBOptions.TIDB_USER))
+//      scalaMap += (TiDBOptions.TIDB_PASSWORD -> sqlContext.getConf(TiDBOptions.TIDB_PASSWORD))
+      scalaMap += ("tidb.addr" -> "127.0.0.1")
+      scalaMap += ("tidb.port" -> "4000")
+      scalaMap += ("tidb.user" -> "root")
+      scalaMap += ("tidb.password" -> "")
     }
     // Support df.writeto: need add db and table for write
     if (!scalaMap.contains("database")) {
@@ -158,7 +164,7 @@ case class TiDBTable(
     }
     // Get TiDBOptions
     val tiDBOptions = new TiDBOptions(scalaMap)
-    TiDBWriteBuilder(info, tiDBOptions, sqlContext)
+    ReflectionUtil.newTiDBWriteBuilder(info, tiDBOptions, sqlContext)
   }
 
   override def deleteWhere(filters: Array[Filter]): Unit = {
