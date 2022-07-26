@@ -456,8 +456,9 @@ public class TiKVScanAnalyzer {
 
       return new ScanRange(
           signedStartClosedKey, signedEndOpenKey, unsignedStartClosedKey, unsignedEndOpenKey);
+    } else {
+      throw new TiClientInternalException("Empty access conditions");
     }
-    throw new TiClientInternalException("Empty access conditions");
   }
 
   private ScanRange buildTableScanKeyRangePerId(
@@ -494,7 +495,6 @@ public class TiKVScanAnalyzer {
     return idRanges;
   }
 
-  @VisibleForTesting
   public Map<Long, List<KeyRange>> buildTableScanKeyRange(
       TiTableInfo table, List<IndexRange> indexRanges, List<TiPartitionDef> prunedParts) {
     requireNonNull(table, "Table is null");
