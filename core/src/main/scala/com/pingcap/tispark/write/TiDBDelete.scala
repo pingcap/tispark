@@ -37,13 +37,13 @@ case class TiDBDelete(
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  @transient lazy val tiSession: ClientSession = getTiSessionFromSparkConf
+  @transient lazy val clientSession: ClientSession = getTiSessionFromSparkConf
 
   // Call copyTableWithRowId to
   // 1.match the schema of dataframe
   // 2.make extract handle more convenience for (pkIsHandle || isCommonHandle) is always true.
   val tiTableInfo: TiTableInfo =
-    tiSession.getCatalog.getTable(database, tableName).copyTableWithRowId()
+    clientSession.getCatalog.getTable(database, tableName).copyTableWithRowId()
 
   @transient private var persistedDFList: List[DataFrame] = Nil
   @transient private var persistedRDDList: List[RDD[_]] = Nil

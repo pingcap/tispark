@@ -29,7 +29,7 @@ class RowIDAllocatorSuite extends BaseTiSparkTest {
 
     val dbName = dbPrefix + "tispark_test"
     val tableName = "rowid_allocator"
-    val tiDBInfo = ti.tiSession.getCatalog.getDatabase(dbName)
+    val tiDBInfo = ti.clientSession.getCatalog.getDatabase(dbName)
     val tiTableInfo =
       ti.clientSession.getCatalog.getTable(dbName, tableName)
     // corner case allocate unsigned long's max value.

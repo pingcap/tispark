@@ -34,7 +34,7 @@ object TiDBWriter {
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
         val tableExists =
-          tiContext.tiSession.getCatalog.getTable(options.database, options.table) != null
+          tiContext.clientSession.getCatalog.getTable(options.database, options.table) != null
 
         if (tableExists) {
           saveMode match {

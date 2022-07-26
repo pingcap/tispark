@@ -32,7 +32,7 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
     jdbcUpdate(
       s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i)) SHARD_ROW_ID_BITS=4")
 
-    val tiTableInfo = ti.tiSession.getCatalog.getTable(dbPrefix + database, table)
+    val tiTableInfo = ti.clientSession.getCatalog.getTable(dbPrefix + database, table)
     assert(!tiTableInfo.isPkHandle)
 
     (1L until 10L).foreach { i =>

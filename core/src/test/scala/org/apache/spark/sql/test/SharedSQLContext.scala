@@ -484,7 +484,7 @@ trait SharedSQLContext
       }
 
       if (_ti != null) {
-        _ti.tiSession.close()
+        _ti.clientSession.close()
         _ti = null
       }
     }

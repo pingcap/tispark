@@ -281,7 +281,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
     val tableName = "catalog_test"
     tidbStmt.execute(s"DROP TABLE IF EXISTS `$tableName`")
     tidbStmt.execute(s"CREATE TABLE $tableName(c1 int)")
-    val catalog = this.ti.tiSession.getCatalog
+    val catalog = this.ti.clientSession.getCatalog
     val tableInfo1 = catalog.getTable(s"${dbPrefix}tispark_test", tableName)
 
     tidbStmt.execute(s"ALTER TABLE `$tableName` ADD COLUMN c2 INT;")

@@ -52,7 +52,7 @@ class TeleMsg(sparkSession: SparkSession) {
       val conf = clientSession.getConf
       TiUtil.sparkConfToTiConfWithoutPD(SparkSession.active.sparkContext.getConf, conf)
       val tiSession = clientSession.getTikvSession
-      val snapShot = tiSession.createSnapshot()
+      val snapShot = clientSession.createSnapshot()
       val value = snapShot.get(TRACK_ID.getBytes("UTF-8"))
 
       if (value.nonEmpty)

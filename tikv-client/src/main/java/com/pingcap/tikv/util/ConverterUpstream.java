@@ -68,16 +68,13 @@ public class ConverterUpstream {
     //    can't set
     //        tikvConf.setScanBathSize(conf.getScanBatchSize());
 
-    // same -----------------------------------
-
+    // same
     tikvConf.setIndexScanBatchSize(conf.getIndexScanBatchSize());
     tikvConf.setIndexScanConcurrency(conf.getIndexScanConcurrency());
     tikvConf.setTableScanConcurrency(conf.getTableScanConcurrency());
     tikvConf.setKvClientConcurrency(conf.getKvClientConcurrency());
     tikvConf.setConnRecycleTimeInSeconds(Math.toIntExact(conf.getConnRecycleTime()));
     tikvConf.setCertReloadIntervalInSeconds(conf.getCertReloadInterval());
-
-    // same
     tikvConf.setBatchGetConcurrency(conf.getBatchGetConcurrency());
     tikvConf.setBatchPutConcurrency(conf.getBatchPutConcurrency());
     tikvConf.setBatchDeleteConcurrency(conf.getBatchDeleteConcurrency());
