@@ -16,10 +16,10 @@
 
 package org.apache.spark.sql.tispark
 
-import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tikv.handle.Handle
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.util.RangeSplitter
+import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.sql.catalyst.expressions.Attribute
@@ -57,7 +57,7 @@ class TiHandleRDD(
   override def compute(split: Partition, context: TaskContext): Iterator[InternalRow] =
     new Iterator[InternalRow] {
       checkTimezone()
-
+      private val clientSession = ClientSession.getInstance(tiConf)
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val snapshot = clientSession.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks
