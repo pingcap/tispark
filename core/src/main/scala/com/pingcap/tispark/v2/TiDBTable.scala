@@ -144,23 +144,27 @@ case class TiDBTable(
 
   override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = {
     var scalaMap = info.options().asScala.toMap
-    // For insert SQL
-    if (scalaMap.isEmpty) {
-//      scalaMap += (TiDBOptions.TIDB_ADDRESS -> sqlContext.getConf(TiDBOptions.TIDB_ADDRESS))
-//      scalaMap += (TiDBOptions.TIDB_PORT -> sqlContext.getConf(TiDBOptions.TIDB_PORT))
-//      scalaMap += (TiDBOptions.TIDB_USER -> sqlContext.getConf(TiDBOptions.TIDB_USER))
-//      scalaMap += (TiDBOptions.TIDB_PASSWORD -> sqlContext.getConf(TiDBOptions.TIDB_PASSWORD))
-      scalaMap += ("tidb.addr" -> "127.0.0.1")
-      scalaMap += ("tidb.port" -> "4000")
-      scalaMap += ("tidb.user" -> "root")
-      scalaMap += ("tidb.password" -> "")
+    // For update statics
+    val enableUpdateStatics =
+      sqlContext.getConf(TiDBOptions.TIDB_ENABLE_UPDATE_TABLE_STATISTICS, "false").toBoolean
+    if (enableUpdateStatics) {
+      scalaMap += (TiDBOptions.TIDB_ADDRESS -> sqlContext.getConf(TiDBOptions.TIDB_ADDRESS))
+      scalaMap += (TiDBOptions.TIDB_PORT -> sqlContext.getConf(TiDBOptions.TIDB_PORT))
+      scalaMap += (TiDBOptions.TIDB_USER -> sqlContext.getConf(TiDBOptions.TIDB_USER))
+      scalaMap += (TiDBOptions.TIDB_PASSWORD -> sqlContext.getConf(TiDBOptions.TIDB_PASSWORD))
+      scalaMap += (TiDBOptions.TIDB_ENABLE_UPDATE_TABLE_STATISTICS -> "true")
     }
+    scalaMap += (TiDBOptions.TiDB_ROW_FORMAT_VERSION -> sqlContext.getConf(
+      TiDBOptions.TiDB_ROW_FORMAT_VERSION,
+      "2"))
+
     // Support df.writeto: need add db and table for write
-    if (!scalaMap.contains("database")) {
-      scalaMap += ("database" -> databaseName)
+    if (!scalaMap.contains(TiDBOptions.TIDB_DATABASE)) {
+      scalaMap += (TiDBOptions.TIDB_DATABASE -> databaseName)
     }
-    if (!scalaMap.contains("table")) {
-      scalaMap += ("table" -> tableName)
+
+    if (!scalaMap.contains(TiDBOptions.TIDB_TABLE)) {
+      scalaMap += (TiDBOptions.TIDB_TABLE -> tableName)
     }
     // Get TiDBOptions
     val tiDBOptions = new TiDBOptions(scalaMap)

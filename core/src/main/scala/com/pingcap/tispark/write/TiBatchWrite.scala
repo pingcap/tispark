@@ -79,7 +79,6 @@ class TiBatchWrite(
   @transient private var ttlManager: TTLManager = _
   private var isTTLUpdate: Boolean = _
   private var lockTTLSeconds: Long = _
-  @transient private var tiDBJDBCClient: TiDBJDBCClient = _
   @transient private var tiBatchWriteTables: List[TiBatchWriteTable] = _
   @transient private var startMS: Long = _
   private var startTs: Long = _
@@ -97,14 +96,6 @@ class TiBatchWrite(
   private def close(): Unit = {
     try {
       if (tiBatchWriteTables != null) {
-        tiBatchWriteTables.foreach(_.unlockTable())
-      }
-    } catch {
-      case _: Throwable =>
-    }
-
-    try {
-      if (tiBatchWriteTables != null) {
         tiBatchWriteTables.foreach(_.unpersistAll())
       }
     } catch {
@@ -113,14 +104,6 @@ class TiBatchWrite(
 
     try {
       twoPhaseCommitHepler.close()
-    } catch {
-      case _: Throwable =>
-    }
-
-    try {
-      if (tiDBJDBCClient != null) {
-        tiDBJDBCClient.close()
-      }
     } catch {
       case _: Throwable =>
     }
@@ -142,19 +125,12 @@ class TiBatchWrite(
     val isTiDBV4 = StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient)
     isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
     lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
-    tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
 
     // init tiBatchWriteTables
     tiBatchWriteTables = {
       dataToWrite.map {
         case (dbTable, df) =>
-          new TiBatchWriteTable(
-            df,
-            tiContext,
-            options.setDBTable(dbTable),
-            tiConf,
-            tiDBJDBCClient,
-            isTiDBV4)
+          new TiBatchWriteTable(df, tiContext, options.setDBTable(dbTable), tiConf, isTiDBV4)
       }.toList
     }
 
@@ -179,21 +155,6 @@ class TiBatchWrite(
     if (allEmpty) {
       logger.warn("data is empty!")
       return
-    }
-
-    // lock table
-    useTableLock = getUseTableLock
-    if (useTableLock) {
-      tiBatchWriteTables.foreach(_.lockTable())
-    } else {
-      if (!isTiDBV4) {
-        if (tiContext.tiConf.isWriteWithoutLockTable) {
-          logger.warn("write tidb-2.x or 3.x without lock table enabled! only for test!")
-        } else {
-          throw new TiBatchWriteException(
-            "current tidb does not support LockTable or is disabled!")
-        }
-      }
     }
 
     // check schema
@@ -274,8 +235,6 @@ class TiBatchWrite(
     // executors secondary pre-write
     twoPhaseCommitHepler.prewriteSecondaryKeyByExecutors(secondaryKeysRDD, primaryKey)
 
-    // check connection lost if using lock table
-    checkConnectionLost()
     // checkschema if not useTableLock
     val schemaUpdateTimes = if (useTableLock) {
       Nil
@@ -289,15 +248,18 @@ class TiBatchWrite(
     // stop ttl
     twoPhaseCommitHepler.stopPrimaryKeyTTLUpdate()
 
-    // unlock table
-    tiBatchWriteTables.foreach(_.unlockTable())
-
     // executors secondary commit
     twoPhaseCommitHepler.commitSecondaryKeyByExecutors(secondaryKeysRDD, commitTs)
 
     // update table statistics: modify_count & count
     if (options.enableUpdateTableStatistics) {
-      tiBatchWriteTables.foreach(_.updateTableStatistics(startTs))
+      val tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
+      tiBatchWriteTables.foreach(_.updateTableStatistics(startTs, tiDBJDBCClient))
+      try {
+        tiDBJDBCClient.close()
+      } catch {
+        case _: Throwable =>
+      }
     }
 
     val endMS = System.currentTimeMillis()
@@ -377,24 +339,6 @@ class TiBatchWrite(
     Math.ceil(avg).toInt
   }
 
-  private def getUseTableLock: Boolean = {
-    if (!options.useTableLock(StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient))) {
-      false
-    } else {
-      if (tiDBJDBCClient.isEnableTableLock) {
-        if (tiDBJDBCClient.getDelayCleanTableLock >= MIN_DELAY_CLEAN_TABLE_LOCK) {
-          true
-        } else {
-          logger.warn(
-            s"table lock disabled! to enable table lock, please set tidb config: delay-clean-table-lock >= $MIN_DELAY_CLEAN_TABLE_LOCK")
-          false
-        }
-      } else {
-        false
-      }
-    }
-  }
-
   private def mergeSparkConfWithDataSourceConf(
       conf: SparkConf,
       options: TiDBOptions): TiConfiguration = {
@@ -404,11 +348,4 @@ class TiBatchWrite(
     TiUtil.sparkConfToTiConf(clonedConf, Option.empty)
   }
 
-  private def checkConnectionLost(): Unit = {
-    if (useTableLock) {
-      if (tiDBJDBCClient.isClosed) {
-        throw new TiBatchWriteException("tidb's jdbc connection is lost!")
-      }
-    }
-  }
 }

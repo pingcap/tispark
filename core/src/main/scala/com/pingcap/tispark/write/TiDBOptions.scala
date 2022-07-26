@@ -135,7 +135,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // Optional parameters for read
   // ------------------------------------------------------------
   val tidbRowId: Boolean = getOrDefault(TIDB_ROWID, "false").toBoolean
-
+  val tidbRowFormatVersion: Int = getOrDefault(TiDB_ROW_FORMAT_VERSION, "2").toInt
   // ------------------------------------------------------------
   // Enable JDBC SSL connection
   // ------------------------------------------------------------
@@ -282,6 +282,7 @@ object TiDBOptions {
   val TIDB_ENABLE_UPDATE_TABLE_STATISTICS: String = newOption("enableUpdateTableStatistics")
   val TIDB_DEDUPLICATE: String = newOption("deduplicate")
   val TIDB_ROWID: String = newOption("tidbRowId")
+  val TiDB_ROW_FORMAT_VERSION: String = newOption("rowFormatVersion")
 
   // region split
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")

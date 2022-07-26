@@ -40,7 +40,6 @@ class TiBatchWriteTable(
     @transient val tiContext: TiContext,
     val options: TiDBOptions,
     val tiConf: TiConfiguration,
-    @transient val tiDBJDBCClient: TiDBJDBCClient,
     val isTiDBV4: Boolean)
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
@@ -48,8 +47,7 @@ class TiBatchWriteTable(
   import com.pingcap.tispark.write.TiBatchWrite._
   @transient private val tiSession = tiContext.tiSession
   // only fetch row format version once for each batch write process
-  private val enableNewRowFormat: Boolean =
-    if (isTiDBV4) tiDBJDBCClient.getRowFormatVersion == 2 else false
+  private val enableNewRowFormat: Boolean = options.tidbRowFormatVersion == 2
   private var tiTableRef: TiTableReference = _
   private var tiDBInfo: TiDBInfo = _
   private var tiTableInfo: TiTableInfo = _
@@ -58,7 +56,6 @@ class TiBatchWriteTable(
   private var colsInDf: List[String] = _
   private var uniqueIndices: Seq[TiIndexInfo] = _
   private var handleCol: TiColumnInfo = _
-  private var tableLocked: Boolean = false
   private var autoIncProvidedID: Boolean = false
   // isCommonHandle = true => clustered index
   private var isCommonHandle: Boolean = _
@@ -321,22 +318,6 @@ class TiBatchWriteTable(
     persistedKeyValueRDD
   }
 
-  def lockTable(): Unit = {
-    if (!tableLocked) {
-      tiDBJDBCClient.lockTableWriteLocal(options.database, options.table)
-      tableLocked = true
-    } else {
-      logger.warn("table already locked!")
-    }
-  }
-
-  def unlockTable(): Unit = {
-    if (tableLocked) {
-      tiDBJDBCClient.unlockTables()
-      tableLocked = false
-    }
-  }
-
   def checkUnsupported(): Unit = {
     // write to table with auto random column
     if (tiTableInfo.hasAutoRandomColumn) {
@@ -380,7 +361,7 @@ class TiBatchWriteTable(
   }
 
   // update table statistics: modify_count & count
-  def updateTableStatistics(startTs: Long): Unit = {
+  def updateTableStatistics(startTs: Long, tiDBJDBCClient: TiDBJDBCClient): Unit = {
     try {
       tiDBJDBCClient.updateTableStatistics(startTs, tiTableInfo.getId, deltaCount, modifyCount)
     } catch {
