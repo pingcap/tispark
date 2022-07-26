@@ -26,8 +26,8 @@ New feature: TiSpark Insert SQL Feature
 
 ## Motivation or Background
 
-TiSpark is a connector that provides read, write and delete support.
-But it only supports writing data using DataSource API, users can't use Spark SQL to write data.
+TiSpark is a connector that provides read, insert and delete support.
+But it only supports insert using DataSource API, users can't use Spark SQL to write data.
 
 It's common for users to use SQL statements in the big-data workflow. We are going to support TiSpark to
 write using Spark SQL.
@@ -42,7 +42,7 @@ write using Spark SQL.
 - User doc
 
 ## API
-Use spark SQL to write data in TiSpark.
+Use spark SQL to insert data in TiSpark.
 ```
 // insert with spark sql
 spark.sql("insert into tidb_db.db.table values(x, x...)(y, y...)...")
@@ -89,8 +89,8 @@ done in every executor which also causes performance issue.
 
 
 ## Compatibility
-- TiDB support: 4.x and 5.x
-- Spark support: >= 3.0
+- TiDB support: 4.x, 5.x and 6.x
+- Spark support: 3.0, 3.1 and 3.2
 
 ## Test Design
 
