@@ -40,10 +40,15 @@ public class ClientSession implements AutoCloseable {
   }
 
   private ClientSession(com.pingcap.tikv.TiConfiguration config) {
-    this.conf = config;
+    if (config != null) {
+      this.conf = config;
+    } else {
+      this.conf = com.pingcap.tikv.TiConfiguration.createDefault("127.0.0.1:2379");
+    }
     this.tikvSession =
-        org.tikv.common.TiSession.create(ConverterUpstream.convertTiConfiguration(config));
-    this.catalog = new Catalog(this::createSnapshot, config.isShowRowId(), config.getDBPrefix());
+        org.tikv.common.TiSession.create(ConverterUpstream.convertTiConfiguration(getConf()));
+    this.catalog =
+        new Catalog(this::createSnapshot, getConf().isShowRowId(), getConf().getDBPrefix());
   }
 
   public Snapshot createSnapshot() {

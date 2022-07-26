@@ -68,6 +68,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     val conf = TiConfiguration.createDefault(pdAddress)
     val clientSession = ClientSession.getInstance(conf)
     meta = Some(new MetaManager(clientSession.getCatalog))
+    this.clientSession = Some(clientSession)
   }
 
   override def name(): String = _name.get
