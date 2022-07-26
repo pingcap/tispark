@@ -43,7 +43,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  // Init tiConf and tiSession
+  // Init tiConf and clientSession
   // PdAddress get from spark config
   private val tiConf = TwoPhaseCommitHepler.generateTiConf(options)
   @transient private lazy val clientSession = ClientSession.getInstance(tiConf)

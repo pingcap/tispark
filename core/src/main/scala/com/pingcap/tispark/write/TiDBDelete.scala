@@ -37,7 +37,7 @@ case class TiDBDelete(
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  @transient lazy val clientSession: ClientSession = getTiSessionFromSparkConf
+  @transient lazy val clientSession: ClientSession = getClientSessionFromSparkConf
 
   // Call copyTableWithRowId to
   // 1.match the schema of dataframe
@@ -193,7 +193,7 @@ case class TiDBDelete(
     }
   }
 
-  private def getTiSessionFromSparkConf: ClientSession = {
+  private def getClientSessionFromSparkConf: ClientSession = {
     val sparkConf: SparkConf = SparkContext.getOrCreate().getConf
     val tiConf: TiConfiguration = sparkConfToTiConf(sparkConf, Option.empty)
     ClientSession.getInstance(tiConf)

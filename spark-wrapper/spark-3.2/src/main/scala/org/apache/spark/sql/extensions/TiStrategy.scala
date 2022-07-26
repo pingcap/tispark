@@ -108,7 +108,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     TiExtensions.validateCatalog(sparkSession)
     val ts = if (TiUtil.getTiDBSnapshot(sparkSession).isEmpty) {
-      tiContext.tiSession.getTimestamp
+      tiContext.clientSession.getTikvSession.getTimestamp
     } else {
       tiContext.clientSession.getSnapshotTimestamp
     }

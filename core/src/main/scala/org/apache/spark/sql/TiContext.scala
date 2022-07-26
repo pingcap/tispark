@@ -30,7 +30,6 @@ import org.json4s.DefaultFormats
 import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
-import org.tikv.common.TiSession
 import scalaj.http.Http
 
 import java.lang
@@ -48,7 +47,6 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
       Option(tiAuthorization.get.getPDAddress())
     } else Option.empty)
   final val clientSession = ClientSession.getInstance(tiConf)
-  final val tiSession: TiSession = clientSession.getTikvSession
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
 
   sparkSession.sparkContext.addSparkListener(new SparkListener() {
@@ -57,7 +55,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
         try {
           clientSession.close()
         } catch {
-          case e: Throwable => logWarning("fail to close TiSession!", e)
+          case e: Throwable => logWarning("fail to close ClientSession!", e)
         }
       }
     }
@@ -66,7 +64,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   TiUtil.registerUDFs(sparkSession)
   StatisticsManager.initStatisticsManager(clientSession)
   CacheInvalidateListener
-    .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
+    .initCacheListener(sparkSession.sparkContext, clientSession.getTikvSession.getRegionManager)
   clientSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
   val meta: MetaManager = new MetaManager(clientSession.getCatalog)
   val debug: DebugTool = new DebugTool

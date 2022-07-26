@@ -57,7 +57,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
 case class TiDBTable(
-    session: ClientSession,
+    clientSession: ClientSession,
     tableRef: TiTableReference,
     table: TiTableInfo,
     var ts: TiTimestamp = null,
@@ -122,11 +122,11 @@ case class TiDBTable(
   override def toString: String = s"TiDBTable($name)"
 
   def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
-    getDagRequestToRegionTaskExec(dagRequest, output, session, sqlContext, tableRef)
+    getDagRequestToRegionTaskExec(dagRequest, output, clientSession, sqlContext, tableRef)
   }
 
   def logicalPlanToRDD(dagRequest: TiDAGRequest, output: Seq[Attribute]): List[TiRowRDD] = {
-    getLogicalPlanToRDD(dagRequest, output, session, sqlContext, tableRef)
+    getLogicalPlanToRDD(dagRequest, output, clientSession, sqlContext, tableRef)
   }
 
   override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = {
@@ -166,7 +166,7 @@ case class TiDBTable(
     }
 
     // TODO It's better to use the start_ts of read. We can't get it now.
-    val startTs = session.getTikvSession.getTimestamp.getVersion
+    val startTs = clientSession.getTikvSession.getTimestamp.getVersion
     logger.info(s"startTS: $startTs")
 
     // Query data from TiKV (ByPass TiDB)

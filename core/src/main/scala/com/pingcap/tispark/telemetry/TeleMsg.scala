@@ -20,7 +20,6 @@ import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark.utils.{SystemInfoUtil, TiUtil}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import org.tikv.common.TiSession
 import org.tikv.common.util.ConcreteBackOffer
 import org.tikv.txn.TwoPhaseCommitter
 
@@ -51,7 +50,6 @@ class TeleMsg(sparkSession: SparkSession) {
         ClientSession.getInstance(TiConfiguration.createDefault(pdAddr.get))
       val conf = clientSession.getConf
       TiUtil.sparkConfToTiConfWithoutPD(SparkSession.active.sparkContext.getConf, conf)
-      val tiSession = clientSession.getTikvSession
       val snapShot = clientSession.createSnapshot()
       val value = snapShot.get(TRACK_ID.getBytes("UTF-8"))
 
@@ -59,7 +57,7 @@ class TeleMsg(sparkSession: SparkSession) {
         return new String(value, "UTF-8")
 
       val uuid = TRACK_ID_PREFIX + UUID.randomUUID().toString
-      putKeyValue(TRACK_ID, uuid, tiSession)
+      putKeyValue(TRACK_ID, uuid, clientSession)
       uuid
     } catch {
       case e: Throwable =>
@@ -68,10 +66,10 @@ class TeleMsg(sparkSession: SparkSession) {
     }
   }
 
-  private def putKeyValue(key: String, value: String, tiSession: TiSession): Unit = {
-    val startTS = tiSession.getTimestamp.getVersion
+  private def putKeyValue(key: String, value: String, clientSession: ClientSession): Unit = {
+    val startTS = clientSession.getTikvSession.getTimestamp.getVersion
     try {
-      val twoPhaseCommitter = new TwoPhaseCommitter(tiSession, startTS)
+      val twoPhaseCommitter = new TwoPhaseCommitter(clientSession.getTikvSession, startTS)
       val backOffer = ConcreteBackOffer.newCustomBackOff(1000)
       twoPhaseCommitter.prewritePrimaryKey(
         backOffer,
@@ -80,7 +78,7 @@ class TeleMsg(sparkSession: SparkSession) {
       twoPhaseCommitter.commitPrimaryKey(
         backOffer,
         key.getBytes("UTF-8"),
-        tiSession.getTimestamp.getVersion)
+        clientSession.getTikvSession.getTimestamp.getVersion)
     } catch {
       case e: Throwable =>
         logger.warn("Failed to set telemetry ID to TiKV.", e.getMessage)
