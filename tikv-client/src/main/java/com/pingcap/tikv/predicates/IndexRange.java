@@ -21,6 +21,7 @@ import com.pingcap.tikv.key.TypedKey;
 import org.tikv.shade.com.google.common.collect.Range;
 
 public class IndexRange {
+
   private final Key accessKey;
   private final Range<TypedKey> range;
 

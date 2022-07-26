@@ -17,6 +17,8 @@
 package com.pingcap.tikv.predicates;
 
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.greaterEqual;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.greaterThan;
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessThan;
 import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
@@ -56,6 +58,7 @@ import org.tikv.shade.com.google.common.collect.ImmutableSet;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class TiKVScanAnalyzerTest {
+
   private static TiTableInfo createTable() {
     return createTableWithIndex(1, 1);
   }
@@ -93,6 +96,184 @@ public class TiKVScanAnalyzerTest {
         .appendIndex("testIndex", ImmutableList.of("c1", "c2", "c3"), false)
         .setPkHandle(true)
         .build();
+  }
+
+  private static TiTableInfo createTableWithUnsignedLong(long tableId, long indexId) {
+    InternalTypeHolder holder =
+        new InternalTypeHolder(
+            MySQLType.TypeLonglong.getTypeCode(),
+            32, // indicating a unsigned type
+            -1,
+            -1,
+            "",
+            "",
+            ImmutableList.of());
+    DataType unsignedLong = DataTypeFactory.of(holder);
+    return new MetaUtils.TableBuilder()
+        .name("testTable")
+        .addColumn("c1", unsignedLong, true)
+        .addColumn("c2", StringType.VARCHAR)
+        .addColumn("c3", StringType.VARCHAR)
+        .addColumn("c4", IntegerType.TINYINT)
+        .tableId(tableId)
+        .appendIndex(indexId, "testIndex", ImmutableList.of("c1", "c2", "c3"), false)
+        .setPkHandle(true)
+        .build();
+  }
+
+  @Test
+  public void buildRangeWithUnsignedLongPKTest() {
+    TiTableInfo table = createTableWithUnsignedLong(6, 5);
+    TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
+
+    List<List<Expression>> situations = new ArrayList<>();
+    List<byte[][]> expectations = new ArrayList<>();
+
+    // (0,Long.Max_VALUE)
+    Expression eq1 =
+        greaterThan(ColumnRef.create("c1", table), Constant.create(0, IntegerType.BIGINT));
+    Expression eq2 =
+        lessThan(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE, IntegerType.BIGINT));
+    List<Expression> situation1 = ImmutableList.of(eq1, eq2);
+    byte[][] expectation1 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(0)).nextPrefix().getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).getBytes(),
+        };
+    situations.add(situation1);
+    expectations.add(expectation1);
+
+    // (0,Long.Max_VALUE+1)
+    eq1 = greaterThan(ColumnRef.create("c1", table), Constant.create(0, IntegerType.BIGINT));
+    eq2 =
+        lessThan(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE + 1, IntegerType.BIGINT));
+    List<Expression> situation2 = ImmutableList.of(eq1, eq2);
+    byte[][] expectation2 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(0)).nextPrefix().getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).nextPrefix().getBytes(),
+        };
+    situations.add(situation2);
+    expectations.add(expectation2);
+
+    // [Long.Max_VALUE,INF]
+    eq1 =
+        greaterEqual(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE, IntegerType.BIGINT));
+    List<Expression> situation3 = ImmutableList.of(eq1);
+    byte[][] expectation3 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).nextPrefix().getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(0xffffffffffffffffL)).nextPrefix().getBytes(),
+        };
+    situations.add(situation3);
+    expectations.add(expectation3);
+
+    // [Long.MaxValue+1,Long.MaxValue+1]
+    eq1 =
+        greaterEqual(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE + 1, IntegerType.BIGINT));
+    eq2 =
+        lessEqual(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE + 1, IntegerType.BIGINT));
+    List<Expression> situation4 = ImmutableList.of(eq1, eq2);
+    byte[][] expectation4 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).nextPrefix().getBytes(),
+        };
+    situations.add(situation4);
+    expectations.add(expectation4);
+
+    // [Long.MaxValue+1,INF]
+    eq1 =
+        greaterEqual(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE + 1, IntegerType.BIGINT));
+    List<Expression> situation5 = ImmutableList.of(eq1);
+    byte[][] expectation5 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(0xffffffffffffffffL)).nextPrefix().getBytes(),
+        };
+    situations.add(situation5);
+    expectations.add(expectation5);
+
+    // [-INF,Long.MaxValue)
+    eq2 =
+        lessThan(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE, IntegerType.BIGINT));
+    List<Expression> situation6 = ImmutableList.of(eq2);
+    byte[][] expectation6 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(0)).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).getBytes(),
+        };
+    situations.add(situation6);
+    expectations.add(expectation6);
+
+    // [-INF,Long.MaxValue+1]
+    eq2 =
+        lessEqual(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE + 1, IntegerType.BIGINT));
+    List<Expression> situation7 = ImmutableList.of(eq2);
+    byte[][] expectation7 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(0)).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).nextPrefix().getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).nextPrefix().getBytes(),
+        };
+    situations.add(situation7);
+    expectations.add(expectation7);
+
+    // [-INF,INF]
+    List<Expression> situation8 = ImmutableList.of();
+    byte[][] expectation8 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(0)).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE)).nextPrefix().getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(0xffffffffffffffffL)).nextPrefix().getBytes(),
+        };
+    situations.add(situation8);
+    expectations.add(expectation8);
+
+    eq2 =
+        equal(
+            ColumnRef.create("c1", table), Constant.create(Long.MAX_VALUE + 1, IntegerType.BIGINT));
+    List<Expression> situation9 = ImmutableList.of(eq2);
+    byte[][] expectation9 =
+        new byte[][] {
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).getBytes(),
+          RowKey.toRowKey(6, new IntHandle(Long.MAX_VALUE + 1)).nextPrefix().getBytes(),
+        };
+    situations.add(situation9);
+    expectations.add(expectation9);
+
+    for (int i = 0; i < situations.size(); i++) {
+      List<Expression> situation = situations.get(i);
+      byte[][] expectation = expectations.get(i);
+      ScanSpec result = TiKVScanAnalyzer.extractConditions(situation, table, pkIndex);
+      List<IndexRange> irs =
+          expressionToIndexRanges(
+              result.getPointPredicates(), result.getRangePredicate(), table, pkIndex);
+
+      TiKVScanAnalyzer scanAnalyzer = new TiKVScanAnalyzer();
+
+      List<Coprocessor.KeyRange> keyRanges =
+          scanAnalyzer.buildTableScanKeyRange(table, irs, null).get(table.getId());
+
+      assertEquals(expectation.length / 2, keyRanges.size());
+      for (int j = 0; j < expectation.length / 2; j++) {
+        Coprocessor.KeyRange keyRange = keyRanges.get(j);
+        assertEquals(ByteString.copyFrom(expectation[j * 2]), keyRange.getStart());
+        assertEquals(ByteString.copyFrom(expectation[j * 2 + 1]), keyRange.getEnd());
+      }
+    }
   }
 
   @Test
@@ -331,6 +512,7 @@ public class TiKVScanAnalyzerTest {
     offsetMap.put("holder", 4);
 
     class test {
+
       private final String[] columnNames;
       private final String[] indexNames;
       private final int[] indexLens;

@@ -139,7 +139,7 @@ public class Constant extends Expression {
   public boolean isOverflowed() {
     if (this.dataType instanceof IntegerType) {
       if (((IntegerType) this.dataType).isUnsignedLong()) {
-        return ((BigDecimal) value).min(UNSIGNED_LONG_MAX).signum() > 0
+        return ((BigDecimal) value).subtract(UNSIGNED_LONG_MAX).signum() > 0
             || ((BigDecimal) value).signum() < 0;
       }
     }
