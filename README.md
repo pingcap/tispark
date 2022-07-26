@@ -20,7 +20,7 @@ Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](http
 
 ## Prerequisites
 
-- To use TiSpark with Spark, you must have a self-hosted or managed Prometheus service.
+- To use TiSpark with Spark, you must have a self-hosted or managed Spark service.
 
 ## Doc TOC
 
