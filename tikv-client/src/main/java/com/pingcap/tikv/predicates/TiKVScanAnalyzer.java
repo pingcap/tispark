@@ -381,7 +381,8 @@ public class TiKVScanAnalyzer {
         signedEndOpenKey = signedStartClosedKey.nextPrefix();
         return new ScanRange(signedStartClosedKey, signedEndOpenKey, null, null);
       }
-    } else if (ir.hasRange()) {
+    }
+    if (ir.hasRange()) {
       Range<TypedKey> r = ir.getRange();
       // Convert the range to low inclusive and high exclusive range
       BigDecimal startClosedKey;
@@ -456,9 +457,8 @@ public class TiKVScanAnalyzer {
 
       return new ScanRange(
           signedStartClosedKey, signedEndOpenKey, unsignedStartClosedKey, unsignedEndOpenKey);
-    } else {
-      throw new TiClientInternalException("Empty access conditions");
     }
+    throw new TiClientInternalException("Empty access conditions");
   }
 
   private ScanRange buildTableScanKeyRangePerId(
