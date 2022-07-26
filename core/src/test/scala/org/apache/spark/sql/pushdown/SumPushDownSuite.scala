@@ -29,15 +29,15 @@ package org.apache.spark.sql.pushdown
 class SumPushDownSuite extends BasePushDownSuite {
 
   private val allCases = Seq[String](
-    "select sum(tp_smallint) from full_data_type_table_cluster",
-    "select sum(tp_bigint) from full_data_type_table_cluster",
-    "select sum(tp_decimal) from full_data_type_table_cluster",
-    "select sum(tp_mediumint) from full_data_type_table_cluster",
-    "select sum(tp_real) from full_data_type_table_cluster",
-    "select sum(tp_tinyint) from full_data_type_table_cluster",
-    "select sum(id_dt) from full_data_type_table_cluster",
-    "select sum(tp_int) from full_data_type_table_cluster",
-    "select sum(tp_double) from full_data_type_table_cluster")
+    "select sum(tp_smallint) from",
+    "select sum(tp_bigint) from",
+    "select sum(tp_decimal) from",
+    "select sum(tp_mediumint) from",
+    "select sum(tp_real) from",
+    "select sum(tp_tinyint) from",
+    "select sum(id_dt) from",
+    "select sum(tp_int) from",
+    "select sum(tp_double) from")
 
   test("Test - Sum push down with pk") {
     val tableName = "full_data_type_table_pk"
