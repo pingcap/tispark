@@ -20,8 +20,8 @@ import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.handle.{Handle, IntHandle}
 import com.pingcap.tikv.key.{IndexKey, RowKey}
-import com.pingcap.tikv.meta.TiColumnInfo
 import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType
+import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiIndexInfo}
 import com.pingcap.tikv.partition.TableCommon
 import com.pingcap.tikv.{ClientSession, TiConfiguration, TiDBJDBCClient}
 import com.pingcap.tispark.TiTableReference
@@ -52,13 +52,12 @@ class TiBatchWriteTable(
 
   import com.pingcap.tispark.write.TiBatchWrite._
 
-  @transient private val tiSession = tiContext.tiSession
   @transient private val clientSession = tiContext.clientSession
   // only fetch row format version once for each batch write process
   private val enableNewRowFormat: Boolean =
     if (isTiDBV4) tiDBJDBCClient.getRowFormatVersion == 2 else false
   private val tiTableRef: TiTableReference = options.getTiTableRef(tiConf)
-  private val tiDBInfo: TiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
+  private val tiDBInfo: TiDBInfo = clientSession.getCatalog.getDatabase(tiTableRef.databaseName)
   private val tiTableInfo = tiTable.getTableInfo
   private val tableColSize: Int = tiTableInfo.getColumns.size()
   private val colsMapInTiDB: Map[String, TiColumnInfo] =
@@ -362,7 +361,6 @@ class TiBatchWriteTable(
       TiAuthorization.authorizeForDelete(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
     } else {
       TiAuthorization.authorizeForInsert(tiTableInfo.getName, tiDBInfo.getName, tiAuthorization)
-      n
     }
   }
 

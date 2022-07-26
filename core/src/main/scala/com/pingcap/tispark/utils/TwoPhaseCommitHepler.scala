@@ -24,8 +24,8 @@ import org.slf4j.LoggerFactory
 import org.tikv.common.exception.TiBatchWriteException
 import org.tikv.common.meta.TiTimestamp
 import org.tikv.common.util.ConcreteBackOffer
-import org.tikv.common.{BytePairWrapper, ByteWrapper, StoreVersion, exception}
-import org.tikv.txn.{TTLManager, TwoPhaseCommitter}
+import org.tikv.common.{BytePairWrapper, ByteWrapper, StoreVersion}
+import org.tikv.txn.{TTLManager, TxnKVClient}
 
 import scala.collection.JavaConverters._
 
@@ -46,28 +46,34 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
   // Init tiConf and tiSession
   // PdAddress get from spark config
   private val tiConf = TwoPhaseCommitHepler.generateTiConf(options)
-
   @transient private lazy val clientSession = ClientSession.getInstance(tiConf)
-  @transient private lazy val tiSession = clientSession.getTikvSession
 
   // Init lockTTLSeconds and ttlManager
   private val tikvSupportUpdateTTL: Boolean =
-    StoreVersion.minTiKVVersion("3.0.5", tiSession.getPDClient)
+    StoreVersion.minTiKVVersion("3.0.5", clientSession.getTikvSession.getPDClient)
   private val isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
   private val lockTTLSeconds: Long = options.getLockTTLSeconds(tikvSupportUpdateTTL)
   @transient private var ttlManager: TTLManager = _
 
   @transient private var ti2PCClient: TwoPhaseCommitter = _
+  def calculateUptime(kvClient: TxnKVClient, startTS: Long): Long =
+    kvClient.getTimestamp.getPhysical - TiTimestamp.extractPhysical(startTS)
 
   // Driver primary pre-write
   def prewritePrimaryKeyByDriver(primaryKey: SerializableKey, primaryRow: Array[Byte]): Unit = {
     logger.info("start to prewritePrimaryKey")
 
     ti2PCClient = new TwoPhaseCommitter(
-      tiSession,
+      tiConf,
       startTs,
-      lockTTLSeconds * 1000 + tiSession.createTxnClient().getTimestamp.getPhysical - TiTimestamp
-        .extractPhysical(startTs))
+      lockTTLSeconds * 1000 +
+        calculateUptime(clientSession.getTikvSession.createTxnClient(), startTs),
+      options.txnPrewriteBatchSize,
+      options.txnCommitBatchSize,
+      options.writeBufferSize,
+      options.writeThreadPerTask,
+      options.retryCommitSecondaryKey,
+      options.prewriteMaxRetryTimes)
 
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(options.prewriteBackOfferMS)
@@ -86,7 +92,16 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
 
     secondaryKeysRDD.foreachPartition { partition =>
       val ti2PCClientOnExecutor =
-        new TwoPhaseCommitter(tiSession, startTs, lockTTLSeconds * 1000)
+        new TwoPhaseCommitter(
+          tiConf,
+          startTs,
+          lockTTLSeconds * 1000,
+          options.txnPrewriteBatchSize,
+          options.txnCommitBatchSize,
+          options.writeBufferSize,
+          options.writeThreadPerTask,
+          options.retryCommitSecondaryKey,
+          options.prewriteMaxRetryTimes)
 
       val pairs = partition.map { keyValue =>
         new BytePairWrapper(keyValue._1.bytes, keyValue._2)
@@ -142,20 +157,21 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
       Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
     }
 
-    val commitTsAttempt = tiSession.getTimestamp.getVersion
+    val commitTsAttempt = clientSession.getTikvSession.getTimestamp.getVersion
 
     // check commitTS
     if (commitTsAttempt <= startTs) {
-      throw new exception.TiBatchWriteException(
+      throw new TiBatchWriteException(
         s"invalid transaction tso with startTs=$startTs, commitTsAttempt=$commitTsAttempt")
     }
 
     // check schema change
     for (schemaUpdateTime <- schemaUpdateTimes) {
       val newTableInfo =
-        tiSession.getCatalog.getTable(schemaUpdateTime.databaseName, schemaUpdateTime.tableName)
+        clientSession.getCatalog
+          .getTable(schemaUpdateTime.databaseName, schemaUpdateTime.tableName)
       if (schemaUpdateTime.updateTime < newTableInfo.getUpdateTimestamp) {
-        throw new exception.TiBatchWriteException("schema has changed during prewrite!")
+        throw new TiBatchWriteException("schema has changed during prewrite!")
       }
     }
 
@@ -185,7 +201,6 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
       commitTs: Long): Unit = {
     if (!options.skipCommitSecondaryKey) {
       logger.info("start to commitSecondaryKeys")
-
       secondaryKeysRDD.foreachPartition { partition =>
         val ti2PCClientOnExecutor = new TwoPhaseCommitter(
           tiConf,
@@ -228,7 +243,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
       if (ttlManager != null) {
         ttlManager.close()
       }
-      ttlManager = new TTLManager(tiSession, startTs, primaryKey.bytes)
+      ttlManager = new TTLManager(clientSession.getTikvSession, startTs, primaryKey.bytes)
       ttlManager.keepAlive()
     }
   }

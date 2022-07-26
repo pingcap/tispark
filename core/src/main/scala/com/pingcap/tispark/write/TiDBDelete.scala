@@ -16,16 +16,15 @@
 
 package com.pingcap.tispark.write
 
+import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType
 import com.pingcap.tikv.meta.TiTableInfo
+import com.pingcap.tikv.partition.{PartitionedTable, TableCommon}
 import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark.utils.TiUtil.sparkConfToTiConf
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TwoPhaseCommitHepler, WriteUtil}
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, SparkSession}
-
-import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType
-import com.pingcap.tikv.partition.{PartitionedTable, TableComm}
 import com.pingcap.tispark.write.TiBatchWrite.TiRow
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.{SparkConf, SparkContext}
 import org.slf4j.LoggerFactory
 
