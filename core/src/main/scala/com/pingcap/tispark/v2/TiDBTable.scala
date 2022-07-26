@@ -24,7 +24,6 @@ import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
 import com.pingcap.tispark.v2.sink.TiDBWriteBuilder
 import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions}
-
 import org.apache.commons.codec.binary.Hex
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
@@ -46,7 +45,6 @@ import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.sql.{SQLContext, execution}
 import org.slf4j.LoggerFactory
 import org.tikv.common.exception
-import org.tikv.common.exception.TiBatchWriteException
 import org.tikv.common.meta.TiTimestamp
 
 import java.sql.{Date, SQLException, Timestamp}
@@ -218,6 +216,7 @@ object TiDBTable {
           dagRequest,
           id,
           attributeRef,
+          tiConf,
           tableRef,
           clientSession,
           sqlContext.sparkSession)
@@ -252,6 +251,7 @@ object TiDBTable {
         dagRequest.copyReqWithPhysicalId(id),
         id,
         TiUtil.getChunkBatchSize(sqlContext),
+        tiConf,
         output,
         tableRef,
         clientSession,

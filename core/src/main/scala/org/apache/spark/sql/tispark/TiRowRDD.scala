@@ -34,11 +34,12 @@ class TiRowRDD(
     override val dagRequest: TiDAGRequest,
     override val physicalId: Long,
     val chunkBatchSize: Int,
+    override val tiConf: TiConfiguration,
     val output: Seq[Attribute],
     override val tableRef: TiTableReference,
     @transient private val clientSession: ClientSession,
     @transient private val sparkSession: SparkSession)
-    extends TiRDD(dagRequest, physicalId, tableRef, clientSession, sparkSession) {
+    extends TiRDD(dagRequest, physicalId, tiConf, tableRef, clientSession, sparkSession) {
 
   protected val logger: Logger = log
 
@@ -50,6 +51,7 @@ class TiRowRDD(
     new Iterator[ColumnarBatch] {
       checkTimezone()
       private val tiPartition = split.asInstanceOf[TiPartition]
+      private val clientSession = ClientSession.getInstance(tiConf)
       clientSession.injectCallBackFunc(callBackFunc)
       private val snapshot = clientSession.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks

@@ -16,7 +16,7 @@
 
 package org.apache.spark.sql.tispark
 
-import com.pingcap.tikv.ClientSession
+import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tikv.handle.Handle
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.util.RangeSplitter
@@ -44,10 +44,11 @@ class TiHandleRDD(
     override val dagRequest: TiDAGRequest,
     override val physicalId: Long,
     val output: Seq[Attribute],
+    override val tiConf: TiConfiguration,
     override val tableRef: TiTableReference,
     @transient private val clientSession: ClientSession,
     @transient private val sparkSession: SparkSession)
-    extends TiRDD(dagRequest, physicalId, tableRef, clientSession, sparkSession) {
+    extends TiRDD(dagRequest, physicalId, tiConf, tableRef, clientSession, sparkSession) {
 
   private val outputTypes = output.map(_.dataType)
   private val converters =

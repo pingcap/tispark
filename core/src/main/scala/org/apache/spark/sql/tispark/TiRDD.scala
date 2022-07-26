@@ -25,7 +25,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.tikv.common.exception
-import org.tikv.common.exception.TiInternalException
 import org.tikv.common.util.RangeSplitter
 import org.tikv.common.util.RangeSplitter.RegionTask
 
@@ -36,12 +35,12 @@ import scala.collection.mutable.ListBuffer
 abstract class TiRDD(
     val dagRequest: TiDAGRequest,
     val physicalId: Long,
+    val tiConf: TiConfiguration,
     val tableRef: TiTableReference,
     @transient private val clientSession: ClientSession,
     @transient private val sparkSession: SparkSession)
     extends RDD[InternalRow](sparkSession.sparkContext, Nil) {
 
-  private val tiConf = clientSession.getConf
   private lazy val partitionPerSplit = tiConf.getPartitionPerSplit
 
   protected def checkTimezone(): Unit = {
