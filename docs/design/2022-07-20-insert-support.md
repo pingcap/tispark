@@ -56,7 +56,7 @@ Here are the main steps:
 - Compatible with different Spark versions
 
 ### Add new capability
-Spark will check the (capabilities)[https://github.com/apache/spark/blob/0494dc90af48ce7da0625485a4dc6917a244d580/sql/catalyst/src/main/java/org/apache/spark/sql/connector/catalog/TableCapability.java] 
+Spark will check the [capabilities](https://github.com/apache/spark/blob/0494dc90af48ce7da0625485a4dc6917a244d580/sql/catalyst/src/main/java/org/apache/spark/sql/connector/catalog/TableCapability.java)
 of TiDBTable which signal to Spark how many features TiDBTable supports. 
 
 If we don't add corresponding capability and insert data by SQL, Spark will throw an exception says TiDBTable don't support it.
@@ -80,7 +80,7 @@ The interface we used to combine DataSource V1 and DataSource V2 is different be
 Spark 3.0, 3.1, and 3.2. So we need to write code for each version. Then we can use reflection to get object of
 corresponding version。
 
-To be specific, we will use (V1WriteBuilder)[https://github.com/apache/spark/blob/branch-3.0/sql/core/src/main/java/org/apache/spark/sql/connector/write/V1WriteBuilder.java] in 3.0 and 3.1, and use (V1Write)[https://github.com/apache/spark/blob/1a42aa5bd44e7524bb55463bbd85bea782715834/sql/core/src/main/java/org/apache/spark/sql/connector/write/V1Write.java] in 3.2.
+To be specific, we will use [V1WriteBuilder](https://github.com/apache/spark/blob/branch-3.0/sql/core/src/main/java/org/apache/spark/sql/connector/write/V1WriteBuilder.java) in 3.0 and 3.1, and use [V1Write](https://github.com/apache/spark/blob/1a42aa5bd44e7524bb55463bbd85bea782715834/sql/core/src/main/java/org/apache/spark/sql/connector/write/V1Write.java) in 3.2.
 
 ### Why not V2 write model
 There is a deduplicate operation in TiSpark that will handle the problem that data have the same unique key.
