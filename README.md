@@ -18,6 +18,10 @@ TiSpark relies on the availability of TiKV clusters and PDs. You also need to se
 
 Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](https://github.com/pingcap/tispark/tree/master/tikv-client) library.
 
+## Prerequisites
+
+- To use TiSpark with Spark, you must have a self-hosted or managed Prometheus service.
+
 ## Doc TOC
 
 - [Getting TiSpark](https://github.com/pingcap/tispark/wiki/Getting-TiSpark)
