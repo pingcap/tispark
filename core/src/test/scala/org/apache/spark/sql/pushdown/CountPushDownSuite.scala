@@ -60,6 +60,8 @@ class CountPushDownSuite extends BasePushDownSuite() {
     push.foreach { query =>
       val sql = query + tableName
       val df = spark.sql(sql)
+      df.show()
+      df.explain()
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
         fail(
           s"count is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
