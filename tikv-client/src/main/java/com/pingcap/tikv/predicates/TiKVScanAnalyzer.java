@@ -381,8 +381,7 @@ public class TiKVScanAnalyzer {
         signedEndOpenKey = signedStartClosedKey.nextPrefix();
         return new ScanRange(signedStartClosedKey, signedEndOpenKey, null, null);
       }
-    }
-    if (ir.hasRange()) {
+    } else if (ir.hasRange()) {
       Range<TypedKey> r = ir.getRange();
       // Convert the range to low inclusive and high exclusive range
       BigDecimal startClosedKey;
