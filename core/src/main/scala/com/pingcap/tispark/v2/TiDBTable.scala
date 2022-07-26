@@ -24,6 +24,8 @@ import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
 import com.pingcap.tispark.v2.sink.TiDBWriteBuilder
 import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions}
+
+import org.apache.commons.codec.binary.Hex
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.catalyst.util.{DateTimeUtils, TimestampFormatter}
@@ -70,6 +72,7 @@ case class TiDBTable(
     def quoted: String = {
       Seq(identifier.databaseName, identifier.tableName).map(quote).mkString(".")
     }
+
     private def quote(part: String): String = {
       if (part.contains(".") || part.contains("`")) {
         s"`${part.replace("`", "``")}`"
@@ -102,6 +105,7 @@ case class TiDBTable(
   }
 
   def databaseName: String = tableRef.databaseName
+
   def tableName: String = tableRef.tableName
 
   override def newScanBuilder(options: CaseInsensitiveStringMap): ScanBuilder =
@@ -178,7 +182,8 @@ case class TiDBTable(
     val tidbOptions = new TiDBOptions(sqlContext.sparkSession.conf.getAll)
 
     // Execute delete
-    val tiDBDelete = TiDBDelete(df, databaseName, tableName, startTs, Some(tidbOptions))
+    val tiDBDelete =
+      TiDBDelete(df, databaseName, tableName, startTs, Some(tidbOptions))
     try {
       tiDBDelete.delete()
     } finally {
@@ -278,6 +283,7 @@ object TiDBTable {
           s"'${timestampFormatter.format(timestampValue)}'"
         case dateValue: Date => "'" + dateValue + "'"
         case dateValue: LocalDate => "'" + dateValue + "'"
+        case arrayByte: Array[Byte] => "X'" + Hex.encodeHexString(arrayByte) + "'"
         case arrayValue: Array[Any] => arrayValue.map(compileValue).mkString(", ")
         case _ => value
       }

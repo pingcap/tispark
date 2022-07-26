@@ -185,6 +185,11 @@
             <artifactId>tikv-client-java</artifactId>
             <version>3.3.0</version>
         </dependency>
+      <dependency>
+        <groupId>commons-codec</groupId>
+        <artifactId>commons-codec</artifactId>
+        <version>1.15</version>
+      </dependency>
     </dependencies>
     <build>
         <resources>

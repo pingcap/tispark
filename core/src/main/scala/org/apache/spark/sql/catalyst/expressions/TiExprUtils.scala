@@ -23,9 +23,16 @@ import com.pingcap.tikv.expression.visitor.{
   MetaResolver,
   SupportedExpressionValidator
 }
-import com.pingcap.tikv.expression.{AggregateFunction, ByItem, ColumnRef, ExpressionBlocklist}
+import com.pingcap.tikv.expression.{
+  AggregateFunction,
+  ByItem,
+  ColumnRef,
+  Constant,
+  ExpressionBlocklist
+}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import org.tikv.common.region.RegionStoreClient.RequestTypes
+import com.pingcap.tikv.types.SetTyp
 import com.pingcap.tispark.v2.TiDBTable
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.execution.TiConverter.fromSparkType
@@ -89,9 +96,11 @@ object TiExprUtils {
               dagRequest.getFields.head
             }
           }
-
-          dagRequest.addRequiredColumn(firstColRef)
-          firstColRef
+          if (dagRequest.getFields.isEmpty) {
+            dagRequest.addRequiredColumn(firstColRef)
+          }
+          // we need to push down Constant(1) for count(1) or count(*)
+          Constant.create(1, null)
         } else {
           args.flatMap(BasicExpression.convertToTiExpr).head
         }
@@ -189,6 +198,16 @@ object TiExprUtils {
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
             .forall(isSupportedBasicExpression(_, tiDBRelation, blocklist))
+      case Count(children) if children.size == 1 =>
+        // set can not push down
+        if (children.head.isInstanceOf[AttributeReference]) {
+          val dataType = tiDBRelation.table.getColumn(children.head.references.head.name).getType
+          !dataType.isInstanceOf[SetType] && !aggExpr.isDistinct && children.forall(
+            isSupportedBasicExpression(_, tiDBRelation, blocklist))
+        } else {
+          !aggExpr.isDistinct && children.forall(
+            isSupportedBasicExpression(_, tiDBRelation, blocklist))
+        }
       case _ => false
     }
 

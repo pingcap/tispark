@@ -22,13 +22,17 @@ import com.pingcap.tispark.utils.TiUtil.sparkConfToTiConf
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TwoPhaseCommitHepler, WriteUtil}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
+
+import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType
+import com.pingcap.tikv.partition.{PartitionedTable, TableComm}
+import com.pingcap.tispark.write.TiBatchWrite.TiRow
 import org.apache.spark.{SparkConf, SparkContext}
 import org.slf4j.LoggerFactory
 
 case class TiDBDelete(
     df: DataFrame,
     database: String,
-    table: String,
+    tableName: String,
     startTs: Long,
     tiDBOptions: Option[TiDBOptions] = None) {
 
@@ -40,18 +44,15 @@ case class TiDBDelete(
   // 1.match the schema of dataframe
   // 2.make extract handle more convenience for (pkIsHandle || isCommonHandle) is always true.
   val tiTableInfo: TiTableInfo =
-    tiSession.getCatalog.getTable(database, table).copyTableWithRowId()
+    tiSession.getCatalog.getTable(database, tableName).copyTableWithRowId()
 
   @transient private var persistedDFList: List[DataFrame] = Nil
   @transient private var persistedRDDList: List[RDD[_]] = Nil
 
   def delete(): Unit = {
-    //persistDF
-    val persistDf = df.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
-    persistedDFList = persistDf :: persistedDFList
 
     //check
-    check(persistDf)
+    check(df)
 
     //check empty
     if (df.rdd.isEmpty()) {
@@ -59,26 +60,69 @@ case class TiDBDelete(
       return
     }
 
-    //Convert Spark row to TiKV row
-    val colsInDf = persistDf.columns.toList.map(_.toLowerCase())
-    val tiRowRdd = persistDf.rdd.map(row => {
-      WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
-    })
+    val colsInDf = df.columns.toList.map(_.toLowerCase())
+
+    /**
+     * There will be a stuck the following codes are executed after df.persist(),
+     * so we use groupByKey() to trigger action firstly.
+     * The reason why getting stuck has not been figured out yet.
+     *
+     * TableCommon is the physical table associated with the TiRow, we can get logical table name
+     * from tiTableInfo.
+     * - if the table is partitioned, we need to transfer the logical table to the physical table
+     * and then group the rows by the physical table.
+     * - if the table is not partitioned, the logical table is the same as the physical table.
+     */
+    val tiRowMapRDD: RDD[(TableCommon, Iterable[TiRow])] =
+      df.rdd
+        .mapPartitions { partition =>
+          // Since using mapPartitions and making table construction out of rowIterator logic,
+          // each partition will construct a new logical table and associated physical tables.
+          val table = new TableCommon(tiTableInfo.getId, tiTableInfo.getId, tiTableInfo)
+
+          if (tiTableInfo.isPartitionEnabled) {
+            val pTable = PartitionedTable.newPartitionTable(table, tiTableInfo)
+            partition.map { row =>
+              val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
+              // locate partition and return the physical table
+              pTable.locatePartition(tiRow) -> tiRow
+            }
+          } else {
+            partition.map { row =>
+              //Convert Spark row to TiKV row
+              val tiRow = WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf)
+              table -> tiRow
+            }
+          }
+        }
+        .groupByKey()
+
+    //persistDF
+    val persistDf = df.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+    persistedDFList = persistDf :: persistedDFList
 
     //Extract handle
-    val deletion: RDD[WrappedRow] = tiRowRdd.map { row =>
-      WrappedRow(row, WriteUtil.extractHandle(row, tiTableInfo))
+    val deletionMapRDD: RDD[(TableCommon, Iterable[WrappedRow])] = tiRowMapRDD.mapValues {
+      case tiRow =>
+        tiRow.map { row => WrappedRow(row, WriteUtil.extractHandle(row, tiTableInfo)) }
     }
 
     // encode record & index
-    val tableId = tiTableInfo.getId
-    val recordKV = WriteUtil.generateRecordKVToDelete(deletion, tableId)
-    val indexKV = WriteUtil.generateIndexKV(
-      SparkSession.active.sparkContext,
-      deletion,
-      tiTableInfo,
-      remove = true)
-    val keyValueRDD = (recordKV ++ indexKV).map(obj => (obj.encodedKey, obj.encodedValue))
+    val recordKVRDD: RDD[WrappedEncodedRow] = deletionMapRDD.flatMap {
+      case (table, wrappedRow) =>
+        wrappedRow.map { row =>
+          WriteUtil.generateRecordKVToDelete(row, table.getPhysicalTableId)
+        }
+    }
+
+    val indexKVRDD: RDD[WrappedEncodedRow] = deletionMapRDD.flatMap {
+      case (table, wrappedEncodedRow) =>
+        wrappedEncodedRow.flatMap { row =>
+          WriteUtil.generateIndexKV(row, table, remove = true)
+        }
+    }
+
+    val keyValueRDD = (recordKVRDD ++ indexKVRDD).map(obj => (obj.encodedKey, obj.encodedValue))
 
     //persist KeyValueRDD
     val persistKeyValueRDD =
@@ -86,7 +130,7 @@ case class TiDBDelete(
     persistedRDDList = persistKeyValueRDD :: persistedRDDList
 
     // 2PC
-    val twoPhaseCommitHepler =
+    val twoPhaseCommitHelper =
       if (tiDBOptions.isEmpty) new TwoPhaseCommitHepler(startTs)
       else new TwoPhaseCommitHepler(startTs, tiDBOptions.get)
     try {
@@ -102,15 +146,15 @@ case class TiDBDelete(
       }
 
       // 2PC
-      twoPhaseCommitHepler.prewritePrimaryKeyByDriver(primaryKey, primaryRow)
-      twoPhaseCommitHepler.prewriteSecondaryKeyByExecutors(secondaryKeysRDD, primaryKey)
-      val commitTs = twoPhaseCommitHepler.commitPrimaryKeyWithRetryByDriver(
+      twoPhaseCommitHelper.prewritePrimaryKeyByDriver(primaryKey, primaryRow)
+      twoPhaseCommitHelper.prewriteSecondaryKeyByExecutors(secondaryKeysRDD, primaryKey)
+      val commitTs = twoPhaseCommitHelper.commitPrimaryKeyWithRetryByDriver(
         primaryKey,
-        List(SchemaUpdateTime(database, table, tiTableInfo.getUpdateTimestamp)))
-      twoPhaseCommitHepler.stopPrimaryKeyTTLUpdate()
-      twoPhaseCommitHepler.commitSecondaryKeyByExecutors(secondaryKeysRDD, commitTs)
+        List(SchemaUpdateTime(database, tableName, tiTableInfo.getUpdateTimestamp)))
+      twoPhaseCommitHelper.stopPrimaryKeyTTLUpdate()
+      twoPhaseCommitHelper.commitSecondaryKeyByExecutors(secondaryKeysRDD, commitTs)
     } finally {
-      twoPhaseCommitHepler.close()
+      twoPhaseCommitHelper.close()
     }
   }
 
@@ -123,14 +167,17 @@ case class TiDBDelete(
    * check unsupport
    * check columns
    * check pkIsHandle and isCommonHandle
+   *
    * @param df
    * @throws IllegalArgumentException if check fail
    */
   private def check(df: DataFrame): Unit = {
-    // Delete from partition table is not supported
+    // Only RangePartition and HashPartition are supported
     if (tiTableInfo.isPartitionEnabled) {
-      throw new IllegalArgumentException(
-        "TiSpark currently does not support delete data from partition table!")
+      val pType = tiTableInfo.getPartitionInfo.getType
+      if (pType != PartitionType.RangePartition && pType != PartitionType.HashPartition) {
+        throw new UnsupportedOperationException(s"Unsupported partition type: $pType")
+      }
     }
 
     // Check columns: Defensive programming, it won't happen in theory

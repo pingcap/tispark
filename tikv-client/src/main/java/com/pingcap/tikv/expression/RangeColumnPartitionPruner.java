@@ -32,7 +32,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import org.tikv.shade.com.google.common.collect.ImmutableSet;
 import org.tikv.shade.com.google.common.collect.RangeSet;
@@ -41,6 +40,7 @@ import org.tikv.shade.com.google.common.collect.TreeRangeSet;
 @SuppressWarnings("UnstableApiUsage")
 public class RangeColumnPartitionPruner
     extends DefaultVisitor<Set<Integer>, LogicalBinaryExpression> {
+
   private final int partsSize;
   private final TiPartitionInfo partInfo;
   private final Map<String, List<Expression>> partExprsPerColumnRef;
@@ -86,23 +86,19 @@ public class RangeColumnPartitionPruner
     NormalizedPredicate predicate = node.normalize();
     if (predicate == null) {
       throw new UnsupportedOperationException(
-          String.format("ComparisonBinaryExpression %s cannot be normalized", node.toString()));
+          String.format("ComparisonBinaryExpression %s cannot be normalized", node));
     }
     String colRefName = predicate.getColumnRef().getName();
     List<Expression> partExprs = partExprsPerColumnRef.get(colRefName);
     Set<Integer> partDefs = new HashSet<>();
+    // For filter with column which is not partitioned columns, we can't locate the physical table,
+    // so we just return all partitionDefs.
     if (partExprs == null) {
-      switch (parent.getCompType()) {
-        case OR:
-          return partDefs;
-        case AND:
-          for (int i = 0; i < partsSize; i++) {
-            partDefs.add(i);
-          }
-          return partDefs;
+      for (int i = 0; i < partsSize; i++) {
+        partDefs.add(i);
       }
+      return partDefs;
     }
-    Objects.requireNonNull(partExprs, "partition expression cannot be null");
     for (int i = 0; i < partsSize; i++) {
       PrunedPartitionBuilder rangeBuilder =
           new PrunedPartitionBuilder(ImmutableSet.of(predicate.getColumnRef()));
