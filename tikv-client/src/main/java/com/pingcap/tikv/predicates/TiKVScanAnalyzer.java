@@ -462,8 +462,8 @@ public class TiKVScanAnalyzer {
   }
 
   private ScanRange buildTableScanKeyRangePerId(
-      long id, IndexRange ir, IntegerType pkHandleDataType) {
-    if (pkHandleDataType.isUnsignedLong()) {
+      long id, IndexRange ir, IntegerType handleDataType) {
+    if (handleDataType.isUnsignedLong()) {
       return buildTableScanUnsignedKeyRangePerId(id, ir);
     } else {
       return buildTableScanSignedKeyRangePerId(id, ir);
@@ -471,13 +471,13 @@ public class TiKVScanAnalyzer {
   }
 
   private Map<Long, List<KeyRange>> buildTableScanKeyRangeWithIds(
-      List<Long> ids, List<IndexRange> indexRanges, IntegerType pkHandleDatatype) {
+      List<Long> ids, List<IndexRange> indexRanges, IntegerType handleDatatype) {
     Map<Long, List<KeyRange>> idRanges = new HashMap<>(ids.size());
     for (Long id : ids) {
       List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
       indexRanges.forEach(
           (ir) -> {
-            ScanRange range = buildTableScanKeyRangePerId(id, ir, pkHandleDatatype);
+            ScanRange range = buildTableScanKeyRangePerId(id, ir, handleDatatype);
             Optional<Pair<Key, Key>> signedKeyRange = range.signedKeyRange;
             Optional<Pair<Key, Key>> unsignedKeyRange = range.unSignedKeyRange;
             if (signedKeyRange.isPresent()) {
@@ -500,26 +500,22 @@ public class TiKVScanAnalyzer {
       TiTableInfo table, List<IndexRange> indexRanges, List<TiPartitionDef> prunedParts) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
-    if (!table.isCommonHandle()) {
-      IntegerType pkHandleDatatype;
+      IntegerType handleDatatype;
       if (table.isPkHandle()) {
-        pkHandleDatatype = (IntegerType) table.getPKIsHandleColumn().getType();
+        handleDatatype = (IntegerType) table.getPKIsHandleColumn().getType();
       } else {
-        pkHandleDatatype = IntegerType.ROW_ID_TYPE;
+        handleDatatype = IntegerType.ROW_ID_TYPE;
       }
       if (table.isPartitionEnabled()) {
         List<Long> ids = new ArrayList<>();
         for (TiPartitionDef pDef : prunedParts) {
           ids.add(pDef.getId());
         }
-        return buildTableScanKeyRangeWithIds(ids, indexRanges, pkHandleDatatype);
+        return buildTableScanKeyRangeWithIds(ids, indexRanges, handleDatatype);
       } else {
         return buildTableScanKeyRangeWithIds(
-            ImmutableList.of(table.getId()), indexRanges, pkHandleDatatype);
+            ImmutableList.of(table.getId()), indexRanges, handleDatatype);
       }
-    } else {
-      throw new TiClientInternalException("common handle is not support now");
-    }
   }
 
   @VisibleForTesting
