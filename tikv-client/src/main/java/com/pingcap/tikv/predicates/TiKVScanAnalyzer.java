@@ -418,8 +418,7 @@ public class TiKVScanAnalyzer {
       boolean endOpenKeyBeyondUint64 = Objects.equals(endOpenKey, BEYOND_UNSIGNED_LONG);
 
       // [startKey, endOpenKey) is in range of [0, MAX_INT64], the same as [0, MAX_INT64 + 1)
-      if (!endOpenKeyBeyondUint64
-          && endOpenKey.compareTo(MIN_UNSIGNED_LONG_BEYOND_SIGNED_LONG) <= 0) {
+      if (endOpenKey.compareTo(MIN_UNSIGNED_LONG_BEYOND_SIGNED_LONG) <= 0) {
         signedEndOpenKey =
             endOpenKey.equals(MIN_UNSIGNED_LONG_BEYOND_SIGNED_LONG)
                 ? RowKey.toRowKey(id, new IntHandle(Long.MAX_VALUE)).nextPrefix()
@@ -500,22 +499,22 @@ public class TiKVScanAnalyzer {
       TiTableInfo table, List<IndexRange> indexRanges, List<TiPartitionDef> prunedParts) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
-      IntegerType handleDatatype;
-      if (table.isPkHandle()) {
-        handleDatatype = (IntegerType) table.getPKIsHandleColumn().getType();
-      } else {
-        handleDatatype = IntegerType.ROW_ID_TYPE;
+    IntegerType handleDatatype;
+    if (table.isPkHandle()) {
+      handleDatatype = (IntegerType) table.getPKIsHandleColumn().getType();
+    } else {
+      handleDatatype = IntegerType.ROW_ID_TYPE;
+    }
+    if (table.isPartitionEnabled()) {
+      List<Long> ids = new ArrayList<>();
+      for (TiPartitionDef pDef : prunedParts) {
+        ids.add(pDef.getId());
       }
-      if (table.isPartitionEnabled()) {
-        List<Long> ids = new ArrayList<>();
-        for (TiPartitionDef pDef : prunedParts) {
-          ids.add(pDef.getId());
-        }
-        return buildTableScanKeyRangeWithIds(ids, indexRanges, handleDatatype);
-      } else {
-        return buildTableScanKeyRangeWithIds(
-            ImmutableList.of(table.getId()), indexRanges, handleDatatype);
-      }
+      return buildTableScanKeyRangeWithIds(ids, indexRanges, handleDatatype);
+    } else {
+      return buildTableScanKeyRangeWithIds(
+          ImmutableList.of(table.getId()), indexRanges, handleDatatype);
+    }
   }
 
   @VisibleForTesting
