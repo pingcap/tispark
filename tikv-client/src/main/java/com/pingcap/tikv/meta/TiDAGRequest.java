@@ -1181,8 +1181,11 @@ public class TiDAGRequest implements Serializable {
       IndexRange range = new IndexRange(null, com.google.common.collect.Range.all());
       List<IndexRange> indexRanges = new ArrayList<>();
       indexRanges.add(range);
-      tiKVScanAnalyzer.buildTableScanKeyRange(
-          tableInfo, indexRanges, tableInfo.getPartitionInfo().getDefs());
+      List<TiPartitionDef> prunedParts = new ArrayList<>();
+      if (tableInfo.isPartitionEnabled()) {
+        prunedParts.addAll(tableInfo.getPartitionInfo().getDefs());
+      }
+      ranges.putAll(tiKVScanAnalyzer.buildTableScanKeyRange(tableInfo, indexRanges, prunedParts));
       return this;
     }
 
