@@ -31,12 +31,8 @@ import com.pingcap.tikv.expression.{
 }
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
-<<<<<<< HEAD
 import com.pingcap.tispark.TiDBRelation
-=======
 import com.pingcap.tikv.types.SetType
-import com.pingcap.tispark.v2.TiDBTable
->>>>>>> 803fc5943 (Fix count/avg push down (#2445))
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.execution.TiConverter.fromSparkType
 
