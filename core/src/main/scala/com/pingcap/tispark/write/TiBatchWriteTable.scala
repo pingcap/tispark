@@ -16,22 +16,23 @@
 
 package com.pingcap.tispark.write
 
-import java.util
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
+import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType
 import com.pingcap.tikv.meta._
+import com.pingcap.tikv.partition.TableCommon
 import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient, TiSession}
 import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{TiContext, _}
 import org.slf4j.LoggerFactory
 
+import java.util
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -41,46 +42,35 @@ class TiBatchWriteTable(
     val options: TiDBOptions,
     val tiConf: TiConfiguration,
     @transient val tiDBJDBCClient: TiDBJDBCClient,
-    val isTiDBV4: Boolean)
+    val isTiDBV4: Boolean,
+    val tiTable: TableCommon)
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
   import com.pingcap.tispark.write.TiBatchWrite._
+
   @transient private val tiSession = tiContext.tiSession
   // only fetch row format version once for each batch write process
   private val enableNewRowFormat: Boolean =
     if (isTiDBV4) tiDBJDBCClient.getRowFormatVersion == 2 else false
-  private var tiTableRef: TiTableReference = _
-  private var tiDBInfo: TiDBInfo = _
-  private var tiTableInfo: TiTableInfo = _
-  private var tableColSize: Int = _
-  private var colsMapInTiDB: Map[String, TiColumnInfo] = _
-  private var colsInDf: List[String] = _
-  private var uniqueIndices: Seq[TiIndexInfo] = _
-  private var handleCol: TiColumnInfo = _
+  private val tiTableRef: TiTableReference = options.getTiTableRef(tiConf)
+  private val tiDBInfo: TiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
+  private val tiTableInfo = tiTable.getTableInfo
+  private val tableColSize: Int = tiTableInfo.getColumns.size()
+  private val colsMapInTiDB: Map[String, TiColumnInfo] =
+    tiTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
+  private var colsInDf: List[String] = df.columns.toList.map(_.toLowerCase())
+  private val uniqueIndices: Seq[TiIndexInfo] =
+    tiTableInfo.getIndices.asScala.filter(index => index.isUnique)
+  private val handleCol: TiColumnInfo = tiTableInfo.getPKIsHandleColumn
   private var tableLocked: Boolean = false
   private var autoIncProvidedID: Boolean = false
   // isCommonHandle = true => clustered index
-  private var isCommonHandle: Boolean = _
+  private val isCommonHandle = tiTableInfo.isCommonHandle
   private var deltaCount: Long = 0
   private var modifyCount: Long = 0
   @transient private var persistedDFList: List[DataFrame] = Nil
   @transient private var persistedRDDList: List[RDD[_]] = Nil
-
-  tiTableRef = options.getTiTableRef(tiConf)
-  tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
-  tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
-
-  if (tiTableInfo == null) {
-    throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
-  }
-
-  isCommonHandle = tiTableInfo.isCommonHandle
-  colsMapInTiDB = tiTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
-  colsInDf = df.columns.toList.map(_.toLowerCase())
-  uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique)
-  handleCol = tiTableInfo.getPKIsHandleColumn
-  tableColSize = tiTableInfo.getColumns.size()
 
   def persist(): Unit = {
     df = df.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
@@ -149,20 +139,21 @@ class TiBatchWriteTable(
 
         if (!options.replace) {
 
-          val colNames = tiTableInfo.getColumns.asScala.map(col => col.getName).mkString(", ")
+          val colNames =
+            tiTableInfo.getColumns.asScala.map(col => col.getName).mkString(", ")
           throw new TiBatchWriteException(
             s"""currently user provided auto increment value is only supported in update mode!
-              |please set parameter replace to true!
-              |
-              |colsInDf.length = ${colsInDf.length}
-              |
-              |df.schema = ${df.schema}
-              |
-              |tableColSize = $tableColSize
-              |
-              |colNames = $colNames
-              |
-              |tiTableInfo = $tiTableInfo
+               |please set parameter replace to true!
+               |
+               |colsInDf.length = ${colsInDf.length}
+               |
+               |df.schema = ${df.schema}
+               |
+               |tableColSize = $tableColSize
+               |
+               |colNames = $colNames
+               |
+               |tiTableInfo = $tiTableInfo
             """.stripMargin)
         }
 
@@ -264,7 +255,7 @@ class TiBatchWriteTable(
 
       val wrappedEncodedRecordRdd = generateRecordKV(distinctWrappedRowRdd, remove = false)
       val wrappedEncodedIndexRdds =
-        WriteUtil.generateIndexKVs(distinctWrappedRowRdd, tiTableInfo, remove = false)
+        WriteUtil.generateIndexKVRDDs(distinctWrappedRowRdd, tiTable, remove = false)
       val wrappedEncodedIndexRdd: RDD[WrappedEncodedRow] = {
         val list = wrappedEncodedIndexRdds.values.toSeq
         if (list.isEmpty) {
@@ -285,10 +276,10 @@ class TiBatchWriteTable(
           if (r1.encodedValue.isEmpty) r2 else r1
         }
         .map(_._2)
-      val g2 = (wrappedEncodedIndexRdd ++ WriteUtil.generateIndexKV(
+      val g2 = (wrappedEncodedIndexRdd ++ WriteUtil.generateIndexKVRDD(
         sc,
         deletion,
-        tiTableInfo,
+        tiTable,
         remove = true))
         .map(wrappedEncodedRow => (wrappedEncodedRow.encodedKey, wrappedEncodedRow))
         .reduceByKey { (r1, r2) =>
@@ -307,7 +298,7 @@ class TiBatchWriteTable(
 
       val wrappedEncodedRecordRdd = generateRecordKV(wrappedRowRdd, remove = false)
       val wrappedEncodedIndexRdds =
-        WriteUtil.generateIndexKVs(wrappedRowRdd, tiTableInfo, remove = false)
+        WriteUtil.generateIndexKVRDDs(wrappedRowRdd, tiTable, remove = false)
       val wrappedEncodedIndexRdd = sc.union(wrappedEncodedIndexRdds.values.toSeq)
 
       (wrappedEncodedRecordRdd ++ wrappedEncodedIndexRdd).map(obj =>
@@ -344,10 +335,12 @@ class TiBatchWriteTable(
         "tispark currently does not support write data to table with auto random column!")
     }
 
-    // write to partition table
+    // Only RangePartition and HashPartition are supported
     if (tiTableInfo.isPartitionEnabled) {
-      throw new TiBatchWriteException(
-        "tispark currently does not support write data to partition table!")
+      val pType = tiTableInfo.getPartitionInfo.getType
+      if (pType != PartitionType.RangePartition && pType != PartitionType.HashPartition) {
+        throw new UnsupportedOperationException(s"Unsupported partition type: $pType")
+      }
     }
 
     // write to table with generated column
@@ -650,8 +643,7 @@ class TiBatchWriteTable(
   }
 
   private def buildRowKey(row: TiRow, handle: Handle): SerializableKey = {
-    new SerializableKey(
-      RowKey.toRowKey(WriteUtil.locatePhysicalTable(row, tiTableInfo), handle).getBytes)
+    new SerializableKey(RowKey.toRowKey(WriteUtil.locatePhysicalTable(tiTable), handle).getBytes)
   }
 
   private def buildUniqueIndexKey(
@@ -667,7 +659,7 @@ class TiBatchWriteTable(
       tiTableInfo)
     val keys = encodeResult.keys
     val indexKey =
-      IndexKey.toIndexKey(WriteUtil.locatePhysicalTable(row, tiTableInfo), index.getId, keys: _*)
+      IndexKey.toIndexKey(WriteUtil.locatePhysicalTable(tiTable), index.getId, keys: _*)
     (new SerializableKey(indexKey.getBytes), encodeResult.appendHandle)
   }
 
@@ -680,7 +672,7 @@ class TiBatchWriteTable(
     } else {
       (
         new SerializableKey(
-          RowKey.toRowKey(WriteUtil.locatePhysicalTable(row, tiTableInfo), handle).getBytes),
+          RowKey.toRowKey(WriteUtil.locatePhysicalTable(tiTable), handle).getBytes),
         encodeTiRow(row))
     }
   }
