@@ -462,8 +462,7 @@ class TiBatchWriteTable(
           batch.foreach { wrappedRow =>
             val encodeResult = buildUniqueIndexKey(wrappedRow.row, wrappedRow.handle, index)
             if (encodeResult._2) {
-              // only add the key if handle is not appended, since if handle is appened,
-              // the value must be a new value
+              // only add the key if the key is distinct.
               keyList.add(encodeResult._1.bytes)
             }
           }

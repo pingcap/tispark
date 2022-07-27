@@ -260,7 +260,10 @@ object WriteUtil {
     val value = if (remove) {
       new Array[Byte](0)
     } else {
-      TableCodec.genIndexValue(handle, encodeIndexResult.distinct)
+      TableCodec.genIndexValue(
+        handle,
+        tiTable.getTableInfo.getCommonHandleVersion,
+        encodeIndexResult.distinct)
     }
 
     (new SerializableKey(encodeIndexResult.indexKey), value)

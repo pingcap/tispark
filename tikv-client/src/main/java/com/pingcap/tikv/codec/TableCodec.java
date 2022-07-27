@@ -83,30 +83,72 @@ public class TableCodec {
     return new IntHandle(new CodecDataInput(value).readLong());
   }
 
-  public static Handle decodeHandleInUniqueIndexValue(byte[] value, boolean isCommonHandle) {
-    if (!isCommonHandle) {
-      if (value.length <= MaxOldEncodeValueLen) {
-        return new IntHandle(new CodecDataInput(value).readLong());
-      }
-      int tailLen = value[0];
-      byte[] encode = Arrays.copyOfRange(value, value.length - tailLen, value.length);
-      return new IntHandle(new CodecDataInput(encode).readLong());
+  // The encoding code is written to mimic TiDB and removed some logic that we didn't support.
+  // The detail encoding explain can be seen here
+  // https://github.com/pingcap/tidb/blob/master/tablecodec/tablecodec.go#L1127
+  // Value layout:
+  //    +-- IndexValueVersion0  (with common handle)
+  //		|
+  //		|  Layout: TailLen |    Options     | Padding
+  // 		|  Length:   1     |  len(options)  | len(padding)
+  // 		|
+  // 		|  TailLen:       len(padding)
+  // 		|  Options:       Encode some value for new features, such as common handle, new collations
+  // or global index.
+  // 		|                 See below for more information.
+  // 		|  Padding:       Ensure length of value always >= 10. (or >= 11 if UntouchedFlag exists.)
+  // 		|
+  // 		+-- Old Encoding (integer handle, local)
+  // 		|
+  // 		|  Layout: [Handle]
+  // 		|  Length:   8
+  // 		|
+  // 		|  Handle:  Only exists in unique index.
+  // 		|
+  // 		|  If no Handle , value will be one single byte '0' (i.e. []byte{'0'}).
+  // 		|  Length of value <= 9, use to distinguish from the new encoding.
+  //  	|
+  // 		+-- IndexValueForClusteredIndexVersion1
+  // 		|
+  // 		|  Layout: TailLen |    VersionFlag  |    Version     ｜ Options
+  // 		|  Length:   1     |        1        |      1         |  len(options)
+  // 		|
+  // 		|  TailLen:       TailLen always be zero.
+  // 		|  Options:       Encode some value for new features, such as common handle, new collations
+  // or global index.
+  // 		|                 See below for more information.
+  // 		|
+  // 		|  Layout of Options:
+  // 		|
+  // 		|     Segment:             Common Handle
+  //  	|     Layout:  CHandle flag | CHandle Len | CHandle
+  // 		|     Length:     1         | 2           | len(CHandle)
+  // 		|
+  // 		|     Common Handle Segment: Exists when unique index used common handles.
+  //    |     Global Index and New Collation in not support now.
+  public static byte[] genIndexValue(Handle handle, int commonHandleVersion, boolean distinct) {
+    if (!handle.isInt() && commonHandleVersion == 1) {
+      return TableCodec.genIndexValueForClusteredIndexVersion1(handle, distinct);
     }
-    CodecDataInput codecDataInput = new CodecDataInput(value);
-    if (getIndexVersion(value) == 1) {
-      IndexValueSegments segments = splitIndexValueForClusteredIndexVersion1(codecDataInput);
-      return new CommonHandle(segments.commonHandle);
-    }
-    int handleLen = ((int) value[2]) << 8 + value[3];
-    byte[] encode = Arrays.copyOfRange(value, 4, handleLen + 4);
-    return new CommonHandle(encode);
+    return genIndexValueVersion0(handle, distinct);
   }
 
-  public static byte[] genIndexValue(Handle handle, boolean distinct) {
+  private static byte[] genIndexValueVersion0(Handle handle, boolean distinct) {
     if (!handle.isInt()) {
-      // TODO
-      //  We need to implement the encoding of the index value version 0 when handle is not int.
-      return TableCodec.genIndexValueForClusteredIndexVersion1(handle, distinct);
+      CodecDataOutput cdo = new CodecDataOutput();
+      int tailLen = 0;
+      cdo.writeByte(0);
+      if (distinct) {
+        encodeCommonHandle(cdo, handle);
+      }
+      if (cdo.size() < 10) {
+        int paddingLen = 10 - cdo.size();
+        tailLen += paddingLen;
+        cdo.write(new byte[paddingLen]);
+      }
+      byte[] value = cdo.toBytes();
+      value[0] = (byte) tailLen;
+      return value;
     }
     // When handle is int, the index encode is version 0.
     if (distinct) {
@@ -117,8 +159,9 @@ public class TableCodec {
     return new byte[] {'0'};
   }
 
-  public static byte[] genIndexValueForClusteredIndexVersion1(Handle handle, boolean distinct) {
+  private static byte[] genIndexValueForClusteredIndexVersion1(Handle handle, boolean distinct) {
     CodecDataOutput cdo = new CodecDataOutput();
+    // add tailLen to cdo, the tailLen is always zero in tispark.
     cdo.writeByte(0);
     cdo.writeByte(IndexVersionFlag);
     cdo.writeByte(1);
@@ -135,6 +178,25 @@ public class TableCodec {
     int hLen = encoded.length;
     cdo.writeShort(hLen);
     cdo.write(encoded);
+  }
+
+  public static Handle decodeHandleInUniqueIndexValue(byte[] value, boolean isCommonHandle) {
+    if (!isCommonHandle) {
+      if (value.length <= MaxOldEncodeValueLen) {
+        return new IntHandle(new CodecDataInput(value).readLong());
+      }
+      int tailLen = value[0];
+      byte[] encode = Arrays.copyOfRange(value, value.length - tailLen, value.length);
+      return new IntHandle(new CodecDataInput(encode).readLong());
+    }
+    CodecDataInput codecDataInput = new CodecDataInput(value);
+    if (getIndexVersion(value) == 1) {
+      IndexValueSegments segments = splitIndexValueForClusteredIndexVersion1(codecDataInput);
+      return new CommonHandle(segments.commonHandle);
+    }
+    int handleLen = ((int) value[2] << 8) + value[3];
+    byte[] encode = Arrays.copyOfRange(value, 4, handleLen + 4);
+    return new CommonHandle(encode);
   }
 
   private static int getIndexVersion(byte[] value) {
