@@ -17,12 +17,13 @@
 package org.apache.spark.sql.execution
 
 import com.pingcap.tikv.columnar.{TiChunk, TiColumnarBatchHelper}
+import com.pingcap.tikv.handle.Handle
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.operation.iterator.CoprocessorIterator
+import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.TiUtil
-import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
@@ -33,8 +34,8 @@ import org.apache.spark.sql.tispark.TiRDD
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.slf4j.LoggerFactory
 import org.tikv.common.meta.TiTimestamp
+import org.tikv.common.util.KeyRangeUtils
 import org.tikv.common.util.RangeSplitter.RegionTask
-import org.tikv.common.util.{KeyRangeUtils, RangeSplitter}
 import org.tikv.kvproto.Coprocessor.KeyRange
 
 import java.util
@@ -189,10 +190,10 @@ case class ColumnarRegionTaskExec(
     val downgradeThreshold = tiConf.getDowngradeThreshold
 
     iter.flatMap { row =>
-      val handles = new util.ArrayList[Long]()
+      val handles = new util.ArrayList[Handle]()
       var handleIdx = 0
       for (i <- row.getArray(1).array) {
-        handles.add(i.asInstanceOf[Long])
+        handles.add(i.asInstanceOf[Handle])
       }
       var taskCount = 0
       numRegions += 1
@@ -202,14 +203,12 @@ case class ColumnarRegionTaskExec(
       var rowIterator: util.Iterator[TiChunk] = null
 
       // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
-      def generateIndexTasks(handles: util.ArrayList[Long]): util.List[RegionTask] = {
+      def generateIndexTasks(handles: util.ArrayList[Handle]): util.List[RegionTask] = {
         val indexTasks: util.List[RegionTask] = new util.ArrayList[RegionTask]()
-        val longHandles: TLongArrayList = new TLongArrayList(handles.size())
-        handles.stream().forEach(e => longHandles.add(e))
         indexTasks.addAll(
           RangeSplitter
             .newSplitter(session.getRegionManager)
-            .splitAndSortHandlesByRegion(dagRequest.getPrunedPhysicalIds, longHandles))
+            .splitAndSortHandlesByRegion(dagRequest.getPrunedPhysicalIds, handles))
         indexTasks
       }
 
@@ -271,8 +270,8 @@ case class ColumnarRegionTaskExec(
         finalTasks
       }
 
-      def feedBatch(): util.ArrayList[Long] = {
-        val tmpHandles = new util.ArrayList[Long](512)
+      def feedBatch(): util.ArrayList[Handle] = {
+        val tmpHandles = new util.ArrayList[Handle](512)
         while (handleIdx < handles.length &&
           tmpHandles.size() < batchSize) {
           tmpHandles.add(handles.get(handleIdx))
@@ -283,8 +282,8 @@ case class ColumnarRegionTaskExec(
 
       def doIndexScan(): Unit =
         while (handleIdx < handles.length) {
-          val tmpHandles: util.ArrayList[Long] =
-            feedBatch().clone().asInstanceOf[util.ArrayList[Long]]
+          val tmpHandles: util.ArrayList[Handle] =
+            feedBatch().clone().asInstanceOf[util.ArrayList[Handle]]
           numHandles += tmpHandles.size()
           logger.debug("Single batch handles size:" + tmpHandles.size())
 
