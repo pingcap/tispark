@@ -27,6 +27,7 @@ import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
 import com.pingcap.tikv.operation.iterator.IndexScanIterator;
 import com.pingcap.tikv.row.Row;
+import com.pingcap.tikv.util.RangeSplitter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -36,7 +37,7 @@ import org.tikv.common.BytePairWrapper;
 import org.tikv.common.TiSession;
 import org.tikv.common.meta.TiTimestamp;
 import org.tikv.common.util.ConcreteBackOffer;
-import org.tikv.common.util.RangeSplitter;
+import org.tikv.common.util.RangeSplitter.RegionTask;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.shade.com.google.protobuf.ByteString;
 import org.tikv.txn.KVClient;
@@ -103,7 +104,7 @@ public class Snapshot {
   }
 
   public Iterator<TiChunk> tableReadChunk(
-      TiDAGRequest dagRequest, List<RangeSplitter.RegionTask> tasks, int numOfRows) {
+      TiDAGRequest dagRequest, List<RegionTask> tasks, int numOfRows) {
     if (dagRequest.isDoubleRead()) {
       throw new UnsupportedOperationException(
           "double read case should first read handle in row-wise fashion");
@@ -133,8 +134,7 @@ public class Snapshot {
    * @param tasks RegionTasks of the coprocessor request to send
    * @return Row iterator to iterate over resulting rows
    */
-  private Iterator<Row> tableReadRow(
-      TiDAGRequest dagRequest, List<RangeSplitter.RegionTask> tasks) {
+  private Iterator<Row> tableReadRow(TiDAGRequest dagRequest, List<RegionTask> tasks) {
     if (dagRequest.isDoubleRead()) {
       Iterator<Handle> iter = getHandleIterator(dagRequest, tasks, getClientSession());
       return new IndexScanIterator(this, dagRequest, iter);
@@ -151,8 +151,7 @@ public class Snapshot {
    * @param tasks RegionTask of the coprocessor request to send
    * @return Row iterator to iterate over resulting rows
    */
-  public Iterator<Handle> indexHandleRead(
-      TiDAGRequest dagRequest, List<RangeSplitter.RegionTask> tasks) {
+  public Iterator<Handle> indexHandleRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
     return getHandleIterator(dagRequest, tasks, getClientSession());
   }
 
