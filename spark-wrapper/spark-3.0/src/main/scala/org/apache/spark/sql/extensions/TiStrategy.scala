@@ -54,7 +54,6 @@ import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.internal.SQLConf
 import org.joda.time.{DateTime, DateTimeZone}
-import org.tikv.common.exception
 import org.tikv.common.exception.IgnoreUnsupportedTypeException
 import org.tikv.common.meta.TiTimestamp
 import org.tikv.common.region.TiStoreType
@@ -244,7 +243,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       }
 
     if (notAllowPushDown) {
-      throw new exception.IgnoreUnsupportedTypeException(
+      throw new IgnoreUnsupportedTypeException(
         "Unsupported type found in fields: " + typeBlockList)
     } else {
       if (dagRequest.isDoubleRead) {
