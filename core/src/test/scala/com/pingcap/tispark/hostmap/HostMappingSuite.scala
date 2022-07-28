@@ -56,19 +56,27 @@ class HostMappingSuite extends FunSuite {
 
   test("Host map connection test") {
     noException should be thrownBy {
-      val conf: SparkConf = new SparkConf(false)
-      val pdAddresses = "127.0.0.1"
-      val fakePdAddresses = "127.1.1.1"
-      val port = ":2379"
-      conf.set(PD_ADDRESSES, fakePdAddresses + port)
-      conf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
-      conf.set("spark.sql.catalog.tidb_catalog", TiCatalog.className)
-      conf.set("spark.sql.catalog.tidb_catalog.pd.addresses", fakePdAddresses + port)
-      conf.set(HOST_MAPPING, fakePdAddresses + ":" + pdAddresses)
-      val sc = new SparkContext("local[4]", "host-mapping-test", conf)
-      val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
-      spark.sql("use tidb_catalog")
-      spark.sql("show databases").show()
+      var sc: SparkContext = null
+      try {
+        val conf: SparkConf = new SparkConf(false)
+        val pdAddresses = "127.0.0.1"
+        val fakePdAddresses = "127.1.1.1"
+        val port = ":2379"
+        conf.set(PD_ADDRESSES, fakePdAddresses + port)
+        conf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
+        conf.set("spark.sql.catalog.tidb_catalog", TiCatalog.className)
+        conf.set("spark.sql.catalog.tidb_catalog.pd.addresses", fakePdAddresses + port)
+        conf.set(HOST_MAPPING, fakePdAddresses + ":" + pdAddresses)
+        sc = new SparkContext("local[4]", "host-mapping-test", conf)
+        val spark = SparkSession.builder().config(sc.getConf).getOrCreate()
+        spark.sql("use tidb_catalog")
+        spark.sql("show databases").show()
+      } finally {
+        if (sc != null){
+          sc.stop()
+          sc = null
+        }
+      }
     }
   }
 }
