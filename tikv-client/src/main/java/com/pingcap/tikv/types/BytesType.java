@@ -108,6 +108,8 @@ public class BytesType extends DataType {
       throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     } else if (value instanceof String) {
       result = value.toString().getBytes();
+    } else if(value instanceof byte[]) {
+      result = (byte[]) value;
     } else {
       throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
