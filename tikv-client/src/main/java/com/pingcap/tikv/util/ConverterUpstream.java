@@ -84,6 +84,8 @@ public class ConverterUpstream {
     tikvConf.setIsolationLevel(conf.getIsolationLevel());
     tikvConf.setShowRowId(conf.isShowRowId());
     tikvConf.setDBPrefix(conf.getDBPrefix());
+    //    tikvConf.setNetworkMappingName(conf.getNetworkMappingName());
+    tikvConf.setHostMapping(conf.getHostMapping());
     // jks
     tikvConf.setTlsEnable(conf.isTlsEnable());
     tikvConf.setTrustCertCollectionFile(conf.getTrustCertCollectionFile());

@@ -16,15 +16,17 @@
 
 package com.pingcap.tispark.telemetry
 
-import com.pingcap.tispark.utils.{HttpClientUtil, TiUtil}
-import com.pingcap.tispark.TiSparkVersion
-import org.apache.spark.sql.SparkSession
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tispark.TiSparkVersion
 import com.pingcap.tispark.auth.TiAuthorization
+import com.pingcap.tispark.utils.{HttpClientUtil, TiUtil}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.internal.SQLConf
 import org.slf4j.LoggerFactory
 import scalaj.http.HttpResponse
+
+import java.net.URI
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
 
@@ -93,12 +95,21 @@ object TiSparkTeleInfo {
       val conf: TiConfiguration = new TiConfiguration
       TiUtil.sparkConfToTiConfWithoutPD(SparkSession.active.sparkContext.getConf, conf)
 
+      var pd_uri: URI = null;
       if (conf.isTlsEnable) {
-        val url = "https://" + pd_address.get + urlPattern
-        resp = httpClient.getHttpsWithTiConfiguration(url, conf)
+        pd_uri = new URI(s"https://${pd_address.get}$urlPattern")
       } else {
-        val url = "http://" + pd_address.get + urlPattern
-        resp = httpClient.get(url)
+        pd_uri = new URI(s"http://${pd_address.get}$urlPattern")
+      }
+
+      if (conf.getHostMapping != null) {
+        pd_uri = conf.getHostMapping.getMappedURI(pd_uri)
+      }
+
+      if (conf.isTlsEnable) {
+        resp = httpClient.getHttpsWithTiConfiguration(pd_uri.toString, conf)
+      } else {
+        resp = httpClient.get(pd_uri.toString)
       }
 
       if (resp == null || !resp.isDefined) {

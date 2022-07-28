@@ -28,6 +28,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.joda.time.DateTimeZone;
+import org.tikv.common.HostMapping;
 import org.tikv.common.Utils;
 import org.tikv.common.pd.PDUtils;
 import org.tikv.common.region.TiStoreType;
@@ -39,6 +40,9 @@ import org.tikv.shade.com.google.common.collect.ImmutableList;
 @Setter
 @Accessors(chain = true)
 public class TiConfiguration implements Serializable {
+
+  private String networkMappingName = "";
+  private HostMapping hostMapping;
 
   private static Long getTimeAsSeconds(String key) {
     return Utils.timeStringAsSec(key);
