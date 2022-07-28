@@ -72,7 +72,7 @@ class HostMappingSuite extends FunSuite {
         spark.sql("use tidb_catalog")
         spark.sql("show databases").show()
       } finally {
-        if (sc != null){
+        if (sc != null) {
           sc.stop()
           sc = null
         }
