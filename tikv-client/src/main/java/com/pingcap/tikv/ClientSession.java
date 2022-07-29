@@ -20,15 +20,15 @@ import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.util.ConverterUpstream;
 import java.util.function.Function;
 import lombok.Getter;
+import org.tikv.common.TiSession;
 import org.tikv.common.event.CacheInvalidateEvent;
 import org.tikv.common.meta.TiTimestamp;
 
 @Getter
 public class ClientSession implements AutoCloseable {
   private final TiConfiguration conf;
-  private final org.tikv.common.TiSession tikvSession;
+  private final TiSession tikvSession;
   private final Catalog catalog;
-
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
   /**
    * This is used for setting call back function to invalidate cache information
@@ -46,7 +46,7 @@ public class ClientSession implements AutoCloseable {
       this.conf = com.pingcap.tikv.TiConfiguration.createDefault("127.0.0.1:2379");
     }
     this.tikvSession =
-        org.tikv.common.TiSession.create(ConverterUpstream.convertTiConfiguration(getConf()));
+        org.tikv.common.TiSession.getInstance(ConverterUpstream.convertTiConfiguration(getConf()));
     this.catalog =
         new Catalog(this::createSnapshot, getConf().isShowRowId(), getConf().getDBPrefix());
   }
