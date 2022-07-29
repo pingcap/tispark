@@ -16,7 +16,7 @@
 
 package com.pingcap.tispark.utils
 
-import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
+import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.exception.{
   ConvertOverflowException,
   TiBatchWriteException,
@@ -228,98 +228,45 @@ object WriteUtil {
       row: WrappedRow,
       index: TiIndexInfo,
       tiTable: TableCommon,
-      remove: Boolean): WrappedEncodedRow = {
-    if (index.isUnique) {
-      val (encodedKey, encodedValue) =
-        generateUniqueIndexKey(row.row, row.handle, index, tiTable, remove)
-      WrappedEncodedRow(
-        row.row,
-        row.handle,
-        encodedKey,
-        encodedValue,
-        isIndex = true,
-        index.getId,
-        remove)
-    } else {
-      val (encodedKey, encodedValue) =
-        generateSecondaryIndexKey(row.row, row.handle, index, tiTable, remove)
-      WrappedEncodedRow(
-        row.row,
-        row.handle,
-        encodedKey,
-        encodedValue,
-        isIndex = true,
-        index.getId,
-        remove)
-    }
+      remove: Boolean) = {
+    val (encodedKey, encodedValue) =
+      generateIndexKeyAndValue(row.row, row.handle, index, tiTable, remove)
+    WrappedEncodedRow(
+      row.row,
+      row.handle,
+      encodedKey,
+      encodedValue,
+      isIndex = true,
+      index.getId,
+      remove)
   }
 
   /**
    * construct unique index and non-unique index and value to be inserted into TiKV
    * NOTE:
-   * pk is not handle case is equivalent to unique index.
-   * for non-unique index, handle will be encoded as part of index key. In contrast, unique
-   * index encoded handle to value.
+   *      pk is not handle case is equivalent to unique index.
+   *      for non-unique index, handle will be encoded as part of index key. In contrast, unique
+   *      index encoded handle to value.
    */
-  private def generateUniqueIndexKey(
+  private def generateIndexKeyAndValue(
       row: TiRow,
       handle: Handle,
       index: TiIndexInfo,
       tiTable: TableCommon,
       remove: Boolean): (SerializableKey, Array[Byte]) = {
-
-    // NULL is only allowed in unique key, primary key does not allow NULL value
-    val encodeResult = IndexKey.encodeIndexDataValues(
-      row,
-      index.getIndexColumns,
-      handle,
-      index.isUnique && !index.isPrimary,
-      tiTable.getTableInfo)
-    val indexKey =
-      IndexKey.toIndexKey(locatePhysicalTable(tiTable), index.getId, encodeResult.keys: _*)
+    val encodeIndexResult =
+      IndexKey.genIndexKey(locatePhysicalTable(tiTable), row, index, handle, tiTable.getTableInfo)
 
     val value = if (remove) {
       new Array[Byte](0)
     } else {
-      if (encodeResult.appendHandle) {
-        val value = new Array[Byte](1)
-        value(0) = '0'
-        value
-      } else {
-        if (handle.isInt) {
-          val cdo = new CodecDataOutput()
-          cdo.writeLong(handle.intValue())
-          cdo.toBytes
-        } else {
-          TableCodec.genIndexValueForClusteredIndexVersion1(index, handle)
-        }
-      }
+      TableCodec.genIndexValue(
+        handle,
+        tiTable.getTableInfo.getCommonHandleVersion,
+        encodeIndexResult.distinct)
     }
-    (new SerializableKey(indexKey.getBytes), value)
-  }
 
-  private def generateSecondaryIndexKey(
-      row: TiRow,
-      handle: Handle,
-      index: TiIndexInfo,
-      tiTable: TableCommon,
-      remove: Boolean): (SerializableKey, Array[Byte]) = {
-    val keys =
-      IndexKey
-        .encodeIndexDataValues(row, index.getIndexColumns, handle, false, tiTable.getTableInfo)
-        .keys
-    val cdo = new CodecDataOutput()
-    cdo.write(IndexKey.toIndexKey(locatePhysicalTable(tiTable), index.getId, keys: _*).getBytes)
-    cdo.write(handle.encodedAsKey())
-
-    val value: Array[Byte] = if (remove) {
-      new Array[Byte](0)
-    } else {
-      val value = new Array[Byte](1)
-      value(0) = '0'
-      value
-    }
-    (new SerializableKey(cdo.toBytes), value)
+    (new SerializableKey(encodeIndexResult.indexKey), value)
   }
 
   /**
