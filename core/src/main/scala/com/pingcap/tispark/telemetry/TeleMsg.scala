@@ -46,10 +46,9 @@ class TeleMsg(sparkSession: SparkSession) {
   private def generateTrackId(): String = {
     try {
 
-      val clientSession =
-        ClientSession.getInstance(TiConfiguration.createDefault(pdAddr.get))
-      val conf = clientSession.getConf
+      val conf = TiConfiguration.createDefault(pdAddr.get)
       TiUtil.sparkConfToTiConfWithoutPD(SparkSession.active.sparkContext.getConf, conf)
+      val clientSession = ClientSession.getInstance(conf)
       val snapShot = clientSession.createSnapshot()
       val value = snapShot.get(TRACK_ID.getBytes("UTF-8"))
 

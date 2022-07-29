@@ -315,7 +315,7 @@ object TiUtil {
     } else {
       try {
         val ts = java.lang.Long.parseLong(str)
-        new meta.TiTimestamp(ts, 0L)
+        new TiTimestamp(ts, 0L)
       } catch {
         case e: Throwable =>
           throw new IllegalArgumentException(

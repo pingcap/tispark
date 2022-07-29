@@ -63,7 +63,7 @@ object TiBatchWrite {
         tiDBOptions.checkWriteRequired()
         new TiBatchWrite(dataToWrite, tiContext, tiDBOptions).write()
       case None =>
-        throw new exception.TiBatchWriteException("TiExtensions is disable!")
+        throw new TiBatchWriteException("TiExtensions is disable!")
     }
   }
 }
@@ -135,7 +135,7 @@ class TiBatchWrite(
 
     // check if write enable
     if (!tiContext.tiConf.isWriteEnable) {
-      throw new exception.TiBatchWriteException(
+      throw new TiBatchWriteException(
         "tispark batch write is disabled! set spark.tispark.write.enable to enable.")
     }
 
@@ -216,7 +216,7 @@ class TiBatchWrite(
         if (tiContext.tiConf.isWriteWithoutLockTable) {
           logger.warn("write tidb-2.x or 3.x without lock table enabled! only for test!")
         } else {
-          throw new exception.TiBatchWriteException(
+          throw new TiBatchWriteException(
             "current tidb does not support LockTable or is disabled!")
         }
       }
@@ -461,7 +461,7 @@ class TiBatchWrite(
   private def checkConnectionLost(): Unit = {
     if (useTableLock) {
       if (tiDBJDBCClient.isClosed) {
-        throw new exception.TiBatchWriteException("tidb's jdbc connection is lost!")
+        throw new TiBatchWriteException("tidb's jdbc connection is lost!")
       }
     }
   }

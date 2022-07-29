@@ -201,7 +201,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
       !ttlMode.equals("FIXED")
     } else {
       if (ttlMode.equals("UPDATE")) {
-        throw new exception.TiBatchWriteException("current tikv does not support ttl update!")
+        throw new TiBatchWriteException("current tikv does not support ttl update!")
       }
       false
     }
@@ -337,7 +337,7 @@ object TiDBOptions {
     conf.foreach {
       case (k, _) =>
         if ("tidb.password".equals(k) || "spark.tispark.tidb.password".equals(k)) {
-          throw new exception.TiBatchWriteException(
+          throw new TiBatchWriteException(
             "!Security! Please DO NOT add TiDB password to SparkConf which will be shown on Spark WebUI!")
         }
     }

@@ -25,7 +25,7 @@ import org.apache.spark.sql.sources.{BaseRelation, CreatableRelationProvider, Da
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession, TiExtensions}
-import org.tikv.common.exception
+import org.tikv.common.exception.TiBatchWriteException
 
 import java.util
 import scala.collection.JavaConverters._
@@ -67,7 +67,7 @@ class TiDBTableProvider
         }
         TiDBTable(tiContext.clientSession, tiTableRef, copyTable, ts, Some(scalaMap))(
           sparkSession.sqlContext)
-      case None => throw new exception.TiBatchWriteException("TiExtensions is disable!")
+      case None => throw new TiBatchWriteException("TiExtensions is disable!")
     }
   }
 

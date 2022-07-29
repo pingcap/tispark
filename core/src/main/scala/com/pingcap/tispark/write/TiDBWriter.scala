@@ -42,17 +42,17 @@ object TiDBWriter {
               TiBatchWrite.write(df, tiContext, options)
 
             case _ =>
-              throw new exception.TiBatchWriteException(
+              throw new TiBatchWriteException(
                 s"SaveMode: $saveMode is not supported. TiSpark only support SaveMode.Append.")
           }
         } else {
-          throw new exception.TiBatchWriteException(
+          throw new TiBatchWriteException(
             s"table `${options.database}`.`${options.table}` does not exists!")
           // TiDBUtils.createTable(conn, df, options, tiContext)
           // TiDBUtils.saveTable(tiContext, df, Some(df.schema), options)
         }
 
-      case None => throw new exception.TiBatchWriteException("TiExtensions is disable!")
+      case None => throw new TiBatchWriteException("TiExtensions is disable!")
     }
 
   }
