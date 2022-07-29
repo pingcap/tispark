@@ -24,7 +24,7 @@ import com.pingcap.tispark.test.generator._
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.commons.math3.util.Combinations
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.BaseRandomDataTypeTest
+import org.apache.spark.sql.types._
 
 import scala.util.Random
 
@@ -111,6 +111,95 @@ class BatchWritePKAndIndexSuite
         insertAndReplace(schemaAndData.schema)
       }
     }
+  }
+
+  // https://github.com/pingcap/tispark/issues/2452
+  test("test duplicate unique indexes are not deleted error") {
+    tidbStmt.execute("drop table if exists `tispark_test`.`t`")
+    tidbStmt.execute("""
+        |CREATE TABLE `tispark_test`.`t` (
+        |  `id`  int(20),
+        |  `name` varchar(255) primary key clustered,
+        |  `age` int(11) null default null,
+        |   unique index(id)
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+      """.stripMargin)
+    val schema = StructType(
+      List(
+        StructField("id", IntegerType, nullable = true),
+        StructField("name", StringType, nullable = false),
+        StructField("age", IntegerType, nullable = true)))
+    val tidbOptions: Map[String, String] = Map(
+      "tidb.addr" -> "127.0.0.1",
+      "tidb.password" -> "",
+      "tidb.port" -> "4000",
+      "tidb.user" -> "root",
+      "replace" -> "true")
+
+    val rdd1 = sc.parallelize(Seq(Row(1, "1", 0)))
+    val row1 = sqlContext.createDataFrame(rdd1, schema)
+    row1.write
+      .format("tidb")
+      .option("database", "tispark_test")
+      .option("table", "t")
+      .options(tidbOptions)
+      .mode("append")
+      .save()
+    val rdd2 = sc.parallelize(Seq(Row(1, "2", 0)))
+    val row2 = sqlContext.createDataFrame(rdd2, schema)
+    row2.write
+      .format("tidb")
+      .option("database", "tispark_test")
+      .option("table", "t")
+      .options(tidbOptions)
+      .mode("append")
+      .save()
+    tidbStmt.execute("ADMIN CHECK TABLE `tispark_test`.`t`")
+    assert(spark.sql("select * from `tispark_test`.`t`").count() == 1)
+  }
+
+  // https://github.com/pingcap/tispark/issues/2391
+  test("test bug fix incorrect uniqueIndex key when table is not intHandle") {
+    tidbStmt.execute("drop table if exists `tispark_test`.`t`")
+    tidbStmt.execute("""
+        |CREATE TABLE `tispark_test`.`t` (
+        |  `id`  int(20),
+        |  `name` varchar(255) primary key clustered,
+        |  `age` int(11) null default null,
+        |   unique index(id)
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+      """.stripMargin)
+    val schema = StructType(
+      List(
+        StructField("id", IntegerType, nullable = true),
+        StructField("name", StringType, nullable = false),
+        StructField("age", IntegerType, nullable = true)))
+    val tidbOptions: Map[String, String] = Map(
+      "tidb.addr" -> "127.0.0.1",
+      "tidb.password" -> "",
+      "tidb.port" -> "4000",
+      "tidb.user" -> "root",
+      "replace" -> "true")
+
+    val rdd1 = sc.parallelize(Seq(Row(null, "1", 0)))
+    val row1 = sqlContext.createDataFrame(rdd1, schema)
+    row1.write
+      .format("tidb")
+      .option("database", "tispark_test")
+      .option("table", "t")
+      .options(tidbOptions)
+      .mode("append")
+      .save()
+    val rdd2 = sc.parallelize(Seq(Row(null, "2", 0)))
+    val row2 = sqlContext.createDataFrame(rdd2, schema)
+    row2.write
+      .format("tidb")
+      .option("database", "tispark_test")
+      .option("table", "t")
+      .options(tidbOptions)
+      .mode("append")
+      .save()
+    assert(spark.sql("select * from `tispark_test`.`t`").count() == 2)
   }
 
   private def insertAndReplace(schema: Schema): Unit = {
