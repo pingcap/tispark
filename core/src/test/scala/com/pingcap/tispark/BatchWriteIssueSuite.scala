@@ -119,14 +119,14 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
           .options(tidbOptions)
           .option("database", database)
           .option("table", table)
-          .option("sleepAfterGetCommitTS", 20000L)
+          .option("sleepAfterGetCommitTS", 3000L)
           .option("replace", "true")
           .mode("append")
           .save()
       }
     }).start()
 
-    Thread.sleep(10000L)
+    Thread.sleep(1000L)
 
     val row1 = Row(1L, 1L)
     val row2 = Row(2L, 22L)
