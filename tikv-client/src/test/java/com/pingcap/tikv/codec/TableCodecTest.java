@@ -16,12 +16,19 @@
 
 package com.pingcap.tikv.codec;
 
+import static org.junit.Assert.assertArrayEquals;
+
+import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.handle.CommonHandle;
+import com.pingcap.tikv.handle.Handle;
+import com.pingcap.tikv.handle.IntHandle;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.StringType;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class TableCodecTest {
   @Rule public ExpectedException expectedEx = ExpectedException.none();
@@ -38,5 +45,26 @@ public class TableCodecTest {
       expectedEx.expectMessage("encodeRow error: data and columnID count not match 4 vs 2");
     } catch (IllegalAccessException ignored) {
     }
+  }
+
+  @Test
+  public void testIndexValueCodec() {
+    Handle commonHandle =
+        CommonHandle.newCommonHandle(new DataType[] {StringType.VARCHAR}, new Object[] {"1"});
+    // test common handle version0
+    byte[] version0Value = TableCodec.genIndexValue(commonHandle, 0, true);
+    Handle decodeCommonHandle0 = TableCodec.decodeHandleInUniqueIndexValue(version0Value, true);
+    assertArrayEquals(commonHandle.encoded(), decodeCommonHandle0.encoded());
+
+    // test common handle version1
+    byte[] version1Value = TableCodec.genIndexValue(commonHandle, 1, true);
+    Handle decodeCommonHandle1 = TableCodec.decodeHandleInUniqueIndexValue(version1Value, true);
+    assertArrayEquals(commonHandle.encoded(), decodeCommonHandle1.encoded());
+
+    // test int handle
+    Handle intHandle = new IntHandle(1);
+    byte[] intHandleValue = TableCodec.genIndexValue(intHandle, 0, true);
+    Handle decodeIntHandle = TableCodec.decodeHandleInUniqueIndexValue(intHandleValue, false);
+    assertArrayEquals(intHandle.encoded(), decodeIntHandle.encoded());
   }
 }

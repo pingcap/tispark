@@ -20,6 +20,7 @@ import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.handle.Handle;
 import com.pingcap.tikv.meta.TiIndexColumn;
+import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
@@ -43,54 +44,56 @@ public class IndexKey extends Key {
   }
 
   public static class EncodeIndexDataResult {
-    public EncodeIndexDataResult(Key[] keys, boolean appendHandle) {
-      this.keys = keys;
-      this.appendHandle = appendHandle;
+    public EncodeIndexDataResult(byte[] indexKey, boolean distinct) {
+      this.indexKey = indexKey;
+      this.distinct = distinct;
     }
 
-    public Key[] keys;
-    public boolean appendHandle;
+    public byte[] indexKey;
+    public boolean distinct;
   }
 
   public static IndexKey toIndexKey(long tableId, long indexId, Key... dataKeys) {
     return new IndexKey(tableId, indexId, dataKeys);
   }
 
-  public static EncodeIndexDataResult encodeIndexDataValues(
-      Row row,
-      List<TiIndexColumn> indexColumns,
-      Handle handle,
-      boolean appendHandleIfContainsNull,
-      TiTableInfo tableInfo) {
-    // when appendHandleIfContainsNull is true, append handle column if any of the index column is
-    // NULL
-    boolean appendHandle = false;
-    if (handle.isInt()) {
-      if (appendHandleIfContainsNull) {
-        for (TiIndexColumn col : indexColumns) {
-          DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
-          if (row.get(col.getOffset(), colTp) == null) {
-            appendHandle = true;
-            break;
-          }
-        }
+  public static EncodeIndexDataResult genIndexKey(
+      long physicalID, Row row, TiIndexInfo indexInfo, Handle handle, TiTableInfo tableInfo) {
+    // When the index is not a unique index,
+    // or when the index is a unique index and the index value contains null,
+    // set distinct=false and append handle to index key.
+    boolean distinct = false;
+    List<TiIndexColumn> indexColumns = indexInfo.getIndexColumns();
+    if (indexInfo.isUnique() && !containNullInUniqueIndexValue(row, tableInfo, indexColumns)) {
+      distinct = true;
+    }
+    CodecDataOutput keyCdo = new CodecDataOutput();
+    keyCdo.write(IndexKey.toIndexKey(physicalID, indexInfo.getId()).getBytes());
+    for (TiIndexColumn col : indexColumns) {
+      DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
+      // truncate index value when index is prefix index.
+      Key key = TypedKey.toTypedKey(row.get(col.getOffset(), colTp), colTp, (int) col.getLength());
+      keyCdo.write(key.getBytes());
+    }
+    if (!distinct) {
+      if (handle.isInt()) {
+        keyCdo.write(TypedKey.toTypedKey(handle, IntegerType.BIGINT).getBytes());
+      } else {
+        keyCdo.write(handle.encodedAsKey());
       }
     }
+    return new EncodeIndexDataResult(keyCdo.toBytes(), distinct);
+  }
 
-    Key[] keys = new Key[indexColumns.size() + (appendHandle ? 1 : 0)];
-    for (int i = 0; i < indexColumns.size(); i++) {
-      TiIndexColumn col = indexColumns.get(i);
+  private static boolean containNullInUniqueIndexValue(
+      Row row, TiTableInfo tableInfo, List<TiIndexColumn> indexColumns) {
+    for (TiIndexColumn col : indexColumns) {
       DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
-      // truncate index's if necessary
-      Key key = TypedKey.toTypedKey(row.get(col.getOffset(), colTp), colTp, (int) col.getLength());
-      keys[i] = key;
+      if (row.get(col.getOffset(), colTp) == null) {
+        return true;
+      }
     }
-    if (appendHandle) {
-      Key key = TypedKey.toTypedKey(handle, IntegerType.BIGINT);
-      keys[keys.length - 1] = key;
-    }
-
-    return new EncodeIndexDataResult(keys, appendHandle);
+    return false;
   }
 
   private static byte[] encode(long tableId, long indexId, Key[] dataKeys) {
