@@ -25,7 +25,7 @@ import org.tikv.common.exception.TiBatchWriteException
 import org.tikv.common.meta.TiTimestamp
 import org.tikv.common.util.ConcreteBackOffer
 import org.tikv.common.{BytePairWrapper, ByteWrapper, StoreVersion}
-import org.tikv.txn.{TTLManager, TxnKVClient}
+import org.tikv.txn.{TTLManager, TwoPhaseCommitter, TxnKVClient}
 
 import scala.collection.JavaConverters._
 
@@ -64,16 +64,10 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
     logger.info("start to prewritePrimaryKey")
 
     ti2PCClient = new TwoPhaseCommitter(
-      tiConf,
+      clientSession.getTikvSession,
       startTs,
       lockTTLSeconds * 1000 +
-        calculateUptime(clientSession.getTikvSession.createTxnClient(), startTs),
-      options.txnPrewriteBatchSize,
-      options.txnCommitBatchSize,
-      options.writeBufferSize,
-      options.writeThreadPerTask,
-      options.retryCommitSecondaryKey,
-      options.prewriteMaxRetryTimes)
+        calculateUptime(clientSession.getTikvSession.createTxnClient(), startTs))
 
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(options.prewriteBackOfferMS)
@@ -92,16 +86,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
 
     secondaryKeysRDD.foreachPartition { partition =>
       val ti2PCClientOnExecutor =
-        new TwoPhaseCommitter(
-          tiConf,
-          startTs,
-          lockTTLSeconds * 1000,
-          options.txnPrewriteBatchSize,
-          options.txnCommitBatchSize,
-          options.writeBufferSize,
-          options.writeThreadPerTask,
-          options.retryCommitSecondaryKey,
-          options.prewriteMaxRetryTimes)
+        new TwoPhaseCommitter(clientSession.getTikvSession, startTs, lockTTLSeconds * 1000)
 
       val pairs = partition.map { keyValue =>
         new BytePairWrapper(keyValue._1.bytes, keyValue._2)
@@ -202,16 +187,8 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
     if (!options.skipCommitSecondaryKey) {
       logger.info("start to commitSecondaryKeys")
       secondaryKeysRDD.foreachPartition { partition =>
-        val ti2PCClientOnExecutor = new TwoPhaseCommitter(
-          tiConf,
-          startTs,
-          lockTTLSeconds * 1000,
-          options.txnPrewriteBatchSize,
-          options.txnCommitBatchSize,
-          options.writeBufferSize,
-          options.writeThreadPerTask,
-          options.retryCommitSecondaryKey,
-          options.prewriteMaxRetryTimes)
+        val ti2PCClientOnExecutor =
+          new TwoPhaseCommitter(clientSession.getTikvSession, startTs, lockTTLSeconds * 1000)
 
         val keys = partition.map { keyValue =>
           new ByteWrapper(keyValue._1.bytes)
