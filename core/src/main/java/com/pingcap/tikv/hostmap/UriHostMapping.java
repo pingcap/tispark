@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.hostmap;
 
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
