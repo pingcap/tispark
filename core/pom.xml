@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.pingcap.tispark</groupId>
         <artifactId>tispark-parent</artifactId>
-        <version>3.1.0-SHAPSHOT</version>
+        <version>3.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -121,6 +121,7 @@
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>${mysql.connector.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.github.oshi</groupId>

@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.pingcap.tispark</groupId>
         <artifactId>tispark-parent</artifactId>
-        <version>3.1.0-SHAPSHOT</version>
+        <version>3.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -24,11 +24,6 @@
             <groupId>com.pingcap.tikv</groupId>
             <artifactId>tikv-client</artifactId>
             <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>${mysql.connector.version}</version>
         </dependency>
     </dependencies>
 
