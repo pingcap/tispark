@@ -153,14 +153,7 @@ class TiBatchWrite(
           if (tiTableInfo.isPartitionEnabled) {
             transferToPhysicalTables(df, tiTableInfo, table, isTiDBV4, tableOptions)
           } else {
-            List(
-              new TiBatchWriteTable(
-                df,
-                tiContext,
-                tableOptions,
-                tiConf,
-                isTiDBV4,
-                table))
+            List(new TiBatchWriteTable(df, tiContext, tableOptions, tiConf, isTiDBV4, table))
           }
       }.toList
     }
@@ -309,14 +302,7 @@ class TiBatchWrite(
           row =>
             table.equals(
               pTable.locatePartition(WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf))))
-        new TiBatchWriteTable(
-          dfPartitioned,
-          tiContext,
-          options,
-          tiConf,
-          tiDBJDBCClient,
-          isTiDBV4,
-          table)
+        new TiBatchWriteTable(dfPartitioned, tiContext, options, tiConf, isTiDBV4, table)
       })
       .toList
   }
