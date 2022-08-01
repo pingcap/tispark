@@ -76,6 +76,10 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val enableUpdateTableStatistics: Boolean =
     getOrDefault(TIDB_ENABLE_UPDATE_TABLE_STATISTICS, "false").toBoolean
   val deduplicate: Boolean = getOrDefault(TIDB_DEDUPLICATE, "true").toBoolean
+  // TiDB use V2 row format to save data after 4.0.0. It can read both V1 and V2 rows.
+  // TiSpark only support TiDB which version higher than 4.0.0. And it can read both V1 and V2 rows too.
+  // So it better to save data using V2 row format.
+  val tidbRowFormatVersion: Int = getOrDefault(TiDB_ROW_FORMAT_VERSION, "2").toInt
 
   // ------------------------------------------------------------
   // Optional parameters for Test
@@ -135,7 +139,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // Optional parameters for read
   // ------------------------------------------------------------
   val tidbRowId: Boolean = getOrDefault(TIDB_ROWID, "false").toBoolean
-  val tidbRowFormatVersion: Int = getOrDefault(TiDB_ROW_FORMAT_VERSION, "2").toInt
+
   // ------------------------------------------------------------
   // Enable JDBC SSL connection
   // ------------------------------------------------------------
