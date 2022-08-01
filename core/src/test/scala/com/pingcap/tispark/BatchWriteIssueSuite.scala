@@ -119,7 +119,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
           .options(tidbOptions)
           .option("database", database)
           .option("table", table)
-          .option("sleepAfterGetCommitTS", 3000L)
+          .option("sleepAfterGetCommitTS", 10000L)
           .option("replace", "true")
           .mode("append")
           .save()
@@ -141,7 +141,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
       .option("replace", "true")
       .mode("append")
       .save()
-
+    Thread.sleep(10000L)
     spark.sql(s"select * from $table").show(false)
     assert(22 == spark.sql(s"select c2 from $table where c1 = 2").collect().head.get(0))
   }
