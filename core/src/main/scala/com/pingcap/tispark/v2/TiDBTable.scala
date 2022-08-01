@@ -20,10 +20,13 @@ import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
+
 import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
 import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions, TiDBWriter}
 import com.pingcap.tispark.TiTableReference
+import org.apache.commons.codec.binary.Hex
+
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.catalyst.util.{DateTimeUtils, TimestampFormatter}
@@ -37,26 +40,7 @@ import org.apache.spark.sql.connector.read.ScanBuilder
 import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, SparkPlan}
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.sources.{
-  AlwaysFalse,
-  AlwaysTrue,
-  And,
-  EqualNullSafe,
-  EqualTo,
-  Filter,
-  GreaterThan,
-  GreaterThanOrEqual,
-  In,
-  IsNotNull,
-  IsNull,
-  LessThan,
-  LessThanOrEqual,
-  Not,
-  Or,
-  StringContains,
-  StringEndsWith,
-  StringStartsWith
-}
+import org.apache.spark.sql.sources._
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
@@ -67,8 +51,8 @@ import java.sql.{Date, SQLException, Timestamp}
 import java.time.{Instant, LocalDate}
 import java.util
 import java.util.Collections
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import collection.JavaConverters._
 
 case class TiDBTable(
     session: TiSession,
@@ -86,6 +70,7 @@ case class TiDBTable(
     def quoted: String = {
       Seq(identifier.databaseName, identifier.tableName).map(quote).mkString(".")
     }
+
     private def quote(part: String): String = {
       if (part.contains(".") || part.contains("`")) {
         s"`${part.replace("`", "``")}`"
@@ -118,6 +103,7 @@ case class TiDBTable(
   }
 
   def databaseName: String = tableRef.databaseName
+
   def tableName: String = tableRef.tableName
 
   override def newScanBuilder(options: CaseInsensitiveStringMap): ScanBuilder =
@@ -205,7 +191,8 @@ case class TiDBTable(
     val tidbOptions = new TiDBOptions(sqlContext.sparkSession.conf.getAll)
 
     // Execute delete
-    val tiDBDelete = TiDBDelete(df, databaseName, tableName, startTs, Some(tidbOptions))
+    val tiDBDelete =
+      TiDBDelete(df, databaseName, tableName, startTs, Some(tidbOptions))
     try {
       tiDBDelete.delete()
     } finally {
@@ -307,6 +294,7 @@ object TiDBTable {
           s"'${timestampFormatter.format(timestampValue)}'"
         case dateValue: Date => "'" + dateValue + "'"
         case dateValue: LocalDate => "'" + dateValue + "'"
+        case arrayByte: Array[Byte] => "X'" + Hex.encodeHexString(arrayByte) + "'"
         case arrayValue: Array[Any] => arrayValue.map(compileValue).mkString(", ")
         case _ => value
       }

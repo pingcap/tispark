@@ -19,6 +19,7 @@ package com.pingcap.tikv;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.pingcap.tikv.operation.PDErrorHandler.getRegionResponseErrorExtractor;
 import static com.pingcap.tikv.pd.PDError.buildFromPdpbError;
+import static com.pingcap.tikv.pd.PDUtils.addrToUrl;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -31,13 +32,13 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.NoopHandler;
 import com.pingcap.tikv.operation.PDErrorHandler;
-import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffFunction.BackOffFuncType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.FutureObserver;
+import com.pingcap.tikv.util.HostMapping;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.KeyValue;
@@ -46,7 +47,10 @@ import io.etcd.jetcd.options.GetOption;
 import io.grpc.ManagedChannel;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -56,6 +60,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Metapb.Store;
@@ -95,6 +100,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private List<URI> pdAddrs;
   private Client etcdClient;
   private ConcurrentMap<Long, Double> tiflashReplicaMap;
+  private HostMapping hostMapping;
 
   private PDClient(TiConfiguration conf, ChannelFactory channelFactory) {
     super(conf, channelFactory);
@@ -123,6 +129,10 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     TsoResponse resp = callWithRetry(backOffer, PDGrpc.getTsoMethod(), request, handler);
     Timestamp timestamp = resp.getTimestamp();
     return new TiTimestamp(timestamp.getPhysical(), timestamp.getLogical());
+  }
+
+  public HostMapping getHostMapping() {
+    return hostMapping;
   }
 
   /**
@@ -350,7 +360,8 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private GetMembersResponse doGetMembers(BackOffer backOffer, URI url) {
     while (true) {
       try {
-        ManagedChannel probChan = channelFactory.getChannel(url.getHost() + ":" + url.getPort());
+        ManagedChannel probChan =
+            channelFactory.getChannel(url.getHost() + ":" + url.getPort(), hostMapping);
         PDGrpc.PDBlockingStub stub = PDGrpc.newBlockingStub(probChan);
         GetMembersRequest request =
             GetMembersRequest.newBuilder().setHeader(RequestHeader.getDefaultInstance()).build();
@@ -390,14 +401,14 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   private boolean createLeaderWrapper(String leaderUrlStr) {
     try {
-      URI newLeader = PDUtils.addrToUrl(leaderUrlStr);
+      URI newLeader = addrToUrl(leaderUrlStr);
       leaderUrlStr = newLeader.getHost() + ":" + newLeader.getPort();
       if (leaderWrapper != null && leaderUrlStr.equals(leaderWrapper.getLeaderInfo())) {
         return true;
       }
 
       // create new Leader
-      ManagedChannel clientChannel = channelFactory.getChannel(leaderUrlStr);
+      ManagedChannel clientChannel = channelFactory.getChannel(leaderUrlStr, hostMapping);
       leaderWrapper =
           new LeaderWrapper(
               leaderUrlStr,
@@ -421,11 +432,12 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
       }
 
       String leaderUrlStr = resp.getLeader().getClientUrlsList().get(0);
-      URI leaderUrl = PDUtils.addrToUrl(leaderUrlStr);
+      URI leaderUrl = addrToUrl(leaderUrlStr);
       leaderUrlStr = leaderUrl.getHost() + ":" + leaderUrl.getPort();
 
       // if leader is switched, just return.
-      if (checkHealth(leaderUrlStr) && switchLeader(resp.getLeader().getClientUrlsList())) {
+      if (checkHealth(leaderUrlStr, hostMapping)
+          && switchLeader(resp.getLeader().getClientUrlsList())) {
         return;
       }
     }
@@ -445,16 +457,16 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
       }
 
       String leaderUrlStr = resp.getLeader().getClientUrlsList().get(0);
-      URI leaderUrl = PDUtils.addrToUrl(leaderUrlStr);
+      URI leaderUrl = addrToUrl(leaderUrlStr);
       leaderUrlStr = leaderUrl.getHost() + ":" + leaderUrl.getPort();
 
-      if (!checkHealth(leaderUrlStr)) {
+      if (!checkHealth(leaderUrlStr, hostMapping)) {
         continue;
       }
 
       // create new Leader
       try {
-        ManagedChannel clientChannel = channelFactory.getChannel(leaderUrlStr);
+        ManagedChannel clientChannel = channelFactory.getChannel(leaderUrlStr, hostMapping);
         leaderWrapper =
             new LeaderWrapper(
                 leaderUrlStr,
@@ -545,19 +557,42 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   private void initCluster() {
     GetMembersResponse resp = null;
-    List<URI> pdAddrs = getConf().getPdAddrs();
+    List<URI> pdAddrs = new ArrayList<>(getConf().getPdAddrs());
+    // shuffle PD addresses so that clients call getMembers from different PD
+    Collections.shuffle(pdAddrs);
+    this.pdAddrs = pdAddrs;
+    this.etcdClient =
+        Client.builder()
+            .endpoints(pdAddrs)
+            .executorService(
+                Executors.newCachedThreadPool(
+                    new ThreadFactoryBuilder()
+                        .setNameFormat("etcd-conn-manager-pool-%d")
+                        .setDaemon(true)
+                        .build()))
+            .build();
+    logger.info("init host mapping: start");
+    this.hostMapping =
+        Optional.ofNullable(getConf().getHostMapping())
+            .orElseGet(() -> new DefaultHostMapping(this.etcdClient, conf.getNetworkMappingName()));
+    logger.info("init host mapping: end");
+
     for (URI u : pdAddrs) {
       resp = getMembers(u);
       if (resp != null) {
         break;
       }
     }
+
     checkNotNull(resp, "Failed to init client for PD cluster.");
     long clusterId = resp.getHeader().getClusterId();
     header = RequestHeader.newBuilder().setClusterId(clusterId).build();
     tsoReq = TsoRequest.newBuilder().setHeader(header).setCount(1).build();
-    this.pdAddrs = pdAddrs;
-    this.etcdClient = Client.builder().endpoints(pdAddrs).build();
+    this.pdAddrs =
+        resp.getMembersList()
+            .stream()
+            .map(mem -> addrToUrl(mem.getClientUrls(0)))
+            .collect(Collectors.toList());
     this.tiflashReplicaMap = new ConcurrentHashMap<>();
     createLeaderWrapper(resp.getLeader().getClientUrls(0));
     service =

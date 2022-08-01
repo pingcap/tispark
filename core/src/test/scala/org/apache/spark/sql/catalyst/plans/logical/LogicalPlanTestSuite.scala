@@ -16,11 +16,17 @@
 
 package org.apache.spark.sql.catalyst.plans.logical
 
+import com.pingcap.tikv.StoreVersion
 import com.pingcap.tikv.codec.KeyUtils
+import com.pingcap.tikv.expression.ComparisonBinaryExpression.{greaterEqual, lessEqual}
+import com.pingcap.tikv.expression.{ColumnRef, Constant, Expression, LogicalBinaryExpression}
+import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
+import com.pingcap.tikv.types.{DataType, DataTypeFactory, IntegerType, MySQLType}
 import com.pingcap.tispark.telemetry.TiSparkTeleInfo
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 import org.apache.spark.sql.execution.{ExplainMode, SimpleMode}
+import org.scalatest.Matchers.{be, contain, convertToAnyShouldWrapper}
 import org.tikv.kvproto.Coprocessor
 
 import java.util
@@ -68,37 +74,37 @@ class LogicalPlanTestSuite extends BasePlanTest {
     refreshConnections()
     val df =
       spark.sql("""
-                  |select t1.*, (
-                  |	select count(*)
-                  |	from test2
-                  |	where id > 1
-                  |), t1.c1, t2.c1, t3.*, t4.c3
-                  |from (
-                  |	select id, c1, c2
-                  |	from test1) t1
-                  |left join (
-                  |	select id, c1, c2, c1 + coalesce(c2 % 2) as c3
-                  |	from test2 where c1 + c2 > 3) t2
-                  |on t1.id = t2.id
-                  |left join (
-                  |	select max(id) as id, min(c1) + c2 as c1, c2, count(*) as c3
-                  |	from test3
-                  |	where c2 <= 3 and exists (
-                  |		select * from (
-                  |			select id as c1 from test3)
-                  |    where (
-                  |      select max(id) from test1) = 4)
-                  |	group by c2) t3
-                  |on t1.id = t3.id
-                  |left join (
-                  |	select max(id) as id, min(c1) as c1, max(c1) as c1, count(*) as c2, c2 as c3
-                  |	from test3
-                  |	where id not in (
-                  |		select id
-                  |		from test1
-                  |		where c2 > 2)
-                  |	group by c2) t4
-                  |on t1.id = t4.id
+          |select t1.*, (
+          |	select count(*)
+          |	from test2
+          |	where id > 1
+          |), t1.c1, t2.c1, t3.*, t4.c3
+          |from (
+          |	select id, c1, c2
+          |	from test1) t1
+          |left join (
+          |	select id, c1, c2, c1 + coalesce(c2 % 2) as c3
+          |	from test2 where c1 + c2 > 3) t2
+          |on t1.id = t2.id
+          |left join (
+          |	select max(id) as id, min(c1) + c2 as c1, c2, count(*) as c3
+          |	from test3
+          |	where c2 <= 3 and exists (
+          |		select * from (
+          |			select id as c1 from test3)
+          |    where (
+          |      select max(id) from test1) = 4)
+          |	group by c2) t3
+          |on t1.id = t3.id
+          |left join (
+          |	select max(id) as id, min(c1) as c1, max(c1) as c1, count(*) as c2, c2 as c3
+          |	from test3
+          |	where id not in (
+          |		select id
+          |		from test1
+          |		where c2 > 2)
+          |	group by c2) t4
+          |on t1.id = t4.id
       """.stripMargin)
 
     var v: TiTimestamp = null
@@ -120,14 +126,134 @@ class LogicalPlanTestSuite extends BasePlanTest {
     }
   }
 
+  // https://github.com/pingcap/tispark/issues/2290
+  test("fix cannot encode row key with non-long type") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    if (StoreVersion.minTiKVVersion("5.0.0", this.ti.tiSession.getPDClient)) {
+      tidbStmt.execute("""
+          |CREATE TABLE `t1` (
+          |  `a` BIGINT UNSIGNED  NOT NULL,
+          |  `b` varchar(255) NOT NULL,
+          |  `c` varchar(255) DEFAULT NULL,
+          |  PRIMARY KEY (`a`) CLUSTERED
+          |  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    } else {
+      if (isEnableAlterPrimaryKey) {
+        cancel("TiDB config alter-primary-key must be false")
+      }
+      tidbStmt.execute("""
+                         |CREATE TABLE `t1` (
+                         |  `a` BIGINT UNSIGNED  NOT NULL,
+                         |  `b` varchar(255) NOT NULL,
+                         |  `c` varchar(255) DEFAULT NULL,
+                         |  PRIMARY KEY (`a`)
+                         |  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+    }
+    tidbStmt.execute(
+      " INSERT INTO t1 VALUES(0, 'aa', 'aa'), ( 9223372036854775807, 'bb', 'bb'), ( 9223372036854775808, 'cc', 'cc'), ( 18446744073709551615, 'dd', 'dd')")
+
+    def checkResultAndExpression(
+        sql: String,
+        valueExpectation: List[String],
+        expressionExpectation: Expression): Unit = {
+      val df = spark.sql(sql)
+      val dag = extractDAGRequests(df).head
+      val rangeFilter = dag.getRangeFilter
+      val value = df.select("a").collect().map(_(0).toString).toList
+      value should contain theSameElementsAs valueExpectation
+      if (rangeFilter.size() == 1) {
+        rangeFilter.get(0).toString should be(expressionExpectation.toString)
+      }
+    }
+
+    val holder = new InternalTypeHolder(
+      MySQLType.TypeLonglong.getTypeCode,
+      DataType.PriKeyFlag + DataType.UnsignedFlag + DataType.NoDefaultValueFlag,
+      20,
+      -1,
+      "utf8_bin",
+      "",
+      null)
+
+    val dataType = DataTypeFactory.of(holder)
+    val situation1 = "SELECT a FROM t1 WHERE a >= 0 and a <= 9223372036854775807 order by a"
+    val valueExpectation1 = List[String]("0", "9223372036854775807")
+    val expressionExpectation1 = LogicalBinaryExpression.and(
+      greaterEqual(new ColumnRef("a", dataType), Constant.create(0, dataType)),
+      lessEqual(new ColumnRef("a", dataType), Constant.create(Long.MaxValue, dataType)))
+    checkResultAndExpression(situation1, valueExpectation1, expressionExpectation1)
+
+    val situation2 = "SELECT a FROM t1 WHERE a >= 0 and a<= 9223372036854775808 order by a"
+    val valueExpectation2 = List[String]("0", "9223372036854775807", "9223372036854775808")
+    val expressionExpectation2 = LogicalBinaryExpression.and(
+      greaterEqual(new ColumnRef("a", dataType), Constant.create(0, dataType)),
+      lessEqual(
+        new ColumnRef("a", dataType),
+        Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType)))
+    checkResultAndExpression(situation2, valueExpectation2, expressionExpectation2)
+
+    val situation3 = "SELECT a FROM t1 WHERE a >= 0 order by a"
+    val valueExpectation3 =
+      List[String]("0", "9223372036854775807", "9223372036854775808", "18446744073709551615")
+    val expressionExpectation3 =
+      greaterEqual(new ColumnRef("a", dataType), Constant.create(0, IntegerType.BIGINT))
+    checkResultAndExpression(situation3, valueExpectation3, expressionExpectation3)
+
+    val situation4 =
+      "SELECT a FROM t1 WHERE a >= 9223372036854775807 and a<=9223372036854775808 order by a"
+    val valueExpectation4 = List[String]("9223372036854775807", "9223372036854775808")
+    val expressionExpectation4 = LogicalBinaryExpression.and(
+      greaterEqual(new ColumnRef("a", dataType), Constant.create(Long.MaxValue, dataType)),
+      lessEqual(
+        new ColumnRef("a", dataType),
+        Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType)))
+    checkResultAndExpression(situation4, valueExpectation4, expressionExpectation4)
+
+    val situation5 = "SELECT a FROM t1 WHERE a<=9223372036854775808 order by a"
+    val valueExpectation5 = List[String]("0", "9223372036854775807", "9223372036854775808")
+    val expressionExpectation5 = lessEqual(
+      new ColumnRef("a", dataType),
+      Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType))
+    checkResultAndExpression(situation5, valueExpectation5, expressionExpectation5)
+
+    val situation6 = "SELECT a FROM t1 WHERE a <= 9223372036854775807 order by a"
+    val valueExpectation6 = List[String]("0", "9223372036854775807")
+    val expressionExpectation6 =
+      lessEqual(new ColumnRef("a", dataType), Constant.create(Long.MaxValue, dataType))
+    checkResultAndExpression(situation6, valueExpectation6, expressionExpectation6)
+
+    val situation7 = "SELECT a FROM t1 WHERE a >= 9223372036854775808 and a<=9223372036854775809"
+    val valueExpectation7 = List[String]("9223372036854775808")
+    val expressionExpectation7 = LogicalBinaryExpression.and(
+      greaterEqual(
+        new ColumnRef("a", dataType),
+        Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType)),
+      lessEqual(
+        new ColumnRef("a", dataType),
+        Constant.create(new java.math.BigDecimal("9223372036854775809"), dataType)))
+    checkResultAndExpression(situation7, valueExpectation7, expressionExpectation7)
+
+    val situation8 = "SELECT a FROM t1 WHERE a >= 9223372036854775808"
+    val valueExpectation8 = List[String]("9223372036854775808", "18446744073709551615")
+    val expressionExpectation8 = greaterEqual(
+      new ColumnRef("a", dataType),
+      Constant.create(new java.math.BigDecimal("9223372036854775808"), dataType))
+    checkResultAndExpression(situation8, valueExpectation8, expressionExpectation8)
+
+    val situation9 = "SELECT a FROM t1 order by a"
+    val valueExpectation9 =
+      List[String]("0", "9223372036854775807", "9223372036854775808", "18446744073709551615")
+    checkResultAndExpression(situation9, valueExpectation9, null)
+  }
+
   test("test physical plan explain which table without cluster index") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     tidbStmt.execute("""
-                       |CREATE TABLE `t1` (
-                       |  `a` BIGINT(20) NOT NULL,
-                       |  `b` varchar(255) NOT NULL,
-                       |  `c` varchar(255) DEFAULT NULL
-                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+        |CREATE TABLE `t1` (
+        |  `a` BIGINT(20) NOT NULL,
+        |  `b` varchar(255) NOT NULL,
+        |  `c` varchar(255) DEFAULT NULL
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
 
     // TableScan with Selection and without RangeFilter.
     val df1 = spark.sql("select * from t1 where a>0 and b>'aa'")
