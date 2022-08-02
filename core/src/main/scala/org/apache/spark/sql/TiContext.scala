@@ -45,7 +45,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   final val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(
     conf,
     if (TiAuthorization.enableAuth) {
-      Option(tiAuthorization.get.getPDAddress())
+      Option(tiAuthorization.get.getPDAddresses())
     } else Option.empty)
   final val tiSession: TiSession = TiSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
