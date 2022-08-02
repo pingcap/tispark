@@ -50,7 +50,6 @@ class CountPushDownSuite extends BasePushDownSuite() {
     "select count(tp_text) from ",
     "select count(tp_tinytext) from ",
     "select count(tp_time) from ",
-    "select count(tp_enum) from ",
     "select count(*) from ",
     "select count(1) from ")
 
@@ -85,6 +84,19 @@ class CountPushDownSuite extends BasePushDownSuite() {
       }
       runTest(query)
     }
+
+    // Count(enum) can push down after 5.0.0
+    if (StoreVersion.minTiKVVersion("5.0.0", ti.tiSession.getPDClient)) {
+      val query = "select count(tp_enum) from " + tableName
+      val df = spark.sql(query)
+      if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
+        fail(
+          s"count is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+            df).head.toString)
+      }
+      runTest(query)
+    }
+
   }
 
   test("Test - Count push down no pk") {
@@ -116,5 +128,18 @@ class CountPushDownSuite extends BasePushDownSuite() {
       }
       runTest(query)
     }
+
+    // Count(enum) can push down after 5.0.0
+    if (StoreVersion.minTiKVVersion("5.0.0", ti.tiSession.getPDClient)) {
+      val query = "select count(tp_enum) from " + tableName
+      val df = spark.sql(query)
+      if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
+        fail(
+          s"count is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+            df).head.toString)
+      }
+      runTest(query)
+    }
+
   }
 }
