@@ -19,7 +19,6 @@ package com.pingcap.tispark.auth
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.test.SharedSQLContext
 import org.scalatest.Matchers.{
-  an,
   be,
   contain,
   convertToAnyShouldWrapper,
@@ -109,7 +108,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   test("Get PD address from TiDB should be correct") {
-    ti.tiAuthorization.get.getPDAddress() should be(pdAddresses)
+    ti.tiAuthorization.get.getPDAddresses() should be(pdAddresses)
   }
 
   test("Use database and select without privilege should not be passed") {
