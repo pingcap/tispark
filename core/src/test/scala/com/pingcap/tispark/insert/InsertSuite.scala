@@ -106,4 +106,14 @@ class InsertSuite extends BaseBatchWriteTest("test_delete_compatibility") {
     val actual = spark.sql(s"SELECT count(*) FROM $dbtable").head().get(0)
     assert(1 == actual)
   }
+
+  test("insert into partition table test") {
+    jdbcUpdate(
+      s"create table $dbtable(i int, s varchar(255), k varchar(255),PRIMARY KEY (i)/*T![clustered_index] CLUSTERED */) partition by hash(i);")
+
+    spark.sql(s"INSERT INTO $dbtable VALUES(0,'hello','tidb'),(1,'world','test')")
+
+    val actual = spark.sql(s"SELECT count(*) FROM $dbtable").head().get(0)
+    assert(2 == actual)
+  }
 }
