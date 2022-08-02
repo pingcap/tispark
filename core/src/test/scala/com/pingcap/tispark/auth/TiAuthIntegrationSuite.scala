@@ -18,7 +18,15 @@ package com.pingcap.tispark.auth
 
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.test.SharedSQLContext
-import org.scalatest.Matchers.{be, contain, convertToAnyShouldWrapper, have, noException, not, the}
+import org.scalatest.Matchers.{
+  be,
+  contain,
+  convertToAnyShouldWrapper,
+  have,
+  noException,
+  not,
+  the
+}
 
 import java.sql.SQLException
 
