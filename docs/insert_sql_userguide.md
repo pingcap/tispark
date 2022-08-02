@@ -69,6 +69,11 @@ The following table shows the TiDB-specific options, which can be passed in thro
 TiDB's version must be **4.0.0 or later**.
 
 ## Limitations
+TiSpark support write into partition table using INSERT SQL now.
+
+But TiSpark does not support insert with a partition spec and a column list, like:
+
+`INSERT INTO test.test PARTITION (i = 1)(s, k) VALUES ('hello', 'world');`
 
 ## Type Conversion for Write
 
