@@ -35,7 +35,7 @@ import scala.util.matching.Regex
 object TiSparkTeleInfo {
 
   private val logger = LoggerFactory.getLogger(getClass.getName)
-  private val pd_address: Option[String] = getPDAddress
+  private val pd_addresses: Option[String] = getPDAddresses
   private val tispark_version: String = getTisparkVersion
   private val tidb_version: String = getPdVersion
   private val spark_version: String = org.apache.spark.SPARK_VERSION
@@ -56,7 +56,7 @@ object TiSparkTeleInfo {
       "spark_version" -> this.spark_version)
   }
 
-  def pdAddress: Option[String] = pd_address
+  def pdAddress: Option[String] = pd_addresses
 
   private def getTisparkVersion: String = {
     val pattern = new Regex("[0-9]\\.[0-9]\\.[0-9].*\\n")
@@ -69,7 +69,7 @@ object TiSparkTeleInfo {
 
   private def getPdVersion: String = {
     val pDStatusOption = requestPD[PDStatus]("/pd/api/v1/status")
-    if (!pDStatusOption.isDefined)
+    if (pDStatusOption.isEmpty)
       "UNKNOWN"
     else
       pDStatusOption.get.version
@@ -77,7 +77,7 @@ object TiSparkTeleInfo {
 
   private def getClusterId: String = {
     val clusterOption = requestPD[Cluster]("/pd/api/v1/cluster")
-    if (!clusterOption.isDefined)
+    if (clusterOption.isEmpty)
       "UNKNOWN"
     else
       clusterOption.get.id
@@ -85,20 +85,24 @@ object TiSparkTeleInfo {
 
   private def requestPD[T: ClassTag](urlPattern: String): Option[T] = {
     try {
-      if (!pd_address.isDefined) {
+      if (pd_addresses.isEmpty) {
         return Option.empty[T]
       }
       val httpClient = new HttpClientUtil
       var resp: Option[HttpResponse[String]] = null
 
-      val conf: TiConfiguration = new TiConfiguration
+      val conf: TiConfiguration = TiConfiguration.createDefault(pdAddress.get)
       TiUtil.sparkConfToTiConfWithoutPD(SparkSession.active.sparkContext.getConf, conf)
+      if (conf.getPdAddrs.isEmpty) {
+        logger.warn("PD address is empty, can't request PD")
+        return Option.empty[T]
+      }
 
-      var pd_uri: URI = null;
+      var pd_uri: URI = conf.getPdAddrs.get(0)
       if (conf.isTlsEnable) {
-        pd_uri = new URI(s"https://${pd_address.get}$urlPattern")
+        pd_uri = new URI(s"https://${pd_uri.getHost}:${pd_uri.getPort}$urlPattern")
       } else {
-        pd_uri = new URI(s"http://${pd_address.get}$urlPattern")
+        pd_uri = new URI(s"http://${pd_uri.getHost}:${pd_uri.getPort}$urlPattern")
       }
 
       if (conf.getHostMapping != null) {
@@ -111,7 +115,7 @@ object TiSparkTeleInfo {
         resp = httpClient.get(pd_uri.toString)
       }
 
-      if (resp == null || !resp.isDefined) {
+      if (resp == null || resp.isEmpty) {
         logger.warn("Failed to request PD version. ")
         return Option.empty[T]
       }
@@ -127,10 +131,10 @@ object TiSparkTeleInfo {
     }
   }
 
-  private def getPDAddress: Option[String] = {
+  private def getPDAddresses: Option[String] = {
     try {
       if (TiAuthorization.enableAuth) {
-        Option(TiAuthorization.tiAuthorization.get.getPDAddress())
+        Option(TiAuthorization.tiAuthorization.get.getPDAddresses())
       } else {
         val conf: SQLConf = SparkSession.active.sessionState.conf.clone()
         Option(conf.getConfString("spark.tispark.pd.addresses"))
