@@ -25,6 +25,8 @@ import com.pingcap.tispark.auth.TiAuthorization
 import org.apache.spark.sql.internal.SQLConf
 import org.slf4j.LoggerFactory
 import scalaj.http.HttpResponse
+
+import java.net.URI
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
 
@@ -97,14 +99,6 @@ object TiSparkTeleInfo {
         return Option.empty[T]
       }
 
-<<<<<<< HEAD
-      if (conf.isTlsEnable) {
-        val url = "https://" + pd_address.get + urlPattern
-        resp = httpClient.getHttpsWithTiConfiguration(url, conf)
-      } else {
-        val url = "http://" + pd_address.get + urlPattern
-        resp = httpClient.get(url)
-=======
       var pd_uri: URI = conf.getPdAddrs.get(0)
       if (conf.isTlsEnable) {
         pd_uri = new URI(s"https://${pd_uri.getHost}:${pd_uri.getPort}$urlPattern")
@@ -112,15 +106,10 @@ object TiSparkTeleInfo {
         pd_uri = new URI(s"http://${pd_uri.getHost}:${pd_uri.getPort}$urlPattern")
       }
 
-      if (conf.getHostMapping != null) {
-        pd_uri = conf.getHostMapping.getMappedURI(pd_uri)
-      }
-
       if (conf.isTlsEnable) {
         resp = httpClient.getHttpsWithTiConfiguration(pd_uri.toString, conf)
       } else {
         resp = httpClient.get(pd_uri.toString)
->>>>>>> 59cd79bb1 (Fix: exception when the size of pdAddresse is > 1 (#2473))
       }
 
       if (resp == null || resp.isEmpty) {
