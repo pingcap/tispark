@@ -92,6 +92,14 @@ region. Since we can't control how to split data in DataSource V2, each executor
 should be written to different regions. If we don't do region split, it may cause performance issue. If we do, region split will be
 done in every executor which also causes performance issue.
 
+## Limitations
+
+The table TiSpark created follows the rules of TiDB which is different from Spark SQL. 
+
+TiSpark supports writing into partition table using INSERT SQL now.
+But TiSpark does not support insert with a partition spec and a column list, like:
+
+`INSERT INTO test.test PARTITION (i = 1)(s, k) VALUES ('hello', 'world');`
 
 ## Compatibility
 - TiDB support: 4.x, 5.x and 6.x
