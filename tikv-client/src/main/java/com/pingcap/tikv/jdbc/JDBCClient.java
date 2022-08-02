@@ -60,8 +60,8 @@ public class JDBCClient {
     }
   }
 
-  public String getPDAddress() throws SQLException {
-    return queryForObject(GET_PD_ADDRESS, (rs, rowNum) -> rs.getString(1));
+  public List<String> getPDAddresses() throws SQLException {
+    return query(GET_PD_ADDRESS, (rs, rowNum) -> rs.getString(1));
   }
 
   public String getCurrentUser() throws SQLException {
