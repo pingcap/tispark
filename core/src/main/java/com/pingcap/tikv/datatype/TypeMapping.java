@@ -16,13 +16,13 @@
 
 package com.pingcap.tikv.datatype;
 
+import static com.pingcap.tikv.types.MySQLType.TypeLonglong;
+import static com.pingcap.tikv.types.MySQLType.TypeTiny;
+
 import com.pingcap.tikv.types.*;
 import org.apache.spark.sql.types.DataTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.pingcap.tikv.types.MySQLType.TypeLonglong;
-import static com.pingcap.tikv.types.MySQLType.TypeTiny;
 
 public class TypeMapping {
   private static final Logger logger = LoggerFactory.getLogger(TypeMapping.class.getName());
