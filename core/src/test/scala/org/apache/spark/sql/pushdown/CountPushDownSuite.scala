@@ -85,8 +85,8 @@ class CountPushDownSuite extends BasePushDownSuite() {
       runTest(query)
     }
 
-    // Count(enum) can push down after 5.0.0
-    if (StoreVersion.minTiKVVersion("5.0.0", ti.tiSession.getPDClient)) {
+    // Count(enum) can push down after 5.1.0
+    if (StoreVersion.minTiKVVersion("5.1.0", ti.tiSession.getPDClient)) {
       val query = "select count(tp_enum) from " + tableName
       val df = spark.sql(query)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
@@ -129,8 +129,8 @@ class CountPushDownSuite extends BasePushDownSuite() {
       runTest(query)
     }
 
-    // Count(enum) can push down after 5.0.0
-    if (StoreVersion.minTiKVVersion("5.0.0", ti.tiSession.getPDClient)) {
+    // Count(enum) can push down after 5.1.0
+    if (StoreVersion.minTiKVVersion("5.1.0", ti.tiSession.getPDClient)) {
       val query = "select count(tp_enum) from " + tableName
       val df = spark.sql(query)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
