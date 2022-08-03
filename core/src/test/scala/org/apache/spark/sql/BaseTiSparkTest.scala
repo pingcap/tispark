@@ -129,7 +129,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   }
 
   protected def supportTTLUpdate: Boolean = {
-    StoreVersion.isTiKVVersionGreatEqualVersion(this.ti.tiSession.getPDClient, Version.RESOLVE_LOCK_V3)
+    StoreVersion.isTiKVVersionGreatEqualThanVersion(this.ti.tiSession.getPDClient, Version.RESOLVE_LOCK_V3)
   }
 
   protected def blockingRead: Boolean = {
@@ -137,7 +137,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   }
 
   protected def nonBlockingRead: Boolean = {
-    StoreVersion.isTiKVVersionGreatEqualVersion(this.ti.tiSession.getPDClient, Version.RESOLVE_LOCK_V4)
+    StoreVersion.isTiKVVersionGreatEqualThanVersion(this.ti.tiSession.getPDClient, Version.RESOLVE_LOCK_V4)
   }
 
   protected def getTableInfo(databaseName: String, tableName: String): TiTableInfo = {

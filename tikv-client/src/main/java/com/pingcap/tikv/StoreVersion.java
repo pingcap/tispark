@@ -59,7 +59,7 @@ public class StoreVersion {
   }
 
   // return true when every TiKV version >= version
-  public static boolean isTiKVVersionGreatEqualVersion(PDClient pdClient, String version) {
+  public static boolean isTiKVVersionGreatEqualThanVersion(PDClient pdClient, String version) {
     StoreVersion storeVersion = new StoreVersion(version);
 
     BackOffer bo = ConcreteBackOffer.newCustomBackOff(BackOffer.PD_INFO_BACKOFF);

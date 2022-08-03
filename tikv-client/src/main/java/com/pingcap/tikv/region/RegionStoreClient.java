@@ -130,7 +130,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
 
   private synchronized Boolean getIsV4() {
     if (isV4 == null) {
-      isV4 = StoreVersion.isTiKVVersionGreatEqualVersion(pdClient, Version.RESOLVE_LOCK_V4);
+      isV4 = StoreVersion.isTiKVVersionGreatEqualThanVersion(pdClient, Version.RESOLVE_LOCK_V4);
     }
     return isV4;
   }
