@@ -130,8 +130,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
   test("fix cannot encode row key with non-long type") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     if (StoreVersion.isTiKVVersionGreatEqualThanVersion(this.ti.tiSession.getPDClient, "5.0.0")) {
-      tidbStmt.execute(
-        """
+      tidbStmt.execute("""
           |CREATE TABLE `t1` (
           |  `a` BIGINT UNSIGNED  NOT NULL,
           |  `b` varchar(255) NOT NULL,

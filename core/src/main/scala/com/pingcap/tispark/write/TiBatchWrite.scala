@@ -140,7 +140,8 @@ class TiBatchWrite(
     // initialize
     tiConf = mergeSparkConfWithDataSourceConf(tiContext.conf, options)
     tiSession = tiContext.tiSession
-    val tikvSupportUpdateTTL = StoreVersion.isTiKVVersionGreatEqualThanVersion(tiSession.getPDClient, "3.0.5")
+    val tikvSupportUpdateTTL =
+      StoreVersion.isTiKVVersionGreatEqualThanVersion(tiSession.getPDClient, "3.0.5")
     val isTiDBV4 = StoreVersion.isTiKVVersionGreatEqualThanVersion(tiSession.getPDClient, "4.0.0")
     isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
     lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
@@ -428,7 +429,8 @@ class TiBatchWrite(
   }
 
   private def getUseTableLock: Boolean = {
-    if (!options.useTableLock(StoreVersion.isTiKVVersionGreatEqualThanVersion(tiSession.getPDClient, "4.0.0"))) {
+    if (!options.useTableLock(
+        StoreVersion.isTiKVVersionGreatEqualThanVersion(tiSession.getPDClient, "4.0.0"))) {
       false
     } else {
       if (tiDBJDBCClient.isEnableTableLock) {

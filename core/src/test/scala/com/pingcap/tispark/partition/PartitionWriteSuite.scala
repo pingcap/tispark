@@ -446,7 +446,9 @@ class PartitionWriteSuite extends BaseTiSparkTest {
   }
 
   test("binary type range column replace test") {
-    if (!StoreVersion.isTiKVVersionGreatEqualThanVersion(this.ti.tiSession.getPDClient, "v5.1.0")) {
+    if (!StoreVersion.isTiKVVersionGreatEqualThanVersion(
+        this.ti.tiSession.getPDClient,
+        "v5.1.0")) {
       cancel("Binary range column partitioning is supported in TiDB v5.1.0+.")
     }
 

@@ -44,7 +44,7 @@ import scala.collection.mutable.ArrayBuffer
  * `tidb_config.properties` must be provided in test resources folder
  */
 trait SharedSQLContext
-  extends SparkFunSuite
+    extends SparkFunSuite
     with Eventually
     with Logging
     with SharedSparkContext {
