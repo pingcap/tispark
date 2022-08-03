@@ -27,14 +27,14 @@ New feature: TiSpark Insert SQL Feature
 ## Motivation or Background
 
 TiSpark is a connector that provides read, insert and delete support.
-But it only supports insert using DataSource API, users can't use Spark SQL to write data.
+But it only supports insert using DataSource API, users can't use Spark SQL to insert data.
 
 It's common for users to use SQL statements in the big-data workflow. We are going to support TiSpark to
 write using Spark SQL.
 
 ## Goals
 **Must have**
-- Support write data by Spark SQL
+- Support insert data by Spark SQL
 - Compatible with Spark 3.x
 
 **Nice to have**
@@ -63,11 +63,11 @@ If we don't add corresponding capability and insert data by SQL, Spark will thro
 Since we will implement V2 interface using V1 code so `V1_BATCH_WRITE` is needed.
 
 ### Remove write options
-Different from writing using DataSource API, Spark SQL can't get required information like tidb address and username.
-We use it to create a JDBC client to connect with TiDB, but we only need to use the JDBC client to update statics now.
+Different from writing using DataSource API, Spark SQL can't get required information like TiDB address and username.
+We use it to create a JDBC client to connect with TiDB, but we only need to use the JDBC client to update statistics now.
 
 So we are going to remove the options check before writing and useless JDBC client code.
-If users want to enable statics update when using Spark SQL, they can add information by `spark.conf.set()`.
+If users want to enable statistics update when using Spark SQL, they can add information by `spark.conf.set()`.
 
 ### Implement V2 interface using V1 code
 Spark DataSource V2 is evolving and not suitable for TiSpark write model currently.
@@ -87,7 +87,7 @@ There is a deduplicate operation in TiSpark that will handle the problem that da
 DataSource V2 will split data into different executors, and we can't control it. This may lead to different
 executors writing data with the same unique key and cause data corruption.
 
-Another problem is about region split. Currently, we split regions to enable parallel write, each executor will write data to only one
+Another problem is about region split. Currently, we split regions to enable parallel write, each executor will insert data to only one
 region. Since we can't control how to split data in DataSource V2, each executor may receive data that
 should be written to different regions. If we don't do region split, it may cause performance issue. If we do, region split will be
 done in every executor which also causes performance issue.
