@@ -47,22 +47,20 @@ It supports insert data using Spark SQL now.
 
 ## TiDB Options
 
-The following table shows the TiDB-specific options, which can be passed in through `TiDBOptions` or `SparkConf`.
+The following table shows the TiDB-specific options, which can be passed in through `SparkConf`.
 
-| Key                         | Required | Default                | Description                                                                                                              |
-| --------------------------- |----------| ---------------------- |--------------------------------------------------------------------------------------------------------------------------|
-| pd.addresses                | true     | -                      | The addresses of PD clusters, split by comma                                                                             |
-| database                    | true     | -                      | TiDB Database                                                                                                            |
-| table                       | true     | -                      | TiDB Table                                                                                                               |
-| tidb.addr                   | false    | -                      | TiDB address, needed when enableUpdateTableStatistics is true                                                            |
-| tidb.port                   | false    | -                      | TiDB Port, needed when enableUpdateTableStatistics is true                                                               |
-| tidb.user                   | false    | -                      | TiDB User, needed when enableUpdateTableStatistics is true                                                               |
-| tidb.password               | false    | -                      | TiDB Password, needed when enableUpdateTableStatistics is true                                                           |
-| enableRegionSplit           | false    | true                   | To split Region to avoid hot Region during insertion                                                                     |
-| scatterWaitMS               | false    | 300000                 | Max time to wait scatter region                                                                                          |
-| writeThreadPerTask          | false    | 1                      | Thread number each spark task use to write data to TiKV                                                                  |
-| bytesPerRegion              | false    | 100663296 (96M)        | Decrease this parameter to split more regions (increase write concurrency)                                               |
-| enableUpdateTableStatistics | false    | false                  | Update statistics in table `mysql.stats_meta` (`tidb.user` must own update privilege to table `mysql.stats_meta` if set true) |
+| Key                         | Required | Default         | Description                                                                                                                   |
+|-----------------------------|----------|-----------------|-------------------------------------------------------------------------------------------------------------------------------|
+| tidb.addr                   | false    | -               | TiDB address, needed when enableUpdateTableStatistics is true                                                                 |
+| tidb.port                   | false    | -               | TiDB Port, needed when enableUpdateTableStatistics is true                                                                    |
+| tidb.user                   | false    | -               | TiDB User, needed when enableUpdateTableStatistics is true                                                                    |
+| tidb.password               | false    | -               | TiDB Password, needed when enableUpdateTableStatistics is true                                                                |
+| enableRegionSplit           | false    | true            | To split Region to avoid hot Region during insertion                                                                          |
+| scatterWaitMS               | false    | 300000          | Max time to wait scatter region                                                                                               |
+| writeThreadPerTask          | false    | 1               | Thread number each spark task use to write data to TiKV                                                                       |
+| bytesPerRegion              | false    | 100663296 (96M) | Decrease this parameter to split more regions (increase write concurrency)                                                    |
+| enableUpdateTableStatistics | false    | false           | Update statistics in table `mysql.stats_meta` (`tidb.user` must own update privilege to table `mysql.stats_meta` if set true) |
+| rowFormatVersion            | false    | 2               | Version of row format to save data                                                                                            | 
 
 ## TiDB Version
 
@@ -83,8 +81,12 @@ The following types of SparkSQL Data are currently not supported for writing to 
 - MapType
 - StructType
 
-Spark SQL and TIDB have different conversion rules. We follow the rule of TIDB when using DataSource API,
-but follow the rule of Spark SQL when using it.
+Spark SQL and TIDB have different conversion rules. We follow the rule when using DataSource API,
+but follow the rule of Spark SQL when using insert.
+
+There is some CAST rules supported by Spark which must be explicit indicated. Like
+`SELECT CAST('2020-01-01' AS Timestamp)`. [Here](https://spark.apache.org/docs/latest/sql-ref-ansi-compliance.html)
+for more details.
 
 When convert Float/Double to Int/Short/Long, there is a subtle different between them. TiDB will use
 `round(num)`, Spark SQL will use `floor(num)`.

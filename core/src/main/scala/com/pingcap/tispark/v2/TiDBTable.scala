@@ -20,16 +20,14 @@ import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
-
 import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
 import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions, TiDBWriter}
 import com.pingcap.tispark.TiTableReference
 import org.apache.commons.codec.binary.Hex
-
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
-import org.apache.spark.sql.catalyst.util.{DateTimeUtils, TimestampFormatter}
+import org.apache.spark.sql.catalyst.util.{CaseInsensitiveMap, DateTimeUtils, TimestampFormatter}
 import org.apache.spark.sql.connector.catalog.{
   SupportsDelete,
   SupportsRead,
@@ -129,31 +127,15 @@ case class TiDBTable(
   }
 
   override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = {
-    var scalaMap = info.options().asScala.toMap
-    // For update statics
-    val enableUpdateStatics =
-      sqlContext.getConf(TiDBOptions.TIDB_ENABLE_UPDATE_TABLE_STATISTICS, "false").toBoolean
-    if (enableUpdateStatics) {
-      scalaMap += (TiDBOptions.TIDB_ADDRESS -> sqlContext.getConf(TiDBOptions.TIDB_ADDRESS))
-      scalaMap += (TiDBOptions.TIDB_PORT -> sqlContext.getConf(TiDBOptions.TIDB_PORT))
-      scalaMap += (TiDBOptions.TIDB_USER -> sqlContext.getConf(TiDBOptions.TIDB_USER))
-      scalaMap += (TiDBOptions.TIDB_PASSWORD -> sqlContext.getConf(TiDBOptions.TIDB_PASSWORD))
-      scalaMap += (TiDBOptions.TIDB_ENABLE_UPDATE_TABLE_STATISTICS -> "true")
+    var option = sqlContext.getAllConfs
+    if (!option.contains(TiDBOptions.TIDB_DATABASE)) {
+      option += (TiDBOptions.TIDB_DATABASE -> databaseName)
     }
-    scalaMap += (TiDBOptions.TiDB_ROW_FORMAT_VERSION -> sqlContext.getConf(
-      TiDBOptions.TiDB_ROW_FORMAT_VERSION,
-      "2"))
-
-    // Support df.writeto: need add db and table for write
-    if (!scalaMap.contains(TiDBOptions.TIDB_DATABASE)) {
-      scalaMap += (TiDBOptions.TIDB_DATABASE -> databaseName)
-    }
-
-    if (!scalaMap.contains(TiDBOptions.TIDB_TABLE)) {
-      scalaMap += (TiDBOptions.TIDB_TABLE -> tableName)
+    if (!option.contains(TiDBOptions.TIDB_TABLE)) {
+      option += (TiDBOptions.TIDB_TABLE -> tableName)
     }
     // Get TiDBOptions
-    val tiDBOptions = new TiDBOptions(scalaMap)
+    val tiDBOptions = new TiDBOptions(option)
     ReflectionUtil.newTiDBWriteBuilder(info, tiDBOptions, sqlContext)
   }
 

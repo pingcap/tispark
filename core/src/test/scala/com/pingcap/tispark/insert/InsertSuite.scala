@@ -18,7 +18,7 @@ package com.pingcap.tispark.insert
 
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 
-class InsertSuite extends BaseBatchWriteTest("test_delete_compatibility") {
+class InsertSuite extends BaseBatchWriteTest("test_insert_sql") {
   private val source_dbtable = "tispark_test.source_table"
   override def dropTable(): Unit = {
     jdbcUpdate(s"drop table if exists $dbtable")
@@ -116,4 +116,31 @@ class InsertSuite extends BaseBatchWriteTest("test_delete_compatibility") {
     val actual = spark.sql(s"SELECT count(*) FROM $dbtable").head().get(0)
     assert(2 == actual)
   }
+
+  test("insert with enableUpdateTableStatistics test") {
+    jdbcUpdate(
+      s"create table $dbtable(i int, s varchar(255), k varchar(255),PRIMARY KEY (i)/*T![clustered_index] CLUSTERED */);")
+
+    spark.conf.set("enableUpdateTableStatistics", "true")
+    spark.conf.set("tidb.addr", "127.0.0.1")
+    spark.conf.set("tidb.port", "4000")
+    spark.conf.set("tidb.user", "root")
+    spark.conf.set("tidb.password", "")
+    spark.sql(s"INSERT INTO $dbtable VALUES(0,'hello','tidb'),(1,'world','test')")
+
+    val actual = spark.sql(s"SELECT count(*) FROM $dbtable").head().get(0)
+    assert(2 == actual)
+  }
+
+  test("insert with rowFormatVersion = 1 test") {
+    jdbcUpdate(
+      s"create table $dbtable(i int, s varchar(255), k varchar(255),PRIMARY KEY (i)/*T![clustered_index] CLUSTERED */);")
+
+    spark.conf.set("rowFormatVersion", "1")
+    spark.sql(s"INSERT INTO $dbtable VALUES(0,'hello','tidb'),(1,'world','test')")
+
+    val actual = spark.sql(s"SELECT count(*) FROM $dbtable").head().get(0)
+    assert(2 == actual)
+  }
+
 }

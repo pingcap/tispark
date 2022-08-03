@@ -36,6 +36,7 @@ case class TiDBWriteBuilder(
           .options(tiDBOptions.parameters)
           .option(TiDBOptions.TIDB_DATABASE, tiDBOptions.database)
           .option(TiDBOptions.TIDB_TABLE, tiDBOptions.table)
+          .option(TiDBOptions.TIDB_DEDUPLICATE, "false")
           .mode(SaveMode.Append)
           .save()
       }
