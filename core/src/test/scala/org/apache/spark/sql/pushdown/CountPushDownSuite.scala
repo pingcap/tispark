@@ -16,6 +16,8 @@
 
 package org.apache.spark.sql.pushdown
 
+import com.pingcap.tikv.{StoreVersion, Version}
+
 /**
  * Count will be pushed down except:
  * - Count(col1,col2,...) can't be pushed down (TiDB not support)
@@ -47,9 +49,7 @@ class CountPushDownSuite extends BasePushDownSuite() {
     "select count(tp_mediumtext) from ",
     "select count(tp_text) from ",
     "select count(tp_tinytext) from ",
-    "select count(tp_bit) from ",
     "select count(tp_time) from ",
-    "select count(tp_enum) from ",
     "select count(*) from ",
     "select count(1) from ")
 
@@ -72,6 +72,31 @@ class CountPushDownSuite extends BasePushDownSuite() {
       val sql = query + tableName
       runTest(sql)
     }
+
+    // Count(bit) can push down after 6.0.0
+    if (StoreVersion.minTiKVVersion("6.0.0", ti.tiSession.getPDClient)) {
+      val query = "select count(tp_bit) from " + tableName
+      val df = spark.sql(query)
+      if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
+        fail(
+          s"count is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+            df).head.toString)
+      }
+      runTest(query)
+    }
+
+    // Count(enum) can push down after 5.1.0
+    if (StoreVersion.minTiKVVersion("5.1.0", ti.tiSession.getPDClient)) {
+      val query = "select count(tp_enum) from " + tableName
+      val df = spark.sql(query)
+      if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
+        fail(
+          s"count is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+            df).head.toString)
+      }
+      runTest(query)
+    }
+
   }
 
   test("Test - Count push down no pk") {
@@ -91,5 +116,30 @@ class CountPushDownSuite extends BasePushDownSuite() {
       val sql = query + tableName
       runTest(sql)
     }
+
+    // Count(bit) can push down after 6.0.0
+    if (StoreVersion.minTiKVVersion("6.0.0", ti.tiSession.getPDClient)) {
+      val query = "select count(tp_bit) from " + tableName
+      val df = spark.sql(query)
+      if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
+        fail(
+          s"count is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+            df).head.toString)
+      }
+      runTest(query)
+    }
+
+    // Count(enum) can push down after 5.1.0
+    if (StoreVersion.minTiKVVersion("5.1.0", ti.tiSession.getPDClient)) {
+      val query = "select count(tp_enum) from " + tableName
+      val df = spark.sql(query)
+      if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
+        fail(
+          s"count is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+            df).head.toString)
+      }
+      runTest(query)
+    }
+
   }
 }

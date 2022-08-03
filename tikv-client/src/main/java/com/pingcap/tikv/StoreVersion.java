@@ -57,6 +57,7 @@ public class StoreVersion {
     return new StoreVersion(v0).toIntVersion() - new StoreVersion(v1).toIntVersion();
   }
 
+  // return true when every TiKV version >= version
   public static boolean minTiKVVersion(String version, PDClient pdClient) {
     StoreVersion storeVersion = new StoreVersion(version);
 
