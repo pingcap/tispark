@@ -420,6 +420,6 @@ abstract class LockResolverTest {
   }
 
   boolean supportAsyncCommit() {
-    return StoreVersion.minTiKVVersion(Version.ASYNC_COMMIT, session.getPDClient());
+    return StoreVersion.isTiKVVersionGreatEqualVersion(session.getPDClient(), Version.ASYNC_COMMIT);
   }
 }

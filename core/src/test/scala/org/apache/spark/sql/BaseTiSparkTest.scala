@@ -18,8 +18,6 @@
 
 package org.apache.spark.sql
 
-import java.sql.Statement
-
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient, Version}
 import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
@@ -28,6 +26,7 @@ import org.apache.spark.sql.execution.ExplainMode
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.test.SharedSQLContext
 
+import java.sql.Statement
 import scala.collection.mutable.ArrayBuffer
 
 class BaseTiSparkTest extends QueryTest with SharedSQLContext {
@@ -130,7 +129,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   }
 
   protected def supportTTLUpdate: Boolean = {
-    StoreVersion.minTiKVVersion(Version.RESOLVE_LOCK_V3, this.ti.tiSession.getPDClient)
+    StoreVersion.isTiKVVersionGreatEqualVersion(this.ti.tiSession.getPDClient, Version.RESOLVE_LOCK_V3)
   }
 
   protected def blockingRead: Boolean = {
@@ -138,7 +137,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   }
 
   protected def nonBlockingRead: Boolean = {
-    StoreVersion.minTiKVVersion(Version.RESOLVE_LOCK_V4, this.ti.tiSession.getPDClient)
+    StoreVersion.isTiKVVersionGreatEqualVersion(this.ti.tiSession.getPDClient, Version.RESOLVE_LOCK_V4)
   }
 
   protected def getTableInfo(databaseName: String, tableName: String): TiTableInfo = {
