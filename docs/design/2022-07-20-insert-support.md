@@ -63,11 +63,12 @@ If we don't add corresponding capability and insert data by SQL, Spark will thro
 Since we will implement V2 interface using V1 code so `V1_BATCH_WRITE` is needed.
 
 ### Remove write options
-Different from writing using DataSource API, Spark SQL can't get required information like TiDB address and username.
-We use it to create a JDBC client to connect with TiDB, but we only need to use the JDBC client to update statistics now.
+Different from writing using DataSource API, Spark SQL can't get required information with options like TiDB address and username.
+These options are used to create a JDBC client to connect with TiDB, but we only need it when updating statistics now.
 
 So we are going to remove the options check before writing and useless JDBC client code.
 If users want to enable statistics update when using Spark SQL, they can add information by `spark.conf.set()`.
+DataSource API write will not be affected.
 
 ### Implement V2 interface using V1 code
 Spark DataSource V2 is evolving and not suitable for TiSpark write model currently.
@@ -94,7 +95,7 @@ done in every executor which also causes performance issue.
 
 ## Limitations
 
-The table TiSpark created follows the rules of TiDB which is different from Spark SQL. 
+TiSpark uses tables created by TiDB which is different from Spark SQL. 
 
 TiSpark supports writing into partition table using INSERT SQL now.
 But TiSpark does not support insert with a partition spec and a column list, like:
@@ -110,6 +111,7 @@ But TiSpark does not support insert with a partition spec and a column list, lik
 ### Functional Tests
 - INSERT SQL write test
 - Auth test
+- JDBC configuration change test
 - Can't affect writing data by DataSource API
 
 ### Compatibility Tests
