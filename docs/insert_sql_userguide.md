@@ -81,7 +81,7 @@ The following types of SparkSQL Data are currently not supported for writing to 
 - MapType
 - StructType
 
-Spark SQL and TIDB have different conversion rules. We follow the rule when using DataSource API,
+Spark SQL and TIDB have different conversion rules. We follow this [rule](https://github.com/pingcap/tispark/blob/master/docs/datasource_api_userguide.md#type-conversion-for-write) when using DataSource API,
 but follow the rule of Spark SQL when using insert.
 
 There is some CAST rules supported by Spark which must be explicit indicated. Like
