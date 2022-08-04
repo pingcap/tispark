@@ -16,6 +16,7 @@
 
 package com.pingcap.tispark.partition
 
+import com.pingcap.tikv.StoreVersion
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{BaseTiSparkTest, Row}
@@ -33,11 +34,6 @@ class PartitionWriteSuite extends BaseTiSparkTest {
   override def beforeEach(): Unit = {
     super.beforeEach()
     tidbStmt.execute(s"drop table if exists `$database`.`$table`")
-  }
-
-  override def afterEach(): Unit = {
-    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
-    super.afterEach()
   }
 
   /**
@@ -92,6 +88,8 @@ class PartitionWriteSuite extends BaseTiSparkTest {
         "p1" -> Array(Array(25), Array(29)),
         "p2" -> Array(),
         "p3" -> Array(Array(35))))
+
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
   test("hash partition replace and delete test") {
@@ -185,6 +183,8 @@ class PartitionWriteSuite extends BaseTiSparkTest {
         "p1" -> Array(),
         "p2" -> Array(),
         "p3" -> Array(Array(Date.valueOf("1995-08-08"), "John"))))
+
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
   /**
@@ -236,6 +236,8 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     deleteResultSpark.collect() should contain theSameElementsAs Array(Row(65L, "John"))
     checkPartitionJDBCResult(
       Map("p0" -> Array(), "p1" -> Array(), "p2" -> Array(Array(65L, "John"))))
+
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
   test("range column replace and delete test") {
@@ -279,6 +281,8 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     deleteResultSpark.collect() should contain theSameElementsAs Array(Row(65L, "John"))
     checkPartitionJDBCResult(
       Map("p0" -> Array(), "p1" -> Array(), "p2" -> Array(Array(65L, "John"))))
+
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
   test("dateTime type range column partition replace and delete test") {
@@ -333,6 +337,8 @@ class PartitionWriteSuite extends BaseTiSparkTest {
         "p0" -> Array(),
         "p1" -> Array(Array(LocalDateTime.from(f.parse("1995-08-08 15:15:15")), "John")),
         "p2" -> Array()))
+
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
   test("date type range column partition replace and delete test") {
@@ -386,6 +392,8 @@ class PartitionWriteSuite extends BaseTiSparkTest {
         "p0" -> Array(),
         "p1" -> Array(Array(Date.valueOf("1995-08-08"), "John")),
         "p2" -> Array()))
+
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
   test("varbinary type range column replace test") {
@@ -433,9 +441,17 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     } should contain theSameElementsAs Array(Row(65L, "John"))
     checkPartitionJDBCResult(
       Map("p0" -> Array(), "p1" -> Array(Array(65L, "John")), "p2" -> Array()))
+
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
   test("binary type range column replace test") {
+    if (!StoreVersion.isTiKVVersionGreatEqualThanVersion(
+        this.ti.tiSession.getPDClient,
+        "v5.1.0")) {
+      cancel("Binary range column partitioning is supported in TiDB v5.1.0+.")
+    }
+
     tidbStmt.execute(
       s"create table `$database`.`$table` (id bigint, name binary(6) unique key) partition by range columns(name) (" +
         s"partition p0 values less than (X'424242424242')," +
@@ -483,6 +499,8 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     } should contain theSameElementsAs Array(Row(65L, "John\u0000\u0000"))
     checkPartitionJDBCResult(
       Map("p0" -> Array(), "p1" -> Array(Array(65L, "John\u0000\u0000")), "p2" -> Array()))
+
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
   /**
@@ -531,6 +549,8 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     deleteResultSpark.collect() should contain theSameElementsAs Array(Row(65L, "John"))
     checkPartitionJDBCResult(
       Map("p0" -> Array(), "p1" -> Array(), "p2" -> Array(Array(65L, "John"))))
+
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
   test("range replace and delete test") {
@@ -573,6 +593,8 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     deleteResultSpark.collect() should contain theSameElementsAs Array(Row(65L, "John"))
     checkPartitionJDBCResult(
       Map("p0" -> Array(), "p1" -> Array(), "p2" -> Array(Array(65L, "John"))))
+
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
   test("range YEAR() partition replace and delete test") {
@@ -627,6 +649,7 @@ class PartitionWriteSuite extends BaseTiSparkTest {
         "p1" -> Array(Array(Date.valueOf("1995-08-08"), "John")),
         "p2" -> Array()))
 
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
   test("unsupported function UNIX_TIMESTAMP() and range partition replace and delete test") {
