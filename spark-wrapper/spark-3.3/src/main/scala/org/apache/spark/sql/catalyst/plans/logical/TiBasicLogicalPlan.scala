@@ -4,7 +4,7 @@ import com.pingcap.tispark.auth.TiAuthorization
 import org.apache.spark.sql.catalyst.analysis.ResolvedNamespace
 
 class TiBasicLogicalPlan {
-  def extractAuthorizationRule(
+  def verifyAuthorizationRule(
       logicalPlan: LogicalPlan,
       tiAuthorization: Option[TiAuthorization]): LogicalPlan = {
     logicalPlan match {

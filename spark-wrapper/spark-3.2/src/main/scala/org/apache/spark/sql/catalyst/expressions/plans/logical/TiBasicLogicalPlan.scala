@@ -5,7 +5,7 @@ import org.apache.spark.sql.catalyst.analysis.ResolvedNamespace
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SetCatalogAndNamespace}
 
 class TiBasicLogicalPlan {
-  def extractAuthorizationRule(
+  def verifyAuthorizationRule(
       logicalPlan: LogicalPlan,
       tiAuthorization: Option[TiAuthorization]): LogicalPlan = {
     logicalPlan match {

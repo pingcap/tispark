@@ -4,8 +4,8 @@ import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.ReflectionUtil
 
 object BasicLogicalPlan {
-  def extractAuthorizationRule(
+  def verifyAuthorizationRule(
       logicalPlan: LogicalPlan,
       tiAuthorization: Option[TiAuthorization]): LogicalPlan =
-    ReflectionUtil.callTiBasicLogicalPlanExtractAuthorizationRule(logicalPlan, tiAuthorization)
+    ReflectionUtil.callTiBasicLogicalPlanVerifyAuthorizationRule(logicalPlan, tiAuthorization)
 }

@@ -105,13 +105,13 @@ object ReflectionUtil {
       .asInstanceOf[Option[TiExpression]]
   }
 
-  def callTiBasicLogicalPlanExtractAuthorizationRule(
+  def callTiBasicLogicalPlanVerifyAuthorizationRule(
       logicalPlan: LogicalPlan,
       tiAuthorization: Option[TiAuthorization]): LogicalPlan = {
     classLoader
       .loadClass(TI_BASIC_LOGICAL_PLAN_CLASS)
       .getDeclaredMethod(
-        "extractAuthorizationRule",
+        "verifyAuthorizationRule",
         classOf[LogicalPlan],
         classOf[TiAuthorization])
       .invoke(null, logicalPlan, tiAuthorization)

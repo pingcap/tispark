@@ -48,7 +48,7 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
       }
       dt
     case s: SetCatalogAndNamespace =>
-      BasicLogicalPlan.extractAuthorizationRule(s, tiAuthorization)
+      BasicLogicalPlan.verifyAuthorizationRule(s, tiAuthorization)
     case dr @ DataSourceV2Relation(
           TiDBTable(_, tableRef, _, _, _),
           output,
