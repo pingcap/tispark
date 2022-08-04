@@ -16,11 +16,11 @@
 
 package com.pingcap.tispark.partition
 
-import com.pingcap.tikv.StoreVersion
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{BaseTiSparkTest, Row}
 import org.scalatest.Matchers.{contain, convertToAnyShouldWrapper, have, the}
+import org.tikv.common.StoreVersion
 
 import java.sql.{Date, ResultSet, Timestamp}
 import java.time.LocalDateTime
@@ -446,9 +446,9 @@ class PartitionWriteSuite extends BaseTiSparkTest {
   }
 
   test("binary type range column replace test") {
-    if (!StoreVersion.isTiKVVersionGreatEqualThanVersion(
-        this.ti.tiSession.getPDClient,
-        "v5.1.0")) {
+    if (!StoreVersion.minTiKVVersion(
+        "v5.1.0",
+        this.ti.clientSession.getTikvSession.getPDClient)) {
       cancel("Binary range column partitioning is supported in TiDB v5.1.0+.")
     }
 

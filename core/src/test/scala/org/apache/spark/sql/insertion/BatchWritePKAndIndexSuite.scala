@@ -16,7 +16,6 @@
 
 package org.apache.spark.sql.insertion
 
-import com.pingcap.tikv.StoreVersion
 import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import com.pingcap.tispark.test.generator.DataGenerator._
@@ -26,6 +25,7 @@ import com.pingcap.tispark.utils.TiUtil
 import org.apache.commons.math3.util.Combinations
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
+import org.tikv.common.StoreVersion
 
 import scala.util.Random
 
@@ -117,9 +117,7 @@ class BatchWritePKAndIndexSuite
   // https://github.com/pingcap/tispark/issues/2452
   test("test duplicate unique indexes are not deleted error") {
     tidbStmt.execute("drop table if exists `tispark_test`.`t`")
-    if (!StoreVersion.isTiKVVersionGreatEqualThanVersion(
-        this.ti.tiSession.getPDClient,
-        "5.0.0")) {
+    if (!StoreVersion.minTiKVVersion("5.0.0", this.ti.clientSession.getTikvSession.getPDClient)) {
       cancel("TiDB version must bigger than 5.0.0")
     }
     tidbStmt.execute("""
@@ -167,9 +165,7 @@ class BatchWritePKAndIndexSuite
   // https://github.com/pingcap/tispark/issues/2391
   test("test bug fix incorrect uniqueIndex key when table is not intHandle") {
     tidbStmt.execute("drop table if exists `tispark_test`.`t`")
-    if (!StoreVersion.isTiKVVersionGreatEqualThanVersion(
-        this.ti.tiSession.getPDClient,
-        "5.0.0")) {
+    if (!StoreVersion.minTiKVVersion("5.0.0", this.ti.clientSession.getTikvSession.getPDClient)) {
       cancel("TiDB version must bigger than 5.0.0")
     }
     tidbStmt.execute("""
