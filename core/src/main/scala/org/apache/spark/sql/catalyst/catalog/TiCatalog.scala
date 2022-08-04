@@ -56,7 +56,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
     val pdAddress: String =
       if (TiAuthorization.enableAuth) {
-        tiAuthorization.get.getPDAddress()
+        tiAuthorization.get.getPDAddresses()
       } else {
         if (!options.containsKey("pd.addresses") && !options.containsKey("pd.address")) {
           throw new Exception("missing configuration spark.sql.catalog.tidb_catalog.pd.addresses")
