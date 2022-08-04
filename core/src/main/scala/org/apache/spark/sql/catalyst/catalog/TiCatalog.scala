@@ -165,8 +165,6 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
   override def renameTable(oldIdent: Identifier, newIdent: Identifier): Unit = ???
 
-
-
   override def createNamespace(
       namespace: Array[String],
       metadata: util.Map[String, String]): Unit =

@@ -49,10 +49,8 @@ object ReflectionUtil {
       classDir.toURI.toURL
     } else {
       new URL(
-        s"jar:$tisparkClassUrl!/resources/spark-wrapper-spark-${
-          TiSparkInfo.SPARK_MAJOR_VERSION
-            .replace('.', '_')
-        }/")
+        s"jar:$tisparkClassUrl!/resources/spark-wrapper-spark-${TiSparkInfo.SPARK_MAJOR_VERSION
+          .replace('.', '_')}/")
     }
     logger.info(s"spark wrapper class url: ${sparkWrapperClassURL.toString}")
 
@@ -107,17 +105,22 @@ object ReflectionUtil {
       .asInstanceOf[Option[TiExpression]]
   }
 
-  def callTiBasicLogicalPlanExtractAuthorizationRule(logicalPlan: LogicalPlan, tiAuthorization: Option[TiAuthorization]): LogicalPlan = {
+  def callTiBasicLogicalPlanExtractAuthorizationRule(
+      logicalPlan: LogicalPlan,
+      tiAuthorization: Option[TiAuthorization]): LogicalPlan = {
     classLoader
       .loadClass(TI_BASIC_LOGICAL_PLAN_CLASS)
-      .getDeclaredMethod("extractAuthorizationRule", classOf[LogicalPlan], classOf[TiAuthorization])
+      .getDeclaredMethod(
+        "extractAuthorizationRule",
+        classOf[LogicalPlan],
+        classOf[TiAuthorization])
       .invoke(null, logicalPlan, tiAuthorization)
       .asInstanceOf[LogicalPlan]
   }
 
   def newTiStrategy(
-                     getOrCreateTiContext: SparkSession => TiContext,
-                     sparkSession: SparkSession): Strategy = {
+      getOrCreateTiContext: SparkSession => TiContext,
+      sparkSession: SparkSession): Strategy = {
     classLoader
       .loadClass(TI_STRATEGY_CLASS)
       .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])
