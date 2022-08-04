@@ -18,9 +18,11 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tispark.TiSparkInfo
-import org.apache.spark.sql.{SparkSession, Strategy, TiContext}
+import com.pingcap.tispark.auth.TiAuthorization
 import org.apache.spark.sql.catalyst.expressions.BasicExpression.TiExpression
 import org.apache.spark.sql.catalyst.expressions.{Alias, ExprId, Expression, SortOrder}
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.{SparkSession, Strategy, TiContext}
 import org.slf4j.LoggerFactory
 
 import java.io.File
@@ -47,8 +49,10 @@ object ReflectionUtil {
       classDir.toURI.toURL
     } else {
       new URL(
-        s"jar:$tisparkClassUrl!/resources/spark-wrapper-spark-${TiSparkInfo.SPARK_MAJOR_VERSION
-          .replace('.', '_')}/")
+        s"jar:$tisparkClassUrl!/resources/spark-wrapper-spark-${
+          TiSparkInfo.SPARK_MAJOR_VERSION
+            .replace('.', '_')
+        }/")
     }
     logger.info(s"spark wrapper class url: ${sparkWrapperClassURL.toString}")
 
@@ -57,6 +61,8 @@ object ReflectionUtil {
   private val logger = LoggerFactory.getLogger(getClass.getName)
   private val SPARK_WRAPPER_CLASS = "com.pingcap.tispark.SparkWrapper"
   private val TI_BASIC_EXPRESSION_CLASS =
+    "org.apache.spark.sql.catalyst.expressions.TiBasicExpression"
+  private val TI_BASIC_LOGICAL_PLAN_CLASS =
     "org.apache.spark.sql.catalyst.expressions.TiBasicExpression"
   private val TI_STRATEGY_CLASS =
     "org.apache.spark.sql.extensions.TiStrategy"
@@ -101,9 +107,17 @@ object ReflectionUtil {
       .asInstanceOf[Option[TiExpression]]
   }
 
+  def callTiBasicLogicalPlanExtractAuthorizationRule(logicalPlan: LogicalPlan, tiAuthorization: Option[TiAuthorization]): LogicalPlan = {
+    classLoader
+      .loadClass(TI_BASIC_LOGICAL_PLAN_CLASS)
+      .getDeclaredMethod("extractAuthorizationRule", classOf[LogicalPlan], classOf[TiAuthorization])
+      .invoke(null, logicalPlan, tiAuthorization)
+      .asInstanceOf[LogicalPlan]
+  }
+
   def newTiStrategy(
-      getOrCreateTiContext: SparkSession => TiContext,
-      sparkSession: SparkSession): Strategy = {
+                     getOrCreateTiContext: SparkSession => TiContext,
+                     sparkSession: SparkSession): Strategy = {
     classLoader
       .loadClass(TI_STRATEGY_CLASS)
       .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])

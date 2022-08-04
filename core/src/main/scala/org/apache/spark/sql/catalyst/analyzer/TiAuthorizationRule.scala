@@ -17,29 +17,23 @@
 package org.apache.spark.sql.catalyst.analyzer
 
 import com.pingcap.tispark.auth.TiAuthorization
-import org.apache.spark.sql.catalyst.plans.logical.{
-  DeleteFromTable,
-  LogicalPlan,
-  SetCatalogAndNamespace,
-  SubqueryAlias
-}
+import com.pingcap.tispark.v2.TiDBTable
+import org.apache.spark.sql.catalyst.plans.logical.{BasicLogicalPlan, DeleteFromTable, LogicalPlan, SetCatalogAndNamespace, SubqueryAlias}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
 import org.apache.spark.sql.{SparkSession, TiContext}
-import com.pingcap.tispark.v2.TiDBTable
 
 /**
  * Only work for table v2(catalog plugin)
  */
 case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
-    sparkSession: SparkSession)
-    extends Rule[LogicalPlan] {
-
+  sparkSession: SparkSession)
+  extends Rule[LogicalPlan] {
   protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
   private lazy val tiAuthorization: Option[TiAuthorization] = tiContext.tiAuthorization
 
   protected def checkForAuth: PartialFunction[LogicalPlan, LogicalPlan] = {
-    case dt @ DeleteFromTable(SubqueryAlias(identifier, _), _) =>
+    case dt@DeleteFromTable(SubqueryAlias(identifier, _), _) =>
       if (identifier.qualifier.nonEmpty) {
         TiAuthorization.authorizeForDelete(
           identifier.name,
@@ -47,18 +41,14 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
           tiAuthorization)
       }
       dt
-    case sd @ SetCatalogAndNamespace(catalogManager, catalogName, namespace) =>
-      if (namespace.isDefined) {
-        namespace.get
-          .foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
-      }
-      sd
-    case dr @ DataSourceV2Relation(
-          TiDBTable(_, tableRef, _, _, _),
-          output,
-          catalog,
-          identifier,
-          options) =>
+    case s: SetCatalogAndNamespace =>
+      BasicLogicalPlan.extractAuthorizationRule(s,tiAuthorization)
+    case dr@DataSourceV2Relation(
+    TiDBTable(_, tableRef, _, _, _),
+    output,
+    catalog,
+    identifier,
+    options) =>
       if (tableRef.tableName.nonEmpty) {
         TiAuthorization.authorizeForSelect(
           tableRef.tableName,

@@ -165,12 +165,18 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
   override def renameTable(oldIdent: Identifier, newIdent: Identifier): Unit = ???
 
-  override def dropNamespace(namespace: Array[String]): Boolean = ???
+
 
   override def createNamespace(
       namespace: Array[String],
       metadata: util.Map[String, String]): Unit =
     ???
+
+  // for spark version smaller than 3.3
+  def dropNamespace(strings: Array[String]): Boolean = ???
+
+  // for spark version bigger equal 3.3
+  def dropNamespace(namespace: Array[String], cascade: Boolean): Boolean = ???
 
   override def alterNamespace(namespace: Array[String], changes: NamespaceChange*): Unit = ???
 
