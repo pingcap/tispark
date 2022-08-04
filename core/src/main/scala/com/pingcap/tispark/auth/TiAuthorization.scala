@@ -114,9 +114,9 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
     parsePrivilegeFromRow(input)
   }
 
-  def getPDAddress(): String = {
+  def getPDAddresses(): String = {
     try {
-      jdbcClient.getPDAddress
+      String.join(",", jdbcClient.getPDAddresses)
     } catch {
       case e: Throwable =>
         throw new IllegalArgumentException(

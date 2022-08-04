@@ -327,7 +327,8 @@ See [here](https://github.com/pingcap/docs/blob/master/statistics.md) for more d
 
 Since TiSpark 2.0, statistics information is default to auto-load.
 
-## Reading partition table from TiDB
+## Partition Table support
+### Reading partition table from TiDB
 
 TiSpark reads the range and hash partition table from TiDB.
 
@@ -340,10 +341,25 @@ Currently, TiSpark partially apply partition pruning on range partition.
 The partition pruning is applied when the partition expression of the range partition is one of the following:
 
 + column expression
-+ `YEAR` (expression) where the expression is a column and its type is datetime or string literal
++ `YEAR($argument)` where the argument is a column and its type is datetime or string literal
 that can be parsed as datetime.
 
 If partition pruning is not applied, TiSpark's reading is equivalent to doing a table scan over all partitions.
+
+### Write into partition table
+
+Currently, TiSpark only supports writing into the range and hash partition table under the following conditions:
++ the partition expression is column expression
++ the partition expression is `YEAR($argument)` where the argument is a column and its type is datetime or string literal
+  that can be parsed as datetime.
+
+There are two ways to write into partition table:
+1. Use datasource API to write into partition table which supports replace and append semantics.
+2. Use delete statement with Spark SQL.
+
+> [!NOTE]
+> Currently the charset only supported is utf8mb4 and [`new_collations_enabled_on_first_bootstrap`](https://docs.pingcap.com/tidb/dev/tidb-configuration-file#new_collations_enabled_on_first_bootstrap)
+> need to be set to `false` in TiDB.
 
 ## Common port numbers used by Spark cluster
 
