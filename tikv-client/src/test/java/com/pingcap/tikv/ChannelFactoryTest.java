@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ChannelFactory.CertWatcher;
+import com.pingcap.tikv.util.HostMapping;
 import io.grpc.ManagedChannel;
 import java.io.File;
 import java.util.ArrayList;
@@ -83,6 +84,7 @@ public class ChannelFactoryTest {
   @Test
   public void testMultiThreadTlsReload() throws InterruptedException {
     ChannelFactory factory = createFactory();
+    HostMapping hostMapping = uri -> uri;
 
     int taskCount = Runtime.getRuntime().availableProcessors() * 2;
     List<Thread> tasks = new ArrayList<>(taskCount);
@@ -92,7 +94,7 @@ public class ChannelFactoryTest {
               () -> {
                 for (int j = 0; j < 100; j++) {
                   String addr = "127.0.0.1:237" + (j % 2 == 0 ? 9 : 8);
-                  ManagedChannel c = factory.getChannel(addr);
+                  ManagedChannel c = factory.getChannel(addr, hostMapping);
                   assertNotNull(c);
                   c.shutdownNow();
                   try {

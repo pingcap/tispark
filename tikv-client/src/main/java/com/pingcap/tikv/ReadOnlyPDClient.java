@@ -20,6 +20,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.HostMapping;
 import java.util.List;
 import java.util.concurrent.Future;
 import org.tikv.kvproto.Metapb.Store;
@@ -52,6 +53,8 @@ public interface ReadOnlyPDClient {
   TiRegion getRegionByID(BackOffer backOffer, long id);
 
   Future<TiRegion> getRegionByIDAsync(BackOffer backOffer, long id);
+
+  HostMapping getHostMapping();
 
   /**
    * Get Store by StoreId

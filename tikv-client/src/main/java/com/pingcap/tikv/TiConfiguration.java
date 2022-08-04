@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.types.Converter;
+import com.pingcap.tikv.util.HostMapping;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
@@ -115,6 +116,9 @@ public class TiConfiguration implements Serializable {
   private String jksTrustPassword;
   private long connRecycleTime = getTimeAsSeconds(DEF_TIKV_CONN_RECYCLE_TIME);
   private long certReloadInterval = getTimeAsSeconds(DEF_TIKV_TLS_RELOAD_INTERVAL);
+
+  private String networkMappingName = "";
+  private HostMapping hostMapping;
 
   private static Long getTimeAsSeconds(String key) {
     return Utils.timeStringAsSec(key);

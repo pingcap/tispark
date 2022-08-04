@@ -44,12 +44,12 @@ import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
-import com.pingcap.tikv.key.RowKey;
+import com.pingcap.tikv.predicates.IndexRange;
 import com.pingcap.tikv.predicates.PredicateUtils;
+import com.pingcap.tikv.predicates.TiKVScanAnalyzer;
 import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.util.KeyRangeUtils;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
@@ -1177,24 +1177,15 @@ public class TiDAGRequest implements Serializable {
     public Builder setFullTableScan(TiTableInfo tableInfo) {
       requireNonNull(tableInfo);
       setTableInfo(tableInfo);
-      if (!tableInfo.isPartitionEnabled()) {
-        RowKey start = RowKey.createMin(tableInfo.getId());
-        RowKey end = RowKey.createBeyondMax(tableInfo.getId());
-        ranges.put(
-            tableInfo.getId(),
-            ImmutableList.of(
-                KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString())));
-      } else {
-        for (TiPartitionDef pDef : tableInfo.getPartitionInfo().getDefs()) {
-          RowKey start = RowKey.createMin(pDef.getId());
-          RowKey end = RowKey.createBeyondMax(pDef.getId());
-          ranges.put(
-              pDef.getId(),
-              ImmutableList.of(
-                  KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString())));
-        }
+      TiKVScanAnalyzer tiKVScanAnalyzer = new TiKVScanAnalyzer();
+      IndexRange range = new IndexRange(null, com.google.common.collect.Range.all());
+      List<IndexRange> indexRanges = new ArrayList<>();
+      indexRanges.add(range);
+      List<TiPartitionDef> prunedParts = new ArrayList<>();
+      if (tableInfo.isPartitionEnabled()) {
+        prunedParts.addAll(tableInfo.getPartitionInfo().getDefs());
       }
-
+      ranges.putAll(tiKVScanAnalyzer.buildTableScanKeyRange(tableInfo, indexRanges, prunedParts));
       return this;
     }
 
