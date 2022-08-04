@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class PartitionPruner {
+
   public static List<Expression> extractLogicalOrComparisonExpr(List<Expression> filters) {
     List<Expression> filteredFilters = new ArrayList<>();
     for (Expression expr : filters) {
@@ -80,7 +81,21 @@ public class PartitionPruner {
     throw new UnsupportedOperationException("cannot prune under invalid partition table");
   }
 
-  static void generateRangeExprs(
+  /**
+   * Convert the TiPartitionDef to ranges' expression.<br>
+   * For example, <br>
+   * "partition by range(YEAR(birthday)) (" <br>
+   * + s"partition p0 values less than (1995)," <br>
+   * + s"partition p1 values less than (1997)," <br>
+   * + s"partition p2 values less than MAXVALUE)") <br>
+   * will be converted to <br>
+   * [ <br>
+   * [year(birthday@DATE) LESS_THAN 1995], <br>
+   * [[year(birthday@DATE) GREATER_EQUAL 1995] AND [year(birthday@DATE) LESS_THAN 1997]], <br>
+   * [[year(birthday@DATE) GREATER_EQUAL 1997] AND 1] <br>
+   * ]<br>
+   */
+  public static void generateRangeExprs(
       TiPartitionInfo partInfo,
       List<Expression> partExprs,
       TiParser parser,
