@@ -283,16 +283,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     BatchGetResponse resp =
         callWithRetry(backOffer, TikvGrpc.getKvBatchGetMethod(), request, handler);
 
-    try {
-      return handleBatchGetResponse(backOffer, resp, version);
-    } catch (TiKVException e) {
-      if ("locks not resolved, retry".equals(e.getMessage())) {
-        backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoTxnLock, e);
-        return batchGet(backOffer, keys, version);
-      } else {
-        throw e;
-      }
-    }
+    return handleBatchGetResponse(backOffer, resp, version);
   }
 
   private List<KvPair> handleBatchGetResponse(
