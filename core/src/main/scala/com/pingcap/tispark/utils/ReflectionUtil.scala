@@ -61,7 +61,7 @@ object ReflectionUtil {
   private val TI_BASIC_EXPRESSION_CLASS =
     "org.apache.spark.sql.catalyst.expressions.TiBasicExpression"
   private val TI_BASIC_LOGICAL_PLAN_CLASS =
-    "org.apache.spark.sql.catalyst.expressions.TiBasicExpression"
+    "org.apache.spark.sql.catalyst.expressions.plans.logical.TiBasicLogicalPlan"
   private val TI_STRATEGY_CLASS =
     "org.apache.spark.sql.extensions.TiStrategy"
 
