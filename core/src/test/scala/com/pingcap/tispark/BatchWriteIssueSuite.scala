@@ -96,7 +96,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
     assert(size.toString.equals(result(1).toString))
   }
 
-  test("batch get retry test") {
+  ignore("batch get retry test") {
     if (blockingRead) {
       cancel()
     }
