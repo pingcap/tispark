@@ -18,9 +18,6 @@
 
 package org.apache.spark.sql.test
 
-import java.io.File
-import java.sql.{Connection, Date, Statement}
-import java.util.{Locale, Properties, TimeZone}
 import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient, Version}
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
@@ -35,6 +32,9 @@ import org.joda.time.DateTimeZone
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
 
+import java.io.File
+import java.sql.{Connection, Date, Statement}
+import java.util.{Locale, Properties, TimeZone}
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -170,7 +170,7 @@ trait SharedSQLContext
     // 3.0.x (x >= 14)
     // 3.1.x (x >= 0)
     // >= 4.0.0
-    StoreVersion.minTiKVVersion(Version.BATCH_WRITE, ti.tiSession.getPDClient)
+    StoreVersion.isTiKVVersionGreatEqualThanVersion(ti.tiSession.getPDClient, Version.BATCH_WRITE)
   }
 
   protected def initializeStatement(): Unit = {
@@ -442,9 +442,9 @@ trait SharedSQLContext
 
         if (_isHiveEnabled) {
           // delete meta store directory to avoid multiple derby instances SPARK-10872
-          import java.io.IOException
-
           import org.apache.commons.io.FileUtils
+
+          import java.io.IOException
           val hiveLocalMetaStorePath = new File("metastore_db")
           try FileUtils.deleteDirectory(hiveLocalMetaStorePath)
           catch {
