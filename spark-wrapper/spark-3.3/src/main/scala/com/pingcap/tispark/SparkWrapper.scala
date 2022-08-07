@@ -15,8 +15,6 @@ package com.pingcap.tispark
  * limitations under the License.
  */
 
-package com.pingcap.tispark
-
 import org.apache.spark.sql.catalyst.expressions.{
   Alias,
   AliasHelper,
