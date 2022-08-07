@@ -26,6 +26,7 @@ import org.apache.spark.sql.{SparkSession, Strategy, TiContext}
 import org.slf4j.LoggerFactory
 
 import java.io.File
+import java.lang.reflect.InvocationTargetException
 import java.net.{URL, URLClassLoader}
 
 /**
@@ -61,7 +62,7 @@ object ReflectionUtil {
   private val TI_BASIC_EXPRESSION_CLASS =
     "org.apache.spark.sql.catalyst.expressions.TiBasicExpression"
   private val TI_BASIC_LOGICAL_PLAN_CLASS =
-    "org.apache.spark.sql.catalyst.expressions.plans.logical.TiBasicLogicalPlan"
+    "org.apache.spark.sql.catalyst.plans.logical.TiBasicLogicalPlan"
   private val TI_STRATEGY_CLASS =
     "org.apache.spark.sql.extensions.TiStrategy"
 
@@ -105,17 +106,23 @@ object ReflectionUtil {
       .asInstanceOf[Option[TiExpression]]
   }
 
+
   def callTiBasicLogicalPlanVerifyAuthorizationRule(
       logicalPlan: LogicalPlan,
       tiAuthorization: Option[TiAuthorization]): LogicalPlan = {
-    classLoader
-      .loadClass(TI_BASIC_LOGICAL_PLAN_CLASS)
-      .getDeclaredMethod(
-        "verifyAuthorizationRule",
-        classOf[LogicalPlan],
-        classOf[TiAuthorization])
-      .invoke(null, logicalPlan, tiAuthorization)
-      .asInstanceOf[LogicalPlan]
+    try{
+      classLoader
+        .loadClass(TI_BASIC_LOGICAL_PLAN_CLASS)
+        .getDeclaredMethod(
+          "verifyAuthorizationRule",
+          classOf[LogicalPlan],
+          classOf[Option[TiAuthorization]])
+        .invoke(null, logicalPlan, tiAuthorization)
+        .asInstanceOf[LogicalPlan]
+    }catch {
+      case ex: InvocationTargetException=>
+        throw ex.getTargetException
+    }
   }
 
   def newTiStrategy(

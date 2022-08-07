@@ -18,7 +18,7 @@ package org.apache.spark.sql.catalyst.plans.logical
 
 import com.pingcap.tispark.auth.TiAuthorization
 
-class TiBasicLogicalPlan {
+object TiBasicLogicalPlan {
   def verifyAuthorizationRule(
       logicalPlan: LogicalPlan,
       tiAuthorization: Option[TiAuthorization]): LogicalPlan = {
