@@ -21,10 +21,10 @@ import org.apache.spark.sql.catalyst.analysis.{ResolvedDBObjectName, ResolvedNam
 
 object TiBasicLogicalPlan {
   def verifyAuthorizationRule(
-                               logicalPlan: LogicalPlan,
-                               tiAuthorization: Option[TiAuthorization]): LogicalPlan = {
+      logicalPlan: LogicalPlan,
+      tiAuthorization: Option[TiAuthorization]): LogicalPlan = {
     logicalPlan match {
-      case st@SetCatalogAndNamespace(namespace) =>
+      case st @ SetCatalogAndNamespace(namespace) =>
         namespace match {
           case ResolvedNamespace(catalog, ns) =>
             ns.foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))

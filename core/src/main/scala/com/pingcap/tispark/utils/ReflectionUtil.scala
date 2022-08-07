@@ -106,11 +106,10 @@ object ReflectionUtil {
       .asInstanceOf[Option[TiExpression]]
   }
 
-
   def callTiBasicLogicalPlanVerifyAuthorizationRule(
       logicalPlan: LogicalPlan,
       tiAuthorization: Option[TiAuthorization]): LogicalPlan = {
-    try{
+    try {
       classLoader
         .loadClass(TI_BASIC_LOGICAL_PLAN_CLASS)
         .getDeclaredMethod(
@@ -119,8 +118,8 @@ object ReflectionUtil {
           classOf[Option[TiAuthorization]])
         .invoke(null, logicalPlan, tiAuthorization)
         .asInstanceOf[LogicalPlan]
-    }catch {
-      case ex: InvocationTargetException=>
+    } catch {
+      case ex: InvocationTargetException =>
         throw ex.getTargetException
     }
   }
