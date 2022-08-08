@@ -95,7 +95,8 @@ public final class RowIDAllocator implements Serializable {
 
   public static RowIDAllocator create(
       long dbId, TiTableInfo table, TiConfiguration conf, boolean unsigned, long step) {
-    BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(40 * BackOffer.seconds);
+    BackOffer backOffer =
+        ConcreteBackOffer.newCustomBackOff(TiConfiguration.ROW_ID_ALLOCATOR_BACKOFF);
     while (true) {
       try {
         return doCreate(dbId, table, conf, unsigned, step);
@@ -144,17 +145,17 @@ public final class RowIDAllocator implements Serializable {
     TwoPhaseCommitter twoPhaseCommitter = new TwoPhaseCommitter(session, timestamp.getVersion());
     BytePairWrapper primaryPair = iterator.next();
     twoPhaseCommitter.prewritePrimaryKey(
-        ConcreteBackOffer.newCustomBackOff(20 * BackOffer.seconds),
+        ConcreteBackOffer.newCustomBackOff(TiConfiguration.PREWRITE_MAX_BACKOFF),
         primaryPair.getKey(),
         primaryPair.getValue());
 
     if (iterator.hasNext()) {
       twoPhaseCommitter.prewriteSecondaryKeys(
-          primaryPair.getKey(), iterator, 20 * BackOffer.seconds);
+          primaryPair.getKey(), iterator, TiConfiguration.PREWRITE_MAX_BACKOFF);
     }
 
     twoPhaseCommitter.commitPrimaryKey(
-        ConcreteBackOffer.newCustomBackOff(10 * BackOffer.seconds),
+        ConcreteBackOffer.newCustomBackOff(TiConfiguration.BATCH_COMMIT_BACKOFF),
         primaryPair.getKey(),
         session.getTimestamp().getVersion());
 

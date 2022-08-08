@@ -32,6 +32,7 @@ import org.tikv.common.HostMapping;
 import org.tikv.common.Utils;
 import org.tikv.common.pd.PDUtils;
 import org.tikv.common.region.TiStoreType;
+import org.tikv.common.util.BackOffer;
 import org.tikv.kvproto.Kvrpcpb.CommandPri;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import org.tikv.shade.com.google.common.collect.ImmutableList;
@@ -40,6 +41,10 @@ import org.tikv.shade.com.google.common.collect.ImmutableList;
 @Setter
 @Accessors(chain = true)
 public class TiConfiguration implements Serializable {
+
+  public static final int PREWRITE_MAX_BACKOFF = 20 * BackOffer.seconds;
+  public static final int BATCH_COMMIT_BACKOFF = 10 * BackOffer.seconds;
+  public static final int ROW_ID_ALLOCATOR_BACKOFF = 40 * BackOffer.seconds;
 
   private String networkMappingName = "";
   private HostMapping hostMapping;
