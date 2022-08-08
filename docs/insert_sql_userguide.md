@@ -50,7 +50,8 @@ It supports insert data using Spark SQL now.
 
 ## TiDB Options
 
-The following table shows the TiDB-specific options, which can be passed in through `SparkConf`.
+The following table shows the TiDB-specific options, which can be passed in through `SparkConf` or `spark.conf.set`.
+But you should not set `tidb.password` in `SparkConf` and only use `spark.conf.set` to set it. 
 
 | Key                         | Required | Default         | Description                                                                                                                   |
 |-----------------------------|----------|-----------------|-------------------------------------------------------------------------------------------------------------------------------|
