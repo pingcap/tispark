@@ -45,7 +45,7 @@ It supports insert data using Spark SQL now.
             "(1,1,'0',11.11,date'2022-1-1','first','spark',12345,'no comment')")
 
     // select data
-    val df = spark.sql("select * from tpch_test.target_table_orders")
+    spark.sql("select * from tpch_test.target_table_orders").show
    ```
 
 ## TiDB Options
