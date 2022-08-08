@@ -278,16 +278,16 @@ object StatisticsManager {
 
   protected def initialize(clientSession: ClientSession): Unit = {
     this.clientSession = clientSession
-    snapshot = clientSession.createSnapshot()
-    catalog = clientSession.getCatalog
-    dbPrefix = clientSession.getConf.getDBPrefix
+    this.snapshot = clientSession.createSnapshot()
+    this.catalog = clientSession.getCatalog
+    this.dbPrefix = clientSession.getConf.getDBPrefix
     // An estimator used to calculate table size.
-    tableSizeEstimator = DefaultTableSizeEstimator
+    this.tableSizeEstimator = DefaultTableSizeEstimator
     val mysqlDB = catalog.getDatabaseFromCache(s"${dbPrefix}mysql")
-    metaTable = catalog.getTableFromCache(mysqlDB, "stats_meta")
-    histTable = catalog.getTableFromCache(mysqlDB, "stats_histograms")
-    bucketTable = catalog.getTableFromCache(mysqlDB, "stats_buckets")
-    statisticsMap.invalidateAll()
+    this.metaTable = catalog.getTableFromCache(mysqlDB, "stats_meta")
+    this.histTable = catalog.getTableFromCache(mysqlDB, "stats_histograms")
+    this.bucketTable = catalog.getTableFromCache(mysqlDB, "stats_buckets")
+    this.statisticsMap.invalidateAll()
   }
 
   def reset(): Unit = initialized = false

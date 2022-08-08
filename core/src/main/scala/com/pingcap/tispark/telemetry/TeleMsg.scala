@@ -22,7 +22,6 @@ import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import org.tikv.common.util.ConcreteBackOffer
 import org.tikv.txn.TwoPhaseCommitter
-
 import java.util.UUID
 
 /**
@@ -45,7 +44,6 @@ class TeleMsg(sparkSession: SparkSession) {
 
   private def generateTrackId(): String = {
     try {
-
       val conf = TiConfiguration.createDefault(pdAddr.get)
       TiUtil.sparkConfToTiConfWithoutPD(SparkSession.active.sparkContext.getConf, conf)
       val clientSession = ClientSession.getInstance(conf)

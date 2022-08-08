@@ -33,7 +33,6 @@ class TiKVClientTLSSuite extends FunSuite {
       conf.setKeyCertChainFile("/config/cert/pem/client.pem")
       conf.setKeyFile("/config/cert/pem/client-pkcs8.key")
       val clientSession = ClientSession.getInstance(conf)
-//      clientSession.getTikvSession.getPDClient.tryUpdateLeader()
       clientSession.getCatalog
       clientSession.createSnapshot()
     }
@@ -52,7 +51,6 @@ class TiKVClientTLSSuite extends FunSuite {
       conf.setJksTrustPath("/config/cert/jks/server-cert-store")
       conf.setJksTrustPassword("12345678")
       val clientSession = ClientSession.getInstance(conf)
-//      clientSession.getTikvSession.getPDClient.tryUpdateLeader()
       clientSession.getCatalog
       clientSession.createSnapshot()
     }

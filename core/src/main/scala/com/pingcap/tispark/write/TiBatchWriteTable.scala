@@ -319,7 +319,6 @@ class TiBatchWriteTable(
 
     // Only RangePartition and HashPartition are supported
     if (tiTableInfo.isPartitionEnabled) {
-
       val pType = tiTableInfo.getPartitionInfo.getType
       if (pType != PartitionType.RangePartition && pType != PartitionType.HashPartition) {
         throw new UnsupportedOperationException(s"Unsupported partition type: $pType")

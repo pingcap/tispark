@@ -25,7 +25,6 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.internal.SQLConf
 import org.slf4j.LoggerFactory
 import scalaj.http.HttpResponse
-
 import java.net.URI
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex

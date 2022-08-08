@@ -119,14 +119,14 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
           .options(tidbOptions)
           .option("database", database)
           .option("table", table)
-          .option("sleepAfterGetCommitTS", 10000L)
+          .option("sleepAfterGetCommitTS", 20000L)
           .option("replace", "true")
           .mode("append")
           .save()
       }
     }).start()
 
-    Thread.sleep(1000L)
+    Thread.sleep(10000L)
 
     val row1 = Row(1L, 1L)
     val row2 = Row(2L, 22L)
@@ -141,7 +141,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
       .option("replace", "true")
       .mode("append")
       .save()
-    Thread.sleep(10000L)
+
     spark.sql(s"select * from $table").show(false)
     assert(22 == spark.sql(s"select c2 from $table where c1 = 2").collect().head.get(0))
   }
