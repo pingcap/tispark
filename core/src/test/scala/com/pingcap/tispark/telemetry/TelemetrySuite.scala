@@ -20,7 +20,13 @@ import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.auth.TiAuthorization.tiConf
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.HttpClientUtil
-import com.sun.net.httpserver.{HttpExchange, HttpHandler, HttpServer, HttpsConfigurator, HttpsServer}
+import com.sun.net.httpserver.{
+  HttpExchange,
+  HttpHandler,
+  HttpServer,
+  HttpsConfigurator,
+  HttpsServer
+}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.test.SharedSQLContext
 import org.scalatest.Matchers.{be, noException}
@@ -61,8 +67,10 @@ class TelemetrySuite extends SharedSQLContext {
   }
   test("test cacheInvalidateCallback does not work ") {
     val conf = TiConfiguration.createDefault("127.0.0.1:2379")
-    val tiSession:TiSession=TiSession.getInstance(conf);
-    CacheInvalidateListener.initCacheListener(_sparkSession.sparkContext, tiSession.getRegionManager)
+    val tiSession: TiSession = TiSession.getInstance(conf);
+    CacheInvalidateListener.initCacheListener(
+      _sparkSession.sparkContext,
+      tiSession.getRegionManager)
     // it's to late to inject
     tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
   }

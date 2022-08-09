@@ -31,10 +31,11 @@ class DeleteNotSupportSuite extends BaseBatchWriteTest("test_delete_not_support"
 
   test("Delete without WHERE clause") {
     jdbcUpdate(s"create table $dbtable(i int, s int,PRIMARY KEY (i))")
-
     the[IllegalArgumentException] thrownBy {
       spark.sql(s"delete from $dbtable")
-    } should have message "requirement failed: Delete without WHERE clause is not supported"
+    } should (have message "requirement failed: Delete without WHERE clause is not supported"
+    // when where clause is empty, Spark3.3 will send AlwaysTrue() to TiSpark.
+      or have message "requirement failed: Delete with alwaysTrue WHERE clause is not supported")
   }
 
   test("Delete with alwaysTrue WHERE clause") {
