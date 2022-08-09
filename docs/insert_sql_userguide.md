@@ -48,10 +48,12 @@ It supports insert data using Spark SQL now.
     spark.sql("select * from tpch_test.target_table_orders").show
    ```
 
-## TiDB Options
+## Configurations
 
-The following table shows the TiDB-specific options, which can be passed in through `SparkConf` or `spark.conf.set`.
-But you should not set `tidb.password` in `SparkConf` and only use `spark.conf.set` to set it. 
+The following table shows the insert configurations, which can be passed in through `SparkConf` or `spark.conf.set`.
+But you should not set `tidb.password` in `SparkConf` and only use `spark.conf.set` to set it.
+
+`tidb.addr`, `tidb.port`, `tidb.user` and `tidb.password` are only needed when enableUpdateTableStatistics is true.
 
 | Key                         | Required | Default         | Description                                                                                                                   |
 |-----------------------------|----------|-----------------|-------------------------------------------------------------------------------------------------------------------------------|
@@ -77,7 +79,7 @@ But TiSpark does not support insert with a partition spec and a column list, lik
 
 `INSERT INTO test.test PARTITION (i = 1)(s, k) VALUES ('hello', 'world');`
 
-## Type Conversion for Write
+## Type Conversion For Insert 
 
 The following types of SparkSQL Data are currently not supported for writing to TiDB:
 
