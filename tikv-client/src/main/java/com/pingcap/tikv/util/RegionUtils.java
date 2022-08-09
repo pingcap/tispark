@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.tools;
+package com.pingcap.tikv.util;
 
 import static java.util.Objects.requireNonNull;
 
@@ -23,7 +23,6 @@ import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.predicates.TiKVScanAnalyzer;
-import com.pingcap.tikv.util.RangeSplitter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

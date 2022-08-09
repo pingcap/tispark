@@ -16,7 +16,7 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tikv.tools.RegionUtils
+import com.pingcap.tikv.util.RegionUtils
 import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark._
 import com.pingcap.tispark.auth.TiAuthorization

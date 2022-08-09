@@ -18,7 +18,6 @@ package com.pingcap.tikv.util;
 
 import java.util.Objects;
 import java.util.stream.Collectors;
-import org.tikv.common.apiversion.RequestKeyCodec;
 
 /**
  * Encapsulate some the parameters that we maintain that are different from upstream into upstream
@@ -27,14 +26,6 @@ import org.tikv.common.apiversion.RequestKeyCodec;
  * by name (downstream converts to upstream, upstream converts to downstream).
  */
 public class ConverterUpstream {
-
-  public static org.tikv.common.ReadOnlyPDClient createUpstreamPDClient(
-      com.pingcap.tikv.TiConfiguration conf, RequestKeyCodec keyCodec) {
-    org.tikv.common.TiConfiguration tikvConf = ConverterUpstream.convertTiConfiguration(conf);
-    org.tikv.common.util.ChannelFactory channelFactory =
-        ConverterUpstream.convertChannelFactory(conf, tikvConf);
-    return org.tikv.common.PDClient.create(tikvConf, keyCodec, channelFactory);
-  }
 
   public static org.tikv.common.TiConfiguration convertTiConfiguration(
       com.pingcap.tikv.TiConfiguration conf) {
@@ -67,6 +58,7 @@ public class ConverterUpstream {
     //      client-java --10240
     //    can't set
     //        tikvConf.setScanBathSize(conf.getScanBatchSize());
+    //        tikvConf.setNetworkMappingName(conf.getNetworkMappingName());
 
     // same
     tikvConf.setIndexScanBatchSize(conf.getIndexScanBatchSize());
@@ -84,7 +76,6 @@ public class ConverterUpstream {
     tikvConf.setIsolationLevel(conf.getIsolationLevel());
     tikvConf.setShowRowId(conf.isShowRowId());
     tikvConf.setDBPrefix(conf.getDBPrefix());
-    //    tikvConf.setNetworkMappingName(conf.getNetworkMappingName());
     tikvConf.setHostMapping(conf.getHostMapping());
     // jks
     tikvConf.setTlsEnable(conf.isTlsEnable());
@@ -97,46 +88,5 @@ public class ConverterUpstream {
     tikvConf.setJksTrustPassword(conf.getJksTrustPassword());
     tikvConf.setJksEnable(conf.isJksEnable());
     return tikvConf;
-  }
-
-  public static org.tikv.common.util.ChannelFactory convertChannelFactory(
-      com.pingcap.tikv.TiConfiguration conf, org.tikv.common.TiConfiguration tikvConf) {
-    org.tikv.common.util.ChannelFactory tikvFactory = null;
-    if (conf.isTlsEnable()) {
-      if (conf.isJksEnable()) {
-        tikvFactory =
-            new org.tikv.common.util.ChannelFactory(
-                conf.getMaxFrameSize(),
-                tikvConf.getKeepaliveTime(),
-                tikvConf.getKeepaliveTimeout(),
-                tikvConf.getIdleTimeout(),
-                conf.getConnRecycleTime(),
-                conf.getCertReloadInterval(),
-                conf.getJksKeyPath(),
-                conf.getJksKeyPassword(),
-                conf.getJksTrustPath(),
-                conf.getJksTrustPassword());
-      } else {
-        tikvFactory =
-            new org.tikv.common.util.ChannelFactory(
-                conf.getMaxFrameSize(),
-                tikvConf.getKeepaliveTime(),
-                tikvConf.getKeepaliveTimeout(),
-                tikvConf.getIdleTimeout(),
-                conf.getConnRecycleTime(),
-                conf.getCertReloadInterval(),
-                conf.getTrustCertCollectionFile(),
-                conf.getKeyCertChainFile(),
-                conf.getKeyFile());
-      }
-    } else {
-      tikvFactory =
-          new org.tikv.common.util.ChannelFactory(
-              conf.getMaxFrameSize(),
-              tikvConf.getKeepaliveTime(),
-              tikvConf.getKeepaliveTimeout(),
-              tikvConf.getIdleTimeout());
-    }
-    return tikvFactory;
   }
 }
