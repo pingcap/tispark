@@ -16,15 +16,17 @@
 
 package com.pingcap.tispark.write
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv._
+import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tikv.meta.TiTableInfo
+import com.pingcap.tikv.partition.{PartitionedTable, TableCommon}
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.auth.TiAuthorization
-import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler}
+import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler, WriteUtil}
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.sql.{DataFrame, SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -138,23 +140,48 @@ class TiBatchWrite(
     // initialize
     tiConf = mergeSparkConfWithDataSourceConf(tiContext.conf, options)
     tiSession = tiContext.tiSession
-    val tikvSupportUpdateTTL = StoreVersion.minTiKVVersion("3.0.5", tiSession.getPDClient)
-    val isTiDBV4 = StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient)
+    val tikvSupportUpdateTTL =
+      StoreVersion.isTiKVVersionGreatEqualThanVersion(tiSession.getPDClient, "3.0.5")
+    val isTiDBV4 = StoreVersion.isTiKVVersionGreatEqualThanVersion(tiSession.getPDClient, "4.0.0")
     isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
     lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
     tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
 
     // init tiBatchWriteTables
     tiBatchWriteTables = {
-      dataToWrite.map {
+      dataToWrite.flatMap {
         case (dbTable, df) =>
-          new TiBatchWriteTable(
-            df,
-            tiContext,
-            options.setDBTable(dbTable),
-            tiConf,
-            tiDBJDBCClient,
-            isTiDBV4)
+          val tableOptions = options.setDBTable(dbTable)
+          val tiTableRef = tableOptions.getTiTableRef(tiConf)
+          val tiTableInfo = tiContext.tiSession.getCatalog.getTable(
+            tableOptions.getTiTableRef(tiConf).databaseName,
+            tableOptions.getTiTableRef(tiConf).tableName)
+
+          if (tiTableInfo == null) {
+            throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
+          }
+
+          val table = new TableCommon(tiTableInfo.getId, tiTableInfo.getId, tiTableInfo)
+
+          /**
+           * Since `TiBatchWriteTable` is associated with a physical table,
+           * - if the table is partitioned, we need to transfer the logical table to the physical table
+           * and then group the rows by physical table to generate TiBatchWriteTable.
+           * - if the table is not partitioned, the logical table is the same as the physical table.
+           */
+          if (tiTableInfo.isPartitionEnabled) {
+            transferToPhysicalTables(df, tiTableInfo, table, isTiDBV4, tableOptions)
+          } else {
+            List(
+              new TiBatchWriteTable(
+                df,
+                tiContext,
+                tableOptions,
+                tiConf,
+                tiDBJDBCClient,
+                isTiDBV4,
+                table))
+          }
       }.toList
     }
 
@@ -170,13 +197,10 @@ class TiBatchWrite(
     tiBatchWriteTables.foreach(_.persist())
 
     // check empty
-    var allEmpty = true
-    tiBatchWriteTables.foreach { table =>
-      if (!table.isDFEmpty) {
-        allEmpty = false
-      }
+    tiBatchWriteTables = tiBatchWriteTables.filter { table =>
+      !table.isDFEmpty
     }
-    if (allEmpty) {
+    if (tiBatchWriteTables.isEmpty) {
       logger.warn("data is empty!")
       return
     }
@@ -304,6 +328,33 @@ class TiBatchWrite(
     logger.info(s"batch write cost ${(endMS - startMS) / 1000} seconds")
   }
 
+  private def transferToPhysicalTables(
+      df: DataFrame,
+      tiTableInfo: TiTableInfo,
+      table: TableCommon,
+      isTiDBV4: Boolean,
+      options: TiDBOptions) = {
+    val pTable = PartitionedTable.newPartitionTable(table, tiTableInfo)
+    val colsInDf = df.columns.toList.map(_.toLowerCase())
+
+    pTable.getPhysicalTables
+      .map(table => {
+        val dfPartitioned = df.filter(
+          row =>
+            table.equals(
+              pTable.locatePartition(WriteUtil.sparkRow2TiKVRow(row, tiTableInfo, colsInDf))))
+        new TiBatchWriteTable(
+          dfPartitioned,
+          tiContext,
+          options,
+          tiConf,
+          tiDBJDBCClient,
+          isTiDBV4,
+          table)
+      })
+      .toList
+  }
+
   private def getRegionSplitPoints(
       rdd: RDD[(SerializableKey, Array[Byte])]): List[SerializableKey] = {
     val count = rdd.count()
@@ -378,7 +429,8 @@ class TiBatchWrite(
   }
 
   private def getUseTableLock: Boolean = {
-    if (!options.useTableLock(StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient))) {
+    if (!options.useTableLock(
+        StoreVersion.isTiKVVersionGreatEqualThanVersion(tiSession.getPDClient, "4.0.0"))) {
       false
     } else {
       if (tiDBJDBCClient.isEnableTableLock) {

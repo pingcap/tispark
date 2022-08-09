@@ -57,6 +57,17 @@ class DeleteWhereClauseSuite extends BaseBatchWriteTest("test_delete_where_claus
     "s in ('0','1','2')",
     "not s='1'")
 
+  test("Delete WHERE Clause test: varbinary & binary") {
+    jdbcUpdate(s"create table $dbtable(i int, s varbinary(255), b binary, PRIMARY KEY (i))")
+    jdbcUpdate(s"insert into $dbtable values (1,'shi','s'),(2,'yu','y')")
+    spark.sql(s"delete from $dbtable where s = 'shi'")
+    val actual = spark.sql(s"select count(*) from $dbtable").head().get(0)
+    assert(actual == 1)
+    spark.sql(s"delete from $dbtable where b = 'y'")
+    val actual2 = spark.sql(s"select count(*) from $dbtable").head().get(0)
+    assert(actual2 == 0)
+  }
+
   test("Delete WHERE Clause test: int") {
     jdbcUpdate(s"create table $dbtable(i int, s varchar(255),PRIMARY KEY (i))")
     whereClauseInt.foreach(query => noException should be thrownBy judge(query))
