@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiTableInfo implements Serializable {
+
   private final long id;
   private final String name;
   private final String charset;
@@ -44,6 +45,10 @@ public class TiTableInfo implements Serializable {
   private final List<TiIndexInfo> indices;
   private final boolean pkIsHandle;
   private final boolean isCommonHandle;
+  // CommonHandleVersion is the version of the clustered index.
+  // 0 for the clustered index created == 5.0.0 RC.
+  // 1 for the clustered index created > 5.0.0 RC.
+  private final int commonHandleVersion;
   private final String comment;
   private final long autoIncId;
   private final long maxColumnId;
@@ -75,6 +80,7 @@ public class TiTableInfo implements Serializable {
       @JsonProperty("collate") String collate,
       @JsonProperty("pk_is_handle") boolean pkIsHandle,
       @JsonProperty("is_common_handle") boolean isCommonHandle,
+      @JsonProperty("common_handle_version") int commonHandleVersion,
       @JsonProperty("cols") List<TiColumnInfo> columns,
       @JsonProperty("index_info") List<TiIndexInfo> indices,
       @JsonProperty("comment") String comment,
@@ -113,6 +119,7 @@ public class TiTableInfo implements Serializable {
     // TODO: Use more precise predication according to types
     this.pkIsHandle = pkIsHandle;
     this.isCommonHandle = isCommonHandle;
+    this.commonHandleVersion = commonHandleVersion;
     this.indices = indices != null ? ImmutableList.copyOf(indices) : ImmutableList.of();
     this.indicesWithoutHiddenAndInvisible =
         this.indices
@@ -251,6 +258,10 @@ public class TiTableInfo implements Serializable {
     return isCommonHandle;
   }
 
+  public int getCommonHandleVersion() {
+    return commonHandleVersion;
+  }
+
   public List<TiIndexInfo> getIndices() {
     return getIndices(false);
   }
@@ -370,6 +381,7 @@ public class TiTableInfo implements Serializable {
           getCollate(),
           true,
           isCommonHandle,
+          commonHandleVersion,
           newColumns.build(),
           getIndices(true),
           getComment(),

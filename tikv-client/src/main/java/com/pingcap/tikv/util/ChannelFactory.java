@@ -264,18 +264,24 @@ public class ChannelFactory implements AutoCloseable {
     }
   }
 
-  private ManagedChannel addrToChannel(SslContextBuilder sslContextBuilder, String addressStr) {
-    URI address;
+  private ManagedChannel addrToChannel(
+      SslContextBuilder sslContextBuilder, String addressStr, HostMapping mapping) {
+    URI address, mapped;
     try {
       address = URI.create("http://" + addressStr);
     } catch (Exception e) {
-      throw new IllegalArgumentException("failed to form address " + addressStr);
+      throw new IllegalArgumentException("Failed to form address " + addressStr);
+    }
+    try {
+      mapped = mapping.getMappedURI(address);
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Failed to get mapped address " + addressStr, e);
     }
 
     NettyChannelBuilder builder = null;
     try {
       builder =
-          NettyChannelBuilder.forAddress(address.getHost(), address.getPort())
+          NettyChannelBuilder.forAddress(mapped.getHost(), mapped.getPort())
               .maxInboundMessageSize(maxFrameSize)
               .keepAliveWithoutCalls(true)
               .idleTimeout(60, TimeUnit.SECONDS);
@@ -296,17 +302,17 @@ public class ChannelFactory implements AutoCloseable {
     }
   }
 
-  public synchronized ManagedChannel getChannel(String address) {
+  public synchronized ManagedChannel getChannel(String address, HostMapping mapping) {
     if (certContext != null) {
       try {
         lock.readLock().lock();
         return connPool.computeIfAbsent(
-            address, key -> addrToChannel(sslContextBuilder.get(), address));
+            address, key -> addrToChannel(sslContextBuilder.get(), address, mapping));
       } finally {
         lock.readLock().unlock();
       }
     }
-    return connPool.computeIfAbsent(address, key -> addrToChannel(null, address));
+    return connPool.computeIfAbsent(address, key -> addrToChannel(null, address, mapping));
   }
 
   private void cleanExpiredConn(List<ManagedChannel> pending) {

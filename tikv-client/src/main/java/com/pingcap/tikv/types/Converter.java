@@ -243,7 +243,11 @@ public class Converter {
     } else if (val instanceof String) {
       // interpret string as in local timezone
       try {
-        return new ExtendedDateTime(strToDateTime((String) val, localDateTimeFormatter));
+        String dateTime = (String) val;
+        return new ExtendedDateTime(
+            strToDateTime(
+                dateTime.startsWith("'") ? dateTime.substring(1, dateTime.length() - 1) : dateTime,
+                localDateTimeFormatter));
       } catch (Exception e) {
         throw new TypeException(String.format("Error parsing string %s to datetime", val), e);
       }
@@ -275,7 +279,13 @@ public class Converter {
       return (Date) val;
     } else if (val instanceof String) {
       try {
-        return new Date(strToDateTime((String) val, localDateFormatter).toDate().getTime());
+        String date = (String) val;
+        return new Date(
+            strToDateTime(
+                    date.startsWith("'") ? date.substring(1, date.length() - 1) : date,
+                    localDateFormatter)
+                .toDate()
+                .getTime());
       } catch (Exception e) {
         throw new TypeException(String.format("Error parsing string %s to date", val), e);
       }
@@ -342,9 +352,10 @@ public class Converter {
     // length expect to be 3.
     try {
       String[] splitBySemiColon = value.split(":");
-      if (splitBySemiColon.length != 3)
+      if (splitBySemiColon.length != 3) {
         throw new IllegalArgumentException(
             String.format("%s is not a valid time type in mysql", value));
+      }
       int sign, hour, minute, second, frac;
       sign = 1;
       hour = Integer.parseInt(splitBySemiColon[0]);
