@@ -21,7 +21,6 @@ import org.apache.spark.sql.{AnalysisException, Row}
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.scalatest.Matchers.{
-  an,
   be,
   contain,
   convertToAnyShouldWrapper,
@@ -41,9 +40,11 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   val databaseWithPrefix = f"$dbPrefix$database"
   val dummyDatabase = "tispark_test_auth_dummy"
   val user = "tispark_unit_test_user"
+  val hive_table = "test_auth_hive"
 
   override def beforeAll(): Unit = {
     _isAuthEnabled = true
+    _isHiveEnabled = true
     super.beforeAll()
 
     // set sql conf
@@ -68,9 +69,6 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     // grant user
     tidbStmt.execute(f"GRANT CREATE ON $dummyDatabase.* TO '$user'@'%%'")
     tidbStmt.execute(f"GRANT PROCESS ON *.* TO '$user'@'%%'")
-
-    spark.sql(s"use tidb_catalog.$dbPrefix$dummyDatabase")
-
   }
 
   override def afterAll(): Unit = {
@@ -80,10 +78,20 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     tidbStmt.execute(s"DROP DATABASE IF EXISTS `$dummyDatabase`")
     super.afterAll()
     _isAuthEnabled = false
+    _isHiveEnabled = false
     TiAuthorization.enableAuth = false
   }
 
+  test("Operator on hive table should pass") {
+    spark.sql(s"CREATE TABLE IF NOT EXISTS `$hive_table`(i int, s varchar(255))")
+    spark.sql(s"INSERT INTO `$hive_table` values(1,'1')")
+    val count = spark.sql(s"select count(*) from `$hive_table`").head.get(0)
+    assert(count == 1)
+    spark.sql(s"DROP TABLE IF EXISTS `$hive_table`")
+  }
+
   test("Use catalog should success") {
+    spark.sql(s"use tidb_catalog.$dbPrefix$dummyDatabase")
     spark.sql(s"use tidb_catalog")
     spark.sql(s"use $dbPrefix$dummyDatabase")
   }
