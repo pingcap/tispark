@@ -1,0 +1,35 @@
+# Commit the code and submit a pull request
+TiSpark uses [Git](https://git-scm.com/) to manage its source code. To contribute to the project, you need to get familiar with Git features so that your changes can be incorporated into the codebase.
+This section addresses some of the most common questions and problems that new contributors might face. This section also covers some Git basics; however, if you find that the content is a little difficult to understand, we recommend that you first read the following introductions to Git:
+- The "Beginner" and "Getting Started" sections of this tutorial from [Atlassian](https://www.atlassian.com/git/tutorials)
+- [Documentation](https://docs.github.com/en/get-started/quickstart/set-up-git) and [guides](https://docs.github.com/cn/get-started/using-git/about-git) for beginners from Github
+- A more in-depth [book](https://git-scm.com/book/en/v2/) from Git
+
+## Fork from TiSpark
+First of all, you need to have your own copy of TiSpark. Just click Fork button to get it.
+![图片](pics/fork.png)
+
+## Create your branch
+A good way to keep your workspace away from each other is using branch. You can create a new branch using the following command.
+```
+git checkout -b my-branch
+```
+
+## Commit your change
+After finishing coding for your change, you should make a commit and write a brief comment about it. Then, you need to  push the change to your own fork.
+```
+git add ${changed files}
+
+git commit -m 'comment'
+
+git push origin my-branch
+```
+
+## Submit a pull request
+Once committed your change, you can go back to TiSpark and create a pull request by clicking one of the buttons in the following picture.
+![图片](pics/pr.png)
+We have a template for pull request . Please follow the guide and fill it.
+![图片](pics/pr_templete.png)
+Conflict
+There may be a conflict when you submit a pull request since others may change the same code as yours. Git can't handle it automatically, you need to do it yourself. If you are not sure about how to handle it, feel free to ask reviewers for help.
+![图片](pics/conflict.png)
