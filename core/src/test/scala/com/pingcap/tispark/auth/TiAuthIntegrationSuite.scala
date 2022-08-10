@@ -82,11 +82,14 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     TiAuthorization.enableAuth = false
   }
 
-  test("Operator on hive table should pass") {
+  test("Operator on hive table should pass auth check") {
     spark.sql(s"CREATE TABLE IF NOT EXISTS `$hive_table`(i int, s varchar(255))")
     spark.sql(s"INSERT INTO `$hive_table` values(1,'1')")
-    val count = spark.sql(s"select count(*) from `$hive_table`").head.get(0)
+    var count = spark.sql(s"select count(*) from `$hive_table`").head.get(0)
     assert(count == 1)
+    the[Exception] thrownBy {
+      spark.sql(s"delete from `$hive_table` where i=1")
+    } should have message s"DELETE is only supported with v2 tables.;"
     spark.sql(s"DROP TABLE IF EXISTS `$hive_table`")
   }
 
