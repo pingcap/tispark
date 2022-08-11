@@ -42,8 +42,26 @@ import org.tikv.shade.com.google.common.collect.ImmutableList;
 @Accessors(chain = true)
 public class TiConfiguration implements Serializable {
 
-  // --------------   only in tispark -------------
+  // --------------- different ------------------
+  // |item          | tispark    | client-java  |
+  // --------------------------------------------
+  // |timeout       | 10minutes  | 200ms        |
+  // |maxFrameSize  | 2Gb        | 512MB        |
+  // |ScanBatchSize | 10480      | 10240        |
+  // --------------------------------------------
+  private int maxFrameSize = DEF_MAX_FRAME_SIZE;
+  private static final int DEF_MAX_FRAME_SIZE = 2147483647; // 2 GB
+  private int timeout = DEF_TIMEOUT;
+  private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
+  private static final int DEF_TIMEOUT = 10;
+  private static final TimeUnit DEF_TIMEOUT_UNIT = TimeUnit.MINUTES;
+  private static final int DEF_SCAN_BATCH_SIZE = 10480;
 
+  public int getScanBatchSize() {
+    return DEF_SCAN_BATCH_SIZE;
+  }
+
+  // --------------   only in tispark -------------
   public static final int PREWRITE_MAX_BACKOFF = 20 * BackOffer.seconds;
   public static final int BATCH_COMMIT_BACKOFF = 10 * BackOffer.seconds;
   public static final int ROW_ID_ALLOCATOR_BACKOFF = 40 * BackOffer.seconds;
@@ -56,42 +74,21 @@ public class TiConfiguration implements Serializable {
   private List<TiStoreType> isolationReadEngines = DEF_ISOLATION_READ_ENGINES;
 
   private static final boolean DEF_WRITE_ALLOW_SPARK_SQL = false;
-  private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
-  private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
-  private static final int DEF_PARTITION_PER_SPLIT = 10;
   private boolean writeAllowSparkSQL = DEF_WRITE_ALLOW_SPARK_SQL;
+  private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
   private boolean writeWithoutLockTable = DEF_WRITE_WITHOUT_LOCK_TABLE;
+  private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
   private int tikvRegionSplitSizeInMB = DEF_TIKV_REGION_SPLIT_SIZE_IN_MB;
+  private static final int DEF_PARTITION_PER_SPLIT = 10;
   private int partitionPerSplit = DEF_PARTITION_PER_SPLIT;
 
-  //  -------- different ---------
+  private static final boolean DEF_TRUNCATE_AS_WARNING = false;
+  private boolean truncateAsWarning = DEF_TRUNCATE_AS_WARNING;
+  private static final boolean DEF_IGNORE_TRUNCATE = true;
+  private boolean ignoreTruncate = DEF_IGNORE_TRUNCATE;
 
-  // maxFrameSize
-  //   tispark     | client-java
-  //     2GB       | 512MB
-  private int maxFrameSize = DEF_MAX_FRAME_SIZE;
-  private static final int DEF_MAX_FRAME_SIZE = 2147483647; // 2 GB
+  // ----------     same with client-java  ------------
 
-  //                         timeout
-  //   tispark                 | client-java
-  //    10 TimeUnit.MINUTES    | 200 TimeUnit.MILLISECONDS
-  private int timeout = DEF_TIMEOUT;
-  private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
-  private static final int DEF_TIMEOUT = 10;
-  private static final TimeUnit DEF_TIMEOUT_UNIT = TimeUnit.MINUTES;
-
-  //      ScanBatchSize
-  //   tispark | client-java
-  //    10480   | 10240
-  private static final int DEF_SCAN_BATCH_SIZE = 10480;
-
-  public int getScanBatchSize() {
-    return DEF_SCAN_BATCH_SIZE;
-  }
-
-  //         pdaddrs
-  //   tispark | client-java
-  //    null   | "127.0.0.1:2379"
   public String getPdAddrsString() {
     return listToString(pdAddrs);
   }
@@ -104,8 +101,6 @@ public class TiConfiguration implements Serializable {
     conf.pdAddrs = strToURI(pdAddrsStr);
     return conf;
   }
-
-  // ----------     same  ------------
 
   private String networkMappingName = "";
   private HostMapping hostMapping;
@@ -145,8 +140,8 @@ public class TiConfiguration implements Serializable {
   private static final int DEF_KV_CLIENT_CONCURRENCY = 10;
 
   private long connRecycleTime = getTimeAsSeconds(DEF_TIKV_CONN_RECYCLE_TIME);
-  private long certReloadInterval = getTimeAsSeconds(DEF_TIKV_TLS_RELOAD_INTERVAL);
   private static final String DEF_TIKV_CONN_RECYCLE_TIME = "60s";
+  private long certReloadInterval = getTimeAsSeconds(DEF_TIKV_TLS_RELOAD_INTERVAL);
   private static final String DEF_TIKV_TLS_RELOAD_INTERVAL = "10s";
 
   public TiConfiguration setConnRecycleTimeInSeconds(String connRecycleTime) {
@@ -186,7 +181,6 @@ public class TiConfiguration implements Serializable {
   private String jksKeyPassword;
   private String jksTrustPath;
   private String jksTrustPassword;
-  //      same default value ,but client-java named jksEnable
   private boolean jksEnable = false;
 
   private static Long getTimeAsSeconds(String key) {

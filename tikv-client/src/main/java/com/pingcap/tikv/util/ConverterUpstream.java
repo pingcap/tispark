@@ -30,10 +30,6 @@ public class ConverterUpstream {
   public static org.tikv.common.TiConfiguration convertTiConfiguration(
       com.pingcap.tikv.TiConfiguration conf) {
     org.tikv.common.TiConfiguration tikvConf;
-
-    // pdaddrs
-    // tispark --- null
-    // client-java -- "127.0.0.1:2379"
     if (conf == null) {
       tikvConf = org.tikv.common.TiConfiguration.createDefault();
     } else {
@@ -42,25 +38,27 @@ public class ConverterUpstream {
               conf.getPdAddrs().stream().map(Objects::toString).collect(Collectors.joining(",")));
     }
 
-    //   timeout
-    //       tispark 10 TimeUnit.MINUTES
-    //       client-java  200 TimeUnit.MILLISECONDS
-    // s --> ms
-    tikvConf.setTimeout(conf.getTimeoutUnit().toMillis(conf.getTimeout()));
-
-    // maxFrameSize
-    //        tispark 2GB
-    //         client-java 512MB
-    tikvConf.setMaxFrameSize(conf.getMaxFrameSize());
-
+    //    can't set
     // ScanBatchSize
     //      tispark-- 10480
     //      client-java --10240
-    //    can't set
-    //        tikvConf.setScanBathSize(conf.getScanBatchSize());
-    //        tikvConf.setNetworkMappingName(conf.getNetworkMappingName());
+    // tikvConf.setScanBathSize(conf.getScanBatchSize()); //different default values
+    // tikvConf.setNetWorkMappingName(conf.getNetworkMappingName());// same default value
+    // tikvConf.setDownGradeThreshold(conf.getDowngradeThreshold());//same default value
+    // tikvConf.setMaxRequestKeyRangeSize(conf.getMaxRequestKeyRangeSize());//same default value
+
+    // different
+    //   timeout
+    //       tispark      10  TimeUnit.MINUTES
+    //       client-java  200 TimeUnit.MILLISECONDS
+    tikvConf.setTimeout(conf.getTimeoutUnit().toMillis(conf.getTimeout()));
+    // maxFrameSize
+    //         tispark      2GB
+    //         client-java  512MB
+    tikvConf.setMaxFrameSize(conf.getMaxFrameSize());
 
     // same
+    tikvConf.setHostMapping(conf.getHostMapping());
     tikvConf.setIndexScanBatchSize(conf.getIndexScanBatchSize());
     tikvConf.setIndexScanConcurrency(conf.getIndexScanConcurrency());
     tikvConf.setTableScanConcurrency(conf.getTableScanConcurrency());
@@ -76,7 +74,6 @@ public class ConverterUpstream {
     tikvConf.setIsolationLevel(conf.getIsolationLevel());
     tikvConf.setShowRowId(conf.isShowRowId());
     tikvConf.setDBPrefix(conf.getDBPrefix());
-    tikvConf.setHostMapping(conf.getHostMapping());
     // jks
     tikvConf.setTlsEnable(conf.isTlsEnable());
     tikvConf.setTrustCertCollectionFile(conf.getTrustCertCollectionFile());
