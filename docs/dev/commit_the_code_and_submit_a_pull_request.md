@@ -7,7 +7,7 @@ This section addresses some of the most common questions and problems that new c
 
 ## Fork from TiSpark
 First of all, you need to have your own copy of TiSpark. Just click Fork button to get it.
-![图片](pics/fork.png)
+![frok](pics/fork.png)
 
 ## Create your branch
 A good way to keep your workspace away from each other is using branch. You can create a new branch using the following command.
@@ -27,9 +27,9 @@ git push origin my-branch
 
 ## Submit a pull request
 Once committed your change, you can go back to TiSpark and create a pull request by clicking one of the buttons in the following picture.
-![图片](pics/pr.png)
+![pr](pics/pr.png)
 We have a template for pull request . Please follow the guide and fill it.
-![图片](pics/pr_templete.png)
+![pr template](pics/pr_templete.png)
 Conflict
 There may be a conflict when you submit a pull request since others may change the same code as yours. Git can't handle it automatically, you need to do it yourself. If you are not sure about how to handle it, feel free to ask reviewers for help.
-![图片](pics/conflict.png)
+![conflict](pics/conflict.png)
