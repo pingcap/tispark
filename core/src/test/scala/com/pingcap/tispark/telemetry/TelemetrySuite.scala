@@ -65,15 +65,6 @@ class TelemetrySuite extends SharedSQLContext {
     val tiSparkTeleInfo = TiSparkTeleInfo.getTiSparkTeleInfo()
     assert(!tiSparkTeleInfo.get("tidb_version").contains("UNKNOWN"))
   }
-  test("test cacheInvalidateCallback does not work ") {
-    val conf = TiConfiguration.createDefault("127.0.0.1:2379")
-    val tiSession: TiSession = TiSession.getInstance(conf);
-    CacheInvalidateListener.initCacheListener(
-      _sparkSession.sparkContext,
-      tiSession.getRegionManager)
-    // it's to late to inject
-    tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
-  }
 }
 
 object TestHttpHandler extends HttpHandler {
