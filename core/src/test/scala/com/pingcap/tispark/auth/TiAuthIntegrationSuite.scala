@@ -25,6 +25,7 @@ import org.scalatest.Matchers.{
   contain,
   convertToAnyShouldWrapper,
   have,
+  message,
   noException,
   not,
   the
@@ -85,11 +86,20 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   test("Operator on hive table should pass auth check") {
     spark.sql(s"CREATE TABLE IF NOT EXISTS `$hive_table`(i int, s varchar(255))")
     spark.sql(s"INSERT INTO `$hive_table` values(1,'1')")
-    var count = spark.sql(s"select count(*) from `$hive_table`").head.get(0)
+    val count = spark.sql(s"select count(*) from `$hive_table`").head.get(0)
     assert(count == 1)
-    the[Exception] thrownBy {
+    val exception = the[Exception] thrownBy {
       spark.sql(s"delete from `$hive_table` where i=1")
-    } should have message s"DELETE is only supported with v2 tables.;"
+    }
+    // This test is going to ensure the auth check won't influence table in spark.
+    // The DELETE SQL will first go through the auth check, then invoke the delete method.
+    // The user doesn't have DELETE privilege now. We hope our auth check doesn't work for hive table,
+    // so the exception should not have related massage. But even it go through the auth check,
+    // a exception will occur since it's a V1 table.
+    exception should not have message(
+      s"DELETE command denied to user `$user`@% for table default.`$hive_table`")
+    exception should have message s"DELETE is only supported with v2 tables.;"
+
     spark.sql(s"DROP TABLE IF EXISTS `$hive_table`")
   }
 
