@@ -25,7 +25,8 @@ object TiBasicLogicalPlan {
       tiAuthorization: Option[TiAuthorization]): LogicalPlan = {
     logicalPlan match {
       case st @ SetCatalogAndNamespace(catalogManager, catalogName, namespace) =>
-        if (namespace.isDefined) {
+        if (catalogName.nonEmpty && catalogName.get.equals(
+            "tidb_catalog") && namespace.isDefined) {
           namespace.get
             .foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
         }

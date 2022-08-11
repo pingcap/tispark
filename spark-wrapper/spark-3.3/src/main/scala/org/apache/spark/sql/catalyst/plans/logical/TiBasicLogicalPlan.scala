@@ -27,10 +27,14 @@ object TiBasicLogicalPlan {
       case st @ SetCatalogAndNamespace(namespace) =>
         namespace match {
           case ResolvedNamespace(catalog, ns) =>
-            ns.foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
+            if (catalog.name().equals("tidb_catalog")) {
+              ns.foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
+            }
             st
           case ResolvedDBObjectName(catalog, nameParts) =>
-            nameParts.foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
+            if (catalog.name().equals("tidb_catalog")) {
+              nameParts.foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
+            }
             st
         }
     }
