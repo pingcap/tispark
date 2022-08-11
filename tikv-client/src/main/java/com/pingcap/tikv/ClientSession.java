@@ -34,6 +34,7 @@ public class ClientSession implements AutoCloseable {
   private final TiSession tikvSession;
   private final Catalog catalog;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
+  private volatile boolean isClosed = false;
 
   /**
    * This is used for setting call back function to invalidate cache information
@@ -41,6 +42,7 @@ public class ClientSession implements AutoCloseable {
    * @param callBackFunc callback function
    */
   public void injectCallBackFunc(Function<CacheInvalidateEvent, Void> callBackFunc) {
+    checkIsClosed();
     this.cacheInvalidateCallback = callBackFunc;
   }
 
@@ -57,17 +59,24 @@ public class ClientSession implements AutoCloseable {
         new Catalog(this::createSnapshot, getConf().isShowRowId(), getConf().getDBPrefix());
   }
 
+  private void checkIsClosed() {
+    if (isClosed) {
+      throw new RuntimeException("this TiSession is closed!");
+    }
+  }
+
   public Snapshot createSnapshot() {
-    // checkIsClosed();
+    checkIsClosed();
     return new Snapshot(this.tikvSession.getTimestamp(), this);
   }
 
   public Snapshot createSnapshot(TiTimestamp ts) {
-    //     checkIsClosed();
+    checkIsClosed();
     return new Snapshot(ts, this);
   }
 
   public synchronized Catalog getOrCreateSnapShotCatalog(TiTimestamp ts) {
+    checkIsClosed();
     snapshotTimestamp = ts;
     if (snapshotCatalog == null) {
       snapshotCatalog =
@@ -79,6 +88,7 @@ public class ClientSession implements AutoCloseable {
   }
 
   public Snapshot createSnapshotWithSnapshotTimestamp() {
+    checkIsClosed();
     return new Snapshot(snapshotTimestamp, this);
   }
 
@@ -99,6 +109,16 @@ public class ClientSession implements AutoCloseable {
 
   @Override
   public void close() throws Exception {
-    tikvSession.close();
+    shutdown(true);
+  }
+
+  private synchronized void shutdown(boolean now) throws Exception {
+    if (!isClosed) {
+      isClosed = true;
+      tikvSession.close();
+      synchronized (sessionCachedMap) {
+        sessionCachedMap.remove(conf.getPdAddrsString());
+      }
+    }
   }
 }
