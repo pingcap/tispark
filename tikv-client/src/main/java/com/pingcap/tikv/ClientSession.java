@@ -17,7 +17,7 @@
 package com.pingcap.tikv;
 
 import com.pingcap.tikv.catalog.Catalog;
-import com.pingcap.tikv.util.ConverterUpstream;
+import com.pingcap.tikv.util.ConvertUpstreamUtils;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -51,7 +51,8 @@ public class ClientSession implements AutoCloseable {
       this.conf = com.pingcap.tikv.TiConfiguration.createDefault("127.0.0.1:2379");
     }
     this.tikvSession =
-        org.tikv.common.TiSession.getInstance(ConverterUpstream.convertTiConfiguration(getConf()));
+        org.tikv.common.TiSession.getInstance(
+            ConvertUpstreamUtils.convertTiConfiguration(getConf()));
     this.catalog =
         new Catalog(this::createSnapshot, getConf().isShowRowId(), getConf().getDBPrefix());
   }
