@@ -18,6 +18,8 @@ package com.pingcap.tikv;
 
 import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.util.ConverterUpstream;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 import lombok.Getter;
 import org.tikv.common.TiSession;
@@ -26,10 +28,13 @@ import org.tikv.common.meta.TiTimestamp;
 
 @Getter
 public class ClientSession implements AutoCloseable {
+
+  private static final Map<String, ClientSession> sessionCachedMap = new HashMap<>();
   private final TiConfiguration conf;
   private final TiSession tikvSession;
   private final Catalog catalog;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
+
   /**
    * This is used for setting call back function to invalidate cache information
    *
@@ -80,7 +85,15 @@ public class ClientSession implements AutoCloseable {
   private volatile Catalog snapshotCatalog;
 
   public static ClientSession getInstance(com.pingcap.tikv.TiConfiguration config) {
-    return new ClientSession(config);
+    synchronized (sessionCachedMap) {
+      String key = config.getPdAddrsString();
+      if (sessionCachedMap.containsKey(key)) {
+        return sessionCachedMap.get(key);
+      }
+      ClientSession newSession = new ClientSession(config);
+      sessionCachedMap.put(key, newSession);
+      return newSession;
+    }
   }
 
   @Override
