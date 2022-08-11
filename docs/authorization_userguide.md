@@ -9,10 +9,10 @@ perform.
 This feature allows you to execute SQL in TiSpark with Authorization and authentication, the same behavior as TiDB
 
 ## Prerequisites
- 
+
 - The database's user account must have the `PROCESS` privilege.
 - TiSpark version >= 2.5.0
-- Spark version = 3.0.x or 3.1.x
+- Spark version > 3.0
 
 ## Setup
 
