@@ -12,7 +12,7 @@ This feature allows you to execute SQL in TiSpark with Authorization and authent
 
 - The database's user account must have the `PROCESS` privilege.
 - TiSpark version >= 2.5.0
-- Spark version > 3.0
+- Spark version = 3.0.x or 3.1.x or 3.2.x or 3.3.x
 
 ## Setup
 
