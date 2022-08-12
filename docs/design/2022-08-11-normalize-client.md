@@ -63,7 +63,6 @@ modified).
 | item         | tispark                               | client-java | can be converted |
 | ----------------------- | ------------------------------------- | ----------- | ----------- |
 | timeout                 | 10 minutes                            | 200ms       | yes |
-| scanBatchSize       | 10480                                 | 10240       | no     |
 | maxFrameSize            | 2GB                                   | 512MB       | yes    |
 | | | | |
 | ignoreTruncate          | true                                  |             |         |

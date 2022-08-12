@@ -34,10 +34,6 @@ public class ConvertUpstreamUtils {
     }
 
     //    can't set
-    // ScanBatchSize
-    //      tispark-- 10480
-    //      client-java --10240
-    // tikvConf.setScanBathSize(conf.getScanBatchSize()); //different default values
     // tikvConf.setNetWorkMappingName(conf.getNetworkMappingName());// same default value
     // tikvConf.setDownGradeThreshold(conf.getDowngradeThreshold());//same default value
     // tikvConf.setMaxRequestKeyRangeSize(conf.getMaxRequestKeyRangeSize());//same default value
