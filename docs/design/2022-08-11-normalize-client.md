@@ -9,15 +9,15 @@
 * [Introduction](#introduction)
 * [Motivation or Background](#motivation-or-background)
 * [Detailed Design](#detailed-design)
-    * [Build and Dependences](#Build and Dependences)
-    * [Configuration](#Configuration)
-    * [ClientSession](#ClientSession)
-        * [Previous module/method call relationship](#Previous module/method call relationship)
-        * [Current  module/method call relationship](#Current module/method call relationship)
+    * [Build and Dependences](#build-and-dependences)
+    * [Configuration](#configuration)
+    * [ClientSession](#clientsession)
+        * [Previous module or method call relationship](#previous-module-or-method-call-relationship)
+        * [Current  module or method call relationship](#current-module-or-method-call-relationship)
 * [Compatibility](#compatibility)
 * [Test Design](#test-design)
-    * [Unit tests](#Unit tests)
-    * [Integration tests](#Integration tests)
+    * [Unit tests](#unit-tests)
+    * [Integration tests](#integration-tests)
 * [Impacts & Risks](#impacts--risks)
 * [Investigation & Alternatives](#investigation--alternatives)
 * [References](#references)
@@ -93,7 +93,7 @@ Catalog and Snapshot.
 This code replaces the original call to `TiSession` and creates and calls it via the `ClientSession`
 configuration file.
 
-#### Previous module/method call relationship
+#### Previous module or method call relationship
 
 ```mermaid
 flowchart 
@@ -123,7 +123,7 @@ B-->C
 
 ```
 
-#### Current  module/method call relationship
+#### Current module or method call relationship
 
 ```mermaid
 
