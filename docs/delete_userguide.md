@@ -23,15 +23,6 @@ spark.conf.set("writeThreadPerTask","3")
 spark.sql("delete from tidb_catalog.db.table where xxx")
 ```
 
-
-## Configuration
-
-| Key                   | Default | Description                                             |
-| --------------------- | ------- | ------------------------------------------------------- |
-| writeThreadPerTask    | 2       | Thread number each spark task use to write data to TiKV |
-| prewriteMaxRetryTimes | 64      | Max retry times for prewrite                            |
-
-
 ## Limitation
 - Delete without WHERE clause is not supported.
 - Delete with subQuery is not supported.

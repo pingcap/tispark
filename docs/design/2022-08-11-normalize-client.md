@@ -11,6 +11,8 @@
 * [Detailed Design](#detailed-design)
     * [Build and Dependences](#build-and-dependences)
     * [Configuration](#configuration)
+        * [TiConfiguration](#tiConfiguration)
+        * [TIDBOptions](#tidboptions)
     * [ClientSession](#clientsession)
         * [Previous module or method call relationship](#previous-module-or-method-call-relationship)
         * [Current  module or method call relationship](#current-module-or-method-call-relationship)
@@ -60,23 +62,30 @@ configuration comparison table. (See also the comments for the `convertTiConfigu
 the `ConverterUpstreamUtils` class). (Not perfect, because some upstream configurations cannot be
 modified).
 
-| item         | tispark                               | client-java | can be converted |
-| ----------------------- | ------------------------------------- | ----------- | ----------- |
-| timeout                 | 10 minutes                            | 200ms       | yes |
-| maxFrameSize            | 2GB                                   | 512MB       | yes    |
-| | | | |
-| ignoreTruncate          | true                                  |             |         |
-| truncateAsWarning       | false                                 |        |         |
-| writeAllowSparkSQL      | false                               |         |         |
-| writeEnable             | true                                |         |         |
-| writeWithoutLockTable   | false                              |         |         |
-| tikvRegionSplitSizeInMB | 96                                  |        |         |
-| partitionPerSplit       | 10                                  |        |         |
-| isolationReadEngines    | TiStoreType.TiKV, TiStoreType.TiFlash |        |         |
-|                         |                                       |||
-| netWorkMappingName | "" |""|no|
-| downGradeThreshold | 1000_0000 |1000_0000|no|
-| maxRequestKeyRangeSize | 2_0000 |2_0000|no|
+Here are some notable configuration items
+
+#### TiConfiguration
+
+| item                       | tispark      | client-java | description                                     |
+|----------------------------|--------------|-------------|-------------------------------------------------|
+| timeout                    | 10 minutes   | 200ms       | convert                                         |
+| maxFrameSize               | 2GB          | 512MB       | convert                                         |
+| netWorkMappingName         | ""           | ""          | can't be convert,but has same default value     |
+| downGradeThreshold         | 1000_0000    | 1000_0000   | can't be convert,but has same default value     |
+| maxRequestKeyRangeSize     | 2_0000       | 2_0000      | can't be convert,but has same default value     |
+| ~~
+ScanBatchSize~~ (delete) | 10480        | 10240       | can't be convert,deleted because it is not used |
+
+#### TIDBOptions
+
+| item                                | reasons                              |
+|-------------------------------------|--------------------------------------|
+| ~~txnPrewriteBatchSize~~   (delete) | client-java does not support setting |
+| ~~txnCommitBatchSize~~     (delete) | client-java does not support setting |
+| ~~writeBufferSize~~        (delete) | client-java does not support setting |
+| ~~writeThreadPerTask~~     (delete) | client-java does not support setting |
+| ~~retryCommitSecondaryKey~~(delete) | client-java does not support setting |
+| ~~prewriteMaxRetryTimes~~  (delete) | client-java does not support setting |
 
 ### ClientSession
 

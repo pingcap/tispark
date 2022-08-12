@@ -47,7 +47,6 @@ public class TiConfiguration implements Serializable {
   // --------------------------------------------
   // |timeout       | 10minutes  | 200ms        |
   // |maxFrameSize  | 2Gb        | 512MB        |
-  // |ScanBatchSize | 10480      | 10240        |
   // --------------------------------------------
   private int maxFrameSize = DEF_MAX_FRAME_SIZE;
   private static final int DEF_MAX_FRAME_SIZE = 2147483647; // 2 GB
