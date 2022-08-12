@@ -27,6 +27,7 @@ import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import com.pingcap.tikv.util.HostMapping;
 import io.grpc.ManagedChannel;
 import io.grpc.MethodDescriptor;
 import io.grpc.health.v1.HealthCheckRequest;
@@ -176,10 +177,10 @@ public abstract class AbstractGRPCClient<
     return this.timeout;
   }
 
-  private boolean doCheckHealth(BackOffer backOffer, String addressStr) {
+  private boolean doCheckHealth(BackOffer backOffer, String addressStr, HostMapping hostMapping) {
     while (true) {
       try {
-        ManagedChannel channel = channelFactory.getChannel(addressStr);
+        ManagedChannel channel = channelFactory.getChannel(addressStr, hostMapping);
         HealthGrpc.HealthBlockingStub stub =
             HealthGrpc.newBlockingStub(channel).withDeadlineAfter(getTimeout(), TimeUnit.MINUTES);
         HealthCheckRequest req = HealthCheckRequest.newBuilder().build();
@@ -192,10 +193,10 @@ public abstract class AbstractGRPCClient<
     }
   }
 
-  protected boolean checkHealth(String addressStr) {
+  protected boolean checkHealth(String addressStr, HostMapping hostMapping) {
     BackOffer backOffer = ConcreteBackOffer.newCustomBackOff((int) (timeout * 2));
     try {
-      return doCheckHealth(backOffer, addressStr);
+      return doCheckHealth(backOffer, addressStr, hostMapping);
     } catch (Exception e) {
       return false;
     }

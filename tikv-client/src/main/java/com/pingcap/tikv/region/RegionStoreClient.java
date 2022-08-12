@@ -130,7 +130,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
 
   private synchronized Boolean getIsV4() {
     if (isV4 == null) {
-      isV4 = StoreVersion.minTiKVVersion(Version.RESOLVE_LOCK_V4, pdClient);
+      isV4 = StoreVersion.isTiKVVersionGreatEqualThanVersion(pdClient, Version.RESOLVE_LOCK_V4);
     }
     return isV4;
   }
@@ -170,7 +170,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       if (logger.isDebugEnabled()) {
         logger.debug(String.format("Create region store client on address %s", addressStr));
       }
-      ManagedChannel channel = channelFactory.getChannel(addressStr);
+      ManagedChannel channel =
+          channelFactory.getChannel(addressStr, regionManager.getPDClient().getHostMapping());
 
       TikvBlockingStub tikvBlockingStub = TikvGrpc.newBlockingStub(channel);
       TikvStub tikvAsyncStub = TikvGrpc.newStub(channel);
@@ -1243,7 +1244,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       if (logger.isDebugEnabled()) {
         logger.debug(String.format("Create region store client on address %s", addressStr));
       }
-      ManagedChannel channel = channelFactory.getChannel(addressStr);
+      ManagedChannel channel =
+          channelFactory.getChannel(addressStr, regionManager.getPDClient().getHostMapping());
 
       TikvBlockingStub blockingStub = TikvGrpc.newBlockingStub(channel);
       TikvStub asyncStub = TikvGrpc.newStub(channel);
