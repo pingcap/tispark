@@ -54,10 +54,10 @@ First, I will import the upstream (referring to `tikv/client-java`) maven depend
 
 Second, consider that there are differences and a lot of similarities between the upstream
 configuration item (`TiConfiguration`) and the current configuration. So keep the current
-configuration class, add the `ConverterUpstream.java` tool class, and convert the current
+configuration class, add the `ConverterUpstreamUtils.java` tool class, and convert the current
 configuration into the upstream configuration as much as possible. The following is a partial
 configuration comparison table. (See also the comments for the `convertTiConfiguration` method in
-the `ConverterUpstream` class). (Not perfect, because some upstream configurations cannot be
+the `ConverterUpstreamUtils` class). (Not perfect, because some upstream configurations cannot be
 modified).
 
 | item         | tispark                               | client-java | can be converted |
