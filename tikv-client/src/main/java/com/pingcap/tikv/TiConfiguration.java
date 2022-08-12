@@ -55,11 +55,6 @@ public class TiConfiguration implements Serializable {
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
   private static final int DEF_TIMEOUT = 10;
   private static final TimeUnit DEF_TIMEOUT_UNIT = TimeUnit.MINUTES;
-  private static final int DEF_SCAN_BATCH_SIZE = 10480;
-
-  public int getScanBatchSize() {
-    return DEF_SCAN_BATCH_SIZE;
-  }
 
   // --------------   only in tispark -------------
   public static final int PREWRITE_MAX_BACKOFF = 20 * BackOffer.seconds;
@@ -122,13 +117,6 @@ public class TiConfiguration implements Serializable {
   // accepted
   //   by TiKV(maximum request size accepted by TiKV is around 1MB)
   private static final int MAX_REQUEST_KEY_RANGE_SIZE = 20000;
-
-  public void setMaxRequestKeyRangeSize(int maxRequestKeyRangeSize) {
-    if (maxRequestKeyRangeSize <= 0) {
-      throw new IllegalArgumentException("Key range size cannot be less than 1");
-    }
-    this.maxRequestKeyRangeSize = maxRequestKeyRangeSize;
-  }
 
   private static final int DEF_INDEX_SCAN_CONCURRENCY = 5;
   private int indexScanConcurrency = DEF_INDEX_SCAN_CONCURRENCY;

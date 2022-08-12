@@ -64,7 +64,6 @@ public class ConcreteScanIterator extends ScanIterator {
           currentCache = null;
         } else {
           try {
-            int scanSize = Math.min(limit, conf.getScanBatchSize());
             currentCache = client.scan(backOffer, startKey, version, false);
             // If we get region before scan, we will use region from cache which
             // may have wrong end key. This may miss some regions that split from old region.
