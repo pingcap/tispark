@@ -35,6 +35,8 @@ public class ClientSession implements AutoCloseable {
   private final Catalog catalog;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
   private volatile boolean isClosed = false;
+  private volatile TiTimestamp snapshotTimestamp;
+  private volatile Catalog snapshotCatalog;
 
   /**
    * This is used for setting call back function to invalidate cache information
@@ -91,9 +93,6 @@ public class ClientSession implements AutoCloseable {
     checkIsClosed();
     return new Snapshot(snapshotTimestamp, this);
   }
-
-  private volatile TiTimestamp snapshotTimestamp;
-  private volatile Catalog snapshotCatalog;
 
   public static ClientSession getInstance(com.pingcap.tikv.TiConfiguration config) {
     synchronized (sessionCachedMap) {
