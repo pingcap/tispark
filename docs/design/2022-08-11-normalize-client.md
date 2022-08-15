@@ -70,7 +70,7 @@ Here are some notable configuration items
 |----------------------------|--------------|-------------|-------------------------------------------------|
 | timeout                    | 10 minutes   | 200ms       | convert                                         |
 | maxFrameSize               | 2GB          | 512MB       | convert                                         |
-| netWorkMappingName         | ""           | ""          | can't be convert,but has same default value     |
+| netWorkMappingName         | ""           | ""          | can't be converted,but has a same default value     |
 | downGradeThreshold         | 1000_0000    | 1000_0000   | can't be convert,but has same default value     |
 | maxRequestKeyRangeSize     | 2_0000       | 2_0000      | can't be convert,but has same default value     |
 | ~~
