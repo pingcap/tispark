@@ -42,12 +42,13 @@ reduce the complexity of `tispark`.
 
 ### Build and Dependences
 
-First, I will import the upstream (referring to `tikv/client-java`) maven dependency.
+First, I will import the upstream (referring
+to [`tikv/client-java`](https://github.com/tikv/client-java)) maven dependency.
 
 1. Considering that the current `tikv-client` module (referring to the internal implementation of
-   the current `tispark client`) relies on three `protobuf` repositories (`kvproto`,`raft-rs`
+   the current `tispark/tikv-client`) relies on three `protobuf` repositories (`kvproto`,`raft-rs`
    and `tipb`, see `tikv-client/scripts/proto.sh` for details), in addition to the need for your own
-maintained `tipb`, the other two can be handed over to upstream maintenance.
+   maintained `tipb`, the other two can be handed over to upstream maintenance.
 2. Due to the introduction of upstream dependencies, some of the same dependencies on both sides may
    have version conflicts. Use maven's shade plugin and replace plugin to rename conflicting library
    package names to prevent conflicts.
@@ -66,15 +67,14 @@ Here are some notable configuration items
 
 #### TiConfiguration
 
-| item                       | tispark      | client-java | description                                     |
-|----------------------------|--------------|-------------|-------------------------------------------------|
-| timeout                    | 10 minutes   | 200ms       | convert                                         |
-| maxFrameSize               | 2GB          | 512MB       | convert                                         |
-| netWorkMappingName         | ""           | ""          | can't be converted,but has a same default value     |
-| downGradeThreshold         | 1000_0000    | 1000_0000   | can't be convert,but has same default value     |
-| maxRequestKeyRangeSize     | 2_0000       | 2_0000      | can't be convert,but has same default value     |
-| ~~
-ScanBatchSize~~ (delete) | 10480        | 10240       | can't be convert,deleted because it is not used |
+| item                       | tispark    | client-java | description                                     |
+|----------------------------|------------|-------------|-------------------------------------------------|
+| timeout                    | 10 minutes | 200ms       | convert                                         |
+| maxFrameSize               | 2GB        | 512MB       | convert                                         |
+| netWorkMappingName         | ""         | ""          | can't be converted,but has a same default value |
+| downGradeThreshold         | 1000_0000  | 1000_0000   | can't be convert,but has same default value     |
+| maxRequestKeyRangeSize     | 2_0000     | 2_0000      | can't be convert,but has same default value     |
+| ~~ScanBatchSize~~ (delete) | 10480      | 10240       | can't be convert,deleted because it is not used |
 
 #### TIDBOptions
 
