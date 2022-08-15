@@ -17,6 +17,7 @@
 package org.apache.spark.sql.catalyst.analyzer
 
 import com.pingcap.tispark.auth.TiAuthorization
+import com.pingcap.tispark.v2.TiDBTable
 import org.apache.spark.sql.catalyst.plans.logical.{
   DeleteFromTable,
   LogicalPlan,
@@ -24,6 +25,7 @@ import org.apache.spark.sql.catalyst.plans.logical.{
   SubqueryAlias
 }
 import org.apache.spark.sql.catalyst.rules.Rule
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
 import org.apache.spark.sql.{SparkSession, TiContext}
 
 /**
@@ -38,27 +40,32 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
 
   protected def checkForAuth: PartialFunction[LogicalPlan, LogicalPlan] = {
     case dt @ DeleteFromTable(SubqueryAlias(identifier, _), _) =>
-      if (identifier.qualifier.nonEmpty) {
+      if (identifier.qualifier.nonEmpty && identifier.qualifier.head.equals("tidb_catalog")) {
         TiAuthorization.authorizeForDelete(
           identifier.name,
           identifier.qualifier.last,
           tiAuthorization)
       }
       dt
-    case sa @ SubqueryAlias(identifier, child) =>
-      if (identifier.qualifier.nonEmpty) {
-        TiAuthorization.authorizeForSelect(
-          identifier.name,
-          identifier.qualifier.last,
-          tiAuthorization)
-      }
-      sa
     case sd @ SetCatalogAndNamespace(catalogManager, catalogName, namespace) =>
-      if (namespace.isDefined) {
+      if (catalogName.nonEmpty && catalogName.get.equals("tidb_catalog") && namespace.isDefined) {
         namespace.get
           .foreach(TiAuthorization.authorizeForSetDatabase(_, tiAuthorization))
       }
       sd
+    case dr @ DataSourceV2Relation(
+          TiDBTable(_, tableRef, _, _, _),
+          output,
+          catalog,
+          identifier,
+          options) =>
+      if (tableRef.tableName.nonEmpty) {
+        TiAuthorization.authorizeForSelect(
+          tableRef.tableName,
+          tableRef.databaseName,
+          tiAuthorization)
+      }
+      dr
   }
 
   override def apply(plan: LogicalPlan): LogicalPlan =
