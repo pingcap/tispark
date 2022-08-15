@@ -10,6 +10,10 @@ The guide is composed of the following parts:
    - Install Scala && Java && Spark && Maven
    - Install TiUP
    - Get the code, build, and run
-   - Commit the code and submit a pull request
 ## Contribute to TiSpark
+   - Report an Issue
+   - Code Style and Quality Guide
+   - Commit the code and submit a pull request
 ## Understand TiSpark
+   - Overview
+   - 
