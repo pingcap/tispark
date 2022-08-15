@@ -47,7 +47,7 @@ First, I will import the upstream (referring to `tikv/client-java`) maven depend
 1. Considering that the current `tikv-client` module (referring to the internal implementation of
    the current `tispark client`) relies on three `protobuf` repositories (`kvproto`,`raft-rs`
    and `tipb`, see `tikv-client/scripts/proto.sh` for details), in addition to the need for your own
-   The maintained `tipb`, the other two can be handed over to upstream maintenance.
+maintained `tipb`, the other two can be handed over to upstream maintenance.
 2. Due to the introduction of upstream dependencies, some of the same dependencies on both sides may
    have version conflicts. Use maven's shade plugin and replace plugin to rename conflicting library
    package names to prevent conflicts.
