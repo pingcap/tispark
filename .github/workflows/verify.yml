@@ -28,7 +28,9 @@ jobs:
           export LANGUAGE=en_US.UTF-8
           mvn mvn-scalafmt_2.12:format -Dscalafmt.skip=false -B
           mvn com.coveo:fmt-maven-plugin:format -B
-          git diff --quiet
+          git diff >a 
+          echo "cat git result"
+          cat a
           formatted="$?"
           if [[ "${formatted}" -eq 1 ]]
           then
