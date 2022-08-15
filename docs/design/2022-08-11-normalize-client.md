@@ -35,7 +35,7 @@ Until the latest version 3.0.1, the interaction between `tispark` and `tikv` sti
 client (`tikv-client` module). The upstream (`tikv/client-java`) provides a dedicated Java client to
 interact with `tikv`. Due to the duplication of a large number of functions, `tispark` hopes to use
 the upstream client to handle the interaction with `tikv`, and migrate its own client module related
-functions to the upstream, only Maintain some information that `tispark` itself needs to retain to
+functions to the upstream, only maintain some information that `tispark` itself needs to retain to
 reduce the complexity of `tispark`.
 
 ## Detailed Design
