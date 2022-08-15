@@ -172,7 +172,7 @@ end
 - Not forward compatible, but users will not directly use `tispark client` related modules, so it
   does not affect users' use.
 - When using `TiSession` afterwards, you need to use `ClientSession` instead. The method provided
-  by `ClientSession` is preferred, and if it is not provided, `getTikvSession()` is required to
+  by `ClientSession` is preferred, and if it is not provided, `getTiKVSession()` is required to
   indirectly call the upstream richer method.
 - It is recommended to add the `org.tikv.shade` prefix when you need to use the three
   packages (`io.grpc`, `com.google`, `io.netty`).

@@ -73,12 +73,12 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       case NORMAL:
         dagService =
             new ExecutorCompletionService<>(
-                clientSession.getTikvSession().getThreadPoolForTableScan());
+                clientSession.getTiKVSession().getThreadPoolForTableScan());
         break;
       case STREAMING:
         streamingService =
             new ExecutorCompletionService<>(
-                clientSession.getTikvSession().getThreadPoolForTableScan());
+                clientSession.getTiKVSession().getThreadPoolForTableScan());
         break;
     }
     submitTasks();
@@ -219,7 +219,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       try {
         RegionStoreClient client =
             clientSession
-                .getTikvSession()
+                .getTiKVSession()
                 .getRegionStoreClientBuilder()
                 .build(region, store, storeType);
         client.addResolvedLocks(startTs, resolvedLocks);
@@ -264,7 +264,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     try {
       client =
           clientSession
-              .getTikvSession()
+              .getTiKVSession()
               .getRegionStoreClientBuilder()
               .build(region, store, storeType);
       Iterator<SelectResponse> responseIterator =

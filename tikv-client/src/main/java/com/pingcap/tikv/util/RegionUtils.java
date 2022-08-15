@@ -68,11 +68,11 @@ public class RegionUtils {
             ImmutableList.of(),
             ImmutableList.of(),
             table,
-            session.getTikvSession().getTimestamp(),
+            session.getTiKVSession().getTimestamp(),
             new TiDAGRequest(PushDownType.NORMAL));
     List<KeyRange> ranges = new ArrayList<>();
     dagRequest.getRangesMaps().forEach((k, v) -> ranges.addAll(v));
-    return RangeSplitter.newSplitter(session.getTikvSession().getRegionManager())
+    return RangeSplitter.newSplitter(session.getTiKVSession().getRegionManager())
         .splitRangeByRegion(ranges);
   }
 }

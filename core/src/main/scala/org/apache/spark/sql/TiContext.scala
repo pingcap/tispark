@@ -64,7 +64,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   TiUtil.registerUDFs(sparkSession)
   StatisticsManager.initStatisticsManager(clientSession)
   CacheInvalidateListener
-    .initCacheListener(sparkSession.sparkContext, clientSession.getTikvSession.getRegionManager)
+    .initCacheListener(sparkSession.sparkContext, clientSession.getTiKVSession.getRegionManager)
   clientSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
   val meta: MetaManager = new MetaManager(clientSession.getCatalog)
   val debug: DebugTool = new DebugTool

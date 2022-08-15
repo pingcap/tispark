@@ -165,7 +165,7 @@ case class TiDBTable(
     }
 
     // TODO It's better to use the start_ts of read. We can't get it now.
-    val startTs = clientSession.getTikvSession.getTimestamp.getVersion
+    val startTs = clientSession.getTiKVSession.getTimestamp.getVersion
     logger.info(s"startTS: $startTs")
 
     // Query data from TiKV (ByPass TiDB)
@@ -232,7 +232,7 @@ object TiDBTable {
       TiUtil.getChunkBatchSize(sqlContext),
       dagRequest,
       clientSession.getConf,
-      clientSession.getTikvSession.getTimestamp,
+      clientSession.getTiKVSession.getTimestamp,
       sqlContext.sparkSession)
   }
 

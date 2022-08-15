@@ -63,7 +63,7 @@ class TiHandleRDD(
       private[this] val tasks = tiPartition.tasks
 
       private val handleIterator = snapshot.indexHandleRead(dagRequest, tasks)
-      private val regionManager = clientSession.getTikvSession.getRegionManager
+      private val regionManager = clientSession.getTiKVSession.getRegionManager
       private lazy val handleList = {
         val lst = new util.ArrayList[Handle]()
         handleIterator.asScala.foreach {

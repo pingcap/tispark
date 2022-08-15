@@ -54,7 +54,7 @@ abstract class TiRDD(
 
   override protected def getPartitions: Array[Partition] = {
     val keyWithRegionTasks = RangeSplitter
-      .newSplitter(clientSession.getTikvSession.getRegionManager)
+      .newSplitter(clientSession.getTiKVSession.getRegionManager)
       .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId), dagRequest.getStoreType)
 
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]

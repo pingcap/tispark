@@ -31,7 +31,7 @@ public class ClientSession implements AutoCloseable {
 
   private static final Map<String, ClientSession> sessionCachedMap = new HashMap<>();
   private final TiConfiguration conf;
-  private final TiSession tikvSession;
+  private final TiSession tiKVSession;
   private final Catalog catalog;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
   private volatile boolean isClosed = false;
@@ -54,7 +54,7 @@ public class ClientSession implements AutoCloseable {
     } else {
       this.conf = com.pingcap.tikv.TiConfiguration.createDefault("127.0.0.1:2379");
     }
-    this.tikvSession =
+    this.tiKVSession =
         org.tikv.common.TiSession.getInstance(
             ConvertUpstreamUtils.convertTiConfiguration(getConf()));
     this.catalog =
@@ -69,7 +69,7 @@ public class ClientSession implements AutoCloseable {
 
   public Snapshot createSnapshot() {
     checkIsClosed();
-    return new Snapshot(this.tikvSession.getTimestamp(), this);
+    return new Snapshot(this.tiKVSession.getTimestamp(), this);
   }
 
   public Snapshot createSnapshot(TiTimestamp ts) {
@@ -114,7 +114,7 @@ public class ClientSession implements AutoCloseable {
   private synchronized void shutdown(boolean now) throws Exception {
     if (!isClosed) {
       isClosed = true;
-      tikvSession.close();
+      tiKVSession.close();
       synchronized (sessionCachedMap) {
         sessionCachedMap.remove(conf.getPdAddrsString());
       }

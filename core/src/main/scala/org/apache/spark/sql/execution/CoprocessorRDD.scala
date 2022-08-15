@@ -184,7 +184,7 @@ case class ColumnarRegionTaskExec(
     // For each partition, we do some initialization work
     val logger = LoggerFactory.getLogger(getClass.getName)
     val clientSession = ClientSession.getInstance(tiConf)
-    val session = clientSession.getTikvSession
+    val session = clientSession.getTiKVSession
     clientSession.injectCallBackFunc(callBackFunc)
     val batchSize = tiConf.getIndexScanBatchSize
     val downgradeThreshold = tiConf.getDowngradeThreshold

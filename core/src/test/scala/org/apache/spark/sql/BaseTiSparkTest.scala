@@ -132,7 +132,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   protected def supportTTLUpdate: Boolean = {
     StoreVersion.minTiKVVersion(
       Version.RESOLVE_LOCK_V3,
-      this.ti.clientSession.getTikvSession.getPDClient)
+      this.ti.clientSession.getTiKVSession.getPDClient)
   }
 
   protected def blockingRead: Boolean = {
@@ -142,7 +142,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   protected def nonBlockingRead: Boolean = {
     StoreVersion.minTiKVVersion(
       Version.RESOLVE_LOCK_V4,
-      this.ti.clientSession.getTikvSession.getPDClient)
+      this.ti.clientSession.getTiKVSession.getPDClient)
   }
 
   protected def getTableInfo(databaseName: String, tableName: String): TiTableInfo = {

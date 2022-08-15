@@ -52,7 +52,7 @@ class TiDBTableProvider
 
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
-        val ts = tiContext.clientSession.getTikvSession.getTimestamp
+        val ts = tiContext.clientSession.getTiKVSession.getTimestamp
         val tiTableRef = TiTableReference(
           properties.get(TiDBOptions.TIDB_DATABASE),
           properties.get(TiDBOptions.TIDB_TABLE))

@@ -57,7 +57,7 @@ public class Snapshot {
   }
 
   public TiSession getSession() {
-    return clientSession.getTikvSession();
+    return clientSession.getTiKVSession();
   }
 
   public long getVersion() {

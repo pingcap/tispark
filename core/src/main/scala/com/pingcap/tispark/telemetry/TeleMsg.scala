@@ -64,9 +64,9 @@ class TeleMsg(sparkSession: SparkSession) {
   }
 
   private def putKeyValue(key: String, value: String, clientSession: ClientSession): Unit = {
-    val startTS = clientSession.getTikvSession.getTimestamp.getVersion
+    val startTS = clientSession.getTiKVSession.getTimestamp.getVersion
     try {
-      val twoPhaseCommitter = new TwoPhaseCommitter(clientSession.getTikvSession, startTS)
+      val twoPhaseCommitter = new TwoPhaseCommitter(clientSession.getTiKVSession, startTS)
       val backOffer = ConcreteBackOffer.newCustomBackOff(1000)
       twoPhaseCommitter.prewritePrimaryKey(
         backOffer,
@@ -75,7 +75,7 @@ class TeleMsg(sparkSession: SparkSession) {
       twoPhaseCommitter.commitPrimaryKey(
         backOffer,
         key.getBytes("UTF-8"),
-        clientSession.getTikvSession.getTimestamp.getVersion)
+        clientSession.getTiKVSession.getTimestamp.getVersion)
     } catch {
       case e: Throwable =>
         logger.warn("Failed to set telemetry ID to TiKV.", e.getMessage)

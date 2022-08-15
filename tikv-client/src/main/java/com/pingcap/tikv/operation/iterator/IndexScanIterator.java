@@ -48,7 +48,7 @@ public class IndexScanIterator implements Iterator<Row> {
     this.snapshot = snapshot;
     this.batchSize = conf.getIndexScanBatchSize();
     this.completionService =
-        new ExecutorCompletionService<>(clientSession.getTikvSession().getThreadPoolForIndexScan());
+        new ExecutorCompletionService<>(clientSession.getTiKVSession().getThreadPoolForIndexScan());
   }
 
   private List<Handle> feedBatch() {
@@ -75,7 +75,7 @@ public class IndexScanIterator implements Iterator<Row> {
                 List<RegionTask> tasks = new ArrayList<>();
                 List<Long> ids = dagReq.getPrunedPhysicalIds();
                 tasks.addAll(
-                    RangeSplitter.newSplitter(clientSession.getTikvSession().getRegionManager())
+                    RangeSplitter.newSplitter(clientSession.getTiKVSession().getRegionManager())
                         .splitAndSortHandlesByRegion(ids, handles));
 
                 return CoprocessorIterator.getRowIterator(dagReq, tasks, clientSession);

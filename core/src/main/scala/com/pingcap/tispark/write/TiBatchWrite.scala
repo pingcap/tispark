@@ -143,8 +143,8 @@ class TiBatchWrite(
     tiConf = mergeSparkConfWithDataSourceConf(tiContext.conf, options)
     clientSession = tiContext.clientSession
     val tikvSupportUpdateTTL =
-      StoreVersion.minTiKVVersion("3.0.5", clientSession.getTikvSession.getPDClient)
-    val isTiDBV4 = StoreVersion.minTiKVVersion("4.0.0", clientSession.getTikvSession.getPDClient)
+      StoreVersion.minTiKVVersion("3.0.5", clientSession.getTiKVSession.getPDClient)
+    val isTiDBV4 = StoreVersion.minTiKVVersion("4.0.0", clientSession.getTiKVSession.getPDClient)
     isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
     lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
     tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
@@ -226,7 +226,7 @@ class TiBatchWrite(
     tiBatchWriteTables.foreach(_.checkColumnNumbers())
 
     // get timestamp as start_ts
-    val startTimeStamp = clientSession.getTikvSession.getTimestamp
+    val startTimeStamp = clientSession.getTiKVSession.getTimestamp
     startTs = startTimeStamp.getVersion
     logger.info(s"startTS: $startTs")
 
@@ -259,7 +259,7 @@ class TiBatchWrite(
       val orderedSplitPoints = getRegionSplitPoints(insertRDD)
 
       try {
-        clientSession.getTikvSession.splitRegionAndScatter(
+        clientSession.getTiKVSession.splitRegionAndScatter(
           orderedSplitPoints.map(_.bytes).asJava,
           options.splitRegionBackoffMS,
           options.scatterRegionBackoffMS,
@@ -432,7 +432,7 @@ class TiBatchWrite(
 
   private def getUseTableLock: Boolean = {
     if (!options.useTableLock(
-        StoreVersion.minTiKVVersion("4.0.0", clientSession.getTikvSession.getPDClient))) {
+        StoreVersion.minTiKVVersion("4.0.0", clientSession.getTiKVSession.getPDClient))) {
       false
     } else {
       if (tiDBJDBCClient.isEnableTableLock) {

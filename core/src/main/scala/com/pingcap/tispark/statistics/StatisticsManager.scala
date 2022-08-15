@@ -157,7 +157,7 @@ object StatisticsManager {
     // load count, modify_count, version info
     loadMetaToTblStats(tblId, tblStatistic)
     val req = StatisticsHelper
-      .buildHistogramsRequest(histTable, tblId, clientSession.getTikvSession.getTimestamp)
+      .buildHistogramsRequest(histTable, tblId, clientSession.getTiKVSession.getTimestamp)
 
     val rows = readDAGRequest(req, histTable.getId)
     if (rows.isEmpty) return
@@ -204,7 +204,7 @@ object StatisticsManager {
       StatisticsHelper.buildMetaRequest(
         metaTable,
         tableId,
-        clientSession.getTikvSession.getTimestamp)
+        clientSession.getTiKVSession.getTimestamp)
 
     val rows = readDAGRequest(req, metaTable.getId)
     if (rows.isEmpty) return
@@ -225,7 +225,7 @@ object StatisticsManager {
       StatisticsHelper.buildBucketRequest(
         bucketTable,
         tableId,
-        clientSession.getTikvSession.getTimestamp)
+        clientSession.getTiKVSession.getTimestamp)
 
     val rows = readDAGRequest(req, bucketTable.getId)
     if (rows.isEmpty) return Nil

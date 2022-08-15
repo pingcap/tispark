@@ -141,7 +141,7 @@ public final class RowIDAllocator implements Serializable {
     if (!iterator.hasNext()) {
       return;
     }
-    TiSession session = ClientSession.getInstance(conf).getTikvSession();
+    TiSession session = ClientSession.getInstance(conf).getTiKVSession();
     TwoPhaseCommitter twoPhaseCommitter = new TwoPhaseCommitter(session, timestamp.getVersion());
     BytePairWrapper primaryPair = iterator.next();
     twoPhaseCommitter.prewritePrimaryKey(

@@ -50,7 +50,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
 
   // Init lockTTLSeconds and ttlManager
   private val tikvSupportUpdateTTL: Boolean =
-    StoreVersion.minTiKVVersion("3.0.5", clientSession.getTikvSession.getPDClient)
+    StoreVersion.minTiKVVersion("3.0.5", clientSession.getTiKVSession.getPDClient)
   private val isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
   private val lockTTLSeconds: Long = options.getLockTTLSeconds(tikvSupportUpdateTTL)
   @transient private var ttlManager: TTLManager = _
@@ -64,10 +64,10 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
     logger.info("start to prewritePrimaryKey")
 
     ti2PCClient = new TwoPhaseCommitter(
-      clientSession.getTikvSession,
+      clientSession.getTiKVSession,
       startTs,
       lockTTLSeconds * 1000 +
-        calculateUptime(clientSession.getTikvSession.createTxnClient(), startTs))
+        calculateUptime(clientSession.getTiKVSession.createTxnClient(), startTs))
 
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(options.prewriteBackOfferMS)
@@ -86,7 +86,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
 
     secondaryKeysRDD.foreachPartition { partition =>
       val ti2PCClientOnExecutor =
-        new TwoPhaseCommitter(clientSession.getTikvSession, startTs, lockTTLSeconds * 1000)
+        new TwoPhaseCommitter(clientSession.getTiKVSession, startTs, lockTTLSeconds * 1000)
 
       val pairs = partition.map { keyValue =>
         new BytePairWrapper(keyValue._1.bytes, keyValue._2)
@@ -142,7 +142,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
       Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
     }
 
-    val commitTsAttempt = clientSession.getTikvSession.getTimestamp.getVersion
+    val commitTsAttempt = clientSession.getTiKVSession.getTimestamp.getVersion
 
     // check commitTS
     if (commitTsAttempt <= startTs) {
@@ -188,7 +188,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
       logger.info("start to commitSecondaryKeys")
       secondaryKeysRDD.foreachPartition { partition =>
         val ti2PCClientOnExecutor =
-          new TwoPhaseCommitter(clientSession.getTikvSession, startTs, lockTTLSeconds * 1000)
+          new TwoPhaseCommitter(clientSession.getTiKVSession, startTs, lockTTLSeconds * 1000)
 
         val keys = partition.map { keyValue =>
           new ByteWrapper(keyValue._1.bytes)
@@ -220,7 +220,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
       if (ttlManager != null) {
         ttlManager.close()
       }
-      ttlManager = new TTLManager(clientSession.getTikvSession, startTs, primaryKey.bytes)
+      ttlManager = new TTLManager(clientSession.getTiKVSession, startTs, primaryKey.bytes)
       ttlManager.keepAlive()
     }
   }

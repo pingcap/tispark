@@ -171,7 +171,7 @@ trait SharedSQLContext
     // 3.0.x (x >= 14)
     // 3.1.x (x >= 0)
     // >= 4.0.0
-    StoreVersion.minTiKVVersion(Version.BATCH_WRITE, ti.clientSession.getTikvSession.getPDClient)
+    StoreVersion.minTiKVVersion(Version.BATCH_WRITE, ti.clientSession.getTiKVSession.getPDClient)
   }
 
   protected def initializeStatement(): Unit = {
