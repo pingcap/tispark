@@ -17,6 +17,7 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tikv._
+import com.pingcap.tikv.util.ConvertUpstreamUtils
 import com.pingcap.tispark.write.{SerializableKey, TiDBOptions}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
@@ -50,7 +51,9 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
 
   // Init lockTTLSeconds and ttlManager
   private val tikvSupportUpdateTTL: Boolean =
-    StoreVersion.minTiKVVersion("3.0.5", clientSession.getTiKVSession.getPDClient)
+    ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
+      clientSession.getTiKVSession.getPDClient,
+      "3.0.5")
   private val isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
   private val lockTTLSeconds: Long = options.getLockTTLSeconds(tikvSupportUpdateTTL)
   @transient private var ttlManager: TTLManager = _

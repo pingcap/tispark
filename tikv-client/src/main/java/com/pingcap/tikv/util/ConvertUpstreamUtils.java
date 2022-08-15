@@ -18,6 +18,8 @@ package com.pingcap.tikv.util;
 
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.tikv.common.PDClient;
+import org.tikv.common.StoreVersion;
 
 /** Convert some classes that are different from upstream. */
 public class ConvertUpstreamUtils {
@@ -76,5 +78,9 @@ public class ConvertUpstreamUtils {
     tikvConf.setJksTrustPassword(conf.getJksTrustPassword());
     tikvConf.setJksEnable(conf.isJksEnable());
     return tikvConf;
+  }
+
+  public static boolean isTiKVVersionGreatEqualThanVersion(PDClient pdClient, String version) {
+    return StoreVersion.minTiKVVersion(version, pdClient);
   }
 }

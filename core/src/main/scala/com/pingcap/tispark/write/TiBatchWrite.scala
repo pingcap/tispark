@@ -19,6 +19,7 @@ package com.pingcap.tispark.write
 import com.pingcap.tikv._
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.partition.{PartitionedTable, TableCommon}
+import com.pingcap.tikv.util.ConvertUpstreamUtils
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler, WriteUtil}
@@ -143,8 +144,8 @@ class TiBatchWrite(
     tiConf = mergeSparkConfWithDataSourceConf(tiContext.conf, options)
     clientSession = tiContext.clientSession
     val tikvSupportUpdateTTL =
-      StoreVersion.minTiKVVersion("3.0.5", clientSession.getTiKVSession.getPDClient)
-    val isTiDBV4 = StoreVersion.minTiKVVersion("4.0.0", clientSession.getTiKVSession.getPDClient)
+      ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(clientSession.getTiKVSession.getPDClient, "3.0.5")
+    val isTiDBV4 = ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(clientSession.getTiKVSession.getPDClient, "4.0.0")
     isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
     lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
     tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
@@ -432,7 +433,7 @@ class TiBatchWrite(
 
   private def getUseTableLock: Boolean = {
     if (!options.useTableLock(
-        StoreVersion.minTiKVVersion("4.0.0", clientSession.getTiKVSession.getPDClient))) {
+      ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(clientSession.getTiKVSession.getPDClient, "4.0.0"))) {
       false
     } else {
       if (tiDBJDBCClient.isEnableTableLock) {

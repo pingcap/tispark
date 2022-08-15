@@ -19,6 +19,7 @@
 package org.apache.spark.sql.test
 
 import com.pingcap.tikv.TiDBJDBCClient
+import com.pingcap.tikv.util.ConvertUpstreamUtils
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
@@ -171,7 +172,7 @@ trait SharedSQLContext
     // 3.0.x (x >= 14)
     // 3.1.x (x >= 0)
     // >= 4.0.0
-    StoreVersion.minTiKVVersion(Version.BATCH_WRITE, ti.clientSession.getTiKVSession.getPDClient)
+    ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(ti.clientSession.getTiKVSession.getPDClient, Version.BATCH_WRITE)
   }
 
   protected def initializeStatement(): Unit = {
