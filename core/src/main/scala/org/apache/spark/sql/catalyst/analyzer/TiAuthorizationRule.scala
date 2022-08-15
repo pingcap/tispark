@@ -40,7 +40,7 @@ case class TiAuthorizationRule(getOrCreateTiContext: SparkSession => TiContext)(
 
   protected def checkForAuth: PartialFunction[LogicalPlan, LogicalPlan] = {
     case dt @ DeleteFromTable(SubqueryAlias(identifier, _), _) =>
-      if (identifier.qualifier.nonEmpty) {
+      if (identifier.qualifier.nonEmpty && identifier.qualifier.head.equals("tidb_catalog")) {
         TiAuthorization.authorizeForDelete(
           identifier.name,
           identifier.qualifier.last,
