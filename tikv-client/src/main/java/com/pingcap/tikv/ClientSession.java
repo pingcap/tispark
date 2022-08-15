@@ -108,10 +108,10 @@ public class ClientSession implements AutoCloseable {
 
   @Override
   public void close() throws Exception {
-    shutdown(true);
+    shutdown();
   }
 
-  private synchronized void shutdown(boolean now) throws Exception {
+  private synchronized void shutdown() throws Exception {
     if (!isClosed) {
       isClosed = true;
       tiKVSession.close();

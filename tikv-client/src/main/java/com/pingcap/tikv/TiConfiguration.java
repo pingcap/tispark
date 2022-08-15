@@ -112,9 +112,10 @@ public class TiConfiguration implements Serializable {
   private static final int DEF_REGION_SCAN_DOWNGRADE_THRESHOLD = 10000000;
 
   private int maxRequestKeyRangeSize = MAX_REQUEST_KEY_RANGE_SIZE;
-  //   if keyRange size per request exceeds this limit, the request might be too large to be
-  // accepted
-  //   by TiKV(maximum request size accepted by TiKV is around 1MB)
+  /**
+   * if keyRange size per request exceeds this limit, the request might be too large to be accepted
+   * by TiKV(maximum request size accepted by TiKV is around 1MB)
+   */
   private static final int MAX_REQUEST_KEY_RANGE_SIZE = 20000;
 
   private static final int DEF_INDEX_SCAN_CONCURRENCY = 5;
