@@ -9,8 +9,18 @@ This section addresses some of the most common questions and problems that new c
 First of all, you need to have your own copy of TiSpark. Just click Fork button to get it.
 ![frok](pics/fork.png)
 
+## Clone to your workspace
+After get your own copy of TiSpark, you need to clone the code to your local workspace.
+You can clone your copy by the following command.
+```
+git clone git@github.com:${YOUR_GITHUB_NAME}/tispark.git
+
+cd tispark
+```
+
 ## Create your branch
-A good way to keep your workspace away from each other is using branch. You can create a new branch using the following command.
+A good way to keep your workspace away from each other is using branch. 
+You can create a new branch using the following command.
 ```
 git checkout -b my-branch
 ```
