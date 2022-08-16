@@ -33,7 +33,7 @@ and the related codes are in this directory.
 ## Spark-Wrapper
 Spark is still evolving. In different versions, the interface of many components will change.
 To support different versions of Spark, we have written separate codes of changed interface for each version of Spark.
-These codes are stored in this directory
+These codes are stored in this directory.
 ## TiKV-Client
 TiSpark hopes to bypass TiDB and use Spark as the computing layer. 
 However, our data is still stored in TiKV, so we need to be able to read and write to TiKV.
