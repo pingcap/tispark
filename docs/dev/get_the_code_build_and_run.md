@@ -32,6 +32,22 @@ If you see the following message, it means the building succeeds.
 Then you will find a jar under `assembly/target/` which is named 
 `tispark-assembly-${spark_version}_${scala_version}-${tispark_version}-SNAPSHOT.jar`
 ## Run
-Make sure you have installed spark before running TiSpark.
+Please make sure you have installed spark before running TiSpark and add the following configuration in `spark-defaults.conf`.
+```
+spark.sql.extensions  org.apache.spark.sql.TiExtensions
+spark.tispark.pd.addresses  ${your_pd_adress}
+spark.sql.catalog.tidb_catalog  org.apache.spark.sql.catalyst.catalog.TiCatalog
+spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_adress}
+```
+
+And then you can use TiSpark in `spark-shell` by run following command.
+
+```
+spark-shell --jars tispark-assembly-${spark_version}_${scala_version}-${tispark_version}-SNAPSHOT.jar
+```
+
 Spark will load the jar when running. But we can't use the feature TiSpark provides now. We implement it using catalog . Please run the following command to use TiSpark.
+
+```
 spark.sql("use tidb_catalog")
+```

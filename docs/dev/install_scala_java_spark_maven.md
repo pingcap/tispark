@@ -45,7 +45,7 @@ We will introduce how to install Scala on MacOs or Unix systems in the following
    export PATH=$MAVEN_HOME/bin:$PATH
    ```
 ## Install Spark (only for running jar)
-   We support Spark 3.0, 3.1 and 3.2 in TiSpark 3.0.x. You can get Spark at Downloads | Apache Spark.
+   We support Spark 3.0, 3.1 and 3.2 in TiSpark 3.0.x. You can get Spark at [Downloads | Apache Spark](https://spark.apache.org/downloads.html).
    We will take Spark 3.2.2 for example.
 1. Download Spark
    If you want download it from the website, please follow these choices.

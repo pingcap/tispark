@@ -23,8 +23,14 @@ You can find more details about TiUP [here](https://docs.pingcap.com/tidb/stable
 2. Declare the global environment variable
    
    `source ${your_shell_profile}`
-3. Start the cluster in the current session
+3. Download TiDB config file
+
+   The test data of TiSpark is very complicated, so that the default config of TiDB is not enough.
+   You need to get a copy of TiDB config file from [here](https://github.com/pingcap/tidb/blob/master/config/config.toml.example),
+   rename it to `config.toml` and set `index-limit` to 512.
+  
+4. Start the cluster in the current session
    
-   `tiup playground`
+   `tiup playground --db.config config.toml`
 
    This command will download required files and  start a TiDB cluster of the latest version with 1 TiDB instance, 1 TiKV instance, 1 PD instance, and 1 TiFlash instance. 
