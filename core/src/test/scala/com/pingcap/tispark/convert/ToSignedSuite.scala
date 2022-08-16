@@ -64,10 +64,10 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
             StructField("c6", BooleanType)))
 
         val readRow1 = Row(1, null, null, null, null, null, null)
-        val readRow2 = Row(2, null, 1L, 1L, 1L, 1L, 1L)
-        val readRow3 = Row(3, 0L, null, 0L, 0L, 0L, 0L)
-        val readRow4 = Row(4, 1L, 0L, null, 0L, 1L, 1L)
-        val readRow5 = Row(5, 1L, 0L, 0L, null, 1L, 0L)
+        val readRow2 = Row(2, null, 1L, 1L, 1L, 1L, true)
+        val readRow3 = Row(3, 0L, null, 0L, 0L, 0L, false)
+        val readRow4 = Row(4, 1L, 0L, null, 0L, 1L, true)
+        val readRow5 = Row(5, 1L, 0L, 0L, null, 1L, false)
         val readRow6 = Row(6, 1L, 0L, 1L, 0L, null, null)
 
         dropTable()
@@ -100,6 +100,13 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
         val row5 = Row(5, b, b, b, null, a, one)
         val row6 = Row(6, c, c, a, d, null, null)
 
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, null, a, b, c, d, false)
+        val readRow3 = Row(3, b, null, d, a, a, true)
+        val readRow4 = Row(4, c, c, null, a, d, false)
+        val readRow5 = Row(5, b, b, b, null, a, true)
+        val readRow6 = Row(6, c, c, a, d, null, null)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -115,7 +122,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6), schema)
     }
   }
 
@@ -141,6 +148,13 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
         val row5 = Row(5, b, b, b, a, a, zero)
         val row6 = Row(6, b, b, null, a, null, null)
 
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, maxByte, maxShort, maxShort, maxShort, maxShort, true)
+        val readRow3 = Row(3, minByte, minShort, minShort, minShort, minShort, false)
+        val readRow4 = Row(4, null, b, null, a, a, true)
+        val readRow5 = Row(5, b, b, b, a, a, false)
+        val readRow6 = Row(6, b, b, null, a, null, null)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -156,7 +170,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6), schema)
     }
   }
 
@@ -184,6 +198,13 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
         val row5 = Row(5, b, b, b, a, a, zero)
         val row6 = Row(6, b, b, null, a, null, one)
 
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, maxByte, maxShort, maxShort, maxInteger, maxInteger, true)
+        val readRow3 = Row(3, minByte, minShort, minShort, minInteger, minInteger, false)
+        val readRow4 = Row(4, null, b, null, a, a, true)
+        val readRow5 = Row(5, b, b, b, a, a, false)
+        val readRow6 = Row(6, b, b, null, a, null, true)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -199,7 +220,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6), schema)
     }
   }
 
@@ -229,6 +250,13 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
         val row5 = Row(5, b, b, b, a, a, zero)
         val row6 = Row(6, b, b, null, a, null, null)
 
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, maxByte, maxShort, maxShort, maxInteger, maxLong, true)
+        val readRow3 = Row(3, minByte, minShort, minShort, minInteger, minLong, false)
+        val readRow4 = Row(4, null, b, null, a, a, true)
+        val readRow5 = Row(5, b, b, b, a, a, false)
+        val readRow6 = Row(6, b, b, null, a, null, null)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -244,7 +272,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6), schema)
     }
   }
 
@@ -275,6 +303,13 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
         val row5 = Row(5, b, b, b, a, a, zero)
         val row6 = Row(6, b, b, null, a, null, null)
 
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, maxByte, maxShort, maxShort, maxInteger, maxInteger, true)
+        val readRow3 = Row(3, minByte, minShort, minShort, minInteger, minInteger, false)
+        val readRow4 = Row(4, null, b, null, a, a, true)
+        val readRow5 = Row(5, b, b, b, a, a, false)
+        val readRow6 = Row(6, b, b, null, a, null, null)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -290,7 +325,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6), schema)
     }
   }
 
@@ -318,6 +353,13 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
         val row5 = Row(5, b, b, b, a, a, zero)
         val row6 = Row(6, b, b, null, a, null, null)
 
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, maxByte, maxShort, maxShort, maxInteger, maxInteger, true)
+        val readRow3 = Row(3, minByte, minShort, minShort, minInteger, minInteger, false)
+        val readRow4 = Row(4, null, b, null, a, a, true)
+        val readRow5 = Row(5, b, b, b, a, a, false)
+        val readRow6 = Row(6, b, b, null, a, null, null)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -333,7 +375,7 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(List(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(List(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6), schema)
     }
   }
 
@@ -381,11 +423,11 @@ class ToSignedSuite extends BaseBatchWriteTest("test_data_type_convert_to_signed
 
         val readRow1 = Row(1, null, null, null, null, null, null)
         val readRow2 =
-          Row(2, maxByteRead, maxShortRead, maxShortRead, maxIntegerRead, maxIntegerRead, 1L)
+          Row(2, maxByteRead, maxShortRead, maxShortRead, maxIntegerRead, maxIntegerRead, true)
         val readRow3 =
-          Row(3, minByteRead, minShortRead, minShortRead, minIntegerRead, minIntegerRead, 0L)
-        val readRow4 = Row(4, null, bRead, null, aRead, aRead, 1L)
-        val readRow5 = Row(5, bRead, bRead, bRead, aRead, aRead, 0L)
+          Row(3, minByteRead, minShortRead, minShortRead, minIntegerRead, minIntegerRead, false)
+        val readRow4 = Row(4, null, bRead, null, aRead, aRead, true)
+        val readRow5 = Row(5, bRead, bRead, bRead, aRead, aRead, false)
         val readRow6 = Row(6, bRead, bRead, null, aRead, null, null)
 
         dropTable()
