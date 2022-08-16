@@ -103,6 +103,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
       errorMessage.equals(s"DELETE is only supported with v2 tables.;")
         || errorMessage.equals(s"DELETE is only supported with v2 tables."))
 
+
     spark.sql(s"DROP TABLE IF EXISTS `$hive_table`")
   }
 
