@@ -1,4 +1,4 @@
-# Install TiUP
+# Start a local TiDB cluster for testing
 TiSpark needs some metadata stored in TiDB, like user authority. 
 And TiSpark will write data to TiKV and read data from it.
 So we need to install TiDB and TiKV. It's really easy to deploy a local test cluster for development using TiUP.
