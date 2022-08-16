@@ -74,4 +74,6 @@ object TiConfigConst {
   val DEFAULT_STALE_READ: String = ""
 
   val TELEMETRY_ENABEL: String = "spark.tispark.telemetry.enable"
+
+  val HOST_MAPPING: String = "spark.tispark.host_mapping"
 }

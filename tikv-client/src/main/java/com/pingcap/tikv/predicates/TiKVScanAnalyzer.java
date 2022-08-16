@@ -25,18 +25,20 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
+import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.PartitionPruner;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
 import com.pingcap.tikv.key.IndexScanKeyRangeBuilder;
+import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiDAGRequest;
-import com.pingcap.tikv.meta.TiDAGRequest.IndexScanType;
+import com.pingcap.tikv.meta.TiDAGRequest.ScanType;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiPartitionDef;
@@ -45,13 +47,17 @@ import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
+import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.MySQLType;
 import com.pingcap.tikv.util.Pair;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -59,11 +65,19 @@ import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class TiKVScanAnalyzer {
+
   private static final double INDEX_SCAN_COST_FACTOR = 1.2;
   private static final double TABLE_SCAN_COST_FACTOR = 1.0;
   private static final double DOUBLE_READ_COST_FACTOR = TABLE_SCAN_COST_FACTOR * 3;
   private static final long TABLE_PREFIX_SIZE = 8;
   private static final long INDEX_PREFIX_SIZE = 8;
+
+  private static final BigDecimal MAX_SIGNED_LONG = new BigDecimal(Long.MAX_VALUE);
+  private static final BigDecimal MIN_UNSIGNED_LONG_BEYOND_SIGNED_LONG =
+      MAX_SIGNED_LONG.add(new BigDecimal(1));
+  private static final BigDecimal MAX_UNSIGNED_LONG =
+      new BigDecimal(UnsignedLong.fromLongBits(0xFFFFFFFFFFFFFFFFL).bigIntegerValue());
+  private static final BigDecimal BEYOND_UNSIGNED_LONG = MAX_UNSIGNED_LONG.add(new BigDecimal(1));
 
   @VisibleForTesting
   public static ScanSpec extractConditions(
@@ -208,7 +222,7 @@ public class TiKVScanAnalyzer {
     // Set DAG Request's store type as minPlan's store type.
     dagRequest.setStoreType(minPlanStoreType);
 
-    dagRequest.addRanges(minPlan.getKeyRanges());
+    dagRequest.addRanges(minPlan.getKeyRanges(), minPlan.getRangeFilters());
     dagRequest.setPrunedParts(minPlan.getPrunedParts());
     dagRequest.addFilters(new ArrayList<>(minPlan.getFilters()));
     if (minPlan.isIndexScan()) {
@@ -271,7 +285,10 @@ public class TiKVScanAnalyzer {
     if (index == null || index.isFakePrimaryKey()) {
       planBuilder
           .setDoubleRead(false)
-          .setKeyRanges(buildTableScanKeyRange(table, irs, prunedParts));
+          .setKeyRanges(
+              buildTableScanKeyRange(table, irs, prunedParts),
+              result.getPointPredicates(),
+              result.getRangePredicate());
       if (useTiFlash) {
         // TiFlash is a columnar storage engine
         long colSize =
@@ -292,14 +309,17 @@ public class TiKVScanAnalyzer {
           .setDoubleRead(!isCoveringIndex(columnList, index, table.isPkHandle()))
           // table name, index and handle column
           .calculateCostAndEstimateCount(tableStatistics, conditions, irs, indexSize, tableColSize)
-          .setKeyRanges(buildIndexScanKeyRange(table, index, irs, prunedParts))
+          .setKeyRanges(
+              buildIndexScanKeyRange(table, index, irs, prunedParts),
+              result.getPointPredicates(),
+              result.getRangePredicate())
           .build();
     }
   }
 
-  private Pair<Key, Key> buildTableScanKeyRangePerId(long id, IndexRange ir) {
-    Key startKey;
-    Key endKey;
+  private ScanRange buildTableScanSignedKeyRangePerId(long id, IndexRange ir) {
+    Key signedStartKey;
+    Key signedEndKey;
     if (ir.hasAccessKey()) {
       checkArgument(
           !ir.hasRange(), "Table scan must have one and only one access condition / point");
@@ -307,8 +327,8 @@ public class TiKVScanAnalyzer {
       Key key = ir.getAccessKey();
       checkArgument(key instanceof TypedKey, "Table scan key range must be typed key");
       TypedKey typedKey = (TypedKey) key;
-      startKey = RowKey.toRowKey(id, typedKey);
-      endKey = startKey.next();
+      signedStartKey = RowKey.toRowKey(id, typedKey);
+      signedEndKey = signedStartKey.next();
     } else if (ir.hasRange()) {
       checkArgument(
           !ir.hasAccessKey(), "Table scan must have one and only one access condition / point");
@@ -316,43 +336,156 @@ public class TiKVScanAnalyzer {
 
       if (!r.hasLowerBound()) {
         // -INF
-        startKey = RowKey.createMin(id);
+        signedStartKey = RowKey.createMin(id);
       } else {
         // Comparison with null should be filtered since it yields unknown always
-        startKey = RowKey.toRowKey(id, r.lowerEndpoint());
+        signedStartKey = RowKey.toRowKey(id, r.lowerEndpoint());
         if (r.lowerBoundType().equals(BoundType.OPEN)) {
-          startKey = startKey.next();
+          signedStartKey = signedStartKey.next();
         }
       }
 
       if (!r.hasUpperBound()) {
         // INF
-        endKey = RowKey.createBeyondMax(id);
+        signedEndKey = RowKey.createBeyondMax(id);
       } else {
-        endKey = RowKey.toRowKey(id, r.upperEndpoint());
+        signedEndKey = RowKey.toRowKey(id, r.upperEndpoint());
         if (r.upperBoundType().equals(BoundType.CLOSED)) {
-          endKey = endKey.next();
+          signedEndKey = signedEndKey.next();
         }
       }
     } else {
       throw new TiClientInternalException("Empty access conditions");
     }
-    return new Pair<>(startKey, endKey);
+    return new ScanRange(signedStartKey, signedEndKey, null, null);
+  }
+
+  private ScanRange buildTableScanUnsignedKeyRangePerId(long id, IndexRange ir) {
+    Key signedStartClosedKey;
+    Key signedEndOpenKey;
+    Key unsignedStartClosedKey;
+    Key unsignedEndOpenKey;
+
+    if (ir.hasAccessKey()) {
+      checkArgument(
+          !ir.hasRange(), "Table scan must have one and only one access condition / point");
+      Key key = ir.getAccessKey();
+      checkArgument(key instanceof TypedKey, "Table scan key range must be typed key");
+      BigDecimal value = (BigDecimal) ((TypedKey) key).getValue();
+      if (value.compareTo(MAX_SIGNED_LONG) > 0) {
+        unsignedStartClosedKey = RowKey.toRowKey(id, new IntHandle(value.longValue()));
+        unsignedEndOpenKey = unsignedStartClosedKey.nextPrefix();
+        return new ScanRange(null, null, unsignedStartClosedKey, unsignedEndOpenKey);
+      } else {
+        signedStartClosedKey = RowKey.toRowKey(id, new IntHandle(value.longValue()));
+        signedEndOpenKey = signedStartClosedKey.nextPrefix();
+        return new ScanRange(signedStartClosedKey, signedEndOpenKey, null, null);
+      }
+    } else if (ir.hasRange()) {
+      Range<TypedKey> r = ir.getRange();
+      // Convert the range to low inclusive and high exclusive range
+      BigDecimal startClosedKey;
+      if (r.hasLowerBound()) {
+        BigDecimal startKey = (BigDecimal) r.lowerEndpoint().getValue();
+        startClosedKey =
+            r.lowerBoundType().equals(BoundType.CLOSED)
+                ? startKey
+                : (startKey.equals(MAX_UNSIGNED_LONG)
+                    ? BEYOND_UNSIGNED_LONG
+                    : startKey.add(BigDecimal.ONE));
+      } else {
+        startClosedKey = new BigDecimal(0);
+      }
+      boolean startClosedKeyBeyondUint64 = startClosedKey.equals(BEYOND_UNSIGNED_LONG);
+      if (startClosedKeyBeyondUint64) {
+        throw new IllegalArgumentException(
+            "Invalid range, startKey has exceeded MAX_UNSIGNED_LONG");
+      }
+
+      BigDecimal endOpenKey;
+      if (r.hasUpperBound()) {
+        BigDecimal endKey = (BigDecimal) r.upperEndpoint().getValue();
+        endOpenKey =
+            r.upperBoundType().equals(BoundType.OPEN)
+                ? endKey
+                : (endKey.equals(MAX_UNSIGNED_LONG)
+                    ? BEYOND_UNSIGNED_LONG
+                    : endKey.add(BigDecimal.ONE));
+      } else {
+        endOpenKey = BEYOND_UNSIGNED_LONG;
+      }
+      boolean endOpenKeyBeyondUint64 = Objects.equals(endOpenKey, BEYOND_UNSIGNED_LONG);
+
+      // [startKey, endOpenKey) is in range of [0, MAX_INT64], the same as [0, MAX_INT64 + 1)
+      if (endOpenKey.compareTo(MIN_UNSIGNED_LONG_BEYOND_SIGNED_LONG) <= 0) {
+        signedEndOpenKey =
+            endOpenKey.equals(MIN_UNSIGNED_LONG_BEYOND_SIGNED_LONG)
+                ? RowKey.toRowKey(id, new IntHandle(Long.MAX_VALUE)).nextPrefix()
+                : RowKey.toRowKey(id, new IntHandle(endOpenKey.longValue()));
+        return new ScanRange(
+            RowKey.toRowKey(id, new IntHandle(startClosedKey.longValue())),
+            signedEndOpenKey,
+            null,
+            null);
+      }
+
+      // [startKey, endOpenKey) is in range of [MAX_INT64 + 1, MAX_UINT64], the same as [MAX_INT64 +
+      // 1, MAX_UINT6 + 1)
+      if (startClosedKey.compareTo(MAX_SIGNED_LONG) > 0) {
+        unsignedStartClosedKey = RowKey.toRowKey(id, new IntHandle(startClosedKey.longValue()));
+        return new ScanRange(
+            null,
+            null,
+            unsignedStartClosedKey,
+            endOpenKeyBeyondUint64
+                ? RowKey.toRowKey(id, new IntHandle(MAX_UNSIGNED_LONG.longValue())).nextPrefix()
+                : RowKey.toRowKey(id, new IntHandle(endOpenKey.longValue())));
+      }
+
+      // [startKey, endOpenKey) is cross the range [0, MAX_INT64] and [MAX_INT64 + 1, MAX_UINT64]
+      signedStartClosedKey = RowKey.toRowKey(id, new IntHandle(startClosedKey.longValue()));
+      signedEndOpenKey =
+          RowKey.toRowKey(id, new IntHandle(MAX_SIGNED_LONG.longValue())).nextPrefix();
+      unsignedStartClosedKey =
+          RowKey.toRowKey(id, new IntHandle(MIN_UNSIGNED_LONG_BEYOND_SIGNED_LONG.longValue()));
+      unsignedEndOpenKey =
+          endOpenKeyBeyondUint64
+              ? RowKey.toRowKey(id, new IntHandle(MAX_UNSIGNED_LONG.longValue())).nextPrefix()
+              : RowKey.toRowKey(id, new IntHandle(endOpenKey.longValue()));
+
+      return new ScanRange(
+          signedStartClosedKey, signedEndOpenKey, unsignedStartClosedKey, unsignedEndOpenKey);
+    } else {
+      throw new TiClientInternalException("Empty access conditions");
+    }
+  }
+
+  private ScanRange buildTableScanKeyRangePerId(
+      long id, IndexRange ir, IntegerType handleDataType) {
+    if (handleDataType.isUnsignedLong()) {
+      return buildTableScanUnsignedKeyRangePerId(id, ir);
+    } else {
+      return buildTableScanSignedKeyRangePerId(id, ir);
+    }
   }
 
   private Map<Long, List<KeyRange>> buildTableScanKeyRangeWithIds(
-      List<Long> ids, List<IndexRange> indexRanges) {
+      List<Long> ids, List<IndexRange> indexRanges, IntegerType handleDatatype) {
     Map<Long, List<KeyRange>> idRanges = new HashMap<>(ids.size());
     for (Long id : ids) {
       List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
       indexRanges.forEach(
           (ir) -> {
-            Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(id, ir);
-            Key startKey = pairKey.first;
-            Key endKey = pairKey.second;
-            // This range only possible when < MIN or > MAX
-            if (!startKey.equals(endKey)) {
-              ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
+            ScanRange range = buildTableScanKeyRangePerId(id, ir, handleDatatype);
+            Optional<Pair<Key, Key>> signedKeyRange = range.signedKeyRange;
+            Optional<Pair<Key, Key>> unsignedKeyRange = range.unSignedKeyRange;
+            if (signedKeyRange.isPresent()) {
+              Pair<Key, Key> pair = signedKeyRange.get();
+              ranges.add(makeCoprocRange(pair.first.toByteString(), pair.second.toByteString()));
+            }
+            if (unsignedKeyRange.isPresent()) {
+              Pair<Key, Key> pair = unsignedKeyRange.get();
+              ranges.add(makeCoprocRange(pair.first.toByteString(), pair.second.toByteString()));
             }
           });
 
@@ -361,20 +494,25 @@ public class TiKVScanAnalyzer {
     return idRanges;
   }
 
-  @VisibleForTesting
-  Map<Long, List<KeyRange>> buildTableScanKeyRange(
+  public Map<Long, List<KeyRange>> buildTableScanKeyRange(
       TiTableInfo table, List<IndexRange> indexRanges, List<TiPartitionDef> prunedParts) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
-
+    IntegerType handleDatatype;
+    if (table.isPkHandle()) {
+      handleDatatype = (IntegerType) table.getPKIsHandleColumn().getType();
+    } else {
+      handleDatatype = IntegerType.ROW_ID_TYPE;
+    }
     if (table.isPartitionEnabled()) {
       List<Long> ids = new ArrayList<>();
       for (TiPartitionDef pDef : prunedParts) {
         ids.add(pDef.getId());
       }
-      return buildTableScanKeyRangeWithIds(ids, indexRanges);
+      return buildTableScanKeyRangeWithIds(ids, indexRanges, handleDatatype);
     } else {
-      return buildTableScanKeyRangeWithIds(ImmutableList.of(table.getId()), indexRanges);
+      return buildTableScanKeyRangeWithIds(
+          ImmutableList.of(table.getId()), indexRanges, handleDatatype);
     }
   }
 
@@ -455,7 +593,9 @@ public class TiKVScanAnalyzer {
   }
 
   public static class TiKVScanPlan {
+
     private final Map<Long, List<KeyRange>> keyRanges;
+    private final List<Expression> rangeFilters;
     private final Set<Expression> filters;
     private final double cost;
     private final TiIndexInfo index;
@@ -466,6 +606,7 @@ public class TiKVScanAnalyzer {
 
     private TiKVScanPlan(
         Map<Long, List<KeyRange>> keyRanges,
+        List<Expression> rangeFilters,
         Set<Expression> filters,
         TiIndexInfo index,
         double cost,
@@ -474,6 +615,7 @@ public class TiKVScanAnalyzer {
         List<TiPartitionDef> partDefs,
         TiStoreType storeType) {
       this.filters = filters;
+      this.rangeFilters = rangeFilters;
       this.keyRanges = keyRanges;
       this.cost = cost;
       this.index = index;
@@ -489,6 +631,10 @@ public class TiKVScanAnalyzer {
 
     public Map<Long, List<KeyRange>> getKeyRanges() {
       return keyRanges;
+    }
+
+    public List<Expression> getRangeFilters() {
+      return rangeFilters;
     }
 
     public Set<Expression> getFilters() {
@@ -520,9 +666,11 @@ public class TiKVScanAnalyzer {
     }
 
     public static class Builder {
+
       private final String tableName;
       private final Logger logger = LoggerFactory.getLogger(getClass().getName());
       private Map<Long, List<KeyRange>> keyRanges;
+      private List<Expression> rangeFilters;
       private Set<Expression> filters;
       private double cost;
       private TiIndexInfo index;
@@ -539,8 +687,16 @@ public class TiKVScanAnalyzer {
         return new Builder(tableName);
       }
 
-      public Builder setKeyRanges(Map<Long, List<KeyRange>> keyRanges) {
+      public Builder setKeyRanges(
+          Map<Long, List<KeyRange>> keyRanges,
+          List<Expression> pointPredicate,
+          Optional<Expression> rangePredicate) {
         this.keyRanges = keyRanges;
+        if (rangeFilters == null) {
+          rangeFilters = new ArrayList<Expression>();
+        }
+        rangeFilters.addAll(pointPredicate);
+        rangePredicate.ifPresent(expression -> rangeFilters.add(expression));
         return this;
       }
 
@@ -582,6 +738,7 @@ public class TiKVScanAnalyzer {
       public TiKVScanPlan build() {
         return new TiKVScanPlan(
             keyRanges,
+            rangeFilters,
             filters,
             index,
             cost,
@@ -591,19 +748,19 @@ public class TiKVScanAnalyzer {
             storeType);
       }
 
-      private void debug(IndexScanType scanType) {
+      private void debug(ScanType scanType) {
         String plan, desc;
         switch (scanType) {
-          case TABLE_SCAN:
-            plan = "TableScan";
+          case TABLE_READER:
+            plan = "TableReader";
             desc = storeType.toString();
             break;
-          case INDEX_SCAN:
-            plan = "IndexScan";
+          case INDEX_LOOKUP:
+            plan = "IndexLookUp";
             desc = index.getName();
             break;
-          case COVERING_INDEX_SCAN:
-            plan = "CoveringIndexScan";
+          case INDEX_READER:
+            plan = "IndexReader";
             desc = index.getName();
             break;
           default:
@@ -631,7 +788,7 @@ public class TiKVScanAnalyzer {
         if (tableStatistics != null) {
           estimatedRowCount = tableStatistics.getCount();
         }
-        debug(IndexScanType.TABLE_SCAN);
+        debug(ScanType.TABLE_READER);
         return this;
       }
 
@@ -660,13 +817,29 @@ public class TiKVScanAnalyzer {
 
           if (isDoubleRead) {
             cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
-            debug(IndexScanType.INDEX_SCAN);
+            debug(ScanType.INDEX_LOOKUP);
           } else {
             cost *= indexSize * INDEX_SCAN_COST_FACTOR;
-            debug(IndexScanType.COVERING_INDEX_SCAN);
+            debug(ScanType.INDEX_READER);
           }
         }
         return this;
+      }
+    }
+  }
+
+  public static class ScanRange {
+
+    Optional<Pair<Key, Key>> signedKeyRange = Optional.empty();
+    Optional<Pair<Key, Key>> unSignedKeyRange = Optional.empty();
+
+    public ScanRange(
+        Key signedStartKey, Key signedEndKey, Key unsignedStartKey, Key unsignedEndKey) {
+      if (signedStartKey != null && signedEndKey != null) {
+        signedKeyRange = Optional.of(new Pair<>(signedStartKey, signedEndKey));
+      }
+      if (unsignedStartKey != null && unsignedEndKey != null) {
+        unSignedKeyRange = Optional.of(new Pair<>(unsignedStartKey, unsignedEndKey));
       }
     }
   }

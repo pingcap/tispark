@@ -17,10 +17,10 @@
 package org.apache.spark.sql.catalyst.catalog
 
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{MetaManager, TiTableReference}
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.v2.TiDBTable
+import com.pingcap.tispark.{MetaManager, TiTableReference}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{NoSuchNamespaceException, NoSuchTableException}
 import org.apache.spark.sql.connector.catalog._
@@ -56,7 +56,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
     val pdAddress: String =
       if (TiAuthorization.enableAuth) {
-        tiAuthorization.get.getPDAddress()
+        tiAuthorization.get.getPDAddresses()
       } else {
         if (!options.containsKey("pd.addresses") && !options.containsKey("pd.address")) {
           throw new Exception("missing configuration spark.sql.catalog.tidb_catalog.pd.addresses")
@@ -66,6 +66,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
     logger.info(s"Initialize TiCatalog with name: $name, pd address: $pdAddress")
     val conf = TiConfiguration.createDefault(pdAddress)
+    TiUtil.sparkConfToTiConfWithoutPD(SparkSession.active.sparkContext.getConf, conf)
     val session = TiSession.getInstance(conf)
     meta = Some(new MetaManager(session.getCatalog))
     tiSession = Some(session)

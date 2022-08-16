@@ -10,7 +10,7 @@
 
     <groupId>com.pingcap.tispark</groupId>
     <artifactId>tispark-parent</artifactId>
-    <version>3.1.0-SHAPSHOT</version>
+    <version>3.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>TiSpark Project Parent POM</name>
     <url>http://github.copm/pingcap/tispark</url>
@@ -70,8 +70,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-        <spark.version.compile>3.0.2</spark.version.compile>
-        <spark.version.test>3.0.2</spark.version.test>
+        <spark.version.compile>3.0.3</spark.version.compile>
+        <spark.version.test>3.0.3</spark.version.test>
         <spark.version.release>3.0</spark.version.release>
         <scala.binary.version>2.12</scala.binary.version>
         <scala.version>2.12.10</scala.version>
@@ -80,7 +80,7 @@
         <scalafmt.skip>true</scalafmt.skip>
         <scalatest.version>3.0.8</scalatest.version>
         <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
-        <mysql.connector.version>5.1.49</mysql.connector.version>
+        <mysql.connector.version>8.0.29</mysql.connector.version>
         <gpg.keyname>fake gpg keyname</gpg.keyname>
         <gpg.skip>true</gpg.skip>
         <javadoc.skip>true</javadoc.skip>
@@ -180,8 +180,8 @@
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <spark.version.compile>3.1.1</spark.version.compile>
-                <spark.version.test>3.1.1</spark.version.test>
+                <spark.version.compile>3.1.3</spark.version.compile>
+                <spark.version.test>3.1.3</spark.version.test>
                 <spark.version.release>3.1</spark.version.release>
             </properties>
         </profile>
@@ -191,8 +191,8 @@
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <spark.version.compile>3.2.1</spark.version.compile>
-                <spark.version.test>3.2.1</spark.version.test>
+                <spark.version.compile>3.2.2</spark.version.compile>
+                <spark.version.test>3.2.2</spark.version.test>
                 <spark.version.release>3.2</spark.version.release>
             </properties>
         </profile>
