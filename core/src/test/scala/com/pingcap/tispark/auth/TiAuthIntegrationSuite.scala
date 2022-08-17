@@ -99,9 +99,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     exception should not have message(
       s"DELETE command denied to user `$user`@% for table default.`$hive_table`")
     val errorMessage = exception.getMessage
-    assert(
-      errorMessage.equals(s"DELETE is only supported with v2 tables.;")
-        || errorMessage.equals(s"DELETE is only supported with v2 tables."))
+    assert(errorMessage.contains(s"DELETE is only supported with v2 tables."))
 
     spark.sql(s"DROP TABLE IF EXISTS `$hive_table`")
   }
