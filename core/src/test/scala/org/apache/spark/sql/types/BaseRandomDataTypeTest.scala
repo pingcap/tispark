@@ -105,7 +105,7 @@ trait BaseRandomDataTypeTest extends BaseTiSparkTest with RandomTest {
     } ++ {
       eqs cross {
         dataType match {
-          case BOOLEAN => List("false", "true")
+          case BOOLEAN => List("0", "1")
           case _ => List.empty[String]
         }
       }

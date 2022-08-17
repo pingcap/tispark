@@ -19,10 +19,13 @@ package com.pingcap.tispark.utils
 
 import com.pingcap.tispark.TiSparkInfo
 import com.pingcap.tispark.auth.TiAuthorization
+import com.pingcap.tispark.write.TiDBOptions
+import org.apache.spark.sql.{SQLContext, SparkSession, Strategy, TiContext}
 import org.apache.spark.sql.catalyst.expressions.BasicExpression.TiExpression
 import org.apache.spark.sql.catalyst.expressions.{Alias, ExprId, Expression, SortOrder}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.{SparkSession, Strategy, TiContext}
+import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.slf4j.LoggerFactory
 
 import java.io.File
@@ -65,6 +68,8 @@ object ReflectionUtil {
     "org.apache.spark.sql.catalyst.plans.logical.TiBasicLogicalPlan"
   private val TI_STRATEGY_CLASS =
     "org.apache.spark.sql.extensions.TiStrategy"
+  private val TIDB_WRITE_BUILDER_CLASS =
+    "org.apache.spark.sql.connector.write.TiDBWriteBuilder"
 
   def newAlias(child: Expression, name: String): Alias = {
     classLoader
@@ -132,5 +137,19 @@ object ReflectionUtil {
       .getDeclaredConstructor(classOf[SparkSession => TiContext], classOf[SparkSession])
       .newInstance(getOrCreateTiContext, sparkSession)
       .asInstanceOf[Strategy]
+  }
+
+  def newTiDBWriteBuilder(
+      info: LogicalWriteInfo,
+      tiDBOptions: TiDBOptions,
+      sqlContext: SQLContext): WriteBuilder = {
+    classLoader
+      .loadClass(TIDB_WRITE_BUILDER_CLASS)
+      .getDeclaredConstructor(
+        classOf[LogicalWriteInfo],
+        classOf[TiDBOptions],
+        classOf[SQLContext])
+      .newInstance(info, tiDBOptions, sqlContext)
+      .asInstanceOf[WriteBuilder]
   }
 }

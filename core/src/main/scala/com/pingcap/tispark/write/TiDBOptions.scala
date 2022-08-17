@@ -76,6 +76,10 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val enableUpdateTableStatistics: Boolean =
     getOrDefault(TIDB_ENABLE_UPDATE_TABLE_STATISTICS, "false").toBoolean
   val deduplicate: Boolean = getOrDefault(TIDB_DEDUPLICATE, "true").toBoolean
+  // TiDB use V2 row format to save data after 4.0.0. It can read both V1 and V2 rows.
+  // TiSpark only support TiDB which version higher than 4.0.0. And it can read both V1 and V2 rows too.
+  // So it better to save data using V2 row format.
+  val tidbRowFormatVersion: Int = getOrDefault(TiDB_ROW_FORMAT_VERSION, "2").toInt
 
   // ------------------------------------------------------------
   // Optional parameters for Test
@@ -282,6 +286,7 @@ object TiDBOptions {
   val TIDB_ENABLE_UPDATE_TABLE_STATISTICS: String = newOption("enableUpdateTableStatistics")
   val TIDB_DEDUPLICATE: String = newOption("deduplicate")
   val TIDB_ROWID: String = newOption("tidbRowId")
+  val TiDB_ROW_FORMAT_VERSION: String = newOption("rowFormatVersion")
 
   // region split
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
