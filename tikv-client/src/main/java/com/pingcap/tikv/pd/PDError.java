@@ -66,7 +66,8 @@ public final class PDError {
 
   public enum ErrorType {
     PD_ERROR,
-    REGION_PEER_NOT_ELECTED
+    REGION_PEER_NOT_ELECTED,
+    PD_RETURN_NO_REGION
   }
 
   public static final class RegionPeerNotElected {
@@ -78,7 +79,17 @@ public final class PDError {
         PDError.newBuilder(DEFAULT_ERROR).setErrorType(ERROR_TYPE).build();
   }
 
+  public static final class PDReturnNoRegion {
+    private static final String ERROR_MESSAGE = "PD returned no region";
+    private static final Pdpb.Error DEFAULT_ERROR =
+        Pdpb.Error.newBuilder().setMessage(ERROR_MESSAGE).build();
+    private static final ErrorType ERROR_TYPE = ErrorType.PD_RETURN_NO_REGION;
+    public static final PDError DEFAULT_INSTANCE =
+        PDError.newBuilder(DEFAULT_ERROR).setErrorType(ERROR_TYPE).build();
+  }
+
   public static final class Builder {
+
     private Pdpb.Error error_;
     private ErrorType errorType_ = ErrorType.PD_ERROR;
 

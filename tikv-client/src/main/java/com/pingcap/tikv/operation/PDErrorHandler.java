@@ -24,6 +24,7 @@ import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.pd.PDError;
+import com.pingcap.tikv.pd.PDError.PDReturnNoRegion;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import java.util.function.Function;
@@ -32,11 +33,21 @@ import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Pdpb;
 
 public class PDErrorHandler<RespT> implements ErrorHandler<RespT> {
+
   public static final Function<Pdpb.GetRegionResponse, PDError> getRegionResponseErrorExtractor =
       r ->
           r.getHeader().hasError()
               ? buildFromPdpbError(r.getHeader().getError())
               : r.getRegion().getId() == 0 ? PDError.RegionPeerNotElected.DEFAULT_INSTANCE : null;
+
+  public static final Function<Pdpb.ScanRegionsResponse, PDError> scanRegionResponseErrorExtractor =
+      r ->
+          r.getHeader().hasError()
+              ? buildFromPdpbError(r.getHeader().getError())
+              : r.getRegionsCount() == 0 && r.getRegionMetasCount() == 0
+                  ? PDReturnNoRegion.DEFAULT_INSTANCE
+                  : null;
+
   private static final Logger logger = LoggerFactory.getLogger(PDErrorHandler.class);
   private final Function<RespT, PDError> getError;
   private final PDClient client;

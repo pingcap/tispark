@@ -262,7 +262,7 @@ public class RangeSplitterTest {
     TLongObjectHashMap<List<Handle>> result = new TLongObjectHashMap<>();
     RangeSplitter.newSplitter(mgr)
         .groupByAndSortHandlesByRegionId(tableId, handles)
-        .forEach((k, v) -> result.put(k.first.getId(), v));
+        .forEach((k, v) -> result.put(k.region.getId(), v));
     assertEquals(2, result.get(0).size());
     assertEquals(10, result.get(1).size());
     assertEquals(2, result.get(2).size());
@@ -282,16 +282,59 @@ public class RangeSplitterTest {
     }
 
     @Override
-    public Pair<TiRegion, Metapb.Store> getRegionStorePairByKey(
+    public RegionStorePair getRegionStorePairByKey(
         ByteString key, TiStoreType storeType, BackOffer backOffer) {
       for (Map.Entry<KeyRange, TiRegion> entry : mockRegionMap.entrySet()) {
         KeyRange range = entry.getKey();
         if (KeyRangeUtils.makeRange(range.getStart(), range.getEnd()).contains(Key.toRawKey(key))) {
           TiRegion region = entry.getValue();
-          return Pair.create(region, Metapb.Store.newBuilder().setId(region.getId()).build());
+          return new RegionStorePair(
+              region, Metapb.Store.newBuilder().setId(region.getId()).build());
         }
       }
       return null;
+    }
+
+    @Override
+    public List<RegionStorePair> getAllRegionStorePairsInRange(
+        KeyRange range, TiStoreType storeType, BackOffer backOffer) {
+      ArrayList<RegionStorePair> regionStorePairArrayList = new ArrayList<>();
+      for (Map.Entry<KeyRange, TiRegion> entry : mockRegionMap.entrySet()) {
+        KeyRange regionRange = entry.getKey();
+        if (this.isRangeOverlap(regionRange, range)) {
+          TiRegion region = entry.getValue();
+          regionStorePairArrayList.add(
+              new RegionStorePair(region, Metapb.Store.newBuilder().setId(region.getId()).build()));
+        }
+      }
+      regionStorePairArrayList.sort(
+          (o1, o2) -> {
+            if (o1.region.getStartKey().isEmpty() && o2.region.getStartKey().isEmpty()) {
+              return 0;
+            }
+            if (o1.region.getStartKey().isEmpty()) {
+              return -1;
+            }
+            if (o2.region.getStartKey().isEmpty()) {
+              return 1;
+            }
+            return Key.toRawKey(o1.region.getStartKey())
+                .compareTo(Key.toRawKey(o2.region.getStartKey()));
+          });
+      return regionStorePairArrayList;
+    }
+
+    public boolean isRangeOverlap(KeyRange range1, KeyRange range2) {
+      boolean isRange1StartKeyBiggerOrEqualThanRange2EndKey =
+          Key.toRawKey(range1.getStart()).compareTo(Key.toRawKey(range2.getEnd())) >= 0
+              && !range2.getEnd().isEmpty()
+              && !range1.getStart().isEmpty();
+      boolean isRange1EndKeySmallerOrEqualThanRange2StartKey =
+          (Key.toRawKey(range1.getEnd()).compareTo(Key.toRawKey(range2.getStart())) <= 0
+                  && !range1.getEnd().isEmpty())
+              || range2.getStart().isEmpty();
+      return !(isRange1EndKeySmallerOrEqualThanRange2StartKey
+          || isRange1StartKeyBiggerOrEqualThanRange2EndKey);
     }
   }
 }

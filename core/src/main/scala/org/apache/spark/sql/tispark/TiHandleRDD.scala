@@ -82,7 +82,7 @@ class TiHandleRDD(
       private val regionHandleMap = RangeSplitter
         .newSplitter(regionManager)
         .groupByAndSortHandlesByRegionId(physicalId, handleList)
-        .map(x => (x._1.first.getId, x._2))
+        .map(x => (x._1.region.getId, x._2))
 
       private val iterator = regionHandleMap.iterator
 

@@ -18,6 +18,7 @@ package com.pingcap.tikv;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.pingcap.tikv.operation.PDErrorHandler.getRegionResponseErrorExtractor;
+import static com.pingcap.tikv.operation.PDErrorHandler.scanRegionResponseErrorExtractor;
 import static com.pingcap.tikv.pd.PDError.buildFromPdpbError;
 import static com.pingcap.tikv.pd.PDUtils.addrToUrl;
 
@@ -63,10 +64,13 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.kvproto.Metapb.Peer;
+import org.tikv.kvproto.Metapb.Region;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
 import org.tikv.kvproto.PDGrpc.PDStub;
+import org.tikv.kvproto.Pdpb;
 import org.tikv.kvproto.Pdpb.Error;
 import org.tikv.kvproto.Pdpb.ErrorType;
 import org.tikv.kvproto.Pdpb.GetAllStoresRequest;
@@ -82,6 +86,8 @@ import org.tikv.kvproto.Pdpb.GetStoreResponse;
 import org.tikv.kvproto.Pdpb.OperatorStatus;
 import org.tikv.kvproto.Pdpb.RequestHeader;
 import org.tikv.kvproto.Pdpb.ResponseHeader;
+import org.tikv.kvproto.Pdpb.ScanRegionsRequest;
+import org.tikv.kvproto.Pdpb.ScanRegionsResponse;
 import org.tikv.kvproto.Pdpb.ScatterRegionRequest;
 import org.tikv.kvproto.Pdpb.ScatterRegionResponse;
 import org.tikv.kvproto.Pdpb.Timestamp;
@@ -288,6 +294,58 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     callAsyncWithRetry(
         backOffer, PDGrpc.getGetRegionByIDMethod(), request, responseObserver, handler);
     return responseObserver.getFuture();
+  }
+
+  @Override
+  public List<TiRegion> scanRegionWithLimit(
+      BackOffer backOffer, ByteString startKey, ByteString endKey, int limit) {
+    CodecDataOutput startCdo = new CodecDataOutput();
+    BytesCodec.writeBytes(startCdo, startKey.toByteArray());
+    ByteString encodeStartKey = startCdo.toByteString();
+    CodecDataOutput endCdo = new CodecDataOutput();
+    BytesCodec.writeBytes(endCdo, endKey.toByteArray());
+    ByteString encodeEndKey = endCdo.toByteString();
+    Supplier<ScanRegionsRequest> request =
+        () ->
+            ScanRegionsRequest.newBuilder()
+                .setHeader(header)
+                .setStartKey(encodeStartKey)
+                .setEndKey(encodeEndKey)
+                .setLimit(limit)
+                .build();
+    PDErrorHandler<ScanRegionsResponse> handler =
+        new PDErrorHandler<>(scanRegionResponseErrorExtractor, this);
+    ScanRegionsResponse resp =
+        callWithRetry(backOffer, PDGrpc.getScanRegionsMethod(), request, handler);
+    return handleScanRegionResponse(resp);
+  }
+
+  private List<TiRegion> handleScanRegionResponse(ScanRegionsResponse response) {
+    List<TiRegion> tiRegions = new ArrayList<>();
+    if (response.getRegionsList().size() == 0) {
+      List<Region> metas = response.getRegionMetasList();
+      List<Peer> leaders = response.getLeadersList();
+      for (int i = 0; i < metas.size(); i++) {
+        Peer leader = null;
+        if (i < leaders.size()) {
+          leader = leaders.get(i);
+        }
+        TiRegion tiRegion =
+            new TiRegion(metas.get(i), leader, conf.getIsolationLevel(), conf.getCommandPriority());
+        tiRegions.add(tiRegion);
+      }
+    } else {
+      for (Pdpb.Region region : response.getRegionsList()) {
+        TiRegion tiRegion =
+            new TiRegion(
+                region.getRegion(),
+                region.getLeader(),
+                conf.getIsolationLevel(),
+                conf.getCommandPriority());
+        tiRegions.add(tiRegion);
+      }
+    }
+    return tiRegions;
   }
 
   private Supplier<GetStoreRequest> buildGetStoreReq(long storeId) {

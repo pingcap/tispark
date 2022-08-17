@@ -20,6 +20,7 @@ package com.pingcap.tikv.region;
 
 import static com.pingcap.tikv.codec.KeyUtils.formatBytesUTF8;
 import static com.pingcap.tikv.codec.KeyUtils.getEncodedKey;
+import static com.pingcap.tikv.key.Key.toRawKey;
 import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
 
 import com.google.common.collect.RangeMap;
@@ -30,9 +31,9 @@ import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.util.BackOffFunction.BackOffFuncType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Store;
@@ -47,12 +49,15 @@ import org.tikv.kvproto.Metapb.StoreState;
 
 @SuppressWarnings("UnstableApiUsage")
 public class RegionManager {
+
   private static final Logger logger = LoggerFactory.getLogger(RegionManager.class);
   // TODO: the region cache logic need rewrite.
   // https://github.com/pingcap/tispark/issues/1170
   private final RegionCache cache;
 
   private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
+
+  public static final int REGION_SCAN_LIMIT = 128;
 
   // To avoid double retrieval, we used the async version of grpc
   // When rpc not returned, instead of call again, it wait for previous one done
@@ -83,56 +88,120 @@ public class RegionManager {
     return cache.getRegionByKey(key, backOffer);
   }
 
-  public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key, BackOffer backOffer) {
+  public RegionStorePair getRegionTiKVStorePairByKey(ByteString key, BackOffer backOffer) {
     return getRegionStorePairByKey(key, TiStoreType.TiKV, backOffer);
   }
 
-  public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key) {
+  public RegionStorePair getRegionTiKVStorePairByKey(ByteString key) {
     return getRegionStorePairByKey(key, TiStoreType.TiKV);
   }
 
-  public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key, TiStoreType storeType) {
+  public RegionStorePair getRegionStorePairByKey(ByteString key, TiStoreType storeType) {
     return getRegionStorePairByKey(key, storeType, ConcreteBackOffer.newGetBackOff());
   }
 
-  public Pair<TiRegion, Store> getRegionStorePairByKey(
+  public RegionStorePair getRegionStorePairByKey(
       ByteString key, TiStoreType storeType, BackOffer backOffer) {
     TiRegion region = cache.getRegionByKey(key, backOffer);
     if (region == null) {
       throw new TiClientInternalException("Region not exist for key:" + formatBytesUTF8(key));
     }
-    if (!region.isValid()) {
-      throw new TiClientInternalException("Region invalid: " + region.toString());
-    }
+    Store store = getStoreInRegionByStoreType(region, storeType, backOffer);
+    return new RegionStorePair(region, store);
+  }
 
-    Store store = null;
-    if (storeType == TiStoreType.TiKV) {
-      Peer leader = region.getLeader();
-      store = cache.getStoreById(leader.getStoreId(), backOffer);
-    } else {
-      outerLoop:
-      for (Peer peer : region.getLearnerList()) {
-        Store s = getStoreById(peer.getStoreId(), backOffer);
-        for (Metapb.StoreLabel label : s.getLabelsList()) {
-          if (label.getKey().equals(storeType.getLabelKey())
-              && label.getValue().equals(storeType.getLabelValue())) {
-            store = s;
-            break outerLoop;
-          }
+  public List<RegionStorePair> getAllRegionTiKVStorePairsInRange(KeyRange range) {
+    return getAllRegionStorePairsInRange(range, TiStoreType.TiKV);
+  }
+
+  public List<RegionStorePair> getAllRegionTiKVStorePairsInRange(
+      KeyRange range, BackOffer backOffer) {
+    return getAllRegionStorePairsInRange(range, TiStoreType.TiKV, backOffer);
+  }
+
+  public List<RegionStorePair> getAllRegionStorePairsInRange(
+      KeyRange range, TiStoreType storeType) {
+    return getAllRegionStorePairsInRange(range, storeType, ConcreteBackOffer.newGetBackOff());
+  }
+
+  public List<RegionStorePair> getAllRegionStorePairsInRange(
+      KeyRange range, TiStoreType storeType, BackOffer backOffer) {
+    List<RegionStorePair> allRegionStorePairs = new ArrayList<>();
+    ByteString startKey = range.getStart();
+    ByteString endKey = range.getEnd();
+    while (toRawKey(startKey).compareTo(toRawKey(endKey)) < 0) {
+      try {
+        ArrayList<RegionStorePair> regionStorePairs;
+        ArrayList<TiRegion> regions =
+            cache.getRegionsInRangeWithLimit(range, backOffer, REGION_SCAN_LIMIT);
+        regionStorePairs = new ArrayList<>();
+        for (TiRegion region : regions) {
+          Store store = getStoreInRegionByStoreType(region, storeType, backOffer);
+          regionStorePairs.add(new RegionStorePair(region, store));
         }
-      }
-      if (store == null) {
-        // clear the region cache so we may get the learner peer next time
-        cache.invalidateRange(region.getStartKey(), region.getEndKey());
+        allRegionStorePairs.addAll(regionStorePairs);
+        startKey = regions.get(regions.size() - 1).getEndKey();
+        range = KeyRange.newBuilder().setStart(startKey).setEnd(endKey).build();
+      } catch (Exception e) {
+        logger.warn("getAllRegionStorePair error", e);
+        backOffer.doBackOff(BackOffFuncType.BoRegionMiss, e);
       }
     }
+    return allRegionStorePairs;
+  }
 
+  public Store getStoreInRegionByStoreType(TiRegion region, TiStoreType storeType) {
+    return getStoreInRegionByStoreType(region, storeType, ConcreteBackOffer.newGetBackOff());
+  }
+
+  public Store getStoreInRegionByStoreType(
+      TiRegion region, TiStoreType storeType, BackOffer backOffer) {
+    if (!region.isValid()) {
+      throw new TiClientInternalException("Region invalid: " + region);
+    }
+    Store store;
+    if (storeType == TiStoreType.TiKV) {
+      store = getLeaderStoreInRegion(region, storeType, backOffer);
+    } else {
+      store = getLearnerStoreWithLabelInRegion(region, storeType, backOffer);
+    }
+    return store;
+  }
+
+  // Get store which is leader in region.
+  // storeType is just for error message.
+  private Store getLeaderStoreInRegion(
+      TiRegion region, TiStoreType storeType, BackOffer backOffer) {
+    Peer leader = region.getLeader();
+    Store store = cache.getStoreById(leader.getStoreId(), backOffer);
     if (store == null) {
       throw new TiClientInternalException(
-          "Cannot find valid store on " + storeType + " for region " + region.toString());
+          "Cannot find valid store on " + storeType + " for region " + region);
     }
+    return cache.getStoreById(leader.getStoreId(), backOffer);
+  }
 
-    return Pair.create(region, store);
+  // Get store which is learner and has same label in storeType.
+  private Store getLearnerStoreWithLabelInRegion(
+      TiRegion region, TiStoreType storeType, BackOffer backOffer) {
+    Store store = null;
+    outerLoop:
+    for (Peer peer : region.getLearnerList()) {
+      Store learnerStore = getStoreById(peer.getStoreId(), backOffer);
+      for (Metapb.StoreLabel label : learnerStore.getLabelsList()) {
+        if (storeType.getStoreLable().equals(label)) {
+          store = learnerStore;
+          break outerLoop;
+        }
+      }
+    }
+    if (store == null) {
+      // clear the region cache, so we may get the learner peer next time
+      cache.invalidateRange(region.getStartKey(), region.getEndKey());
+      throw new TiClientInternalException(
+          "Cannot find valid store on " + storeType + " for region " + region);
+    }
+    return store;
   }
 
   public Store getStoreById(long id) {
@@ -184,10 +253,12 @@ public class RegionManager {
   }
 
   public static class RegionCache {
+
     // private final Map<Long, TiRegion> regionCache;
     private final Map<Long, Store> storeCache;
     private final RangeMap<Key, TiRegion> regionCache;
     private final ReadOnlyPDClient pdClient;
+    public static final int SCAN_REGION_LIMIT = 128;
 
     public RegionCache(ReadOnlyPDClient pdClient) {
       regionCache = TreeRangeMap.create();
@@ -214,6 +285,33 @@ public class RegionManager {
       return region;
     }
 
+    public synchronized ArrayList<TiRegion> getRegionsInRangeWithLimit(
+        KeyRange range, BackOffer backOffer, int scanLimit) {
+      ByteString startKey = range.getStart();
+      ByteString endKey = range.getEnd();
+      ArrayList<TiRegion> regionsInRange = new ArrayList<>();
+      while (toRawKey(startKey).compareTo(toRawKey(endKey)) < 0
+          && regionsInRange.size() < scanLimit) {
+
+        TiRegion region = regionCache.get(getEncodedKey(startKey));
+        while (region == null) {
+          try {
+            updateCacheInRangeWithLimit(startKey, endKey, scanLimit, backOffer);
+            region = regionCache.get(getEncodedKey(startKey));
+            if (region == null) {
+              throw new NullPointerException("fail to get region by key " + startKey);
+            }
+          } catch (Exception e) {
+            backOffer.doBackOff(BackOffFuncType.BoRegionMiss, e);
+          }
+        }
+
+        regionsInRange.add(region);
+        startKey = region.getEndKey();
+      }
+      return regionsInRange;
+    }
+
     private synchronized boolean putRegion(TiRegion region) {
       if (logger.isDebugEnabled()) {
         logger.debug("putRegion: " + region);
@@ -221,6 +319,22 @@ public class RegionManager {
       regionCache.remove(makeRange(region.getStartKey(), region.getEndKey()));
       regionCache.put(makeRange(region.getStartKey(), region.getEndKey()), region);
       return true;
+    }
+
+    private synchronized void updateCacheInRangeWithLimit(
+        ByteString startKey, ByteString endKey, int limit, BackOffer backOffer)
+        throws GrpcException {
+      List<TiRegion> regions = pdClient.scanRegionWithLimit(backOffer, startKey, endKey, limit);
+      for (TiRegion region : regions) {
+        // Region without leader.
+        if (region.getLeader() == null || region.getLeader().getId() == 0) {
+          continue;
+        }
+        // Region which has leader will be inserted into cache.
+        if (!putRegion(region)) {
+          throw new TiClientInternalException("Invalid Region: " + region);
+        }
+      }
     }
 
     public synchronized boolean updateRegion(TiRegion expected, TiRegion region) {
@@ -298,6 +412,17 @@ public class RegionManager {
       } catch (Exception e) {
         throw new GrpcException(e);
       }
+    }
+  }
+
+  public class RegionStorePair {
+
+    public TiRegion region;
+    public Store store;
+
+    public RegionStorePair(TiRegion region, Store store) {
+      this.region = region;
+      this.store = store;
     }
   }
 }

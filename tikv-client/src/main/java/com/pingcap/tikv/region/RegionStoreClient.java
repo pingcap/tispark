@@ -40,6 +40,7 @@ import com.pingcap.tikv.exception.SelectException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.operation.KVErrorHandler;
+import com.pingcap.tikv.region.RegionManager.RegionStorePair;
 import com.pingcap.tikv.streaming.StreamingResponse;
 import com.pingcap.tikv.txn.AbstractLockResolverClient;
 import com.pingcap.tikv.txn.Lock;
@@ -49,7 +50,6 @@ import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.Batch;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
 import java.util.ArrayList;
@@ -163,8 +163,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
               clientBuilder);
 
     } else {
-      Store tikvStore =
-          regionManager.getRegionStorePairByKey(region.getStartKey(), TiStoreType.TiKV).second;
+      Store tikvStore = regionManager.getStoreInRegionByStoreType(region, TiStoreType.TiKV);
 
       String addressStr = tikvStore.getAddress();
       if (logger.isDebugEnabled()) {
@@ -1273,8 +1272,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
 
     public synchronized RegionStoreClient build(ByteString key, TiStoreType storeType)
         throws GrpcException {
-      Pair<TiRegion, Store> pair = regionManager.getRegionStorePairByKey(key, storeType);
-      return build(pair.first, pair.second, storeType);
+      RegionStorePair regionStorePairByKey = regionManager.getRegionStorePairByKey(key, storeType);
+      return build(regionStorePairByKey.region, regionStorePairByKey.store, storeType);
     }
 
     public synchronized RegionStoreClient build(TiRegion region) throws GrpcException {

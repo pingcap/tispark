@@ -47,7 +47,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.Op;
-import org.tikv.kvproto.Metapb;
 
 public class TwoPhaseCommitter {
 
@@ -146,8 +145,7 @@ public class TwoPhaseCommitter {
 
   private void doPrewritePrimaryKeyWithRetry(BackOffer backOffer, ByteString key, ByteString value)
       throws TiBatchWriteException {
-    Pair<TiRegion, Metapb.Store> pair = this.regionManager.getRegionStorePairByKey(key, backOffer);
-    TiRegion tiRegion = pair.first;
+    TiRegion tiRegion = this.regionManager.getRegionByKey(key, backOffer);
 
     Kvrpcpb.Mutation mutation;
     if (!value.isEmpty()) {
@@ -200,8 +198,7 @@ public class TwoPhaseCommitter {
 
   private void doCommitPrimaryKeyWithRetry(BackOffer backOffer, ByteString key, long commitTs)
       throws TiBatchWriteException {
-    Pair<TiRegion, Metapb.Store> pair = this.regionManager.getRegionStorePairByKey(key, backOffer);
-    TiRegion tiRegion = pair.first;
+    TiRegion tiRegion = this.regionManager.getRegionByKey(key, backOffer);
     List<ByteString> keys = new ArrayList<>();
     keys.add(key);
 

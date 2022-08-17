@@ -26,6 +26,7 @@ import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
+import com.pingcap.tikv.region.RegionManager.RegionStorePair;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
@@ -33,7 +34,6 @@ import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -403,10 +403,10 @@ public class TiSession implements AutoCloseable {
         groupKeysByRegion(regionManager, splitKeys, backOffer);
     for (Map.Entry<TiRegion, List<ByteString>> entry : groupKeys.entrySet()) {
 
-      Pair<TiRegion, Metapb.Store> pair =
-          getRegionManager().getRegionStorePairByKey(entry.getKey().getStartKey());
-      TiRegion region = pair.first;
-      Metapb.Store store = pair.second;
+      RegionStorePair regionStorePairByKey =
+          getRegionManager().getRegionTiKVStorePairByKey(entry.getKey().getStartKey());
+      TiRegion region = regionStorePairByKey.region;
+      Metapb.Store store = regionStorePairByKey.store;
       List<ByteString> splits =
           entry
               .getValue()

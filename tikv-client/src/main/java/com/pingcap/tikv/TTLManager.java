@@ -22,6 +22,7 @@ import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiBatchWriteException;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
+import com.pingcap.tikv.region.RegionManager.RegionStorePair;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.txn.type.ClientRPCResult;
@@ -29,7 +30,6 @@ import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.LogDesensitization;
-import com.pingcap.tikv.util.Pair;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -120,9 +120,9 @@ public class TTLManager {
   }
 
   private void sendTxnHeartBeat(BackOffer bo, long ttl) {
-    Pair<TiRegion, Metapb.Store> pair = regionManager.getRegionStorePairByKey(primaryLock);
-    TiRegion tiRegion = pair.first;
-    Metapb.Store store = pair.second;
+    RegionStorePair regionStorePairByKey = regionManager.getRegionTiKVStorePairByKey(primaryLock);
+    TiRegion tiRegion = regionStorePairByKey.region;
+    Metapb.Store store = regionStorePairByKey.store;
 
     ClientRPCResult result = kvClient.txnHeartBeat(bo, primaryLock, startTS, ttl, tiRegion, store);
 

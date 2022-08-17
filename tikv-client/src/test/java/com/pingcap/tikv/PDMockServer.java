@@ -16,6 +16,8 @@
 
 package com.pingcap.tikv;
 
+import com.google.protobuf.ByteString;
+import com.pingcap.tikv.key.Key;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.Status;
@@ -25,7 +27,9 @@ import java.net.ServerSocket;
 import java.util.Deque;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingDeque;
+import org.tikv.kvproto.Metapb.Region;
 import org.tikv.kvproto.PDGrpc;
+import org.tikv.kvproto.Pdpb;
 import org.tikv.kvproto.Pdpb.GetMembersRequest;
 import org.tikv.kvproto.Pdpb.GetMembersResponse;
 import org.tikv.kvproto.Pdpb.GetRegionByIDRequest;
@@ -33,6 +37,10 @@ import org.tikv.kvproto.Pdpb.GetRegionRequest;
 import org.tikv.kvproto.Pdpb.GetRegionResponse;
 import org.tikv.kvproto.Pdpb.GetStoreRequest;
 import org.tikv.kvproto.Pdpb.GetStoreResponse;
+import org.tikv.kvproto.Pdpb.ResponseHeader;
+import org.tikv.kvproto.Pdpb.ScanRegionsRequest;
+import org.tikv.kvproto.Pdpb.ScanRegionsResponse;
+import org.tikv.kvproto.Pdpb.ScanRegionsResponse.Builder;
 import org.tikv.kvproto.Pdpb.TsoRequest;
 import org.tikv.kvproto.Pdpb.TsoResponse;
 
@@ -102,6 +110,39 @@ public class PDMockServer extends PDGrpc.PDImplBase {
   public void getRegionByID(GetRegionByIDRequest request, StreamObserver<GetRegionResponse> resp) {
     try {
       resp.onNext(getRegionByIDResp.removeFirst());
+      resp.onCompleted();
+    } catch (Exception e) {
+      resp.onError(Status.INTERNAL.asRuntimeException());
+    }
+  }
+
+  @Override
+  public void scanRegions(ScanRegionsRequest request, StreamObserver<ScanRegionsResponse> resp) {
+    try {
+      ByteString startKey = request.getStartKey();
+      ByteString endKey = request.getEndKey();
+      int limit = request.getLimit();
+      int size = 0;
+      Builder builder = ScanRegionsResponse.newBuilder();
+      for (GetRegionResponse response : getRegionResp) {
+        Region region = response.getRegion();
+        if (Key.toRawKey(endKey).compareTo(Key.toRawKey(region.getStartKey())) > 0
+            || Key.toRawKey(startKey).compareTo(Key.toRawKey(region.getEndKey())) < 0) {
+          Pdpb.Region respRegion =
+              Pdpb.Region.newBuilder()
+                  .setRegion(response.getRegion())
+                  .setLeader(response.getLeader())
+                  .build();
+          builder.addRegions(respRegion);
+          size++;
+          if (size > limit) {
+            break;
+          }
+        }
+      }
+      ResponseHeader defaultHeader = ResponseHeader.newBuilder().setClusterId(clusterId).build();
+      builder.setHeader(defaultHeader);
+      resp.onNext(builder.build());
       resp.onCompleted();
     } catch (Exception e) {
       resp.onError(Status.INTERNAL.asRuntimeException());

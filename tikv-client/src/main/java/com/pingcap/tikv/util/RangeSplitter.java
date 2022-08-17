@@ -16,18 +16,20 @@
 
 package com.pingcap.tikv.util;
 
-import static com.pingcap.tikv.key.Key.toRawKey;
 import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
 import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.RegionManager;
+import com.pingcap.tikv.region.RegionManager.RegionStorePair;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.region.TiStoreType;
+import com.pingcap.tikv.util.BackOffFunction.BackOffFuncType;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -61,12 +63,11 @@ public class RangeSplitter {
    * @param handles Handle list
    * @return <Region, HandleList> map
    */
-  public Map<Pair<TiRegion, Metapb.Store>, List<Handle>> groupByAndSortHandlesByRegionId(
+  public Map<RegionStorePair, List<Handle>> groupByAndSortHandlesByRegionId(
       long tableId, List<Handle> handles) {
     TLongObjectHashMap<List<Handle>> regionHandles = new TLongObjectHashMap<>();
-    TLongObjectHashMap<Pair<TiRegion, Metapb.Store>> idToRegionStorePair =
-        new TLongObjectHashMap<>();
-    Map<Pair<TiRegion, Metapb.Store>, List<Handle>> result = new HashMap<>();
+    TLongObjectHashMap<RegionStorePair> idToRegionStorePair = new TLongObjectHashMap<>();
+    Map<RegionStorePair, List<Handle>> result = new HashMap<>();
     handles.sort(Handle::compare);
 
     byte[] endKey = null;
@@ -80,9 +81,9 @@ public class RangeSplitter {
           regionHandles.put(curRegion.getId(), handlesInCurRegion);
           handlesInCurRegion = new ArrayList<>();
         }
-        Pair<TiRegion, Metapb.Store> regionStorePair =
-            regionManager.getRegionStorePairByKey(ByteString.copyFrom(key.getBytes()));
-        curRegion = regionStorePair.first;
+        RegionStorePair regionStorePair =
+            regionManager.getRegionTiKVStorePairByKey(ByteString.copyFrom(key.getBytes()));
+        curRegion = regionStorePair.region;
         idToRegionStorePair.put(curRegion.getId(), regionStorePair);
         endKey = curRegion.getEndKey().toByteArray();
       }
@@ -93,7 +94,7 @@ public class RangeSplitter {
     }
     regionHandles.forEachEntry(
         (k, v) -> {
-          Pair<TiRegion, Metapb.Store> regionStorePair = idToRegionStorePair.get(k);
+          RegionStorePair regionStorePair = idToRegionStorePair.get(k);
           result.put(regionStorePair, v);
           return true;
         });
@@ -119,7 +120,7 @@ public class RangeSplitter {
     // Max value for current index handle range
     ImmutableList.Builder<RegionTask> regionTasks = ImmutableList.builder();
 
-    Map<Pair<TiRegion, Metapb.Store>, List<Handle>> regionHandlesMap =
+    Map<RegionStorePair, List<Handle>> regionHandlesMap =
         groupByAndSortHandlesByRegionId(tableId, handles);
 
     regionHandlesMap.forEach((k, v) -> createTask(0, v.size(), tableId, v, k, regionTasks));
@@ -132,7 +133,7 @@ public class RangeSplitter {
       int endPos,
       long tableId,
       List<Handle> handles,
-      Pair<TiRegion, Metapb.Store> regionStorePair,
+      RegionStorePair regionStorePair,
       ImmutableList.Builder<RegionTask> regionTasks) {
     List<KeyRange> newKeyRanges = new ArrayList<>(endPos - startPos + 1);
     Handle startHandle = handles.get(startPos);
@@ -154,7 +155,7 @@ public class RangeSplitter {
         makeCoprocRange(
             RowKey.toRowKey(tableId, startHandle).toByteString(),
             RowKey.toRowKey(tableId, endHandle.next()).toByteString()));
-    regionTasks.add(new RegionTask(regionStorePair.first, regionStorePair.second, newKeyRanges));
+    regionTasks.add(new RegionTask(regionStorePair.region, regionStorePair.store, newKeyRanges));
   }
 
   /**
@@ -168,64 +169,82 @@ public class RangeSplitter {
     if (keyRanges == null || keyRanges.size() == 0) {
       return ImmutableList.of();
     }
-
-    int i = 0;
-    KeyRange range = keyRanges.get(i++);
     Map<Long, List<KeyRange>> idToRange = new HashMap<>(); // region id to keyRange list
-    Map<Long, Pair<TiRegion, Metapb.Store>> idToRegion = new HashMap<>();
-
-    while (true) {
-      Pair<TiRegion, Metapb.Store> regionStorePair = null;
-
-      BackOffer bo = ConcreteBackOffer.newGetBackOff();
-      while (regionStorePair == null) {
+    Map<Long, RegionStorePair> idToRegion = new HashMap<>();
+    BackOffer bo = ConcreteBackOffer.newGetBackOff();
+    for (KeyRange range : keyRanges) {
+      while (true) {
         try {
-          regionStorePair = regionManager.getRegionStorePairByKey(range.getStart(), storeType, bo);
-
-          if (regionStorePair == null) {
-            throw new NullPointerException(
-                "fail to get region/store pair by key " + formatByteString(range.getStart()));
+          List<RegionStorePair> regionStorePairList =
+              regionManager.getAllRegionStorePairsInRange(range, storeType, bo);
+          for (RegionStorePair regionStorePair : regionStorePairList) {
+            TiRegion region = regionStorePair.region;
+            // Add region id to RegionStorePair Map.
+            idToRegion.putIfAbsent(region.getId(), regionStorePair);
           }
-        } catch (Exception e) {
-          LOG.warn("getRegionStorePairByKey error", e);
-          bo.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
-        }
-      }
-
-      TiRegion region = regionStorePair.first;
-      idToRegion.putIfAbsent(region.getId(), regionStorePair);
-
-      // both key range is close-opened
-      // initial range inside PD is guaranteed to be -INF to +INF
-      // Both keys are at right hand side and then always not -INF
-      if (toRawKey(range.getEnd()).compareTo(toRawKey(region.getEndKey())) > 0) {
-        // current region does not cover current end key
-        KeyRange cutRange =
-            KeyRange.newBuilder().setStart(range.getStart()).setEnd(region.getEndKey()).build();
-
-        List<KeyRange> ranges = idToRange.computeIfAbsent(region.getId(), k -> new ArrayList<>());
-        ranges.add(cutRange);
-
-        // cut new remaining for current range
-        range = KeyRange.newBuilder().setStart(region.getEndKey()).setEnd(range.getEnd()).build();
-      } else {
-        // current range covered by region
-        List<KeyRange> ranges = idToRange.computeIfAbsent(region.getId(), k -> new ArrayList<>());
-        ranges.add(range);
-        if (i >= keyRanges.size()) {
+          extractScanRangeForRegion(idToRange, range, regionStorePairList);
           break;
+        } catch (Exception e) {
+          LOG.warn("getAllRegionStorePairsInRange error", e);
+          bo.doBackOff(BackOffFuncType.BoRegionMiss, e);
         }
-        range = keyRanges.get(i++);
       }
     }
-
     ImmutableList.Builder<RegionTask> resultBuilder = ImmutableList.builder();
     idToRange.forEach(
         (k, v) -> {
-          Pair<TiRegion, Metapb.Store> regionStorePair = idToRegion.get(k);
-          resultBuilder.add(new RegionTask(regionStorePair.first, regionStorePair.second, v));
+          RegionStorePair regionStorePair = idToRegion.get(k);
+          resultBuilder.add(new RegionTask(regionStorePair.region, regionStorePair.store, v));
         });
     return resultBuilder.build();
+  }
+
+  private static void extractScanRangeForRegion(
+      Map<Long, List<KeyRange>> idToRange,
+      KeyRange range,
+      List<RegionStorePair> regionStorePairList) {
+    if (regionStorePairList.size() == 0) {
+      throw new TiClientInternalException(
+          String.format(
+              "fail to get region/store pairs in [ %s, %s ) ", range.getStart(), range.getEnd()));
+    }
+
+    // Both key range is close-opened.
+    // Initial region range inside PD is guaranteed to be -INF to +INF.
+    // Both keys are at right hand side and always not -INF.
+
+    if (regionStorePairList.size() == 1) {
+      // If only one region is returned, the range is covered by the region.
+      // So the scan range is same as range.
+      TiRegion region = regionStorePairList.get(0).region;
+      idToRange.computeIfAbsent(region.getId(), k -> new ArrayList<>()).add(range);
+      return;
+    }
+
+    // regionStorePairList.size() >= 2
+
+    // the first region`s startKey is smaller or equal than the range`s start.
+    // So the first scan range is [ range.getStart(), firstRegion.getEndKey() ).
+    TiRegion firstRegion = regionStorePairList.get(0).region;
+    KeyRange firstScanRange =
+        KeyRange.newBuilder().setStart(range.getStart()).setEnd(firstRegion.getEndKey()).build();
+    idToRange.computeIfAbsent(firstRegion.getId(), k -> new ArrayList<>()).add(firstScanRange);
+
+    for (int i = 1; i < regionStorePairList.size() - 1; i++) {
+      // The region which is the last region will necessarily be covered by the range.
+      // So the middle scan range is [ region.getStartKey(), region.getEndKey() ).
+      TiRegion region = regionStorePairList.get(i).region;
+      KeyRange midScanRange =
+          KeyRange.newBuilder().setStart(region.getStartKey()).setEnd(region.getEndKey()).build();
+      idToRange.computeIfAbsent(region.getId(), k -> new ArrayList<>()).add(midScanRange);
+    }
+
+    // the last region`s endKey is greater or equal than range`s end.
+    // So the last scan range is [ lastRegion.getStartKey(), range.getEnd() ).
+    TiRegion lastRegion = regionStorePairList.get(regionStorePairList.size() - 1).region;
+    KeyRange lastScanRange =
+        KeyRange.newBuilder().setStart(lastRegion.getStartKey()).setEnd(range.getEnd()).build();
+    idToRange.computeIfAbsent(lastRegion.getId(), k -> new ArrayList<>()).add(lastScanRange);
   }
 
   /**
