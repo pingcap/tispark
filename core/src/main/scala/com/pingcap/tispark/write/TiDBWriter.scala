@@ -29,7 +29,6 @@ object TiDBWriter {
       options: TiDBOptions): Unit = {
     val sparkSession = sqlContext.sparkSession
 
-    options.checkWriteRequired()
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
         val tableExists =
