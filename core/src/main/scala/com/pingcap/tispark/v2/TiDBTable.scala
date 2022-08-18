@@ -20,9 +20,8 @@ import com.pingcap.tikv.ClientSession
 import com.pingcap.tikv.handle.Handle
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
 import com.pingcap.tispark.TiTableReference
-import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
-import com.pingcap.tispark.v2.sink.TiDBWriteBuilder
 import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions}
 import org.apache.commons.codec.binary.Hex
 import org.apache.commons.lang3.StringUtils
@@ -44,8 +43,6 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.sql.{SQLContext, execution}
 import org.slf4j.LoggerFactory
-import org.tikv.common.exception
-import org.tikv.common.exception.TiBatchWriteException
 import org.tikv.common.meta.TiTimestamp
 
 import java.sql.{Date, SQLException, Timestamp}
@@ -115,6 +112,7 @@ case class TiDBTable(
   override def capabilities(): util.Set[TableCapability] = {
     val capabilities = new util.HashSet[TableCapability]
     capabilities.add(TableCapability.BATCH_READ)
+    capabilities.add(TableCapability.V1_BATCH_WRITE)
     capabilities
   }
 
@@ -129,22 +127,16 @@ case class TiDBTable(
   }
 
   override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = {
-    var scalaMap = info.options().asScala.toMap
-    // TODO https://github.com/pingcap/tispark/issues/2269 we need to move TiDB dependencies which will block insert SQL.
-    // if we don't support it before release, insert SQL should throw exception in catalyst
-    if (scalaMap.isEmpty) {
-      throw new TiBatchWriteException("tidbOption is neccessary.")
+    var option = sqlContext.getAllConfs
+    if (!option.contains(TiDBOptions.TIDB_DATABASE)) {
+      option += (TiDBOptions.TIDB_DATABASE -> databaseName)
     }
-    // Support df.writeto: need add db and table for write
-    if (!scalaMap.contains("database")) {
-      scalaMap += ("database" -> databaseName)
-    }
-    if (!scalaMap.contains("table")) {
-      scalaMap += ("table" -> tableName)
+    if (!option.contains(TiDBOptions.TIDB_TABLE)) {
+      option += (TiDBOptions.TIDB_TABLE -> tableName)
     }
     // Get TiDBOptions
-    val tiDBOptions = new TiDBOptions(scalaMap)
-    TiDBWriteBuilder(info, tiDBOptions, sqlContext)
+    val tiDBOptions = new TiDBOptions(option)
+    ReflectionUtil.newTiDBWriteBuilder(info, tiDBOptions, sqlContext)
   }
 
   override def deleteWhere(filters: Array[Filter]): Unit = {

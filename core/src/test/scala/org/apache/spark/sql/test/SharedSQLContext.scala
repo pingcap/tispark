@@ -172,7 +172,9 @@ trait SharedSQLContext
     // 3.0.x (x >= 14)
     // 3.1.x (x >= 0)
     // >= 4.0.0
-    ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(ti.clientSession.getTiKVSession.getPDClient, Version.BATCH_WRITE)
+    ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
+      ti.clientSession.getTiKVSession.getPDClient,
+      Version.BATCH_WRITE)
   }
 
   protected def initializeStatement(): Unit = {

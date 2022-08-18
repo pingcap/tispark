@@ -75,7 +75,9 @@ class CountPushDownSuite extends BasePushDownSuite() {
     }
 
     // Count(bit) can push down after 6.0.0
-    if (ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(ti.clientSession.getTiKVSession.getPDClient, "6.0.0")) {
+    if (ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
+        ti.clientSession.getTiKVSession.getPDClient,
+        "6.0.0")) {
       val query = "select count(tp_bit) from " + tableName
       val df = spark.sql(query)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
@@ -87,7 +89,9 @@ class CountPushDownSuite extends BasePushDownSuite() {
     }
 
     // Count(enum) can push down after 5.1.0
-    if (ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(ti.clientSession.getTiKVSession.getPDClient, "5.1.0")) {
+    if (ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
+        ti.clientSession.getTiKVSession.getPDClient,
+        "5.1.0")) {
       val query = "select count(tp_enum) from " + tableName
       val df = spark.sql(query)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
@@ -119,7 +123,9 @@ class CountPushDownSuite extends BasePushDownSuite() {
     }
 
     // Count(bit) can push down after 6.0.0
-    if (ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(ti.clientSession.getTiKVSession.getPDClient, "6.0.0")) {
+    if (ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
+        ti.clientSession.getTiKVSession.getPDClient,
+        "6.0.0")) {
       val query = "select count(tp_bit) from " + tableName
       val df = spark.sql(query)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
@@ -131,7 +137,9 @@ class CountPushDownSuite extends BasePushDownSuite() {
     }
 
     // Count(enum) can push down after 5.1.0
-    if (ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(ti.clientSession.getTiKVSession.getPDClient, "5.1.0")) {
+    if (ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
+        ti.clientSession.getTiKVSession.getPDClient,
+        "5.1.0")) {
       val query = "select count(tp_enum) from " + tableName
       val df = spark.sql(query)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {

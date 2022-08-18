@@ -118,7 +118,9 @@ class BatchWritePKAndIndexSuite
   // https://github.com/pingcap/tispark/issues/2452
   test("test duplicate unique indexes are not deleted error") {
     tidbStmt.execute("drop table if exists `tispark_test`.`t`")
-    if (!ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(this.ti.clientSession.getTiKVSession.getPDClient, "5.0.0")) {
+    if (!ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
+        this.ti.clientSession.getTiKVSession.getPDClient,
+        "5.0.0")) {
       cancel("TiDB version must bigger than 5.0.0")
     }
     tidbStmt.execute("""
@@ -166,7 +168,9 @@ class BatchWritePKAndIndexSuite
   // https://github.com/pingcap/tispark/issues/2391
   test("test bug fix incorrect uniqueIndex key when table is not intHandle") {
     tidbStmt.execute("drop table if exists `tispark_test`.`t`")
-    if (!ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(this.ti.clientSession.getTiKVSession.getPDClient, "5.0.0")) {
+    if (!ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
+        this.ti.clientSession.getTiKVSession.getPDClient,
+        "5.0.0")) {
       cancel("TiDB version must bigger than 5.0.0")
     }
     tidbStmt.execute("""
