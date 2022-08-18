@@ -20,16 +20,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.apache.spark.sql.{AnalysisException, Row}
-import org.scalatest.Matchers.{
-  be,
-  contain,
-  convertToAnyShouldWrapper,
-  have,
-  message,
-  noException,
-  not,
-  the
-}
+import org.scalatest.Matchers.{be, contain, convertToAnyShouldWrapper, have, message, noException, not, the}
 
 import java.sql.SQLException
 
@@ -98,7 +89,8 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     // a exception will occur since it's a V1 table.
     exception should not have message(
       s"DELETE command denied to user `$user`@% for table default.`$hive_table`")
-    exception should have message s"DELETE is only supported with v2 tables."
+    exception should (have message s"DELETE is only supported with v2 tables."
+      or have message s"DELETE is only supported with v2 tables.;")
 
     spark.sql(s"DROP TABLE IF EXISTS `$hive_table`")
   }
