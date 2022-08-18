@@ -20,7 +20,16 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.apache.spark.sql.{AnalysisException, Row}
-import org.scalatest.Matchers.{be, contain, convertToAnyShouldWrapper, have, message, noException, not, the}
+import org.scalatest.Matchers.{
+  be,
+  contain,
+  convertToAnyShouldWrapper,
+  have,
+  message,
+  noException,
+  not,
+  the
+}
 
 import java.sql.SQLException
 
