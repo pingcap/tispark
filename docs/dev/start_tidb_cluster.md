@@ -27,7 +27,7 @@ You can find more details about TiUP [here](https://docs.pingcap.com/tidb/stable
 
    The test data of TiSpark is very complicated, so that the default config of TiDB is not enough.
    You need to get a copy of TiDB config file from [here](https://github.com/pingcap/tidb/blob/master/config/config.toml.example),
-   rename it to `config.toml` and set `index-limit` to 512.
+   rename it to `config.toml` and set `index-limit` to 512 if you want to pass the tispark test
   
 4. Start the cluster in the current session
    

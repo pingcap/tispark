@@ -110,7 +110,8 @@ public class TiChunkColumnVector extends TiColumnVector {
    */
   @Override
   public boolean getBoolean(int rowId) {
-    return false;
+    int value = getInt(rowId);
+    return value == 1;
   }
 
   public byte getByte(int rowId) {

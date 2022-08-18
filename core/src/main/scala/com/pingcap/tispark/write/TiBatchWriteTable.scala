@@ -42,7 +42,6 @@ class TiBatchWriteTable(
     @transient val tiContext: TiContext,
     val options: TiDBOptions,
     val tiConf: TiConfiguration,
-    @transient val tiDBJDBCClient: TiDBJDBCClient,
     val isTiDBV4: Boolean,
     val tiTable: TableCommon)
     extends Serializable {
@@ -52,8 +51,8 @@ class TiBatchWriteTable(
 
   @transient private val tiSession = tiContext.tiSession
   // only fetch row format version once for each batch write process
-  private val enableNewRowFormat: Boolean =
-    if (isTiDBV4) tiDBJDBCClient.getRowFormatVersion == 2 else false
+
+  private val enableNewRowFormat: Boolean = options.tidbRowFormatVersion == 2
   private val tiTableRef: TiTableReference = options.getTiTableRef(tiConf)
   private val tiDBInfo: TiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
   private val tiTableInfo = tiTable.getTableInfo
@@ -65,6 +64,7 @@ class TiBatchWriteTable(
     tiTableInfo.getIndices.asScala.filter(index => index.isUnique)
   private val handleCol: TiColumnInfo = tiTableInfo.getPKIsHandleColumn
   private var tableLocked: Boolean = false
+
   private var autoIncProvidedID: Boolean = false
   // isCommonHandle = true => clustered index
   private val isCommonHandle = tiTableInfo.isCommonHandle
@@ -277,15 +277,6 @@ class TiBatchWriteTable(
     persistedKeyValueRDD
   }
 
-  def lockTable(): Unit = {
-    if (!tableLocked) {
-      tiDBJDBCClient.lockTableWriteLocal(options.database, options.table)
-      tableLocked = true
-    } else {
-      logger.warn("table already locked!")
-    }
-  }
-
   // if rdd contains same key, it means we need first delete the old value and insert the new value associated the
   // key. We can merge the two operation into one update operation.
   private def unionInsertDelete(
@@ -298,13 +289,6 @@ class TiBatchWriteTable(
         if (r1.encodedValue.isEmpty) r2 else r1
       }
       .map(_._2)
-  }
-
-  def unlockTable(): Unit = {
-    if (tableLocked) {
-      tiDBJDBCClient.unlockTables()
-      tableLocked = false
-    }
   }
 
   def checkUnsupported(): Unit = {
@@ -352,7 +336,7 @@ class TiBatchWriteTable(
   }
 
   // update table statistics: modify_count & count
-  def updateTableStatistics(startTs: Long): Unit = {
+  def updateTableStatistics(startTs: Long, tiDBJDBCClient: TiDBJDBCClient): Unit = {
     try {
       tiDBJDBCClient.updateTableStatistics(startTs, tiTableInfo.getId, deltaCount, modifyCount)
     } catch {
