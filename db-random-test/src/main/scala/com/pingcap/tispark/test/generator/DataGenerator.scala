@@ -56,7 +56,7 @@ object DataGenerator {
   // F indicates the fraction of date/datetime format
   val withF: List[ReflectedDataType] = timestamps ::: durations
 
-  val numeric: List[ReflectedDataType] = bits ::: booleans ::: integers ::: decimals ::: doubles
+  val numeric: List[ReflectedDataType] = bits ::: integers ::: decimals ::: doubles
   val dateAndDateTime: List[ReflectedDataType] = timestamps ::: dates ::: durations ::: years
 
   val stringAndBinaries: List[ReflectedDataType] = strings ::: binaries
@@ -71,7 +71,7 @@ object DataGenerator {
 
   // TODO: support json
   val allDataTypes: List[ReflectedDataType] =
-    numeric ::: dateAndDateTime ::: stringType ::: enumAndSets
+    numeric ::: dateAndDateTime ::: stringType ::: enumAndSets ::: booleans
   // supported data types for generator
   val supportedDataTypes: List[ReflectedDataType] = allDataTypes
 
