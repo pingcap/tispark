@@ -11,11 +11,14 @@ First of all, you need to have your own copy of TiSpark. Just click Fork button 
 
 ## Clone to your workspace
 After get your own copy of TiSpark, you need to clone the code to your local workspace.
-You can clone your copy by the following command.
+You can clone your copy using `git clone` and use `git remote add`to add the upstream repo,
+so that you can pull the latest code in the upstream master branch to reduce the conflict.
 ```
 git clone git@github.com:${YOUR_GITHUB_NAME}/tispark.git
 
 cd tispark
+
+git remote add upstream git@github.pingcap/tispark.git
 ```
 
 ## Create your branch
@@ -26,13 +29,15 @@ git checkout -b my-branch
 ```
 
 ## Commit your change
-After finishing coding for your change, you should make a commit and write a brief comment about it. Then, you need to  push the change to your own fork.
+After finishing coding for your change, you should make a commit and write a brief comment about it.
+Then, you need to push the change to your own fork.
+Use `git push` with `-u` can relate origin branch and local branch, so you can use `git push` for the next pushes.
 ```
 git add ${changed files}
 
 git commit -m 'comment'
 
-git push origin my-branch
+git push -u origin my-branch
 ```
 
 ## Submit a pull request

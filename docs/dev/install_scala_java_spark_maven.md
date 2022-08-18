@@ -46,7 +46,9 @@ We will introduce how to install Scala on MacOs or Unix systems in the following
    ```
 ## Install Spark (only for running jar)
    We support Spark 3.0, 3.1 and 3.2 in TiSpark 3.0.x. You can get Spark at [Downloads | Apache Spark](https://spark.apache.org/downloads.html).
-   We will take Spark 3.2.2 for example.
+   We will not support the installation of spark.
+   If you have any questions, please turn to [Spark](https://spark.apache.org/) for help.   
+   Here is a simple example of how to install Spark 3.2.2.
 1. Download Spark
    If you want download it from the website, please follow these choices.
    ![spark](pics/spark.png)

@@ -31,7 +31,18 @@ If you see the following message, it means the building succeeds.
 ```
 Then you will find a jar under `assembly/target/` which is named 
 `tispark-assembly-${spark_version}_${scala_version}-${tispark_version}-SNAPSHOT.jar`
-## Run
+
+## Run Test
+If you build it success, you also have downloaded needed files.
+Tests are required when add new features or fix bugs.
+You can add tests or modify tests according your codes.
+These tests are under `test` directories in each module.
+
+Before running test, you need to make a copy of `tidb_config.properties.template` and rename it to
+`tidb_config.properties` and update to configuration as yours and make sure you have deployed a TiDB cluster.
+
+
+## Run Jar
 Please make sure you have installed spark before running TiSpark and add the following configuration in `spark-defaults.conf`.
 ```
 spark.sql.extensions  org.apache.spark.sql.TiExtensions
