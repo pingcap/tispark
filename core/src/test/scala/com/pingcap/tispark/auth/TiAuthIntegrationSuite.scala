@@ -82,6 +82,10 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   test("Operator on hive table should pass auth check") {
+    if (!catalogPluginMode) {
+      cancel
+    }
+
     spark.sql(s"CREATE TABLE IF NOT EXISTS `$hive_table`(i int, s varchar(255))")
     spark.sql(s"INSERT INTO `$hive_table` values(1,'1')")
     val count = spark.sql(s"select count(*) from `$hive_table`").head.get(0)
