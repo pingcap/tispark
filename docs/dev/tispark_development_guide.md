@@ -11,7 +11,7 @@ The guide is composed of the following parts:
    - [Start a local TiDB cluster for testing](start_tidb_cluster.md)
    - [Get the code, build, and run](get_the_code_build_and_run.md)
 ## Contribute to TiSpark
-   - [Report an Issue](report_an_ssue.md)
+   - [Report an Issue](report_an_issue.md)
    - [Code Style and Quality Guide](code_style.md)
    - [Commit the code and submit a pull request](commit_the_code_and_submit_a_pull_request.md)
 ## Understand TiSpark

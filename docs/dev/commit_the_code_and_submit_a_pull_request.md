@@ -45,6 +45,7 @@ Once committed your change, you can go back to TiSpark and create a pull request
 ![pr](pics/pr.png)
 We have a template for pull request . Please follow the guide and fill it.
 ![pr template](pics/pr_templete.png)
-Conflict
+
+## Conflict
 There may be a conflict when you submit a pull request since others may change the same code as yours. Git can't handle it automatically, you need to do it yourself. If you are not sure about how to handle it, feel free to ask reviewers for help.
 ![conflict](pics/conflict.png)

@@ -16,7 +16,7 @@ We implement some interfaces of Spark to use our code and logic in Spark's proce
 Including but not limited to writing, deleting, authentication, etc.
 ## Core-Test
 We will run integration tests for each pull request.
-This directory is normally empty, but when running integration tests, the test codes are copied into this directory. 
+This directory is normally empty, but when running integration tests, the test codes in `Core` module are copied into this directory. 
 You don't need and shouldn't modify this directory.
 ## DB-random-test
 In our tests, we have some special tests that need to use randomly generated data and schemas.

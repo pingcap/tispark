@@ -29,10 +29,10 @@ This not only avoids the region splits in the process of continuous writing, but
 ## Write using 2PC
 After getting the data, we will use 2PC to write it into TiKV. Our 2PC implement follows Percolator. For more details, you can read [TiKV | Percolator](https://tikv.org/deep-dive/distributed-transaction/percolator/) 
 and [Google Percolator](https://research.google/pubs/pub36726/). Here is a brief process introduction.
-4. Lock table
-5. Prewrite primary key
-6. Prewrite secondary key
-7. Commit primary key
-8. Unlock table
-9. Async commit secondary key
+1. Lock table
+2. Prewrite primary key 
+3. Prewrite secondary key
+4. Commit primary key
+5. Unlock table
+6. Async commit secondary key
 
