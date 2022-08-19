@@ -51,10 +51,13 @@ spark.sql.catalog.tidb_catalog  org.apache.spark.sql.catalyst.catalog.TiCatalog
 spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_adress}
 ```
 
-And then you can use TiSpark in `spark-shell` by run following command.
+We don't include mysql connector in our package. 
+You can download it from [here](https://mvnrepository.com/artifact/mysql/mysql-connector-java).
+
+And then you can use TiSpark in `spark` by run following command.
 
 ```
-spark-shell --jars tispark-assembly-${spark_version}_${scala_version}-${tispark_version}-SNAPSHOT.jar
+spark-submit --jars tispark-assembly-${spark_version}_${scala_version}-${tispark_version}-SNAPSHOT.jar,mysql-connector-java-8.0.29.jar
 ```
 
 Spark will load the jar when running. But we can't use the feature TiSpark provides now. We implement it using catalog . Please run the following command to use TiSpark.

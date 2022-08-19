@@ -26,10 +26,6 @@ This directory is going to store some development-related tools or files.
 Currently, there are only format files in this directory.
 ## Docs
 This directory mainly stores some documents, including but not limited to design documents, user documents and development documents.
-## Python
-Spark provides python API for developers. TiSpark uses pyspark to provide users with Python API too,
-and the related codes are in this directory.
-# R
 ## Spark-Wrapper
 Spark is still evolving. In different versions, the interface of many components will change.
 To support different versions of Spark, we have written separate codes of changed interface for each version of Spark.
