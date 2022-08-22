@@ -175,7 +175,7 @@
 
     <profiles>
         <profile>
-            <id>spark-3.1.1</id>
+            <id>spark-3.1</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
@@ -186,7 +186,7 @@
             </properties>
         </profile>
         <profile>
-            <id>spark-3.2.1</id>
+            <id>spark-3.2</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
