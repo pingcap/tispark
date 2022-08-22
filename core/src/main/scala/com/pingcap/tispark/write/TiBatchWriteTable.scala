@@ -16,20 +16,14 @@
 
 package com.pingcap.tispark.write
 
-import java.util
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.exception.TiBatchWriteException
-
 import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
 import com.pingcap.tikv.meta._
 import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient, TiSession}
 import com.pingcap.tispark.TiTableReference
-<<<<<<< HEAD
-=======
-import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.WriteUtil.locatePhysicalTable
->>>>>>> ab27854e7 (fix: Incorrect unique index key when table is not intHandle & Duplicate values for unique indexes (#2455))
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -37,6 +31,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{TiContext, _}
 import org.slf4j.LoggerFactory
 
+import java.util
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -250,7 +245,7 @@ class TiBatchWriteTable(
       }
       val insertRowRdd = generateRecordKV(distinctWrappedRowRdd, remove = false)
       val insertIndexRdd =
-        WriteUtil.generateIndexKVRDD(sc, distinctWrappedRowRdd, tiTable, remove = false)
+        WriteUtil.generateIndexKV(sc, distinctWrappedRowRdd, tiTableInfo, remove = false)
 
       // The rows that exist in the current TiDB that conflict
       // with the primary key or unique index of the inserted rows.
@@ -268,72 +263,18 @@ class TiBatchWriteTable(
         throw new TiBatchWriteException(
           "currently user provided auto increment value is only supported in update mode!")
       }
-
-<<<<<<< HEAD
-      val wrappedEncodedRecordRdd = generateRecordKV(distinctWrappedRowRdd, remove = false)
-      val wrappedEncodedIndexRdds =
-        WriteUtil.generateIndexKVs(distinctWrappedRowRdd, tiTableInfo, remove = false)
-      val wrappedEncodedIndexRdd: RDD[WrappedEncodedRow] = {
-        val list = wrappedEncodedIndexRdds.values.toSeq
-        if (list.isEmpty) {
-          sc.emptyRDD[WrappedEncodedRow]
-        } else if (list.lengthCompare(1) == 0) {
-          list.head
-        } else {
-          sc.union(list)
-        }
-      }
-
-      val g1 = (wrappedEncodedRecordRdd ++ generateRecordKV(deletion, remove = true))
-        .map(wrappedEncodedRow => (wrappedEncodedRow.encodedKey, wrappedEncodedRow))
-        .reduceByKey { (r1, r2) =>
-          // if rdd contains same key, it means we need first delete the old value and insert the new value associated the
-          // key. We can merge the two operation into one update operation.
-          // Note: the deletion operation's value of kv pair is empty.
-          if (r1.encodedValue.isEmpty) r2 else r1
-        }
-        .map(_._2)
-      val g2 = (wrappedEncodedIndexRdd ++ WriteUtil.generateIndexKV(
-        sc,
-        deletion,
-        tiTableInfo,
-        remove = true))
-        .map(wrappedEncodedRow => (wrappedEncodedRow.encodedKey, wrappedEncodedRow))
-        .reduceByKey { (r1, r2) =>
-          if (r1.encodedValue.isEmpty) r2 else r1
-        }
-        .map(_._2)
-=======
       val deleteRowRDD = generateRecordKV(conflictRows, remove = true)
-      val deleteIndexRDD = WriteUtil.generateIndexKVRDD(sc, conflictRows, tiTable, remove = true)
+      val deleteIndexRDD = WriteUtil.generateIndexKV(sc, conflictRows, tiTableInfo, remove = true)
 
       (unionInsertDelete(insertRowRdd, deleteRowRDD) ++
         unionInsertDelete(insertIndexRdd, deleteIndexRDD)).map(obj =>
         (obj.encodedKey, obj.encodedValue))
->>>>>>> ab27854e7 (fix: Incorrect unique index key when table is not intHandle & Duplicate values for unique indexes (#2455))
 
     } else {
-<<<<<<< HEAD
-      val rowIDAllocator = getRowIDAllocator(count)
-      val wrappedRowRdd = tiRowRdd.zipWithIndex.map { row =>
-        val index = row._2 + 1
-        val rowId = rowIDAllocator.getShardRowId(index)
-        WrappedRow(row._1, new IntHandle(rowId))
-      }
-
-      val wrappedEncodedRecordRdd = generateRecordKV(wrappedRowRdd, remove = false)
-      val wrappedEncodedIndexRdds =
-        WriteUtil.generateIndexKVs(wrappedRowRdd, tiTableInfo, remove = false)
-      val wrappedEncodedIndexRdd = sc.union(wrappedEncodedIndexRdds.values.toSeq)
-
-      (wrappedEncodedRecordRdd ++ wrappedEncodedIndexRdd).map(obj =>
-        (obj.encodedKey, obj.encodedValue))
-=======
       val insertRowRdd = generateRecordKV(wrappedRowRdd, remove = false)
       val insertIndexRdd =
-        WriteUtil.generateIndexKVRDD(sc, wrappedRowRdd, tiTable, remove = false)
+        WriteUtil.generateIndexKV(sc, wrappedRowRdd, tiTableInfo, remove = false)
       (insertRowRdd ++ insertIndexRdd).map(obj => (obj.encodedKey, obj.encodedValue))
->>>>>>> ab27854e7 (fix: Incorrect unique index key when table is not intHandle & Duplicate values for unique indexes (#2455))
     }
 
     // persist
@@ -672,22 +613,9 @@ class TiBatchWriteTable(
       handle: Handle,
       index: TiIndexInfo): (SerializableKey, Boolean) = {
     // NULL is only allowed in unique key, primary key does not allow NULL value
-<<<<<<< HEAD
-    val encodeResult = IndexKey.encodeIndexDataValues(
-      row,
-      index.getIndexColumns,
-      handle,
-      index.isUnique && !index.isPrimary,
-      tiTableInfo)
-    val keys = encodeResult.keys
-    val indexKey =
-      IndexKey.toIndexKey(WriteUtil.locatePhysicalTable(row, tiTableInfo), index.getId, keys: _*)
-    (new SerializableKey(indexKey.getBytes), encodeResult.appendHandle)
-=======
     val encodeResult =
-      IndexKey.genIndexKey(locatePhysicalTable(tiTable), row, index, handle, tiTable.getTableInfo)
+      IndexKey.genIndexKey(locatePhysicalTable(row, tiTableInfo), row, index, handle, tiTableInfo)
     (new SerializableKey(encodeResult.indexKey), encodeResult.distinct)
->>>>>>> ab27854e7 (fix: Incorrect unique index key when table is not intHandle & Duplicate values for unique indexes (#2455))
   }
 
   private def generateRowKey(

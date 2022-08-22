@@ -17,12 +17,8 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.codec.TableCodec
-import com.pingcap.tikv.exception.{
-  ConvertOverflowException,
-  TiBatchWriteException,
-  TiDBConvertException
-}
-import com.pingcap.tikv.key.{CommonHandle, Handle, IndexKey, IntHandle, RowKey}
+import com.pingcap.tikv.exception.{ConvertOverflowException, TiBatchWriteException, TiDBConvertException}
+import com.pingcap.tikv.key._
 import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType
@@ -183,45 +179,16 @@ object WriteUtil {
       index: TiIndexInfo,
       tiTableInfo: TiTableInfo,
       remove: Boolean): RDD[WrappedEncodedRow] = {
-<<<<<<< HEAD
-    if (index.isUnique) {
-      rdd.map { row =>
-        val (encodedKey, encodedValue) =
-          generateUniqueIndexKey(row.row, row.handle, index, tiTableInfo, remove)
-        WrappedEncodedRow(
-          row.row,
-          row.handle,
-          encodedKey,
-          encodedValue,
-          isIndex = true,
-          index.getId,
-          remove)
-      }
-    } else {
-      rdd.map { row =>
-        val (encodedKey, encodedValue) =
-          generateSecondaryIndexKey(row.row, row.handle, index, tiTableInfo, remove)
-        WrappedEncodedRow(
-          row.row,
-          row.handle,
-          encodedKey,
-          encodedValue,
-          isIndex = true,
-          index.getId,
-          remove)
-      }
-    }
-=======
     rdd.map { row =>
-      generateIndex(row, index, tiTable, remove)
+      generateIndex(row, index, tiTableInfo, remove)
     }
   }
 
   private def generateIndex(
-      row: WrappedRow,
-      index: TiIndexInfo,
-      tiTable: TableCommon,
-      remove: Boolean) = {
+                             row: WrappedRow,
+                             index: TiIndexInfo,
+                             tiTable: TiTableInfo,
+                             remove: Boolean) = {
     val (encodedKey, encodedValue) =
       generateIndexKeyAndValue(row.row, row.handle, index, tiTable, remove)
     WrappedEncodedRow(
@@ -232,7 +199,6 @@ object WriteUtil {
       isIndex = true,
       index.getId,
       remove)
->>>>>>> ab27854e7 (fix: Incorrect unique index key when table is not intHandle & Duplicate values for unique indexes (#2455))
   }
 
   /**
@@ -248,58 +214,20 @@ object WriteUtil {
       index: TiIndexInfo,
       tiTableInfo: TiTableInfo,
       remove: Boolean): (SerializableKey, Array[Byte]) = {
-<<<<<<< HEAD
 
     // NULL is only allowed in unique key, primary key does not allow NULL value
-    val encodeResult = IndexKey.encodeIndexDataValues(
-      row,
-      index.getIndexColumns,
-      handle,
-      index.isUnique && !index.isPrimary,
-      tiTableInfo)
-    val indexKey = IndexKey.toIndexKey(
-      locatePhysicalTable(row, tiTableInfo),
-      index.getId,
-      encodeResult.keys: _*)
-=======
     val encodeIndexResult =
-      IndexKey.genIndexKey(locatePhysicalTable(tiTable), row, index, handle, tiTable.getTableInfo)
->>>>>>> ab27854e7 (fix: Incorrect unique index key when table is not intHandle & Duplicate values for unique indexes (#2455))
+      IndexKey.genIndexKey(locatePhysicalTable(row, tiTableInfo), row, index, handle, tiTableInfo)
 
     val value = if (remove) {
       new Array[Byte](0)
     } else {
       TableCodec.genIndexValue(
         handle,
-        tiTable.getTableInfo.getCommonHandleVersion,
+        tiTableInfo.getCommonHandleVersion,
         encodeIndexResult.distinct)
     }
-
-<<<<<<< HEAD
-  private def generateSecondaryIndexKey(
-      row: TiRow,
-      handle: Handle,
-      index: TiIndexInfo,
-      tiTableInfo: TiTableInfo,
-      remove: Boolean): (SerializableKey, Array[Byte]) = {
-    val keys =
-      IndexKey.encodeIndexDataValues(row, index.getIndexColumns, handle, false, tiTableInfo).keys
-    val cdo = new CodecDataOutput()
-    cdo.write(
-      IndexKey.toIndexKey(locatePhysicalTable(row, tiTableInfo), index.getId, keys: _*).getBytes)
-    cdo.write(handle.encodedAsKey())
-
-    val value: Array[Byte] = if (remove) {
-      new Array[Byte](0)
-    } else {
-      val value = new Array[Byte](1)
-      value(0) = '0'
-      value
-    }
-    (new SerializableKey(cdo.toBytes), value)
-=======
     (new SerializableKey(encodeIndexResult.indexKey), value)
->>>>>>> ab27854e7 (fix: Incorrect unique index key when table is not intHandle & Duplicate values for unique indexes (#2455))
   }
 
   /**
