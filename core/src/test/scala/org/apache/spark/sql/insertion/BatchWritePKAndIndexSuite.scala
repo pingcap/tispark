@@ -116,7 +116,7 @@ class BatchWritePKAndIndexSuite
 
   // https://github.com/pingcap/tispark/issues/2452
   test("test duplicate unique indexes are not deleted error") {
-    if (!StoreVersion.minTiKVVersion("5.0.0",this.ti.tiSession.getPDClient)){
+    if (!StoreVersion.minTiKVVersion("5.0.0", this.ti.tiSession.getPDClient)) {
       cancel("TiDB version must bigger than 5.0")
     }
     tidbStmt.execute("drop table if exists `tispark_test`.`t`")
@@ -168,8 +168,7 @@ class BatchWritePKAndIndexSuite
       cancel("TiDB version must bigger than 5.0")
     }
     tidbStmt.execute("drop table if exists `tispark_test`.`t`")
-    tidbStmt.execute(
-      """
+    tidbStmt.execute("""
         |CREATE TABLE `tispark_test`.`t` (
         |  `id`  int(20),
         |  `name` varchar(255) primary key clustered,
