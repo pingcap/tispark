@@ -45,5 +45,14 @@
                 <include>**/*</include>
             </includes>
         </fileSet>
+        <fileSet>
+            <directory>
+                ${project.parent.basedir}/spark-wrapper/spark-3.3/target/classes/
+            </directory>
+            <outputDirectory>resources/spark-wrapper-spark-3_3</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
     </fileSets>
 </assembly>

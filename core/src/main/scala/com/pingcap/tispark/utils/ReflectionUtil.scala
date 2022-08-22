@@ -18,14 +18,18 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tispark.TiSparkInfo
+import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.write.TiDBOptions
 import org.apache.spark.sql.{SQLContext, SparkSession, Strategy, TiContext}
 import org.apache.spark.sql.catalyst.expressions.BasicExpression.TiExpression
 import org.apache.spark.sql.catalyst.expressions.{Alias, ExprId, Expression, SortOrder}
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.{SparkSession, Strategy, TiContext}
 import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.slf4j.LoggerFactory
 
 import java.io.File
+import java.lang.reflect.InvocationTargetException
 import java.net.{URL, URLClassLoader}
 
 /**
@@ -60,6 +64,8 @@ object ReflectionUtil {
   private val SPARK_WRAPPER_CLASS = "com.pingcap.tispark.SparkWrapper"
   private val TI_BASIC_EXPRESSION_CLASS =
     "org.apache.spark.sql.catalyst.expressions.TiBasicExpression"
+  private val TI_BASIC_LOGICAL_PLAN_CLASS =
+    "org.apache.spark.sql.catalyst.plans.logical.TiBasicLogicalPlan"
   private val TI_STRATEGY_CLASS =
     "org.apache.spark.sql.extensions.TiStrategy"
   private val TIDB_WRITE_BUILDER_CLASS =
@@ -103,6 +109,24 @@ object ReflectionUtil {
       .getDeclaredMethod("convertToTiExpr", classOf[Expression])
       .invoke(null, expr)
       .asInstanceOf[Option[TiExpression]]
+  }
+
+  def callTiBasicLogicalPlanVerifyAuthorizationRule(
+      logicalPlan: LogicalPlan,
+      tiAuthorization: Option[TiAuthorization]): LogicalPlan = {
+    try {
+      classLoader
+        .loadClass(TI_BASIC_LOGICAL_PLAN_CLASS)
+        .getDeclaredMethod(
+          "verifyAuthorizationRule",
+          classOf[LogicalPlan],
+          classOf[Option[TiAuthorization]])
+        .invoke(null, logicalPlan, tiAuthorization)
+        .asInstanceOf[LogicalPlan]
+    } catch {
+      case ex: InvocationTargetException =>
+        throw ex.getTargetException
+    }
   }
 
   def newTiStrategy(

@@ -16,6 +16,9 @@
 
 package com.pingcap.tispark.telemetry
 
+import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tispark.auth.TiAuthorization.tiConf
+import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.HttpClientUtil
 import com.sun.net.httpserver.{
   HttpExchange,
@@ -24,6 +27,7 @@ import com.sun.net.httpserver.{
   HttpsConfigurator,
   HttpsServer
 }
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.test.SharedSQLContext
 import org.scalatest.Matchers.{be, noException}
 

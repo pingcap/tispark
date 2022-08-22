@@ -42,6 +42,7 @@ object TiAggregationProjectionV2 {
             rel @ DataSourceV2ScanRelation(
               DataSourceV2Relation(source: TiDBTable, _, _, _, _),
               _,
+              _,
               _)) if projects.forall(_.isInstanceOf[Attribute]) =>
         Some((filters, rel, source, projects))
       case _ => Option.empty[ReturnType]
