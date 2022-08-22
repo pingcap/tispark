@@ -30,37 +30,34 @@ import org.apache.spark.sql.types._
 
 object PromotedSum {
   def apply(child: Expression): SpecialSum = {
-    val retType = child.dataType match {
-      case DecimalType.Fixed(precision, scale) =>
-        DecimalType.bounded(precision + 10, scale)
-      case _ => DoubleType
+    child.dataType match {
+      // We need to convert MySQLType: TypeTiny,TypeShort,TypeInt24,TypeLong,TypeLonglong,TINYINT,TypeYear to DecimalType in order to push down sum
+      // The whole data convert flow: all of the above MySQLType => Spark LongType => Spark DecimalType => MySQLType DecimalType
+      // here we just convert Spark LongType => Spark DecimalType, we will convert Spark DecimalType => MySQLType DecimalType later
+      case LongType => SpecialSum(child, DecimalType.BigIntDecimal, null)
+      case _ =>
+        throw new IllegalStateException("only LongType will use PromotedSum to replace Sum")
     }
-
-    SpecialSum(child, retType, null)
   }
 
   def unapply(s: SpecialSum): Option[Expression] =
     s match {
-      case s.initVal if s.initVal == null => Some(s.child)
+      case s if s.initVal == null => Some(s.child)
       case _ => Option.empty[Expression]
     }
 }
 
-object SumNotNullable {
+object CountSum {
   def apply(child: Expression): SpecialSum = {
-    val retType = child.dataType match {
-      case DecimalType.Fixed(precision, scale) =>
-        DecimalType.bounded(precision + 10, scale)
-      case _: IntegralType => LongType
-      case _ => DoubleType
-    }
+    // Use LongType because the push down count always return IntegerType.BIGINT
+    // IntegerType.BIGINT will convert to SparkType LongType
+    SpecialSum(child, LongType, 0)
 
-    SpecialSum(child, retType, 0)
   }
 
   def unapply(s: SpecialSum): Option[Expression] =
     s match {
-      case s.initVal if s.initVal == null => Some(s.child)
+      case s if s.initVal != null => Some(s.child)
       case _ => Option.empty[Expression]
     }
 }

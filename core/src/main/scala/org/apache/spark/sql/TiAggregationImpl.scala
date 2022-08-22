@@ -83,14 +83,19 @@ object TiAggregationImpl {
               a.copy(aggregateFunction = Count(ref), resultId = newExprId))
         }.toMap
 
+        // ResultDataType of sum only can be double or decimal
+        // We need to cast decimal back to long for the promotedSum, or spark will regard decimal as long cause the wrong answer
         val sumRewrite = sumsRewriteMap.map {
           case (ref, sum) =>
+            val aggregate = sum.aggregateFunction
             val resultDataType = sum.resultAttribute.dataType
-            val castedSum = resultDataType match {
-              case LongType => Cast(sum.resultAttribute, DecimalType.BigIntDecimal)
-              case FloatType => Cast(sum.resultAttribute, DoubleType)
-              case DoubleType => Cast(sum.resultAttribute, DoubleType)
-              case d: DecimalType => Cast(sum.resultAttribute, d)
+            val castedSum = aggregate match {
+              case PromotedSum(_) => Cast(sum.resultAttribute, LongType)
+              case _: Sum =>
+                if (resultDataType.isInstanceOf[DecimalType])
+                  Cast(sum.resultAttribute, resultDataType)
+                else Cast(sum.resultAttribute, DoubleType)
+              case _ => throw new IllegalArgumentException("Unknown sum type" + aggregate)
             }
             (ref: Expression) -> ReflectionUtil.newAlias(castedSum, ref.name, ref.exprId)
         }

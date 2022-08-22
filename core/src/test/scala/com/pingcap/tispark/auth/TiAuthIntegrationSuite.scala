@@ -23,6 +23,7 @@ import org.scalatest.Matchers.{
   contain,
   convertToAnyShouldWrapper,
   have,
+  message,
   noException,
   not,
   the
@@ -38,9 +39,11 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   val databaseWithPrefix = f"$dbPrefix$database"
   val dummyDatabase = "tispark_test_auth_dummy"
   val user = "tispark_unit_test_user"
+  val hive_table = "test_auth_hive"
 
   override def beforeAll(): Unit = {
     _isAuthEnabled = true
+    _isHiveEnabled = true
     super.beforeAll()
 
     // set sql conf
@@ -65,11 +68,6 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     // grant user
     tidbStmt.execute(f"GRANT CREATE ON $dummyDatabase.* TO '$user'@'%%'")
     tidbStmt.execute(f"GRANT PROCESS ON *.* TO '$user'@'%%'")
-
-    // set namespace "tidb_catalog"
-    if (catalogPluginMode) {
-      spark.sql(s"use tidb_catalog.$dbPrefix$dummyDatabase")
-    }
   }
 
   override def afterAll(): Unit = {
@@ -79,10 +77,40 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     tidbStmt.execute(s"DROP DATABASE IF EXISTS `$dummyDatabase`")
     super.afterAll()
     _isAuthEnabled = false
+    _isHiveEnabled = false
     TiAuthorization.enableAuth = false
   }
 
+  test("Operator on hive table should pass auth check") {
+    if (!catalogPluginMode) {
+      cancel
+    }
+
+    spark.sql(s"CREATE TABLE IF NOT EXISTS `$hive_table`(i int, s varchar(255))")
+    spark.sql(s"INSERT INTO `$hive_table` values(1,'1')")
+    val count = spark.sql(s"select count(*) from `$hive_table`").head.get(0)
+    assert(count == 1)
+    val exception = the[Exception] thrownBy {
+      spark.sql(s"delete from `$hive_table` where i=1")
+    }
+    // This test is going to ensure the auth check won't influence table in spark.
+    // The DELETE SQL will first go through the auth check, then invoke the delete method.
+    // The user doesn't have DELETE privilege now. We hope our auth check doesn't work for hive table,
+    // so the exception should not have related massage. But even it go through the auth check,
+    // a exception will occur since it's a V1 table.
+    exception should not have message(
+      s"DELETE command denied to user `$user`@% for table default.`$hive_table`")
+    val errorMessage = exception.getMessage
+    assert(errorMessage.contains(s"DELETE is only supported with v2 tables."))
+
+    spark.sql(s"DROP TABLE IF EXISTS `$hive_table`")
+  }
+
   test("Use catalog should success") {
+    // set namespace "tidb_catalog"
+    if (catalogPluginMode) {
+      spark.sql(s"use tidb_catalog.$dbPrefix$dummyDatabase")
+    }
     if (catalogPluginMode) {
       spark.sql(s"use tidb_catalog")
       spark.sql(s"use $dbPrefix$dummyDatabase")
@@ -98,7 +126,7 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
   }
 
   test("Get PD address from TiDB should be correct") {
-    ti.tiAuthorization.get.getPDAddress() should be(pdAddresses)
+    ti.tiAuthorization.get.getPDAddresses() should be(pdAddresses)
   }
 
   test("Use database and select without privilege should not be passed") {
