@@ -54,6 +54,7 @@ class SumPushDownSuite extends BasePushDownSuite {
   }
 
   test("Test - Sum push down cluster") {
+    val tableName = "full_data_type_table_cluster"
     tidbStmt.execute("DROP TABLE IF EXISTS `full_data_type_table_cluster`")
     tidbStmt.execute("""
          CREATE TABLE `full_data_type_table_cluster` (
@@ -88,13 +89,14 @@ class SumPushDownSuite extends BasePushDownSuite {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
       """)
     allCases.foreach { query =>
-      val df = spark.sql(query)
+      val sql = query + tableName
+      val df = spark.sql(sql)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
         fail(
-          s"sum is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+          s"sum is not pushed down in query:$sql,DAGRequests:" + extractCoprocessorRDDs(
             df).head.toString)
       }
-      runTest(query)
+      runTest(sql)
     }
   }
 
@@ -113,6 +115,7 @@ class SumPushDownSuite extends BasePushDownSuite {
   }
 
   test("Test - Sum push down noncluster") {
+    val tableName = "full_data_type_table_cluster"
     tidbStmt.execute("DROP TABLE IF EXISTS `full_data_type_table_cluster`")
     tidbStmt.execute("""
          CREATE TABLE `full_data_type_table_cluster` (
@@ -148,13 +151,14 @@ class SumPushDownSuite extends BasePushDownSuite {
       """)
 
     allCases.foreach { query =>
-      val df = spark.sql(query)
+      val sql = query + tableName
+      val df = spark.sql(sql)
       if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
         fail(
-          s"sum is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+          s"sum is not pushed down in query:$sql,DAGRequests:" + extractCoprocessorRDDs(
             df).head.toString)
       }
-      runTest(query)
+      runTest(sql)
     }
   }
 
