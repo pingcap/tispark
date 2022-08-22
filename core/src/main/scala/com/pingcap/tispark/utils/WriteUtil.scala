@@ -17,7 +17,11 @@
 package com.pingcap.tispark.utils
 
 import com.pingcap.tikv.codec.TableCodec
-import com.pingcap.tikv.exception.{ConvertOverflowException, TiBatchWriteException, TiDBConvertException}
+import com.pingcap.tikv.exception.{
+  ConvertOverflowException,
+  TiBatchWriteException,
+  TiDBConvertException
+}
 import com.pingcap.tikv.key._
 import com.pingcap.tikv.meta.{TiIndexColumn, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.ObjectRowImpl
@@ -185,10 +189,10 @@ object WriteUtil {
   }
 
   private def generateIndex(
-                             row: WrappedRow,
-                             index: TiIndexInfo,
-                             tiTable: TiTableInfo,
-                             remove: Boolean) = {
+      row: WrappedRow,
+      index: TiIndexInfo,
+      tiTable: TiTableInfo,
+      remove: Boolean) = {
     val (encodedKey, encodedValue) =
       generateIndexKeyAndValue(row.row, row.handle, index, tiTable, remove)
     WrappedEncodedRow(

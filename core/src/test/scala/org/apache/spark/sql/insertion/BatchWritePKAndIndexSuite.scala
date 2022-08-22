@@ -16,6 +16,7 @@
 
 package org.apache.spark.sql.insertion
 
+import com.pingcap.tikv.StoreVersion
 import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import com.pingcap.tispark.test.generator.DataGenerator._
@@ -115,6 +116,9 @@ class BatchWritePKAndIndexSuite
 
   // https://github.com/pingcap/tispark/issues/2452
   test("test duplicate unique indexes are not deleted error") {
+    if (!StoreVersion.minTiKVVersion("5.0.0",this.ti.tiSession.getPDClient)){
+      cancel("TiDB version must bigger than 5.0")
+    }
     tidbStmt.execute("drop table if exists `tispark_test`.`t`")
     tidbStmt.execute("""
         |CREATE TABLE `tispark_test`.`t` (
