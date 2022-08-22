@@ -1,5 +1,6 @@
 /*
- * Copyright 2021 PingCAP, Inc.
+ *
+ * Copyright 2022 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,16 +13,17 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package com.pingcap.tispark.v2.sink
+package org.apache.spark.sql.catalyst.plans.logical
 
-import com.pingcap.tispark.write.TiDBOptions
-import org.apache.spark.sql.SQLContext
-import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
+import com.pingcap.tispark.auth.TiAuthorization
+import com.pingcap.tispark.utils.ReflectionUtil
 
-case class TiDBWriteBuilder(
-    info: LogicalWriteInfo,
-    tiDBOptions: TiDBOptions,
-    sqlContext: SQLContext)
-    extends WriteBuilder {}
+object BasicLogicalPlan {
+  def verifyAuthorizationRule(
+      logicalPlan: LogicalPlan,
+      tiAuthorization: Option[TiAuthorization]): LogicalPlan =
+    ReflectionUtil.callTiBasicLogicalPlanVerifyAuthorizationRule(logicalPlan, tiAuthorization)
+}

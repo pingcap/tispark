@@ -124,6 +124,8 @@ TiBatchWrite.write(
 
 The following table shows the TiDB-specific options, which can be passed in through `TiDBOptions` or `SparkConf`.
 
+`tidb.addr`, `tidb.port`, `tidb.user` and `tidb.password` only are needed when enableUpdateTableStatistics is true.
+
 | Key                         | Required | Default                | Description                                                                                                                   |
 | --------------------------- | -------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | pd.addresses                | true     | -                      | The addresses of PD clusters, split by comma                                                                                  |

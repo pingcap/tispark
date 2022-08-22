@@ -17,19 +17,9 @@
 package com.pingcap.tikv.datatype;
 
 import static com.pingcap.tikv.types.MySQLType.TypeLonglong;
+import static com.pingcap.tikv.types.MySQLType.TypeTiny;
 
-import com.pingcap.tikv.types.AbstractDateTimeType;
-import com.pingcap.tikv.types.BytesType;
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DateType;
-import com.pingcap.tikv.types.DecimalType;
-import com.pingcap.tikv.types.EnumType;
-import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.JsonType;
-import com.pingcap.tikv.types.RealType;
-import com.pingcap.tikv.types.SetType;
-import com.pingcap.tikv.types.StringType;
-import com.pingcap.tikv.types.TimeType;
+import com.pingcap.tikv.types.*;
 import org.apache.spark.sql.types.DataTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,6 +79,9 @@ public class TypeMapping {
       // cast unsigned long to decimal to avoid potential overflow.
       if (type.isUnsigned() && type.getType() == TypeLonglong) {
         return DataTypes.createDecimalType(20, 0);
+      }
+      if (type.getType() == TypeTiny && type.getLength() == 1) {
+        return DataTypes.BooleanType;
       }
       return DataTypes.LongType;
     }
