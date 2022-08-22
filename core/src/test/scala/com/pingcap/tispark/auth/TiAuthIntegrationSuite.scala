@@ -102,7 +102,6 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     spark.sql(s"DROP TABLE IF EXISTS `$hive_table`")
   }
 
-
   test("Use catalog should success") {
     spark.sql(s"use tidb_catalog.$dbPrefix$dummyDatabase")
     spark.sql(s"use tidb_catalog")

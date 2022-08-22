@@ -39,7 +39,6 @@ class SumPushDownSuite extends BasePushDownSuite {
     "select sum(tp_int) from ",
     "select sum(tp_double) from ")
 
-<<<<<<< HEAD
   test("Test - Sum push down with pk") {
     val tableName = "full_data_type_table_pk"
     allCases.foreach { query =>
@@ -53,7 +52,7 @@ class SumPushDownSuite extends BasePushDownSuite {
       runTest(sql)
     }
   }
-=======
+
   test("Test - Sum push down cluster") {
     tidbStmt.execute("DROP TABLE IF EXISTS `full_data_type_table_cluster`")
     tidbStmt.execute("""
@@ -88,7 +87,16 @@ class SumPushDownSuite extends BasePushDownSuite {
         PRIMARY KEY (`id_dt`)/*T![clustered_index] CLUSTERED */
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
       """)
->>>>>>> fc68865f4 (add Aggregates in TiDAGRequest (#2371))
+    allCases.foreach { query =>
+      val df = spark.sql(query)
+      if (!extractCoprocessorRDDs(df).head.toString.contains("Aggregates")) {
+        fail(
+          s"sum is not pushed down in query:$query,DAGRequests:" + extractCoprocessorRDDs(
+            df).head.toString)
+      }
+      runTest(query)
+    }
+  }
 
   test("Test - Sum push down no pk") {
     val tableName = "full_data_type_table_no_pk"
