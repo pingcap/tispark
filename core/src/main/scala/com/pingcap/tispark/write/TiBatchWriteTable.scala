@@ -491,7 +491,7 @@ class TiBatchWriteTable(
                   conflictUniqueIndexValue,
                   isCommonHandle)
               val conflictUniqueIndexRowKey =
-                RowKey.toRowKey(locatePhysicalTable(tiTable), conflictHandle);
+                RowKey.toRowKey(tiTableInfo.getId, conflictHandle);
               conflictRowKey.add(conflictUniqueIndexRowKey.getBytes)
             }
           }
