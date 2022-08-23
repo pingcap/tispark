@@ -11,7 +11,7 @@ spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_address}
 
 ## Requirement
 - TiDB 4.x or 5.x
-- Spark >= 3.0
+- Spark = 3.0.x or 3.1.x or 3.2.x or 3.3.x
 
 ## Delete with SQL
 ```
@@ -28,5 +28,4 @@ spark.sql("delete from tidb_catalog.db.table where xxx")
 - Delete with subQuery is not supported.
 - Delete from partition table is not supported.
 - Delete with Pessimistic Transaction Mode is not supported.
-
 

@@ -262,7 +262,7 @@ class UnsignedOverflowSuite extends BaseBatchWriteTest("test_data_type_unsigned_
     val jdbcErrorClass = classOf[java.lang.RuntimeException]
     val tidbErrorClass = classOf[java.lang.RuntimeException]
     val tidbErrorMsgStartWith =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
+      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),

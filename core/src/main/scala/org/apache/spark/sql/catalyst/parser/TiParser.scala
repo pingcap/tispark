@@ -54,6 +54,9 @@ case class TiParser(
   @scala.throws[ParseException]("Text cannot be parsed to a DataType")
   def parseRawDataType(sqlText: String): DataType = ???
 
+  @scala.throws[ParseException]("Text cannot be parsed to a LogicalPlan")
+  def parseQuery(sqlText: String): LogicalPlan = ???
+
   def getOrElseInitTiCatalog: TiCatalog = {
     val catalogManager = sparkSession.sessionState.catalogManager
     catalogManager.catalog("tidb_catalog").asInstanceOf[TiCatalog]
