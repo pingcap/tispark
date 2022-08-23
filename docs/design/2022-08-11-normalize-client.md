@@ -26,7 +26,7 @@
 
 ## Introduction
 
-Replace `tispark's tikv-client` module, use `tikv's client-java` to interact
+Replace `tispark's tikv-client` module, use [`tikv's client-java`](https://github.com/tikv/client-java) to interact
 with [`tikv`](https:///github.com/tikv/tikv).
 
 ## Motivation or Background
@@ -51,7 +51,7 @@ to [`tikv/client-java`](https://github.com/tikv/client-java)) maven dependency.
    maintained `tipb`, the other two can be handed over to upstream maintenance.
 2. Due to the introduction of upstream dependencies, some of the same dependencies on both sides may
    have version conflicts. Use maven's shade plugin and replace plugin to rename conflicting library
-   package names to prevent conflicts.
+   package names to prevent conflicts.(See point 3 in [Compatibility](#compatibility) for ways to avoid conflicts)
 
 ### Configuration
 
@@ -67,15 +67,18 @@ Here are some notable configuration items
 
 #### TiConfiguration
 
-| item                       | tispark    | client-java | description                                     |
-|----------------------------|------------|-------------|-------------------------------------------------|
-| timeout                    | 10 minutes | 200ms       | convert                                         |
-| maxFrameSize               | 2GB        | 512MB       | convert                                         |
-| netWorkMappingName         | ""         | ""          | can't be converted,but has a same default value |
-| downGradeThreshold         | 1000_0000  | 1000_0000   | can't be convert,but has same default value     |
-| maxRequestKeyRangeSize     | 2_0000     | 2_0000      | can't be convert,but has same default value     |
-| ~~ScanBatchSize~~ (delete) | 10480      | 10240       | can't be convert,deleted because it is not used |
+| item                             | tispark   | client-java | description                                     |
+|----------------------------------|-----------|-------------|-------------------------------------------------|
+| timeout                          | 10 minutes | 200ms       | convert                                         |
+| maxFrameSize                     | 2GB       | 512MB       | convert                                         |
+| netWorkMappingName               | ""        | ""          | can't be converted,but has a same default value |
+| downGradeThreshold               | 1000_0000 | 1000_0000   | can't be convert,but has same default value     |
+| maxRequestKeyRangeSize           | 2_0000    | 2_0000      | can't be convert,but has same default value     |
+| ~~ScanBatchSize~~ (delete)       | 10480     | 10240       | can't be convert,deleted because it is not used |
+| ~~truncateAsWarning~~ (delete)   | false     |             | only in tispark,deleted because it is not used  |
+ | ~~ignoreTruncate~~  (delete)     | true      |             | only in tispark,deleted because it is not used  |
 
+TODO:If the upstream tikv/client-java changes the constructor of TwoPhaseCommitter to public in the next version, restore the configuration items, functions and documentation involved.
 #### TIDBOptions
 
 | item                                | reasons                              |
@@ -175,7 +178,16 @@ end
   by `ClientSession` is preferred, and if it is not provided, `getTiKVSession()` is required to
   indirectly call the upstream richer method.
 - It is recommended to add the `org.tikv.shade` prefix when you need to use the three
-  packages (`io.grpc`, `com.google`, `io.netty`).
+  packages (`io.grpc`, `com.google`, `io.netty`,`io.opencensus`).
+
+  | old package name    | new package name                  |
+  |---------------------|-----------------------------------|
+  | io.grpc             | org.tikv.shade.io.grpc            |
+  | io.netty            | org.tikv.shade.io.netty           |
+  | io.opencensus       | org.tikv.shade.io.opencensus      |
+  | com.google.protobuf | org.tikv.shade.com.google.protobuf|
+  | com.google.common   | org.tikv.shade.com.google.common  |
+  | com.google.gson     | org.tikv.shade.com.google.gson    |
 
 ## Test Design
 

@@ -75,12 +75,6 @@ public class TiConfiguration implements Serializable {
   private int tikvRegionSplitSizeInMB = DEF_TIKV_REGION_SPLIT_SIZE_IN_MB;
   private static final int DEF_PARTITION_PER_SPLIT = 10;
   private int partitionPerSplit = DEF_PARTITION_PER_SPLIT;
-
-  private static final boolean DEF_TRUNCATE_AS_WARNING = false;
-  private boolean truncateAsWarning = DEF_TRUNCATE_AS_WARNING;
-  private static final boolean DEF_IGNORE_TRUNCATE = true;
-  private boolean ignoreTruncate = DEF_IGNORE_TRUNCATE;
-
   // ----------     same with client-java  ------------
 
   public String getPdAddrsString() {

@@ -130,8 +130,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   /** */
   public void rawPut(
-      org.tikv.kvproto.Kvrpcpb.RawPutRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.RawPutResponse> responseObserver) {
+      Kvrpcpb.RawPutRequest request, StreamObserver<Kvrpcpb.RawPutResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       ByteString key = request.getKey();
@@ -173,8 +172,8 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   /** */
   public void rawDelete(
-      org.tikv.kvproto.Kvrpcpb.RawDeleteRequest request,
-      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.RawDeleteResponse> responseObserver) {
+      Kvrpcpb.RawDeleteRequest request,
+      StreamObserver<Kvrpcpb.RawDeleteResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       ByteString key = request.getKey();
@@ -310,8 +309,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
       Coprocessor.Response.Builder builderWrap = Coprocessor.Response.newBuilder();
       SelectResponse.Builder builder = SelectResponse.newBuilder();
-      org.tikv.kvproto.Errorpb.Error.Builder errBuilder =
-          org.tikv.kvproto.Errorpb.Error.newBuilder();
+      Errorpb.Error.Builder errBuilder = Errorpb.Error.newBuilder();
 
       for (Coprocessor.KeyRange keyRange : keyRanges) {
         Integer errorCode = errorMap.remove(keyRange.getStart());

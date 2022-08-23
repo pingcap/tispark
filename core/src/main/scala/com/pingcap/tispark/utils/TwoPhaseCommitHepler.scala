@@ -89,6 +89,7 @@ case class TwoPhaseCommitHepler(startTs: Long, options: TiDBOptions) extends Aut
 
     secondaryKeysRDD.foreachPartition { partition =>
       val ti2PCClientOnExecutor =
+        //TODO:If the upstream tikv/client-java changes the constructor of TwoPhaseCommitter to public in the next version, restore the configuration items, functions and documentation involved.
         new TwoPhaseCommitter(clientSession.getTiKVSession, startTs, lockTTLSeconds * 1000)
 
       val pairs = partition.map { keyValue =>

@@ -19,7 +19,6 @@ spark.sql("delete from tidb_catalog.db.table where xxx")
 ```
 You can also customize some options 
 ```
-spark.conf.set("writeThreadPerTask","3")
 spark.sql("delete from tidb_catalog.db.table where xxx")
 ```
 
