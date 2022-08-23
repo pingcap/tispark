@@ -97,6 +97,10 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
   }
 
   ignore("batch get retry test") {
+    //Part of the code of the upstream client needs to be modified, and pr has been proposed
+    //Because of the modified retry logic. This test is no longer meaningful
+    //Due to the test code problem, the integration test cannot be passed temporarily. Later, you need to consider modifying the test logic or removing the test.
+    //https://github.com/tikv/client-java/pull/645
     if (blockingRead) {
       cancel()
     }
