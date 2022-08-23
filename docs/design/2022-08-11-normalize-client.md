@@ -95,7 +95,7 @@ catalog, and `pdclient` classes as the cut points to connect other codes of the 
 module. So the key is to replace the `tiSession` class and rewrite these methods, so that the core
 module can not only enjoy the upstream functions, but also flexibly rewrite and expand the upstream.
 Therefore, the `ClientSession` class was added, the `TiSession`, `PDClient` and other classes were
-deleted, the Catalog and Snapshot classes were retained, and the `ClientSession` was used as a new
+deleted for they will be maintained by the upstream, the Catalog and Snapshot classes were retained, and the `ClientSession` was used as a new
 entry for the core module. `ClientSession` holds the upstream `TiSession` and the current original
 Catalog and Snapshot.
 This code replaces the original call to `TiSession` and creates and calls it via the `ClientSession`
