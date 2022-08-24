@@ -81,6 +81,8 @@ public class ConvertUpstreamUtils {
   }
 
   public static boolean isTiKVVersionGreatEqualThanVersion(PDClient pdClient, String version) {
+    // TODO:If the upstream changes the method name from minTiKVVersion to
+    // isTiKVVersionGreatEqualThanVersion, remove this method and use the upstream method directly
     return StoreVersion.minTiKVVersion(version, pdClient);
   }
 }

@@ -112,13 +112,17 @@ public class ClientSession implements AutoCloseable {
   }
 
   private synchronized void shutdown() throws Exception {
+    if (tiKVSession != null) {
+      tiKVSession.close();
+    }
     if (!isClosed) {
       isClosed = true;
-      snapshotCatalog.close();
+      if (snapshotCatalog != null) {
+        snapshotCatalog.close();
+      }
       synchronized (sessionCachedMap) {
         sessionCachedMap.remove(conf.getPdAddrsString());
       }
     }
-    tiKVSession.close();
   }
 }

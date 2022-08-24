@@ -51,7 +51,7 @@ to [`tikv/client-java`](https://github.com/tikv/client-java)) maven dependency.
    maintained `tipb`, the other two can be handed over to upstream maintenance.
 2. Due to the introduction of upstream dependencies, some of the same dependencies on both sides may
    have version conflicts. Use maven's shade plugin and replace plugin to rename conflicting library
-   package names to prevent conflicts.(See point 3 in [Compatibility](#compatibility) for ways to avoid conflicts)
+   package names to prevent conflicts.(See point 4 in [Compatibility](#compatibility) for ways to avoid conflicts)
 
 ### Configuration
 
@@ -72,14 +72,16 @@ Here are some notable configuration items
 | timeout                          | 10 minutes | 200ms       | convert                                         |
 | maxFrameSize                     | 2GB       | 512MB       | convert                                         |
 | netWorkMappingName               | ""        | ""          | can't be converted,but has a same default value |
-| downGradeThreshold               | 1000_0000 | 1000_0000   | can't be convert,but has same default value     |
-| maxRequestKeyRangeSize           | 2_0000    | 2_0000      | can't be convert,but has same default value     |
-| ~~ScanBatchSize~~ (delete)       | 10480     | 10240       | can't be convert,deleted because it is not used |
+| downGradeThreshold               | 1000_0000 | 1000_0000   | can't be converted,but has same default value     |
+| maxRequestKeyRangeSize           | 2_0000    | 2_0000      | can't be converted,but has same default value     |
+| ~~ScanBatchSize~~ (delete)       | 10480     | 10240       | can't be converted,deleted because it is not used |
 | ~~truncateAsWarning~~ (delete)   | false     |             | only in tispark,deleted because it is not used  |
  | ~~ignoreTruncate~~  (delete)     | true      |             | only in tispark,deleted because it is not used  |
 
-TODO:If the upstream tikv/client-java changes the constructor of TwoPhaseCommitter to public in the next version, restore the configuration items, functions and documentation involved.
 #### TIDBOptions
+
+These configuration items involve the private constructor of TwoPhaseCommitter. The upstream does not provide a public constructor for use. 
+TODO:Temporarily disable the settings of several configuration items to restore the configuration after the upstream update.
 
 | item                                | reasons                              |
 |-------------------------------------|--------------------------------------|
@@ -177,8 +179,9 @@ end
 - When using `TiSession` afterwards, you need to use `ClientSession` instead. The method provided
   by `ClientSession` is preferred, and if it is not provided, `getTiKVSession()` is required to
   indirectly call the upstream richer method.
-- It is recommended to add the `org.tikv.shade` prefix when you need to use the three
-  packages (`io.grpc`, `com.google`, `io.netty`,`io.opencensus`).
+- Some configurations and options have been removed. See the tables in [TiConfiguration](#tiConfiguration) and [TIDBOptions](#tidboptions) for more information (follow the delete section).
+- It is recommended to add the `org.tikv.shade` prefix when you need to use these
+  packages (`io.grpc`, `com.google`, `io.netty`,`io.opencensus`).Because the shade plugin adds the shade prefix to the upstream dependencies. If you know exactly why you want to use the current module's dependencies instead of the upstream dependencies, use the shade prefix to keep the style consistent.
 
   | old package name    | new package name                  |
   |---------------------|-----------------------------------|
