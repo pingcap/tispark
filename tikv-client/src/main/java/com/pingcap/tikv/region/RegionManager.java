@@ -326,8 +326,8 @@ public class RegionManager {
         throws GrpcException {
       List<TiRegion> regions = pdClient.scanRegionWithLimit(backOffer, startKey, endKey, limit);
       for (TiRegion region : regions) {
-        // Region without leader.
         if (region.getLeader() == null || region.getLeader().getId() == 0) {
+          // Region without leader will not insert into cache.
           continue;
         }
         // Region which has leader will be inserted into cache.

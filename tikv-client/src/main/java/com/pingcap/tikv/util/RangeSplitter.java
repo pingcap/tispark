@@ -171,9 +171,9 @@ public class RangeSplitter {
     }
     Map<Long, List<KeyRange>> idToRange = new HashMap<>(); // region id to keyRange list
     Map<Long, RegionStorePair> idToRegion = new HashMap<>();
-    BackOffer bo = ConcreteBackOffer.newGetBackOff();
     for (KeyRange range : keyRanges) {
       while (true) {
+        BackOffer bo = ConcreteBackOffer.newGetBackOff();
         try {
           List<RegionStorePair> regionStorePairList =
               regionManager.getAllRegionStorePairsInRange(range, storeType, bo);
