@@ -32,7 +32,7 @@ public class ClientSession implements AutoCloseable {
   private static final Map<String, ClientSession> sessionCachedMap = new HashMap<>();
   private final TiConfiguration conf;
   private final TiSession tiKVSession;
-  private final Catalog catalog;
+  private volatile Catalog catalog;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
   private volatile boolean isClosed = false;
   private volatile TiTimestamp snapshotTimestamp;
@@ -48,6 +48,20 @@ public class ClientSession implements AutoCloseable {
     this.cacheInvalidateCallback = callBackFunc;
   }
 
+  public Catalog getCatalog() {
+    Catalog res = catalog;
+    if (res == null) {
+      synchronized (this) {
+        if (catalog == null) {
+          catalog =
+              new Catalog(this::createSnapshot, getConf().isShowRowId(), getConf().getDBPrefix());
+        }
+        res = catalog;
+      }
+    }
+    return res;
+  }
+
   private ClientSession(com.pingcap.tikv.TiConfiguration config) {
     if (config != null) {
       this.conf = config;
@@ -57,8 +71,7 @@ public class ClientSession implements AutoCloseable {
     this.tiKVSession =
         org.tikv.common.TiSession.getInstance(
             ConvertUpstreamUtils.convertTiConfiguration(getConf()));
-    this.catalog =
-        new Catalog(this::createSnapshot, getConf().isShowRowId(), getConf().getDBPrefix());
+    this.catalog = getCatalog();
   }
 
   private void checkIsClosed() {
