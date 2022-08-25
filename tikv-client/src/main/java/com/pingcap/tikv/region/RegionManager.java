@@ -178,7 +178,7 @@ public class RegionManager {
       throw new TiClientInternalException(
           "Cannot find valid store on " + storeType + " for region " + region);
     }
-    return cache.getStoreById(leader.getStoreId(), backOffer);
+    return store;
   }
 
   // Get store which is learner and has same label in storeType.
@@ -285,6 +285,8 @@ public class RegionManager {
       return region;
     }
 
+    // getRegionWithLimit gets at most `scanLimit` regions, starts from the region
+    // containing `startKey` and in key order.
     public synchronized ArrayList<TiRegion> getRegionsInRangeWithLimit(
         KeyRange range, BackOffer backOffer, int scanLimit) {
       ByteString startKey = range.getStart();
