@@ -159,6 +159,7 @@ public class MetaUtils {
           "",
           pkHandle,
           isCommonHandle,
+          1,
           columns,
           indices,
           "",
