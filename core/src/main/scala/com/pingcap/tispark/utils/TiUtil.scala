@@ -233,6 +233,10 @@ object TiUtil {
       tiConf.setHostMapping(new UriHostMapping(""))
     }
 
+    if (conf.contains(TiConfigConst.NEW_COLLATION_ENABLE)) {
+      tiConf.setNewCollationEnable(conf.get(TiConfigConst.NEW_COLLATION_ENABLE).toBoolean)
+    }
+
     tiConf
   }
 

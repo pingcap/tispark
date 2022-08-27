@@ -24,6 +24,7 @@ import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
@@ -96,6 +97,7 @@ public class TiSession implements AutoCloseable {
     }
     this.regionManager = null;
     this.clientBuilder = null;
+    refreshNewCollationEnabled();
   }
 
   public static TiSession getInstance(TiConfiguration conf) {
@@ -108,6 +110,19 @@ public class TiSession implements AutoCloseable {
       TiSession newSession = new TiSession(conf);
       sessionCachedMap.put(key, newSession);
       return newSession;
+    }
+  }
+
+  // if NewCollationEnabled is not set in configuration file,
+  // we will set it to true when TiDB version is greater than or equal to  v6.0.0.
+  // Otherwise, we will set it to false
+  private void refreshNewCollationEnabled() {
+    if (!conf.getIsNewCollationEnabledSetInConfFile()) {
+      if (StoreVersion.isTiKVVersionGreatEqualThanVersion(getPDClient(), "6.0.0")) {
+        Collation.setNewCollationEnabled(true);
+      } else {
+        Collation.setNewCollationEnabled(false);
+      }
     }
   }
 

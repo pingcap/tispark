@@ -48,4 +48,10 @@ public abstract class Expression implements Serializable {
   public void setDataType(DataType dataType) {
     this.dataType = dataType;
   }
+
+  // Only change collation in LogicalBinaryExpression, ComparisonBinaryExpression
+  // and StringRegExpression.
+  public void setNewCollation() {
+    this.dataType.setCollation(this.dataType.getCollationCode());
+  }
 }

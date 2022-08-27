@@ -191,7 +191,7 @@ public class Converter {
         String.format("Cannot cast %s to bytes", val.getClass().getSimpleName()));
   }
 
-  static byte[] convertToBytes(Object val, int prefixLength) {
+  public static byte[] convertToBytes(Object val, int prefixLength) {
     requireNonNull(val, "val is null");
     if (val instanceof byte[]) {
       byte[] valByte = (byte[]) val;
@@ -204,7 +204,7 @@ public class Converter {
         String.format("Cannot cast %s to bytes", val.getClass().getSimpleName()));
   }
 
-  static byte[] convertUtf8ToBytes(Object val, int prefixLength) {
+  public static byte[] convertUtf8ToBytes(Object val, int prefixLength) {
     requireNonNull(val, "val is null");
     if (val instanceof byte[]) {
       byte[] valByte = (byte[]) val;

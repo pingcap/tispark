@@ -20,9 +20,17 @@ import com.pingcap.tikv.exception.CodecException;
 import com.pingcap.tikv.key.CommonHandle;
 import com.pingcap.tikv.key.Handle;
 import com.pingcap.tikv.key.IntHandle;
+import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.meta.TiIndexColumn;
+import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
+import com.pingcap.tikv.types.BytesType;
+import com.pingcap.tikv.types.Converter;
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.MySQLType;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -125,10 +133,17 @@ public class TableCodec {
   // 		|     Length:     1         | 2           | len(CHandle)
   // 		|
   // 		|     Common Handle Segment: Exists when unique index used common handles.
-  //    |     Global Index and New Collation in not support now.
-  public static byte[] genIndexValue(Handle handle, int commonHandleVersion, boolean distinct) {
+  //    |     Global Index in not support now.
+  public static byte[] genIndexValue(
+      Row row,
+      Handle handle,
+      int commonHandleVersion,
+      boolean distinct,
+      TiIndexInfo tiIndexInfo,
+      TiTableInfo tiTableInfo) {
     if (!handle.isInt() && commonHandleVersion == 1) {
-      return TableCodec.genIndexValueForCommonHandleVersion1(handle, distinct);
+      return TableCodec.genIndexValueForCommonHandleVersion1(
+          row, handle, distinct, tiIndexInfo, tiTableInfo);
     }
     return genIndexValueForClusterIndexVersion0(handle, distinct);
   }
@@ -159,7 +174,43 @@ public class TableCodec {
     return new byte[] {'0'};
   }
 
-  private static byte[] genIndexValueForCommonHandleVersion1(Handle handle, boolean distinct) {
+  private static Boolean needRestoreData(DataType type) {
+    if (Collation.isNewCollationEnabled() && isNonBinaryStr(type)) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private static Boolean isNonBinaryStr(DataType type) {
+    if (type.getCollationCode() != Collation.translate("binary") && isString(type)) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private static boolean isString(DataType type) {
+    return isTypeChar(type) || isTypeVarChar(type) || isTypeBlob(type);
+  }
+
+  private static Boolean isTypeChar(DataType type) {
+    return type.getType() == MySQLType.TypeVarchar || type.getType() == MySQLType.TypeString;
+  }
+
+  private static Boolean isTypeBlob(DataType type) {
+    return type.getType() == MySQLType.TypeBlob
+        || type.getType() == MySQLType.TypeTinyBlob
+        || type.getType() == MySQLType.TypeMediumBlob
+        || type.getType() == MySQLType.TypeLongBlob;
+  }
+
+  private static Boolean isTypeVarChar(DataType type) {
+    return type.getType() == MySQLType.TypeVarchar || type.getType() == MySQLType.TypeVarString;
+  }
+
+  private static byte[] genIndexValueForCommonHandleVersion1(
+      Row row, Handle handle, boolean distinct, TiIndexInfo tiIndexInfo, TiTableInfo tiTableInfo) {
     CodecDataOutput cdo = new CodecDataOutput();
     // add tailLen to cdo, the tailLen is always zero in tispark.
     cdo.writeByte(0);
@@ -169,6 +220,41 @@ public class TableCodec {
     if (distinct) {
       encodeCommonHandle(cdo, handle);
     }
+
+    // encode restore data if needed.
+    List<TiColumnInfo> columnInfoList = new ArrayList<>();
+    List<Object> valueList = new ArrayList<>();
+    for (TiIndexInfo index : tiTableInfo.getIndices()) {
+      for (TiIndexColumn tiIndexColumn : index.getIndexColumns()) {
+        TiColumnInfo indexColumnInfo = tiTableInfo.getColumn(tiIndexColumn.getOffset());
+        DataType indexType = indexColumnInfo.getType();
+        int prefixLength = (int) tiIndexColumn.getLength();
+        if (needRestoreData(indexType)) {
+          Object value = row.get(indexColumnInfo.getOffset(), indexColumnInfo.getType());
+          if (value == null) {
+            continue;
+          } else if (Collation.isBinCollation(indexType.getCollationCode())) {
+            continue;
+          } else if (DataType.isLengthUnSpecified(prefixLength)) {
+            valueList.add(value);
+          } else if (indexType instanceof BytesType) {
+            if (indexType.getCharset().equalsIgnoreCase("utf8")
+                || indexType.getCharset().equalsIgnoreCase("utf8mb4")) {
+              value = Converter.convertUtf8ToBytes(value, prefixLength);
+              valueList.add(value);
+            } else {
+              value = Converter.convertToBytes(value, prefixLength);
+              valueList.add(value);
+            }
+          }
+          columnInfoList.add(indexColumnInfo);
+        }
+      }
+    }
+    if (valueList.size() > 0) {
+      cdo.write(new RowEncoderV2().encode(columnInfoList, valueList));
+    }
+
     return cdo.toBytes();
   }
 
