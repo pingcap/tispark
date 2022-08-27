@@ -36,8 +36,7 @@ class CollationSuite extends BaseTiSparkTest {
   test("utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci with clustered index test") {
     val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
     for (collation <- collations) {
-      tidbStmt.execute(
-        s"""
+      tidbStmt.execute(s"""
            |    DROP TABLE IF EXISTS `tispark_test`.`collation_test_table`;
            |    CREATE TABLE `tispark_test`.`collation_test_table` (
            |      `col_bit` bit(1) not null,
@@ -52,29 +51,31 @@ class CollationSuite extends BaseTiSparkTest {
       val col_varchar1 = generateRandomString(23)
       val col_varchar2 = generateRandomString(23)
 
-      spark.sql(
-        s"""
+      spark.sql(s"""
            |  INSERT INTO `tispark_test`.`collation_test_table` VALUES (0, '${col_varchar1}',-1176927076,-199700133);
            |""".stripMargin)
 
-      spark.sql(
-        s"""
+      spark.sql(s"""
            |  INSERT INTO `tispark_test`.`collation_test_table` VALUES (1, '${col_varchar2}',-1908012631,586989409);
            |""".stripMargin)
 
-      val df = spark.sql("select * from `tispark_test`.`collation_test_table` order by `col_bit` desc")
+      val df =
+        spark.sql("select * from `tispark_test`.`collation_test_table` order by `col_bit` desc")
       assert(df.count() == 2);
       assert(df.head().getString(1) == col_varchar2)
     }
   }
 
-
-  test("utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci with special clustered index test") {
-    val collations = Array("utf8mb4_bin","utf8mb4_general_ci", "utf8mb4_unicode_ci")
-    val col_varchars = Array("a        ", "😜😃", "åß∂ƒ©˙∆˚¬…æ", "ЁЂЃЄЅІЇЈЉЊЋЌЍЎЏАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя")
+  test(
+    "utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci with special clustered index test") {
+    val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
+    val col_varchars = Array(
+      "a        ",
+      "😜😃",
+      "åß∂ƒ©˙∆˚¬…æ",
+      "ЁЂЃЄЅІЇЈЉЊЋЌЍЎЏАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя")
     for (collation <- collations) {
-      tidbStmt.execute(
-        s"""
+      tidbStmt.execute(s"""
            |    DROP TABLE IF EXISTS `tispark_test`.`collation_test_table`;
            |    CREATE TABLE `tispark_test`.`collation_test_table` (
            |      `col_varchar` varchar(256) not null,
@@ -86,23 +87,22 @@ class CollationSuite extends BaseTiSparkTest {
            |""".stripMargin)
 
       for (i <- 0 until col_varchars.length) {
-        spark.sql(
-          s"""
+        spark.sql(s"""
              |  INSERT INTO `tispark_test`.`collation_test_table` VALUES ('${col_varchars(i)}',${i},-199700133);
              |""".stripMargin)
       }
       val df = spark.sql("select * from `tispark_test`.`collation_test_table`")
-      df.collect().foreach(row => {
-        assert(row.getString(0) == col_varchars(row.getLong(1).toInt))
-      })
+      df.collect()
+        .foreach(row => {
+          assert(row.getString(0) == col_varchars(row.getLong(1).toInt))
+        })
     }
   }
 
   test("utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci compare test") {
     val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
     for (collation <- collations) {
-      tidbStmt.execute(
-        s"""
+      tidbStmt.execute(s"""
            |   DROP TABLE IF EXISTS `tispark_test`.`collation_test_table`;
            |   CREATE TABLE `tispark_test`.`collation_test_table` (
            |    `col_varchar` varchar(2) not null
@@ -114,7 +114,8 @@ class CollationSuite extends BaseTiSparkTest {
           |INSERT INTO `tispark_test`.`collation_test_table` VALUES ('Aa'),('AA'),('aa'),('aA'),('Bb'),('BB'),('bb'),('bB');
           |""".stripMargin)
 
-      val df1 = spark.sql("SELECT * FROM `tispark_test`.`collation_test_table` WHERE col_varchar > 'a'")
+      val df1 =
+        spark.sql("SELECT * FROM `tispark_test`.`collation_test_table` WHERE col_varchar > 'a'")
       if (collation == "utf8mb4_bin") {
         assert(df1.count() == 4)
       } else if (collation == "utf8mb4_general_ci") {
@@ -122,7 +123,8 @@ class CollationSuite extends BaseTiSparkTest {
       } else if (collation == "utf8mb4_unicode_ci") {
         assert(df1.count() == 8)
       }
-      val df2 = spark.sql("SELECT * FROM `tispark_test`.`collation_test_table` WHERE col_varchar like 'aa'")
+      val df2 = spark.sql(
+        "SELECT * FROM `tispark_test`.`collation_test_table` WHERE col_varchar like 'aa'")
       if (collation == "utf8mb4_bin") {
         assert(df2.count() == 1)
       } else if (collation == "utf8mb4_general_ci") {
@@ -137,8 +139,7 @@ class CollationSuite extends BaseTiSparkTest {
   test("utf8mb4_general_ci and utf8mb4_unicode_ci with primary index conflict test") {
     val collations = Array("utf8mb4_general_ci", "utf8mb4_unicode_ci")
     for (collation <- collations) {
-      tidbStmt.execute(
-        s"""
+      tidbStmt.execute(s"""
            |   DROP TABLE IF EXISTS `tispark_test`.`collation_test_table`;
            |   CREATE TABLE `tispark_test`.`collation_test_table` (
            |    `col_varchar` varchar(2) not null,
@@ -147,8 +148,7 @@ class CollationSuite extends BaseTiSparkTest {
            |  """.stripMargin)
 
       the[TiBatchWriteException] thrownBy {
-        spark.sql(
-          """
+        spark.sql("""
             |INSERT INTO `tispark_test`.`collation_test_table` VALUES ('Aa'),('AA');
             |""".stripMargin)
       }

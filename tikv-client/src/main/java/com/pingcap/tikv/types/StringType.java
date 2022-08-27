@@ -122,11 +122,14 @@ public class StringType extends BytesType {
   protected void encodeKey(CodecDataOutput cdo, Object value) {
     if (Collation.isNewCollationEnabled()) {
       if (Collation.isUTF8GeneralCICollation(this.collation)) {
-        Codec.BytesCodec.writeBytesFully(cdo, GeneralCICollator.key(Converter.convertToString(value)));
+        Codec.BytesCodec.writeBytesFully(
+            cdo, GeneralCICollator.key(Converter.convertToString(value)));
       } else if (Collation.isUTF8UnicodeCICollation(this.collation)) {
-        Codec.BytesCodec.writeBytesFully(cdo, UnicodeCICollator.key(Converter.convertToString(value)));
+        Codec.BytesCodec.writeBytesFully(
+            cdo, UnicodeCICollator.key(Converter.convertToString(value)));
       } else if (Collation.isUTF8BinCollation(this.collation)) {
-        Codec.BytesCodec.writeBytesFully(cdo, BinPaddingCollator.key(Converter.convertToString(value)));
+        Codec.BytesCodec.writeBytesFully(
+            cdo, BinPaddingCollator.key(Converter.convertToString(value)));
       } else {
         throw new CodecException("Unsupported collation: " + Collation.translate(this.collation));
       }
