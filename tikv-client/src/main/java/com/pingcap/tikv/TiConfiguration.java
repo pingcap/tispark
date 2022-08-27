@@ -17,6 +17,7 @@
 package com.pingcap.tikv;
 
 import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.types.Converter;
@@ -120,6 +121,9 @@ public class TiConfiguration implements Serializable {
   private String networkMappingName = "";
   private HostMapping hostMapping;
 
+  // judge if the NewCollationEnabled is set in configuration file
+  private boolean isNewCollationEnabledSetInConfFile = false;
+
   private static Long getTimeAsSeconds(String key) {
     return Utils.timeStringAsSec(key);
   }
@@ -178,5 +182,14 @@ public class TiConfiguration implements Serializable {
   public TiConfiguration setCertReloadIntervalInSeconds(String interval) {
     this.certReloadInterval = getTimeAsSeconds(interval);
     return this;
+  }
+
+  public void setNewCollationEnable(Boolean flag) {
+    this.isNewCollationEnabledSetInConfFile = true;
+    Collation.setNewCollationEnabled(flag);
+  }
+
+  public Boolean getIsNewCollationEnabledSetInConfFile() {
+    return this.isNewCollationEnabledSetInConfFile;
   }
 }

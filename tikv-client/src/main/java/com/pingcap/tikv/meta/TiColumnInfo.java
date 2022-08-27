@@ -243,7 +243,7 @@ public class TiColumnInfo implements Serializable {
     return ColumnInfo.newBuilder()
         .setColumnId(id)
         .setTp(type.getTypeCode())
-        .setCollation(type.getCollationCode())
+        .setCollation(Collation.rewriteNewCollationIDIfNeeded(type.getCollationCode()))
         .setColumnLen((int) type.getLength())
         .setDecimal(type.getDecimal())
         .setFlag(type.getFlag())
