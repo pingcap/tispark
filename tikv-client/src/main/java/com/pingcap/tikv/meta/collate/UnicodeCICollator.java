@@ -18,9 +18,11 @@ package com.pingcap.tikv.meta.collate;
 
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.util.Pair;
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -138,10 +140,13 @@ public class UnicodeCICollator {
   static {
     try {
       Long startTime = System.currentTimeMillis();
-      List<String> lines =
-          Files.readAllLines(
-              Paths.get(
-                  UnicodeCICollator.class.getClassLoader().getResource(UNICODE_MAP_TABLE).toURI()));
+      InputStream inputStream =
+          UnicodeCICollator.class.getClassLoader().getResourceAsStream(UNICODE_MAP_TABLE);
+      BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+      List<String> lines = new ArrayList<>();
+      for (String line; (line = reader.readLine()) != null; ) {
+        lines.add(line);
+      }
       logger.info(
           "Read unicode_map_table file cost " + (System.currentTimeMillis() - startTime) + "ms");
       startTime = System.currentTimeMillis();

@@ -133,7 +133,28 @@ class CollationSuite extends BaseTiSparkTest {
         assert(df2.count() == 4)
       }
     }
+  }
 
+  test("utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci with non commonHandle") {
+    val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
+    for (collation <- collations) {
+      tidbStmt.execute(s"""
+                          |   DROP TABLE IF EXISTS `tispark_test`.`collation_test_table`;
+                          |   CREATE TABLE `tispark_test`.`collation_test_table` (
+                          |    `col_varchar` varchar(256),
+                          |    PRIMARY KEY (`col_varchar`)
+                          |    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=${collation}
+                          |  """.stripMargin)
+
+      spark.sql("""
+          |INSERT INTO `tispark_test`.`collation_test_table` VALUES ('Aefa');
+          |""".stripMargin)
+
+      val df =
+        spark.sql("SELECT * FROM `tispark_test`.`collation_test_table`")
+
+      assert(df.head().getString(0) == "Aefa")
+    }
   }
 
   test("utf8mb4_general_ci and utf8mb4_unicode_ci with primary index conflict test") {
@@ -154,4 +175,26 @@ class CollationSuite extends BaseTiSparkTest {
       }
     } should have message "duplicate unique key or primary key"
   }
+
+  test("utf8mb4_general_ci and utf8mb4_unicode_ci with unique index conflict test") {
+    val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
+    for (collation <- collations) {
+      tidbStmt.execute(s"""
+                          |   DROP TABLE IF EXISTS `tispark_test`.`collation_test_table`;
+                          |   CREATE TABLE `tispark_test`.`collation_test_table` (
+                          |    `col_varchar` varchar(256) not null,
+                          |    UNIQUE KEY (`col_varchar`(2))
+                          |    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=${collation}
+                          |  """.stripMargin)
+
+      tidbStmt.execute("INSERT INTO `tispark_test`.`collation_test_table` VALUES ('aajiofeaj');")
+
+      the[TiBatchWriteException] thrownBy {
+        spark.sql("""
+                    |INSERT INTO `tispark_test`.`collation_test_table` VALUES ('aajiofeaj');
+                    |""".stripMargin)
+      }
+    } should have message "data to be inserted has conflicts with TiKV data"
+  }
+
 }

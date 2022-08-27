@@ -145,17 +145,64 @@ public class TableCodec {
       return TableCodec.genIndexValueForCommonHandleVersion1(
           row, handle, distinct, tiIndexInfo, tiTableInfo);
     }
-    return genIndexValueForClusterIndexVersion0(handle, distinct);
+    return genIndexValueForClusterIndexVersion0(row, handle, distinct, tiIndexInfo, tiTableInfo);
   }
 
-  private static byte[] genIndexValueForClusterIndexVersion0(Handle handle, boolean distinct) {
-    if (!handle.isInt()) {
-      CodecDataOutput cdo = new CodecDataOutput();
-      int tailLen = 0;
-      cdo.writeByte(0);
-      if (distinct) {
-        encodeCommonHandle(cdo, handle);
+  private static void genRestoreData(
+      Row row, CodecDataOutput cdo, TiIndexInfo tiIndexInfo, TiTableInfo tiTableInfo) {
+    List<TiColumnInfo> columnInfoList = new ArrayList<>();
+    List<Object> valueList = new ArrayList<>();
+    for (TiIndexInfo index : tiTableInfo.getIndices()) {
+      for (TiIndexColumn tiIndexColumn : index.getIndexColumns()) {
+        TiColumnInfo indexColumnInfo = tiTableInfo.getColumn(tiIndexColumn.getOffset());
+        DataType indexType = indexColumnInfo.getType();
+        int prefixLength = (int) tiIndexColumn.getLength();
+        if (needRestoreData(indexType)) {
+          Object value = row.get(indexColumnInfo.getOffset(), indexColumnInfo.getType());
+          if (value == null) {
+            continue;
+          } else if (Collation.isBinCollation(indexType.getCollationCode())) {
+            continue;
+          } else if (DataType.isLengthUnSpecified(prefixLength)) {
+            valueList.add(value);
+          } else if (indexType instanceof BytesType) {
+            if (indexType.getCharset().equalsIgnoreCase("utf8")
+                || indexType.getCharset().equalsIgnoreCase("utf8mb4")) {
+              value = Converter.convertUtf8ToBytes(value, prefixLength);
+              valueList.add(value);
+            } else {
+              value = Converter.convertToBytes(value, prefixLength);
+              valueList.add(value);
+            }
+          }
+          columnInfoList.add(indexColumnInfo);
+        }
       }
+    }
+    if (valueList.size() > 0) {
+      cdo.write(new RowEncoderV2().encode(columnInfoList, valueList));
+    }
+  }
+
+  private static byte[] genIndexValueForClusterIndexVersion0(
+      Row row, Handle handle, boolean distinct, TiIndexInfo tiIndexInfo, TiTableInfo tiTableInfo) {
+    CodecDataOutput cdo = new CodecDataOutput();
+    cdo.writeByte(0);
+    int tailLen = 0;
+    Boolean newEncode = false;
+    if (!handle.isInt() && distinct) {
+      encodeCommonHandle(cdo, handle);
+      newEncode = true;
+    }
+
+    // encode restore data if needed.
+    genRestoreData(row, cdo, tiIndexInfo, tiTableInfo);
+
+    if (cdo.size() > 1) {
+      newEncode = true;
+    }
+
+    if (newEncode) {
       if (cdo.size() < 10) {
         int paddingLen = 10 - cdo.size();
         tailLen += paddingLen;
@@ -222,38 +269,7 @@ public class TableCodec {
     }
 
     // encode restore data if needed.
-    List<TiColumnInfo> columnInfoList = new ArrayList<>();
-    List<Object> valueList = new ArrayList<>();
-    for (TiIndexInfo index : tiTableInfo.getIndices()) {
-      for (TiIndexColumn tiIndexColumn : index.getIndexColumns()) {
-        TiColumnInfo indexColumnInfo = tiTableInfo.getColumn(tiIndexColumn.getOffset());
-        DataType indexType = indexColumnInfo.getType();
-        int prefixLength = (int) tiIndexColumn.getLength();
-        if (needRestoreData(indexType)) {
-          Object value = row.get(indexColumnInfo.getOffset(), indexColumnInfo.getType());
-          if (value == null) {
-            continue;
-          } else if (Collation.isBinCollation(indexType.getCollationCode())) {
-            continue;
-          } else if (DataType.isLengthUnSpecified(prefixLength)) {
-            valueList.add(value);
-          } else if (indexType instanceof BytesType) {
-            if (indexType.getCharset().equalsIgnoreCase("utf8")
-                || indexType.getCharset().equalsIgnoreCase("utf8mb4")) {
-              value = Converter.convertUtf8ToBytes(value, prefixLength);
-              valueList.add(value);
-            } else {
-              value = Converter.convertToBytes(value, prefixLength);
-              valueList.add(value);
-            }
-          }
-          columnInfoList.add(indexColumnInfo);
-        }
-      }
-    }
-    if (valueList.size() > 0) {
-      cdo.write(new RowEncoderV2().encode(columnInfoList, valueList));
-    }
+    genRestoreData(row, cdo, tiIndexInfo, tiTableInfo);
 
     return cdo.toBytes();
   }

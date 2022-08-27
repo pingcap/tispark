@@ -180,6 +180,17 @@ public class Converter {
     return val.toString();
   }
 
+  public static String convertToUTF8String(Object val) {
+    requireNonNull(val, "val is null");
+    if (val instanceof byte[]) {
+      return new String((byte[]) val, StandardCharsets.UTF_8);
+    } else if (val instanceof String) {
+      return (String) val;
+    }
+    throw new TypeException(
+        String.format("Cannot cast %s to bytes", val.getClass().getSimpleName()));
+  }
+
   public static byte[] convertToBytes(Object val) {
     requireNonNull(val, "val is null");
     if (val instanceof byte[]) {
