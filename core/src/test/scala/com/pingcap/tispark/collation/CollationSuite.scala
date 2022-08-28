@@ -197,4 +197,24 @@ class CollationSuite extends BaseTiSparkTest {
     } should have message "data to be inserted has conflicts with TiKV data"
   }
 
+  test("utf8mb4_general_ci and utf8mb4_unicode_ci with primary key insert test") {
+    val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
+    val col_varchar = generateRandomString(10)
+    for (collation <- collations) {
+      tidbStmt.execute(s"""
+                          |   DROP TABLE IF EXISTS `tispark_test`.`collation_test_table`;
+                          |   CREATE TABLE `tispark_test`.`collation_test_table` (
+                          |    `col_varchar` char(10) not null,
+                          |    PRIMARY KEY (`col_varchar`(2)) /*T![clustered_index] CLUSTERED */
+                          |    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=${collation}
+                          |  """.stripMargin)
+
+      spark.sql(s"""
+                    |INSERT INTO `tispark_test`.`collation_test_table` VALUES ('${col_varchar}');
+                    |""".stripMargin)
+
+      val df = spark.sql("SELECT * FROM `tispark_test`.`collation_test_table`")
+      assert(df.head().getString(0) == col_varchar)
+    }
+  }
 }

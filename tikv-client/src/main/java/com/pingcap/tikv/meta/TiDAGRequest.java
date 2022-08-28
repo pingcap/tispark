@@ -342,7 +342,7 @@ public class TiDAGRequest implements Serializable {
         TiColumnInfo columnInfo = tableInfo.getColumn(col.getName());
         colOffsetInFieldMap.put(col.getName(), lastOffset);
         lastOffset++;
-        tblScanBuilder.addColumns(columnInfo.toProto(tableInfo));
+        tblScanBuilder.addColumns(columnInfo.toOldProto(tableInfo));
       }
       // column offset should be in accordance with fields
       outputOffsets.add(colOffsetInFieldMap.get(col.getName()));
