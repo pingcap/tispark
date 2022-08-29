@@ -103,6 +103,8 @@ public class TableCodecTest {
     Handle commonHandle =
         CommonHandle.newCommonHandle(new DataType[] {StringType.VARCHAR}, new Object[] {"1"});
     TiTableInfo tableInfo = generateTiTableInfo();
+
+    // test common handle version0
     byte[] version0Value = TableCodec.genIndexValue(null, commonHandle, 0, true, null, tableInfo);
     Handle decodeCommonHandle0 = TableCodec.decodeHandleInUniqueIndexValue(version0Value, true);
     assertArrayEquals(commonHandle.encoded(), decodeCommonHandle0.encoded());
