@@ -155,15 +155,14 @@ public class UnicodeCICollator {
               .stream()
               .map(line -> line.split(","))
               .flatMap(Arrays::stream)
-              .map(
+              .mapToLong(
                   s -> {
                     if (s.startsWith("0x")) {
-                      return s.substring(2);
+                      return Long.parseUnsignedLong(s.substring(2), 16);
                     } else {
-                      return s;
+                      return Long.parseUnsignedLong(s, 16);
                     }
                   })
-              .mapToLong(l -> Long.parseUnsignedLong(l, 16))
               .toArray();
       logger.info("Load unicode_map_table cost " + (System.currentTimeMillis() - startTime) + "ms");
     } catch (Exception e) {
