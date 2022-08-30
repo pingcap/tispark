@@ -17,6 +17,7 @@
 package com.pingcap.tispark.collation
 
 import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tikv.meta.Collation
 import org.apache.spark.sql.BaseTiSparkTest
 import org.scalatest.Matchers.{convertToAnyShouldWrapper, have, the}
 
@@ -33,7 +34,14 @@ class CollationSuite extends BaseTiSparkTest {
     s.mkString
   }
 
+  private def checkNewCollationEnabled(): Unit = {
+    if (!Collation.isNewCollationEnabled) {
+      cancel()
+    }
+  }
+
   test("utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci with clustered index test") {
+    checkNewCollationEnabled
     val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
     for (collation <- collations) {
       tidbStmt.execute(s"""
@@ -68,6 +76,7 @@ class CollationSuite extends BaseTiSparkTest {
 
   test(
     "utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci with special clustered index test") {
+    checkNewCollationEnabled
     val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
     val col_varchars = Array(
       "a        ",
@@ -100,6 +109,7 @@ class CollationSuite extends BaseTiSparkTest {
   }
 
   test("utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci compare test") {
+    checkNewCollationEnabled
     val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
     for (collation <- collations) {
       tidbStmt.execute(s"""
@@ -136,6 +146,7 @@ class CollationSuite extends BaseTiSparkTest {
   }
 
   test("utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci with non commonHandle") {
+    checkNewCollationEnabled
     val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
     for (collation <- collations) {
       tidbStmt.execute(s"""
@@ -158,6 +169,7 @@ class CollationSuite extends BaseTiSparkTest {
   }
 
   test("utf8mb4_general_ci and utf8mb4_unicode_ci with primary index conflict test") {
+    checkNewCollationEnabled
     val collations = Array("utf8mb4_general_ci", "utf8mb4_unicode_ci")
     for (collation <- collations) {
       tidbStmt.execute(s"""
@@ -177,6 +189,7 @@ class CollationSuite extends BaseTiSparkTest {
   }
 
   test("utf8mb4_general_ci and utf8mb4_unicode_ci with unique index conflict test") {
+    checkNewCollationEnabled
     val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
     for (collation <- collations) {
       tidbStmt.execute(s"""
@@ -198,6 +211,7 @@ class CollationSuite extends BaseTiSparkTest {
   }
 
   test("utf8mb4_general_ci and utf8mb4_unicode_ci with primary key insert test") {
+    checkNewCollationEnabled
     val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
     val col_varchar = generateRandomString(10)
     for (collation <- collations) {
