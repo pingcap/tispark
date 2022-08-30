@@ -292,7 +292,9 @@ class LogicalPlanTestSuite extends BasePlanTest {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     val tiSparkTeleInfo = TiSparkTeleInfo.getTiSparkTeleInfo()
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    if (StoreVersion.isTiKVVersionGreatEqualThanVersion(this.ti.tiSession.getPDClient, "5.0.0")) {
+    if (ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
+        this.ti.clientSession.getTiKVSession.getPDClient,
+        "5.0.0")) {
       tidbStmt.execute("""
           |CREATE TABLE `t1` (
           |  `a` BIGINT(20) NOT NULL,
