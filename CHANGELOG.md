@@ -1,7 +1,23 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
-## [TiSpark 2.5.0] 2022-05-16
+## [TiSpark 2.5.2] 2022-08-30
+### Compatibility Changes
+- We will not provide the mysql-connector-java dependency because of the limit of the GPL license.#2457
+
+### Fixes
+- Fix the bug that single column condition is in the incorrect `if branch` #2384
+- Fix when TiDB has more than 10,000 tables in one Database, TiSpark may throw Table not found exceptions #2433
+- Fix count/avg push down  #2445
+- Fix the bug that when the primary key is not integer type, the two rows with null unique index will conflict and the bug that when the unique index conflicts, the conflicting unique index column cannot be deleted correctly  #2455
+- Fix exception would through when the size of pdAddresse is > 1 #2473
+- Fix the bug that Count(bit) should not be pushed down before TiKV 6.0.0  #2476
+- Upgraded Spark3.1 support version from 3.0.2 to 3.0.3，Upgraded Spark3.1 support version from 3.1.1 to 3.1.3，Upgraded Spark3.2 support version from 3.2.1 to 3.2.2 #2486
+- Only do auth check for tables in TiDB #2489
+- Change profile  #2517
+
+
+## [TiSpark 2.5.1] 2022-05-16
 ### Fixes
 - Fix limit not push down bug [#2335](https://github.com/pingcap/tispark/pull/2335)
 - Fix ClassCastException when cluster index with type Timestamp and Date [#2323](https://github.com/pingcap/tispark/pull/2323)
