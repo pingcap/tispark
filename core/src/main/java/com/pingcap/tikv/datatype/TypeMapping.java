@@ -80,9 +80,6 @@ public class TypeMapping {
       if (type.isUnsigned() && type.getType() == TypeLonglong) {
         return DataTypes.createDecimalType(20, 0);
       }
-      if (type.getType() == TypeTiny && type.getLength() == 1) {
-        return DataTypes.BooleanType;
-      }
       return DataTypes.LongType;
     }
 
