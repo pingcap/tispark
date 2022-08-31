@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 PingCAP, Inc.
+ * Copyright 2022 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-package com.pingcap.tispark.v2.sink
+package com.pingcap.tikv.util;
 
-import com.pingcap.tispark.write.TiDBOptions
-import org.apache.spark.sql.SQLContext
-import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
+import java.io.Serializable;
+import java.net.URI;
 
-case class TiDBWriteBuilder(
-    info: LogicalWriteInfo,
-    tiDBOptions: TiDBOptions,
-    sqlContext: SQLContext)
-    extends WriteBuilder {}
+public interface HostMapping extends Serializable {
+  URI getMappedURI(URI uri);
+}

@@ -21,26 +21,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 
 class WriteDDLConflictSuite extends ConcurrencyTest {
-  test("write ddl conflict using TableLock") {
-    if (!isEnableTableLock) {
-      cancel
-    }
-
-    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
-    jdbcUpdate(s"insert into $dbtable values(4, 'null')")
-
-    doBatchWriteInBackground(Map("useTableLock" -> "true"))
-
-    Thread.sleep(sleepBeforeQuery)
-
-    val caught = intercept[java.sql.SQLException] {
-      jdbcUpdate(s"alter table $dbtable ADD Email varchar(255)")
-    }
-    assert(
-      caught.getMessage
-        .startsWith("Table 'test_concurrency_write_read' was locked in WRITE LOCAL by server"))
-  }
-
   test("write ddl conflict using SchemaVersionCheck") {
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(4, 'null')")

@@ -234,14 +234,6 @@ select count(*) from account;
 1 row selected (1.97 seconds)
 ```
 
-## TiSparkR
-
-TiSparkR is a thin layer built for supporting R language with TiSpark. Refer to [this document](../R/README.md) for TiSparkR guide.
-
-## TiSpark on PySpark
-
-TiSpark on PySpark is a Python package build to support Python language with TiSpark. Refer to [this document](../python/README.md) for TiSpark on PySpark guide .
-
 ## Use TiSpark with Hive
 
 To use TiSpark with Hive:
@@ -391,11 +383,7 @@ If the online business requirements are not high or the loading is not large eno
 
 Q: How to use PySpark with TiSpark?
 
-A: Follow [TiSpark on PySpark](../python/README.md).
-
-Q: How to use SparkR with TiSpark?
-
-A: Follow [TiSpark on SparkR](../R/README.md).
+A: Follow [TiSpark on PySpark](https://github.com/pingcap/tispark/wiki/PySpark).
 
 ## Errors and Exceptions
 
