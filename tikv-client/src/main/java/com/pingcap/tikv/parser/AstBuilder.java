@@ -87,6 +87,8 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
       if (fnNameCtx.YEAR() != null) {
         Expression args = visitFunctionArgs(ctx.functionArgs());
         return new FuncCallExpr(args, Type.YEAR);
+      } else {
+        throw new UnsupportedOperationException("Unsupported function: " + fnNameCtx.getText());
       }
     }
     return visitChildren(ctx);
