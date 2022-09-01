@@ -52,7 +52,7 @@ public class RegionManager {
   // https://github.com/pingcap/tispark/issues/1170
   private final RegionCache cache;
 
-  private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
+  private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
 
   // To avoid double retrieval, we used the async version of grpc
   // When rpc not returned, instead of call again, it wait for previous one done
@@ -67,7 +67,12 @@ public class RegionManager {
     this.cacheInvalidateCallback = null;
   }
 
-  public Function<CacheInvalidateEvent, Void> getCacheInvalidateCallback() {
+  public synchronized void setCacheInvalidateCallback(
+      Function<CacheInvalidateEvent, Void> cacheInvalidateCallback) {
+    this.cacheInvalidateCallback = cacheInvalidateCallback;
+  }
+
+  public synchronized Function<CacheInvalidateEvent, Void> getCacheInvalidateCallback() {
     return cacheInvalidateCallback;
   }
 

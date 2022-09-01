@@ -341,6 +341,8 @@ public class TiSession implements AutoCloseable {
    */
   public void injectCallBackFunc(Function<CacheInvalidateEvent, Void> callBackFunc) {
     this.cacheInvalidateCallback = callBackFunc;
+    RegionManager manager = this.getRegionManager();
+    manager.setCacheInvalidateCallback(callBackFunc);
   }
 
   /**

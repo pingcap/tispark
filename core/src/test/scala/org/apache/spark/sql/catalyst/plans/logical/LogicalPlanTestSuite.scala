@@ -24,12 +24,15 @@ import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.types.{DataType, DataTypeFactory, IntegerType, MySQLType}
 import com.pingcap.tispark.telemetry.TiSparkTeleInfo
+import org.apache.log4j.spi.LoggingEvent
+import org.apache.log4j.{AppenderSkeleton, Logger}
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 import org.apache.spark.sql.execution.{ExplainMode, SimpleMode}
 import org.scalatest.Matchers.{be, contain, convertToAnyShouldWrapper}
 import org.tikv.kvproto.Coprocessor
 
 import java.util
+import java.util.stream.Collectors
 
 class LogicalPlanTestSuite extends BasePlanTest {
 
