@@ -290,18 +290,15 @@ class LogicalPlanTestSuite extends BasePlanTest {
   test("test physical plan explain which table with cluster index") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     val tiSparkTeleInfo = TiSparkTeleInfo.getTiSparkTeleInfo()
-    val version = tiSparkTeleInfo.get("tidb_version")
-    if (version.isEmpty) {
-      fail("TiDB version can not be empty")
-    }
-    if (version.get.toString.compareTo("v5") > 0) {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    if (StoreVersion.isTiKVVersionGreatEqualThanVersion(this.ti.tiSession.getPDClient, "5.0.0")) {
       tidbStmt.execute("""
-                         |CREATE TABLE `t1` (
-                         |  `a` BIGINT(20) NOT NULL,
-                         |  `b` varchar(255) NOT NULL,
-                         |  `c` varchar(255) DEFAULT NULL,
-                         |   PRIMARY KEY (`a`) clustered
-                         |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+          |CREATE TABLE `t1` (
+          |  `a` BIGINT(20) NOT NULL,
+          |  `b` varchar(255) NOT NULL,
+          |  `c` varchar(255) DEFAULT NULL,
+          |   PRIMARY KEY (`a`) clustered
+          |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
     } else {
       val config =
         tidbStmt.executeQuery("show config where type='tidb' and name='alter-primary-key'")
