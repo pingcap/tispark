@@ -42,8 +42,7 @@ class TiFlashSuite extends BaseTiSparkTest {
     cancelIfTiFlashDisabled()
 
     tidbStmt.execute("DROP TABLE IF EXISTS `quarterly_report_status`")
-    tidbStmt.execute(
-      """
+    tidbStmt.execute("""
         |CREATE TABLE `quarterly_report_status` (
         |  `report_id` int(11) NOT NULL,
         |  `report_status` varchar(20) NOT NULL,
