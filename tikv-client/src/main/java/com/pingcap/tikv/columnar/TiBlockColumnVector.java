@@ -142,6 +142,8 @@ public class TiBlockColumnVector extends TiColumnVector {
    */
   @Override
   public boolean getBoolean(int rowId) {
+    // Use getLong, because getLong will call different method according to fixedLength
+    // Maybe decode has some problems, use getInt directly will cause strange result
     long value = getLong(rowId);
     return value == 1;
   }
