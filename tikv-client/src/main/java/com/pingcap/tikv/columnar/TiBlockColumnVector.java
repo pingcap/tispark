@@ -142,7 +142,8 @@ public class TiBlockColumnVector extends TiColumnVector {
    */
   @Override
   public boolean getBoolean(int rowId) {
-    return false;
+    int value = getInt(rowId);
+    return value == 1;
   }
 
   /**
