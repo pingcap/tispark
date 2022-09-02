@@ -12,23 +12,16 @@ This document introduces how to set up and use TiSpark, which requires some basi
 * [Recommended deployment configurations](#recommended-deployment-configurations)
    + [For independent deployment of Spark cluster and TiSpark cluster](#for-independent-deployment-of-spark-cluster-and-tispark-cluster)
    + [For hybrid deployment of TiSpark and TiKV cluster](#for-hybrid-deployment-of-tispark-and-tikv-cluster)
-* [Deploy TiSpark](#deploy-tispark)
-   + [Deploy TiSpark on existing Spark cluster](#deploy-tispark-on-existing-spark-cluster)
-   + [Deploy TiSpark without Spark cluster](#deploy-tispark-without-spark-cluster)
-* [Demonstration](#demonstration)
-* [TiSparkR](#tisparkr)
-* [TiSpark on PySpark](#tispark-on-pyspark)
-* [Use TiSpark with Hive](#use-tispark-with-hive)
-* [Load Spark DataFrame into TiDB using TiDB Connector](#load-spark-dataframe-into-tidb-using-tidb-connector)
-* [Load Spark DataFrame into TiDB using JDBC](#load-spark-dataframe-into-tidb-using-jdbc)
+* [Getting Started](#getting-started)
+* [Configuration](#configuration)
+* [Write with TiSpark](#write-with-tispark)
+* [Features](#features)
+  * [Expression Index](#expression-index)
+  * [TiFlash](#partition-table-support)
+  * [Partition Table support](#partition-table-support)
+  * [Other features](#other-features)
 * [Statistics information](#statistics-information)
-* [Reading partition table from TiDB](#reading-partition-table-from-tidb)
-* [Common port numbers used by Spark cluster](#common-port-numbers-used-by-spark-cluster)
-* [FAQ](#13-faq)
-* [Errors and Exceptions](#14-errors-and-exceptions)
-   + [Netty OutOfDirectMemoryError](#netty-outofdirectmemoryerror)
-   + [Chinese characters are garbled](#chinese-characters-are-garbled)
-   + [GRPC message exceeds maximum size error](#grpc-message-exceeds-maximum-size-error)
+* [FAQ](#faq)
    
 ## Overview
 
@@ -91,196 +84,24 @@ spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_adress}
 
 For the hybrid deployment of TiSpark and TiKV, add the resources required by TiSpark to the resources reserved in TiKV, and allocate 25% of the memory for the system.
 
-## Deploy TiSpark
+## Getting Started
 
-Download the TiSpark's jar package from [here](https://github.com/pingcap/tispark/releases).
+See [Getting Started](https://github.com/pingcap/tispark/wiki/Getting-Started)
 
-### Deploy TiSpark on existing Spark cluster
+## Configuration
 
-You do not need to reboot the existing Spark cluster for TiSpark to run on it. Instead, use Spark's `--jars` parameter to introduce TiSpark as a dependency:
+You can find all the configuration items in the [configuration](./configuration.md) file.
 
-```
-spark-shell --jars $your_path_to/tispark-${name_with_version}.jar
-```
+## Write with TiSpark
 
-To deploy TiSpark as a default component, place the TiSpark jar package into each node's jar path on the Spark cluster and restart the Spark cluster:
-
-```
-cp $your_path_to/tispark-${name_with_version}.jar $SPARK_HOME/jars
-```
-
-In this way, you can use either `Spark-Submit` or `Spark-Shell` to use TiSpark directly.
-
-### Deploy TiSpark without Spark cluster
-
-Without a Spark cluster, it is recommended that you use the Spark Standalone mode by placing a compiled version of Spark on each node on the cluster. For any problem, refer to the [official Spark website](https://spark.apache.org/docs/latest/spark-standalone.html). You are also welcome to [file an issue](https://github.com/pingcap/tispark/issues/new) on GitHub.
-
-#### Step 1: Download and install
-
-Download [Apache Spark](https://spark.apache.org/downloads.html).
-
-+ For the Standalone mode without Hadoop support, use Spark **2.3.x/2.4.x** and any version of pre-build with Apache Hadoop 2.x with Hadoop dependencies.
-
-+ If you need to use the Hadoop cluster, choose the corresponding Hadoop version. You can also build Spark from the [Spark 2.3 source code](https://spark.apache.org/docs/2.3.4/building-spark.html) or [Spark 2.4 source code](https://spark.apache.org/docs/2.4.4/building-spark.html) to match the previous version of the official Hadoop 2.6.
-
-> **Note:**
->
-> Confirm the Spark version that your TiSpark version supports.
-
-Suppose you already have a Spark binary, and the current PATH is `SPARKPATH`, copy the TiSpark jar package to the `$SPARKPATH/jars` directory.
-
-#### Step 2: Start a Master node
-
-Execute the following command on the selected Spark-Master node:
-
-```
-cd $SPARKPATH
-
-./sbin/start-master.sh
-```
-
-After the command is executed, a log file is printed on the screen. Check the log file to confirm whether the Spark-Master is started successfully.
-
-Open the [http://spark-master-hostname:8080](http://spark-master-hostname:8080) to view the cluster information (if you do not change the default port number of Spark-Master).
-
-When you start Spark-Worker, you can also use this panel to confirm whether the Worker is joined to the cluster.
-
-#### Step 3: Start a Worker node
-
-Similarly, start a Spark-Worker node by executing the following command:
-
-```
-./sbin/start-slave.sh spark://spark-master-hostname:7077
-```
-
-After the command returns, also check whether the Worker node is joined to the Spark cluster correctly from the panel.
-
-Repeat the above command on all Worker nodes. After all the Workers are connected to the Master, you have a Standalone mode Spark cluster.
-
-#### Step 4: Spark SQL shell and JDBC Server
-
-Use Spark's ThriftServer and SparkSQL directly because TiSpark now supports Spark 2.3/2.4.
-
-## Demonstration
-
-This section briefly introduces how to use Spark SQL for OLAP analysis (assuming that you have successfully started the TiSpark cluster as described above).
-
-The following example uses a table named `lineitem` in the `tpch` database.
-
-1. Add the entry below in your `./conf/spark-defaults.conf`, assuming that your PD node is located at `192.168.1.100`, port `2379`.
-
-    ```
-    spark.tispark.pd.addresses 192.168.1.100:2379
-    spark.sql.extensions org.apache.spark.sql.TiExtensions
-    spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
-    spark.sql.catalog.tidb_catalog.pd.addresses 192.168.1.100:2379
-    ```
-
-2. In the Spark-Shell, enter the following command:
-
-    ```
-    spark.sql("use tidb_catalog.tpch")
-    ```
-
-3. Call Spark SQL directly:
-
-    ```
-    spark.sql("select count (*) from lineitem").show
-    ```
-
-    The result:
-
-    ```
-    +-------------+
-    | Count (1) |
-    +-------------+
-    | 600000000 |
-    +-------------+
-    ```
-
-TiSpark's SQL Interactive shell is almost the same as spark-sql shell.
-
-```
-spark-sql> use tpch;
-Time taken: 0.015 seconds
-
-spark-sql> select count(*) from lineitem;
-2000
-Time taken: 0.673 seconds, Fetched 1 row(s)
-```
-
-For the JDBC connection with Thrift Server, try various JDBC-supported tools including SQuirreL SQL and hive-beeline.
-
-For example, to use it with beeline:
-
-```
-./beeline
-Beeline version 1.2.2 by Apache Hive
-beeline> !connect jdbc:hive2://localhost:10000
-
-1: jdbc:hive2://localhost:10000> use testdb;
-+---------+--+
-| Result  |
-+---------+--+
-+---------+--+
-No rows selected (0.013 seconds)
-
-select count(*) from account;
-+-----------+--+
-| count(1)  |
-+-----------+--+
-| 1000000   |
-+-----------+--+
-1 row selected (1.97 seconds)
-```
-
-## Use TiSpark with Hive
-
-To use TiSpark with Hive:
-
-1. Set the environment variable `HADOOP_CONF_DIR` to your Hadoop's configuration folder.
-
-2. Copy `hive-site.xml` to the `spark/conf` folder before you start Spark.
-
-    ```
-    val tisparkDF = spark.sql("select * from tispark_table").toDF
-    tisparkDF.write.saveAsTable("hive_table") // save table to hive
-    spark.sql("select * from hive_table a, tispark_table b where a.col1 = b.col1").show // join table across Hive and Tispark
-    ```
-
-## Load Spark DataFrame into TiDB using TiDB Connector
 TiSpark natively supports writing data to TiKV via Spark Data Source API and guarantees ACID.
+See [Data Source API User Guide](./datasource_api_userguide.md) for more detail.
 
-For example:
+TiSpark>=3.0.2 also supports Insert SQL. See [insert SQL](./insert_sql_userguide.md) for more detail.
 
-```scala
-// tispark will send `lock table` command to TiDB via JDBC
-val tidbOptions: Map[String, String] = Map(
-  "tidb.addr" -> "127.0.0.1",
-  "tidb.password" -> "",
-  "tidb.port" -> "4000",
-  "tidb.user" -> "root",
-  "spark.tispark.pd.addresses" -> "127.0.0.1:2379"
-)
+You can also write to TiDB with Spark JDBC, this is the native way to use spark, no need to import TiSpark.
 
-val customer = spark.sql("select * from customer limit 100000")
-
-customer.write
-.format("tidb")
-.option("database", "tpch_test")
-.option("table", "cust_test_select")
-.options(tidbOptions)
-.mode("append")
-.save()
-```
-
-See [here](./datasource_api_userguide.md) for more details.
-
-## Load Spark DataFrame into TiDB using JDBC
-
-While TiSpark provides a direct way to load data into your TiDB cluster, you can also do it by using JDBC.
-
-For example:
+Here is a reference:
 
 ```scala
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
@@ -306,21 +127,37 @@ df.write
 
 Please set `isolationLevel` to `NONE` to avoid large single transactions which might lead to TiDB OOM and also avoid the `ISOLATION LEVEL does not support` error (TiDB currently only supports `REPEATABLE-READ`).
 
-## Statistics information
 
-TiSpark uses the statistic information for:
+## Features
 
-+ Determining which index to use in your query plan with the lowest estimated cost.
-+ Small table broadcasting, which enables efficient broadcast join.
+> Main Features
 
-For TiSpark to use the statistic information, first make sure that relevant tables have been analyzed.
+| Feature Support                   | TiSpark 2.4.x | TiSpark 2.5.x | TiSpark 3.0.x | TiSpark master |
+| --------------------------------- | ------------- | ------------- | ----------- | -------------- |
+| SQL select without tidb_catalog   | ✔           | ✔           |             |                |
+| SQL select with tidb_catalog      |               | ✔           | ✔         | ✔            |
+| DataFrame append                  | ✔           | ✔           | ✔         | ✔            |
+| DataFrame reads                   | ✔           | ✔           | ✔         | ✔            |
+| SQL show databases                | ✔           | ✔           | ✔         | ✔            |
+| SQL show tables                   | ✔           | ✔           | ✔         | ✔            |
+| SQL auth                          |               | ✔           | ✔         | ✔            |
+| SQL delete from with tidb_catalog |               |               | ✔         | ✔            |
+| TLS                               |               |               | ✔         | ✔            |
+| DataFrame auth                    |               |               |             | ✔            |
 
-See [here](https://github.com/pingcap/docs/blob/master/statistics.md) for more details about how to analyze tables.
+### Expression Index
 
-Since TiSpark 2.0, statistics information is default to auto-load.
+`tidb-5.0` supports Expression Index.
 
-## Partition Table support
-### Reading partition table from TiDB
+TiSpark currently supports retrieving data from table with `Expression Index`, but the `Expression Index` will not be used by the planner of TiSpark.
+
+### TiFlash
+TiSpark can read from TiFlash with the configuration `spark.tispark.isolation_read_engines`
+
+
+### Partition Table support
+ 
+**Reading partition table from TiDB**
 
 TiSpark reads the range and hash partition table from TiDB.
 
@@ -334,11 +171,11 @@ The partition pruning is applied when the partition expression of the range part
 
 + column expression
 + `YEAR($argument)` where the argument is a column and its type is datetime or string literal
-that can be parsed as datetime.
+  that can be parsed as datetime.
 
 If partition pruning is not applied, TiSpark's reading is equivalent to doing a table scan over all partitions.
 
-### Write into partition table
+**Write into partition table**
 
 Currently, TiSpark only supports writing into the range and hash partition table under the following conditions:
 + the partition expression is column expression
@@ -353,69 +190,30 @@ There are two ways to write into partition table:
 > Currently the charset only supported is utf8mb4 and [`new_collations_enabled_on_first_bootstrap`](https://docs.pingcap.com/tidb/dev/tidb-configuration-file#new_collations_enabled_on_first_bootstrap)
 > need to be set to `false` in TiDB.
 
-## Common port numbers used by Spark cluster
 
-|Port Name| Default Port Number   | Configuration Property   | Notes|
-|---------------| ------------- |-----|-----|
-|Master web UI  | `8080`  | spark.master.ui.port  or SPARK_MASTER_WEBUI_PORT| The value set by `spark.master.ui.port` takes precedence.  |
-|Worker web UI  |  `8081`  | spark.worker.ui.port or SPARK_WORKER_WEBUI_PORT  | The value set by `spark.worker.ui.port` takes precedence.|
-|History server web UI   |  `18080`  | spark.history.ui.port  |Optional; it is only applied if you use the history server.   |
-|Master port   |  `7077`  |   SPARK_MASTER_PORT  |   |
-|Master REST port   |  `6066`  | spark.master.rest.port  | Not needed if you disable the `REST` service.   |
-|Worker port |  (random)   |  SPARK_WORKER_PORT |   |
-|Block manager port  |(random)   | spark.blockManager.port  |   |
-|Shuffle server  |  `7337`   | spark.shuffle.service.port  |  Optional; it is only applied if you use the external shuffle service.  |
-|  Application web UI  |  `4040`  |  spark.ui.port | If `4040` has been occupied, then `4041` is used. |
+### Other Features
+- [Push down](./push_down.md)
+- [Delete with TiSpark](./delete_userguide.md)
+- [Stale read](https://github.com/pingcap/tispark/blob/master/docs/stale_read.md)
+- [Authorization and authentication](https://github.com/pingcap/tispark/blob/master/docs/authorization_userguide.md)
+- [TiSpark with multiple catalogs](https://github.com/pingcap/tispark/wiki/TiSpark-with-multiple-catalogs)
+- [TiSpark TLS](https://github.com/pingcap/tispark/blob/master/docs/configuration.md#tls-notes)
+- [TiSpark Telemetry](https://github.com/pingcap/tispark/blob/master/docs/telemetry.md)
+- [TiSpark plan](./query_execution_plan_in_TiSpark.md)
+
+### Statistics information
+
+TiSpark uses the statistic information for:
+
++ Determining which index to use in your query plan with the lowest estimated cost.
++ Small table broadcasting, which enables efficient broadcast join.
+
+For TiSpark to use the statistic information, first make sure that relevant tables have been analyzed.
+
+See [here](https://github.com/pingcap/docs/blob/master/statistics.md) for more details about how to analyze tables.
+
+Since TiSpark 2.0, statistics information is default to auto-load.
 
 ## FAQ
 
-Q: What are the pros and cons of independent deployment as opposed to a shared resource with an existing Spark / Hadoop cluster?
-
-A: You can use the existing Spark cluster without a separate deployment, but if the existing cluster is busy, TiSpark will not be able to achieve the desired speed.
-
-Q: Can I mix Spark with TiKV?
-
-A: If TiDB and TiKV are overloaded and run critical online tasks, consider deploying TiSpark separately.
-
-You also need to consider using different NICs to ensure that OLTP's network resources are not compromised so that online business is not affected.
-
-If the online business requirements are not high or the loading is not large enough, you can mix TiSpark with TiKV deployment.
-
-Q: How to use PySpark with TiSpark?
-
-A: Follow [TiSpark on PySpark](https://github.com/pingcap/tispark/wiki/PySpark).
-
-## Errors and Exceptions
-
-### Netty OutOfDirectMemoryError
-
-Netty's `PoolThreadCache` may hold some unused memory, which may cause the following error.
-
-```
-Caused by: shade.io.netty.handler.codec.DecoderException: shade.io.netty.util.internal.OutOfDirectMemoryError
-```
-
-The following configurations can be used to avoid the error.
-
-```
---conf "spark.driver.extraJavaOptions=-Dshade.io.netty.allocator.type=unpooled"
---conf "spark.executor.extraJavaOptions=-Dshade.io.netty.allocator.type=unpooled"
-```
-
-### Chinese characters are garbled
-
-The following configurations can be used to avoid the garbled chinese characters problem.
-
-```
---conf "spark.driver.extraJavaOptions=-Dfile.encoding=UTF-8"
---conf "spark.executor.extraJavaOptions=-Dfile.encoding=UTF-8"
-```
-### GRPC message exceeds maximum size error
-
-The maximum message size of GRPC java lib is 2G. The following error will be thrown if there is a huge region in TiKV whose size is more than 2G.
-
-```
-Caused by: shade.io.grpc.StatusRuntimeException: RESOURCE_EXHAUSTED: gRPC message exceeds maximum size 2147483647
-```
-
-Use `SHOW TABLE [table_name] REGIONS [WhereClauseOptional]` to check whether there is a huge region in TiKV.
+See our wiki [TiSpark FAQ](https://github.com/pingcap/tispark/wiki/TiSpark-FAQ)
