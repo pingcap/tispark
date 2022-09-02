@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 ### Fixes
 - Fix the bug that single column condition is in the incorrect `if branch` [#2395](https://github.com/pingcap/tispark/pull/2395)
 - Fix when TiDB has more than 10,000 tables in one Database, TiSpark may throw Table not found exceptions [#2440](https://github.com/pingcap/tispark/pull/2440)
-- Fix count/avg push down  [#2470](https://github.com/pingcap/tispark/pull/2470)
+- Fix the bug that count/avg can not push down  [#2470](https://github.com/pingcap/tispark/pull/2470)
 - Fix the bug that when the primary key is not integer type, the two rows with null unique index will conflict and the bug that when the unique index conflicts, the conflicting unique index column cannot be deleted correctly  [#2515](https://github.com/pingcap/tispark/pull/2515)
 - Fix exception would through when the size of pdAddresse is > 1 [#2478](https://github.com/pingcap/tispark/pull/2478)
 - Fix the bug that Count(bit) should not be pushed down before TiKV 6.0.0  [#2485](https://github.com/pingcap/tispark/pull/2485)
