@@ -128,9 +128,12 @@ public class TableCodec {
   // 		|
   // 		|  Layout of Options:
   // 		|
-  // 		|     Segment:             Common Handle
-  //  	|     Layout:  CHandle flag | CHandle Len | CHandle
-  // 		|     Length:     1         | 2           | len(CHandle)
+  //		|     Segment:             Common Handle                 |     Global Index      |   New
+  // Collation
+  // 		|     Layout:  CHandle flag | CHandle Len | CHandle      | PidFlag | PartitionID |
+  // restoreData
+  //		|     Length:     1         | 2           | len(CHandle) |    1    |    8        |
+  // len(restoreData)
   // 		|
   // 		|     Common Handle Segment: Exists when unique index used common handles.
   //    |     Global Index in not support now.
@@ -148,6 +151,11 @@ public class TableCodec {
     return genIndexValueForClusterIndexVersion0(row, handle, distinct, tiIndexInfo, tiTableInfo);
   }
 
+  // If the following conditions are satisfied, a column should have restore data:
+  // The column is a string type that uses the new collation.
+  // For type char, blob and unspecified, the collation is neither binary nor with the suffix
+  // “_bin”.
+  // For type varchar, the collation is not binary.
   private static void genRestoreData(
       Row row, CodecDataOutput cdo, TiIndexInfo tiIndexInfo, TiTableInfo tiTableInfo) {
     List<TiColumnInfo> columnInfoList = new ArrayList<>();
@@ -198,12 +206,16 @@ public class TableCodec {
     // encode restore data if needed.
     genRestoreData(row, cdo, tiIndexInfo, tiTableInfo);
 
+    // when cdo has restore data, we will use newEncode formate.
     if (cdo.size() > 1) {
       newEncode = true;
     }
 
     if (newEncode) {
-      if (cdo.size() < 10) {
+      if (handle.isInt() && distinct) {
+        tailLen += 8;
+        encodeHandleInUniqueIndexValue(cdo, handle);
+      } else if (cdo.size() < 10) {
         int paddingLen = 10 - cdo.size();
         tailLen += paddingLen;
         cdo.write(new byte[paddingLen]);
@@ -222,7 +234,9 @@ public class TableCodec {
   }
 
   private static Boolean needRestoreData(DataType type) {
-    if (Collation.isNewCollationEnabled() && isNonBinaryStr(type)) {
+    if (Collation.isNewCollationEnabled()
+        && isNonBinaryStr(type)
+        && !(Collation.isBinCollation(type.getCollationCode()) && !isTypeVarChar(type))) {
       return true;
     } else {
       return false;
@@ -280,6 +294,12 @@ public class TableCodec {
     int hLen = encoded.length;
     cdo.writeShort(hLen);
     cdo.write(encoded);
+  }
+
+  private static void encodeHandleInUniqueIndexValue(CodecDataOutput cdo, Handle handle) {
+    if (handle.isInt()) {
+      cdo.writeLong(handle.intValue());
+    }
   }
 
   public static Handle decodeHandleInUniqueIndexValue(byte[] value, boolean isCommonHandle) {

@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.Setter;
@@ -121,8 +122,7 @@ public class TiConfiguration implements Serializable {
   private String networkMappingName = "";
   private HostMapping hostMapping;
 
-  // judge if the NewCollationEnabled is set in configuration file
-  private boolean isNewCollationEnabledSetInConfFile = false;
+  private Boolean NewCollationEnabled;
 
   private static Long getTimeAsSeconds(String key) {
     return Utils.timeStringAsSec(key);
@@ -185,11 +185,11 @@ public class TiConfiguration implements Serializable {
   }
 
   public void setNewCollationEnable(Boolean flag) {
-    this.isNewCollationEnabledSetInConfFile = true;
+    this.NewCollationEnabled = flag;
     Collation.setNewCollationEnabled(flag);
   }
 
-  public Boolean getIsNewCollationEnabledSetInConfFile() {
-    return this.isNewCollationEnabledSetInConfFile;
+  public Optional<Boolean> getNewCollationEnable() {
+    return Optional.ofNullable(this.NewCollationEnabled);
   }
 }
