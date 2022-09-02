@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## [TiSpark 2.5.2] 2022-08-30
 ### Compatibility Changes
-- We will not provide the mysql-connector-java dependency because of the limit of the GPL license.[#2457](https://github.com/pingcap/tispark/pull/2457)
+- We will not provide the mysql-connector-java dependency because of the limit of the GPL license [#2461](https://github.com/pingcap/tispark/pull/2461)
 
 ### Fixes
 - Fix the bug that single column condition is incorrect `if branch` [#2394](https://github.com/pingcap/tispark/pull/2394)
