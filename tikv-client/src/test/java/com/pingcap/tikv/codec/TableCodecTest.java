@@ -105,18 +105,24 @@ public class TableCodecTest {
     TiTableInfo tableInfo = generateTiTableInfo();
 
     // test common handle version0
-    byte[] version0Value = TableCodec.genIndexValue(null, commonHandle, 0, true, null, tableInfo);
+    byte[] version0Value =
+        TableCodec.genIndexValue(
+            null, commonHandle, 0, true, tableInfo.getIndices(true).get(0), tableInfo);
     Handle decodeCommonHandle0 = TableCodec.decodeHandleInUniqueIndexValue(version0Value, true);
     assertArrayEquals(commonHandle.encoded(), decodeCommonHandle0.encoded());
 
     // test common handle version1
-    byte[] version1Value = TableCodec.genIndexValue(null, commonHandle, 1, true, null, tableInfo);
+    byte[] version1Value =
+        TableCodec.genIndexValue(
+            null, commonHandle, 1, true, tableInfo.getIndices(true).get(0), tableInfo);
     Handle decodeCommonHandle1 = TableCodec.decodeHandleInUniqueIndexValue(version1Value, true);
     assertArrayEquals(commonHandle.encoded(), decodeCommonHandle1.encoded());
 
     // test int handle
     Handle intHandle = new IntHandle(1);
-    byte[] intHandleValue = TableCodec.genIndexValue(null, intHandle, 0, true, null, tableInfo);
+    byte[] intHandleValue =
+        TableCodec.genIndexValue(
+            null, intHandle, 0, true, tableInfo.getIndices(true).get(0), tableInfo);
     Handle decodeIntHandle = TableCodec.decodeHandleInUniqueIndexValue(intHandleValue, false);
     assertArrayEquals(intHandle.encoded(), decodeIntHandle.encoded());
   }
