@@ -137,6 +137,13 @@ public class TableCodec {
   // 		|
   // 		|     Common Handle Segment: Exists when unique index used common handles.
   //    |     Global Index in not support now.
+  //		|     In v4.0, restored data contains all the index values. For example, (a int, b char(10))
+  // and index (a, b).
+  //		|     In v5.0, restored data contains only non-binary data(except for char and _bin). In the
+  // above example, the restored data contains only the value of b.
+  //		|     Besides, if the collation of b is _bin, then restored data is an integer indicate the
+  // spaces are truncated. Then we use sortKey
+  //		|     and the restored data together to restore original data.
   public static byte[] genIndexValue(
       Row row,
       Handle handle,
@@ -153,9 +160,8 @@ public class TableCodec {
 
   // If the following conditions are satisfied, a column should have restore data:
   // The column is a string type that uses the new collation.
-  // For type char, blob and unspecified, the collation is neither binary nor with the suffix
-  // “_bin”.
-  // For type varchar, the collation is not binary.
+  // For version1, type char and blob, the collation is neither binary nor with the suffix “_bin”.
+  // For version1, type varchar, the collation is not binary.
   private static void genRestoreData(
       Row row, CodecDataOutput cdo, TiIndexInfo tiIndexInfo, TiTableInfo tiTableInfo) {
     List<TiColumnInfo> columnInfoList = new ArrayList<>();
@@ -204,7 +210,26 @@ public class TableCodec {
     }
 
     // encode restore data if needed.
-    genRestoreData(row, cdo, tiIndexInfo, tiTableInfo);
+    // For version0, restore all index value.
+    List<TiColumnInfo> columnInfoList = new ArrayList<>();
+    List<Object> valueList = new ArrayList<>();
+    for (TiIndexInfo index : tiTableInfo.getIndices()) {
+      for (TiIndexColumn tiIndexColumn : index.getIndexColumns()) {
+        TiColumnInfo indexColumnInfo = tiTableInfo.getColumn(tiIndexColumn.getOffset());
+        if (Collation.isNewCollationEnabled()) {
+          Object value = row.get(indexColumnInfo.getOffset(), indexColumnInfo.getType());
+          if (value == null) {
+            continue;
+          } else {
+            valueList.add(value);
+          }
+          columnInfoList.add(indexColumnInfo);
+        }
+      }
+    }
+    if (valueList.size() > 0) {
+      cdo.write(new RowEncoderV2().encode(columnInfoList, valueList));
+    }
 
     // when cdo has restore data, we will use newEncode formate.
     if (cdo.size() > 1) {

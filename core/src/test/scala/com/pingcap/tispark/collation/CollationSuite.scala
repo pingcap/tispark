@@ -74,6 +74,40 @@ class CollationSuite extends BaseTiSparkTest {
     }
   }
 
+  test("utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci with non-clustered index test") {
+    checkNewCollationEnabled
+    val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
+    for (collation <- collations) {
+      tidbStmt.execute(s"""
+                          |    DROP TABLE IF EXISTS `tispark_test`.`collation_test_table`;
+                          |    CREATE TABLE `tispark_test`.`collation_test_table` (
+                          |      `col_bit` bit(1) not null,
+                          |      `col_varchar` varchar(23) not null,
+                          |      `col_int0` int(11) not null,
+                          |      `col_int1` int(11) not null,
+                          |      UNIQUE KEY (`col_int0`),
+                          |      PRIMARY KEY (`col_varchar`(5),`col_bit`) NONCLUSTERED
+                          |    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=${collation}
+                          |""".stripMargin)
+
+      val col_varchar1 = generateRandomString(23)
+      val col_varchar2 = generateRandomString(23)
+
+      spark.sql(s"""
+                   |  INSERT INTO `tispark_test`.`collation_test_table` VALUES (0, '${col_varchar1}',-1176927076,-199700133);
+                   |""".stripMargin)
+
+      spark.sql(s"""
+                   |  INSERT INTO `tispark_test`.`collation_test_table` VALUES (1, '${col_varchar2}',-1908012631,586989409);
+                   |""".stripMargin)
+
+      val df =
+        spark.sql("select * from `tispark_test`.`collation_test_table` order by `col_bit` desc")
+      assert(df.count() == 2);
+      assert(df.head().getString(1) == col_varchar2)
+    }
+  }
+
   test(
     "utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci with special clustered index test") {
     checkNewCollationEnabled
@@ -99,6 +133,41 @@ class CollationSuite extends BaseTiSparkTest {
         spark.sql(s"""
              |  INSERT INTO `tispark_test`.`collation_test_table` VALUES ('${col_varchars(i)}',${i},-199700133);
              |""".stripMargin)
+      }
+      val df = spark.sql("select * from `tispark_test`.`collation_test_table`")
+      df.collect()
+        .foreach(row => {
+          assert(row.getString(0) == col_varchars(row.getLong(1).toInt))
+        })
+    }
+  }
+
+  test(
+    "utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci with special non-clustered index test") {
+    checkNewCollationEnabled
+    val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
+    val col_varchars = Array(
+      "a        ",
+      "😜😃",
+      "åß∂ƒ©˙∆˚¬…æ",
+      "ЁЂЃЄЅІЇЈЉЊЋЌЍЎЏАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя")
+    for (collation <- collations) {
+      tidbStmt.execute(s"""
+                          |    DROP TABLE IF EXISTS `tispark_test`.`collation_test_table`;
+                          |    CREATE TABLE `tispark_test`.`collation_test_table` (
+                          |      `col_varchar` varchar(256) not null,
+                          |      `col_int0` int(11) not null,
+                          |      `col_int1` int(11) not null,
+                          |      UNIQUE KEY (`col_int0`),
+                          |      PRIMARY KEY (`col_varchar`(4)) NONCLUSTERED
+                          |    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=${collation}
+                          |""".stripMargin)
+
+      for (i <- 0 until col_varchars.length) {
+        spark.sql(s"""
+                     |  INSERT INTO `tispark_test`.`collation_test_table` VALUES ('${col_varchars(
+          i)}',${i},-199700133);
+                     |""".stripMargin)
       }
       val df = spark.sql("select * from `tispark_test`.`collation_test_table`")
       df.collect()
@@ -145,7 +214,7 @@ class CollationSuite extends BaseTiSparkTest {
     }
   }
 
-  test("utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci with non commonHandle") {
+  test("utf8mb4_bin, utf8mb4_general_ci and utf8mb4_unicode_ci with non-clustered index") {
     checkNewCollationEnabled
     val collations = Array("utf8mb4_bin", "utf8mb4_general_ci", "utf8mb4_unicode_ci")
     for (collation <- collations) {
@@ -158,13 +227,13 @@ class CollationSuite extends BaseTiSparkTest {
                           |  """.stripMargin)
 
       spark.sql("""
-          |INSERT INTO `tispark_test`.`collation_test_table` VALUES ('Aefa');
+          |INSERT INTO `tispark_test`.`collation_test_table` VALUES ('Aefa   ');
           |""".stripMargin)
 
       val df =
         spark.sql("SELECT * FROM `tispark_test`.`collation_test_table`")
 
-      assert(df.head().getString(0) == "Aefa")
+      assert(df.head().getString(0) == "Aefa   ")
     }
   }
 
