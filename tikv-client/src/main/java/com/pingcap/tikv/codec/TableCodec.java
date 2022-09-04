@@ -211,24 +211,18 @@ public class TableCodec {
 
     // encode restore data if needed.
     // For version0, restore all index value.
-    List<TiColumnInfo> columnInfoList = new ArrayList<>();
-    List<Object> valueList = new ArrayList<>();
-    for (TiIndexInfo index : tiTableInfo.getIndices()) {
-      for (TiIndexColumn tiIndexColumn : index.getIndexColumns()) {
-        TiColumnInfo indexColumnInfo = tiTableInfo.getColumn(tiIndexColumn.getOffset());
-        if (Collation.isNewCollationEnabled()) {
-          Object value = row.get(indexColumnInfo.getOffset(), indexColumnInfo.getType());
-          if (value == null) {
-            continue;
-          } else {
-            valueList.add(value);
-          }
-          columnInfoList.add(indexColumnInfo);
+    if (tableNeedRestoreData(tiTableInfo,tiIndexInfo)) {
+      List<TiColumnInfo> columnInfoList = new ArrayList<>();
+      List<Object> valueList = new ArrayList<>();
+        for (TiIndexColumn tiIndexColumn : tiIndexInfo.getIndexColumns()) {
+          TiColumnInfo indexColumnInfo = tiTableInfo.getColumn(tiIndexColumn.getOffset());
+            Object value = row.get(indexColumnInfo.getOffset(), indexColumnInfo.getType());
+              valueList.add(value);
+            columnInfoList.add(indexColumnInfo);
         }
+      if (valueList.size() > 0) {
+        cdo.write(new RowEncoderV2().encode(columnInfoList, valueList));
       }
-    }
-    if (valueList.size() > 0) {
-      cdo.write(new RowEncoderV2().encode(columnInfoList, valueList));
     }
 
     // when cdo has restore data, we will use newEncode formate.
@@ -266,6 +260,16 @@ public class TableCodec {
     } else {
       return false;
     }
+  }
+
+  private static Boolean tableNeedRestoreData(TiTableInfo tiTableInfo, TiIndexInfo tiIndexInfo) {
+    for (TiIndexColumn tiIndexColumn : tiIndexInfo.getIndexColumns()){
+      TiColumnInfo indexColumnInfo = tiTableInfo.getColumn(tiIndexColumn.getOffset());
+      if (needRestoreData(indexColumnInfo.getType())){
+        return true;
+      }
+    }
+    return false;
   }
 
   private static Boolean isNonBinaryStr(DataType type) {
