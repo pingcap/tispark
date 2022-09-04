@@ -211,15 +211,15 @@ public class TableCodec {
 
     // encode restore data if needed.
     // For version0, restore all index value.
-    if (tableNeedRestoreData(tiTableInfo,tiIndexInfo)) {
+    if (tableNeedRestoreData(tiTableInfo, tiIndexInfo)) {
       List<TiColumnInfo> columnInfoList = new ArrayList<>();
       List<Object> valueList = new ArrayList<>();
-        for (TiIndexColumn tiIndexColumn : tiIndexInfo.getIndexColumns()) {
-          TiColumnInfo indexColumnInfo = tiTableInfo.getColumn(tiIndexColumn.getOffset());
-            Object value = row.get(indexColumnInfo.getOffset(), indexColumnInfo.getType());
-              valueList.add(value);
-            columnInfoList.add(indexColumnInfo);
-        }
+      for (TiIndexColumn tiIndexColumn : tiIndexInfo.getIndexColumns()) {
+        TiColumnInfo indexColumnInfo = tiTableInfo.getColumn(tiIndexColumn.getOffset());
+        Object value = row.get(indexColumnInfo.getOffset(), indexColumnInfo.getType());
+        valueList.add(value);
+        columnInfoList.add(indexColumnInfo);
+      }
       if (valueList.size() > 0) {
         cdo.write(new RowEncoderV2().encode(columnInfoList, valueList));
       }
@@ -263,9 +263,9 @@ public class TableCodec {
   }
 
   private static Boolean tableNeedRestoreData(TiTableInfo tiTableInfo, TiIndexInfo tiIndexInfo) {
-    for (TiIndexColumn tiIndexColumn : tiIndexInfo.getIndexColumns()){
+    for (TiIndexColumn tiIndexColumn : tiIndexInfo.getIndexColumns()) {
       TiColumnInfo indexColumnInfo = tiTableInfo.getColumn(tiIndexColumn.getOffset());
-      if (needRestoreData(indexColumnInfo.getType())){
+      if (needRestoreData(indexColumnInfo.getType())) {
         return true;
       }
     }
