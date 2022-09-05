@@ -32,8 +32,7 @@ class AccumulatorSuite extends BaseTiSparkTest {
     logger.addAppender(listLogAppender)
     try {
       tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-      tidbStmt.execute(
-        """
+      tidbStmt.execute("""
           |CREATE TABLE `t1` (
           |`a` BIGINT(20)  NOT NULL,
           |`b` varchar(255) NOT NULL,
