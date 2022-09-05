@@ -38,7 +38,37 @@ class TiFlashSuite extends BaseTiSparkTest {
     }
   }
 
-  test("Test reading TiFlash partition table") {
+  test("Test reading TiFlash partition table (year)") {
+    cancelIfTiFlashDisabled()
+
+    tidbStmt.execute("DROP TABLE IF EXISTS `quarterly_report_status`")
+    tidbStmt.execute("""
+        |CREATE TABLE `quarterly_report_status` (
+        |  `report_id` int(11) NOT NULL,
+        |  `report_status` varchar(20) NOT NULL,
+        |  `report_updated` DATE NOT NULL DEFAULT '1970-01-01'
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+        |PARTITION BY RANGE ( year(`report_updated`) ) (
+        |  PARTITION `p0` VALUES LESS THAN (2001),
+        |  PARTITION `p1` VALUES LESS THAN (2011),
+        |  PARTITION `p2` VALUES LESS THAN (2021),
+        |  PARTITION `p3` VALUES LESS THAN (MAXVALUE)
+        |)
+        |""".stripMargin)
+    tidbStmt.execute("""
+                       |INSERT INTO quarterly_report_status VALUES
+                       | (1,'a','2000-07-02 00:00:00'),
+                       | (2,'b','2010-08-02 00:00:00'),
+                       | (3,'c','2020-02-02 00:00:00');""".stripMargin)
+
+    tidbStmt.execute("""alter table quarterly_report_status set tiflash replica 1""")
+
+    assert(checkLoadTiFlashWithRetry("quarterly_report_status", Some("tispark_test")))
+    explainAndRunTest("select * from quarterly_report_status", canTestTiFlash = true)
+  }
+
+  // ignore for read partition table does not support UNIX_TIMESTAMP now
+  ignore("Test reading TiFlash partition table (UNIX_TIMESTAMP)") {
     cancelIfTiFlashDisabled()
 
     tidbStmt.execute("DROP TABLE IF EXISTS `quarterly_report_status`")
