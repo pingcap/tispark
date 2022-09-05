@@ -32,17 +32,18 @@ class AccumulatorSuite extends BaseTiSparkTest {
     logger.addAppender(listLogAppender)
     try {
       tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-      tidbStmt.execute("""
+      tidbStmt.execute(
+        """
           |CREATE TABLE `t1` (
           |`a` BIGINT(20)  NOT NULL,
           |`b` varchar(255) NOT NULL,
           |`c` varchar(255) DEFAULT NULL
           |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
               """.stripMargin)
-      spark.sql("SELECT * FROM t1 where a>0 and b > 'aa'").show()
+      spark.sql("SELECT * FROM t1").show()
       tidbStmt.execute(
         "SPLIT TABLE t1 BETWEEN (-9223372036854775808) AND (-8223372036854775808) REGIONS 300")
-      spark.sql("SELECT * FROM t1 where a>0 and b > 'aa'").show()
+      spark.sql("SELECT * FROM t1").show()
     } finally {
       logger.removeAppender(listLogAppender)
     }
