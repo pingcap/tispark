@@ -14,7 +14,7 @@ All notable changes to this project will be documented in this file.
 - Fix the bug that Count(bit) should not be pushed down before TiKV 6.0.0  [#2484](https://github.com/pingcap/tispark/pull/2484)
 - Upgraded Spark3.1 support version from 3.0.2 to 3.0.3，Upgraded Spark3.1 support version from 3.1.1 to 3.1.3 [#2487](https://github.com/pingcap/tispark/pull/2487)
 - Only do auth check for tables in TiDB [#2502](https://github.com/pingcap/tispark/pull/2502)
-- Change profile  [#2517](https://github.com/pingcap/tispark/pull/2517)
+- Change spark profile  [#2517](https://github.com/pingcap/tispark/pull/2517)
 
 
 ## [TiSpark 2.5.1] 2022-05-16
