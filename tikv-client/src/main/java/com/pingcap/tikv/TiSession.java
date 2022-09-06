@@ -114,7 +114,7 @@ public class TiSession implements AutoCloseable {
   }
 
   // if NewCollationEnabled is not set in configuration file,
-  // we will set it to true when TiDB version is greater than or equal to  v6.0.0.
+  // we will set it to true when TiDB version is greater than or equal to v6.0.0.
   // Otherwise, we will set it to false
   private void refreshNewCollationEnabled() {
     if (!conf.getNewCollationEnable().isPresent()) {
