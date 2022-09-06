@@ -189,6 +189,13 @@ public class RangeSplitter {
             throw new NullPointerException(
                 "fail to get region/store pair by key " + formatByteString(range.getStart()));
           }
+
+          // TODO: cherry-pick https://github.com/pingcap/tispark/pull/1380 to client-java and flush
+          // cache.
+          if (regionStorePair.second == null) {
+            LOG.warn("Cannot find valid store on " + storeType);
+            regionStorePair = null;
+          }
         } catch (Exception e) {
           LOG.warn("getRegionStorePairByKey error", e);
           bo.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
