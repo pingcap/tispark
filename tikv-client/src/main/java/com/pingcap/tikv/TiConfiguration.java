@@ -122,7 +122,7 @@ public class TiConfiguration implements Serializable {
   private String networkMappingName = "";
   private HostMapping hostMapping;
 
-  private Boolean NewCollationEnabled;
+  private Boolean newCollationEnabled;
 
   private static Long getTimeAsSeconds(String key) {
     return Utils.timeStringAsSec(key);
@@ -185,11 +185,11 @@ public class TiConfiguration implements Serializable {
   }
 
   public void setNewCollationEnable(Boolean flag) {
-    this.NewCollationEnabled = flag;
+    this.newCollationEnabled = flag;
     Collation.setNewCollationEnabled(flag);
   }
 
   public Optional<Boolean> getNewCollationEnable() {
-    return Optional.ofNullable(this.NewCollationEnabled);
+    return Optional.ofNullable(this.newCollationEnabled);
   }
 }
