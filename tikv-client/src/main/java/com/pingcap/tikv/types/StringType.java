@@ -18,10 +18,17 @@
 
 package com.pingcap.tikv.types;
 
+import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.CodecException;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
+import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.meta.collate.BinPaddingCollator;
+import com.pingcap.tikv.meta.collate.GeneralCICollator;
+import com.pingcap.tikv.meta.collate.UnicodeCICollator;
 import java.nio.charset.StandardCharsets;
 
 public class StringType extends BytesType {
@@ -108,5 +115,27 @@ public class StringType extends BytesType {
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     return new String((byte[]) super.decodeNotNull(flag, cdi), StandardCharsets.UTF_8);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  protected void encodeKey(CodecDataOutput cdo, Object value) {
+    if (Collation.isNewCollationEnabled()) {
+      if (Collation.isUTF8GeneralCICollation(this.collation)) {
+        Codec.BytesCodec.writeBytesFully(
+            cdo, GeneralCICollator.key(Converter.convertToUTF8String(value)));
+      } else if (Collation.isUTF8UnicodeCICollation(this.collation)) {
+        Codec.BytesCodec.writeBytesFully(
+            cdo, UnicodeCICollator.key(Converter.convertToUTF8String(value)));
+      } else if (Collation.isUTF8BinCollation(this.collation)) {
+        Codec.BytesCodec.writeBytesFully(
+            cdo, BinPaddingCollator.key(Converter.convertToUTF8String(value)));
+      } else {
+        throw new CodecException("Unsupported collation: " + Collation.translate(this.collation));
+      }
+    } else {
+      byte[] bytes = Converter.convertToBytes(value);
+      Codec.BytesCodec.writeBytesFully(cdo, bytes);
+    }
   }
 }

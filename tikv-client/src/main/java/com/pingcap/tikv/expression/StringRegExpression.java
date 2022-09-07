@@ -145,4 +145,9 @@ public class StringRegExpression extends Expression {
     ENDS_WITH,
     LIKE
   }
+
+  @Override
+  public void setNewCollation() {
+    this.dataType.setCollation(left.dataType.getCollationCode());
+  }
 }

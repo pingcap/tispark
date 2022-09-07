@@ -76,4 +76,6 @@ object TiConfigConst {
   val TELEMETRY_ENABEL: String = "spark.tispark.telemetry.enable"
 
   val HOST_MAPPING: String = "spark.tispark.host_mapping"
+
+  val NEW_COLLATION_ENABLE: String = "spark.tispark.new_collation_enable"
 }

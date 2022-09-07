@@ -40,6 +40,7 @@ import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.expression.Not;
 import com.pingcap.tikv.expression.StringRegExpression;
 import com.pingcap.tikv.expression.Visitor;
+import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.types.BitType;
 import com.pingcap.tikv.types.BytesType;
 import com.pingcap.tikv.types.DataType;
@@ -128,7 +129,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
         .setFlen((int) fieldType.getLength())
         .setDecimal(fieldType.getDecimal())
         .setCharset(fieldType.getCharset())
-        .setCollate(fieldType.getCollationCode())
+        .setCollate(Collation.rewriteNewCollationIDIfNeeded(fieldType.getCollationCode()))
         .build();
   }
 
@@ -140,6 +141,9 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     builder.setTp(ExprType.ScalarFunc);
 
     // Return type
+    if (Collation.isNewCollationEnabled()) {
+      node.setNewCollation();
+    }
     builder.setFieldType(toPBFieldType(getType(node)));
 
     for (Expression child : node.getChildren()) {
