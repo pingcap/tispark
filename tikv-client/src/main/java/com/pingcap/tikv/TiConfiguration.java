@@ -16,6 +16,7 @@
 
 package com.pingcap.tikv;
 
+import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.types.Converter;
 import java.io.Serializable;
 import java.net.URI;
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.Setter;
@@ -59,6 +61,17 @@ public class TiConfiguration implements Serializable {
   public static final int PREWRITE_MAX_BACKOFF = 20 * BackOffer.seconds;
   public static final int BATCH_COMMIT_BACKOFF = 10 * BackOffer.seconds;
   public static final int ROW_ID_ALLOCATOR_BACKOFF = 40 * BackOffer.seconds;
+
+  private Boolean newCollationEnabled;
+
+  public void setNewCollationEnable(Boolean flag) {
+    this.newCollationEnabled = flag;
+    Collation.setNewCollationEnabled(flag);
+  }
+
+  public Optional<Boolean> getNewCollationEnable() {
+    return Optional.ofNullable(this.newCollationEnabled);
+  }
 
   private static final boolean DEF_WRITE_ENABLE = true;
   private boolean writeEnable = DEF_WRITE_ENABLE;

@@ -239,11 +239,25 @@ public class TiColumnInfo implements Serializable {
     return new TiIndexColumn(CIStr.newCIStr(getName()), getOffset(), getType().getLength());
   }
 
-  ColumnInfo toProto(TiTableInfo tableInfo) {
+  ColumnInfo toOldProto(TiTableInfo tableInfo) {
     return ColumnInfo.newBuilder()
         .setColumnId(id)
         .setTp(type.getTypeCode())
         .setCollation(type.getCollationCode())
+        .setColumnLen((int) type.getLength())
+        .setDecimal(type.getDecimal())
+        .setFlag(type.getFlag())
+        .setDefaultVal(getOriginDefaultValueAsByteString())
+        .setPkHandle(tableInfo.isPkHandle() && isPrimaryKey())
+        .addAllElems(type.getElems())
+        .build();
+  }
+
+  ColumnInfo toProto(TiTableInfo tableInfo) {
+    return ColumnInfo.newBuilder()
+        .setColumnId(id)
+        .setTp(type.getTypeCode())
+        .setCollation(Collation.rewriteNewCollationIDIfNeeded(type.getCollationCode()))
         .setColumnLen((int) type.getLength())
         .setDecimal(type.getDecimal())
         .setFlag(type.getFlag())

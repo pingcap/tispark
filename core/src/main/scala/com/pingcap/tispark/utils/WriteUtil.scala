@@ -262,9 +262,12 @@ object WriteUtil {
       new Array[Byte](0)
     } else {
       TableCodec.genIndexValue(
+        row,
         handle,
         tiTable.getTableInfo.getCommonHandleVersion,
-        encodeIndexResult.distinct)
+        encodeIndexResult.distinct,
+        index,
+        tiTable.getTableInfo)
     }
 
     (new SerializableKey(encodeIndexResult.indexKey), value)

@@ -19,9 +19,17 @@ package com.pingcap.tikv.codec;
 import com.pingcap.tikv.handle.CommonHandle;
 import com.pingcap.tikv.handle.Handle;
 import com.pingcap.tikv.handle.IntHandle;
+import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.meta.TiIndexColumn;
+import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
+import com.pingcap.tikv.types.BytesType;
+import com.pingcap.tikv.types.Converter;
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.MySQLType;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.tikv.common.exception.CodecException;
@@ -120,28 +128,113 @@ public class TableCodec {
   // 		|
   // 		|  Layout of Options:
   // 		|
-  // 		|     Segment:             Common Handle
-  //  	|     Layout:  CHandle flag | CHandle Len | CHandle
-  // 		|     Length:     1         | 2           | len(CHandle)
+  //		|     Segment:             Common Handle                 |     Global Index      |   New
+  // Collation
+  // 		|     Layout:  CHandle flag | CHandle Len | CHandle      | PidFlag | PartitionID |
+  // restoreData
+  //		|     Length:     1         | 2           | len(CHandle) |    1    |    8        |
+  // len(restoreData)
   // 		|
   // 		|     Common Handle Segment: Exists when unique index used common handles.
-  //    |     Global Index and New Collation in not support now.
-  public static byte[] genIndexValue(Handle handle, int commonHandleVersion, boolean distinct) {
+  //    |     Global Index in not support now.
+  //		|     In v4.0, restored data contains all the index values. For example, (a int, b char(10))
+  // and index (a, b).
+  //		|     In v5.0, restored data contains only non-binary data(except for char and _bin). In the
+  // above example, the restored data contains only the value of b.
+  //		|     Besides, if the collation of b is _bin, then restored data is an integer indicate the
+  // spaces are truncated. Then we use sortKey
+  //		|     and the restored data together to restore original data.
+  public static byte[] genIndexValue(
+      Row row,
+      Handle handle,
+      int commonHandleVersion,
+      boolean distinct,
+      TiIndexInfo tiIndexInfo,
+      TiTableInfo tiTableInfo) {
     if (!handle.isInt() && commonHandleVersion == 1) {
-      return TableCodec.genIndexValueForCommonHandleVersion1(handle, distinct);
+      return TableCodec.genIndexValueForCommonHandleVersion1(
+          row, handle, distinct, tiIndexInfo, tiTableInfo);
     }
-    return genIndexValueForClusterIndexVersion0(handle, distinct);
+    return genIndexValueForClusterIndexVersion0(row, handle, distinct, tiIndexInfo, tiTableInfo);
   }
 
-  private static byte[] genIndexValueForClusterIndexVersion0(Handle handle, boolean distinct) {
-    if (!handle.isInt()) {
-      CodecDataOutput cdo = new CodecDataOutput();
-      int tailLen = 0;
-      cdo.writeByte(0);
-      if (distinct) {
-        encodeCommonHandle(cdo, handle);
+  // If the following conditions are satisfied, a column should have restore data:
+  // The column is a string type that uses the new collation.
+  // For version1, type char and blob, the collation is neither binary nor with the suffix “_bin”.
+  // For version1, type varchar, the collation is not binary.
+  private static void genRestoreData(
+      Row row, CodecDataOutput cdo, TiIndexInfo tiIndexInfo, TiTableInfo tiTableInfo) {
+    List<TiColumnInfo> columnInfoList = new ArrayList<>();
+    List<Object> valueList = new ArrayList<>();
+    for (TiIndexInfo index : tiTableInfo.getIndices()) {
+      for (TiIndexColumn tiIndexColumn : index.getIndexColumns()) {
+        TiColumnInfo indexColumnInfo = tiTableInfo.getColumn(tiIndexColumn.getOffset());
+        DataType indexType = indexColumnInfo.getType();
+        int prefixLength = (int) tiIndexColumn.getLength();
+        if (needRestoreData(indexType)) {
+          Object value = row.get(indexColumnInfo.getOffset(), indexColumnInfo.getType());
+          if (value == null) {
+            continue;
+          } else if (Collation.isBinCollation(indexType.getCollationCode())) {
+            continue;
+          } else if (DataType.isLengthUnSpecified(prefixLength)) {
+            valueList.add(value);
+          } else if (indexType instanceof BytesType) {
+            if (indexType.getCharset().equalsIgnoreCase("utf8")
+                || indexType.getCharset().equalsIgnoreCase("utf8mb4")) {
+              value = Converter.convertUtf8ToBytes(value, prefixLength);
+              valueList.add(value);
+            } else {
+              value = Converter.convertToBytes(value, prefixLength);
+              valueList.add(value);
+            }
+          }
+          columnInfoList.add(indexColumnInfo);
+        }
       }
-      if (cdo.size() < 10) {
+    }
+    if (valueList.size() > 0) {
+      cdo.write(new RowEncoderV2().encode(columnInfoList, valueList));
+    }
+  }
+
+  private static byte[] genIndexValueForClusterIndexVersion0(
+      Row row, Handle handle, boolean distinct, TiIndexInfo tiIndexInfo, TiTableInfo tiTableInfo) {
+    CodecDataOutput cdo = new CodecDataOutput();
+    cdo.writeByte(0);
+    int tailLen = 0;
+    Boolean newEncode = false;
+    if (!handle.isInt() && distinct) {
+      encodeCommonHandle(cdo, handle);
+      newEncode = true;
+    }
+
+    // encode restore data if needed.
+    // For version0, restore all index value.
+    if (tableNeedRestoreData(tiTableInfo, tiIndexInfo)) {
+      List<TiColumnInfo> columnInfoList = new ArrayList<>();
+      List<Object> valueList = new ArrayList<>();
+      for (TiIndexColumn tiIndexColumn : tiIndexInfo.getIndexColumns()) {
+        TiColumnInfo indexColumnInfo = tiTableInfo.getColumn(tiIndexColumn.getOffset());
+        Object value = row.get(indexColumnInfo.getOffset(), indexColumnInfo.getType());
+        valueList.add(value);
+        columnInfoList.add(indexColumnInfo);
+      }
+      if (valueList.size() > 0) {
+        cdo.write(new RowEncoderV2().encode(columnInfoList, valueList));
+      }
+    }
+
+    // when cdo has restore data, we will use newEncode formate.
+    if (cdo.size() > 1) {
+      newEncode = true;
+    }
+
+    if (newEncode) {
+      if (handle.isInt() && distinct) {
+        tailLen += 8;
+        encodeHandleInUniqueIndexValue(cdo, handle);
+      } else if (cdo.size() < 10) {
         int paddingLen = 10 - cdo.size();
         tailLen += paddingLen;
         cdo.write(new byte[paddingLen]);
@@ -159,7 +252,55 @@ public class TableCodec {
     return new byte[] {'0'};
   }
 
-  private static byte[] genIndexValueForCommonHandleVersion1(Handle handle, boolean distinct) {
+  private static Boolean needRestoreData(DataType type) {
+    if (Collation.isNewCollationEnabled()
+        && isNonBinaryStr(type)
+        && !(Collation.isBinCollation(type.getCollationCode()) && !isTypeVarChar(type))) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private static Boolean tableNeedRestoreData(TiTableInfo tiTableInfo, TiIndexInfo tiIndexInfo) {
+    for (TiIndexColumn tiIndexColumn : tiIndexInfo.getIndexColumns()) {
+      TiColumnInfo indexColumnInfo = tiTableInfo.getColumn(tiIndexColumn.getOffset());
+      if (needRestoreData(indexColumnInfo.getType())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static Boolean isNonBinaryStr(DataType type) {
+    if (type.getCollationCode() != Collation.translate("binary") && isString(type)) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private static boolean isString(DataType type) {
+    return isTypeChar(type) || isTypeVarChar(type) || isTypeBlob(type);
+  }
+
+  private static Boolean isTypeChar(DataType type) {
+    return type.getType() == MySQLType.TypeVarchar || type.getType() == MySQLType.TypeString;
+  }
+
+  private static Boolean isTypeBlob(DataType type) {
+    return type.getType() == MySQLType.TypeBlob
+        || type.getType() == MySQLType.TypeTinyBlob
+        || type.getType() == MySQLType.TypeMediumBlob
+        || type.getType() == MySQLType.TypeLongBlob;
+  }
+
+  private static Boolean isTypeVarChar(DataType type) {
+    return type.getType() == MySQLType.TypeVarchar || type.getType() == MySQLType.TypeVarString;
+  }
+
+  private static byte[] genIndexValueForCommonHandleVersion1(
+      Row row, Handle handle, boolean distinct, TiIndexInfo tiIndexInfo, TiTableInfo tiTableInfo) {
     CodecDataOutput cdo = new CodecDataOutput();
     // add tailLen to cdo, the tailLen is always zero in tispark.
     cdo.writeByte(0);
@@ -169,6 +310,10 @@ public class TableCodec {
     if (distinct) {
       encodeCommonHandle(cdo, handle);
     }
+
+    // encode restore data if needed.
+    genRestoreData(row, cdo, tiIndexInfo, tiTableInfo);
+
     return cdo.toBytes();
   }
 
@@ -178,6 +323,12 @@ public class TableCodec {
     int hLen = encoded.length;
     cdo.writeShort(hLen);
     cdo.write(encoded);
+  }
+
+  private static void encodeHandleInUniqueIndexValue(CodecDataOutput cdo, Handle handle) {
+    if (handle.isInt()) {
+      cdo.writeLong(handle.intValue());
+    }
   }
 
   public static Handle decodeHandleInUniqueIndexValue(byte[] value, boolean isCommonHandle) {

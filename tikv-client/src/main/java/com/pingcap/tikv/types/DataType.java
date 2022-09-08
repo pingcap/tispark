@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
-import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.columnar.TiChunkColumnVector;
@@ -80,12 +79,16 @@ public abstract class DataType implements Serializable {
   // such as not null, timestamp
   protected final int flag;
   protected final int decimal;
-  protected final int collation;
+  protected int collation;
   protected final long length;
   private final String charset;
   private final List<String> elems;
   private final byte[] allNotNullBitMap = initAllNotNullBitMap();
   private final byte[] readBuffer = new byte[8];
+
+  public void setCollation(int flag) {
+    this.collation = flag;
+  }
 
   public DataType(MySQLType tp, int prec, int scale) {
     this.tp = tp;
@@ -431,7 +434,7 @@ public abstract class DataType implements Serializable {
       } else {
         bytes = Converter.convertToBytes(value, prefixLength);
       }
-      BytesCodec.writeBytesFully(cdo, bytes);
+      encodeKey(cdo, bytes);
     } else {
       throw new TypeException("Data type can not encode with prefix");
     }

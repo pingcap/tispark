@@ -17,6 +17,7 @@
 package com.pingcap.tikv;
 
 import com.pingcap.tikv.catalog.Catalog;
+import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.util.ConvertUpstreamUtils;
 import java.util.HashMap;
 import java.util.Map;
@@ -72,6 +73,21 @@ public class ClientSession implements AutoCloseable {
         org.tikv.common.TiSession.getInstance(
             ConvertUpstreamUtils.convertTiConfiguration(getConf()));
     this.catalog = getCatalog();
+    refreshNewCollationEnabled();
+  }
+
+  // if NewCollationEnabled is not set in configuration file,
+  // we will set it to true when TiDB version is greater than or equal to v6.0.0.
+  // Otherwise, we will set it to false
+  private void refreshNewCollationEnabled() {
+    if (!conf.getNewCollationEnable().isPresent()) {
+      if (ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
+          getTiKVSession().getPDClient(), "6.0.0")) {
+        Collation.setNewCollationEnabled(true);
+      } else {
+        Collation.setNewCollationEnabled(false);
+      }
+    }
   }
 
   private void checkIsClosed() {

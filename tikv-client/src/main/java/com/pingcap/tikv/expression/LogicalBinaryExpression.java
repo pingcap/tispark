@@ -102,4 +102,9 @@ public class LogicalBinaryExpression extends Expression {
     OR,
     XOR
   }
+
+  @Override
+  public void setNewCollation() {
+    this.dataType.setCollation(left.dataType.getCollationCode());
+  }
 }

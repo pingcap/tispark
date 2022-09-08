@@ -118,7 +118,7 @@ trait SharedSQLContext
         s"$tableName not found in TiDB after load. Load Data to TiFlash failed.")
     }
     logger.info(s"Table $tableName found present in ${check.head.head}")
-    for (_ <- 0 until 60) {
+    for (_ <- 0 until 120) {
       // check every 2 secs
       Thread.sleep(2000)
       val available = database match {

@@ -205,4 +205,9 @@ public class ComparisonBinaryExpression extends Expression {
       return key;
     }
   }
+
+  @Override
+  public void setNewCollation() {
+    this.dataType.setCollation(left.dataType.getCollationCode());
+  }
 }

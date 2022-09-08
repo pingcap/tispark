@@ -17,12 +17,14 @@
 package com.pingcap.tikv.meta;
 
 import java.util.Map;
+import org.tikv.common.util.Pair;
 import org.tikv.shade.com.google.common.collect.ImmutableMap;
 
 public class Collation {
   public static final int DEF_COLLATION_CODE = 83;
   private static final Map<String, Integer> collationMap;
   private static final Map<Integer, String> collationCodeMap;
+  private static boolean newCollationEnabled = false;
 
   static {
     collationMap =
@@ -264,10 +266,113 @@ public class Collation {
   }
 
   public static String translate(int code) {
+    if (code < 0 && isNewCollationEnabled()) {
+      code = -code;
+    }
     String collation = collationCodeMap.get(code);
     if (collation == null) {
       return "";
     }
     return collation;
+  }
+
+  public static void setNewCollationEnabled(boolean flag) {
+    newCollationEnabled = flag;
+  }
+
+  public static Boolean isNewCollationEnabled() {
+    return newCollationEnabled;
+  }
+
+  // RewriteNewCollationIDIfNeeded rewrites a collation id if the new collations are enabled.
+  // When new collations are enabled, we turn the collation id to negative so that other the
+  // components of the cluster(for example, TiKV) is able to aware of it without any change to
+  // the protocol definition.
+  // When new collations are not enabled, collation id remains the same.
+  public static int rewriteNewCollationIDIfNeeded(int id) {
+    if (isNewCollationEnabled()) {
+      if (id >= 0) {
+        return -id;
+      }
+    }
+    return id;
+  }
+
+  public static String truncateTailingSpace(String str) {
+    int i = str.length() - 1;
+    for (; i >= 0; i--) {
+      if (str.charAt(i) != ' ') {
+        break;
+      }
+    }
+    return str.substring(0, i + 1);
+  }
+
+  public static int sign(int i) {
+    return i > 0 ? 1 : i < 0 ? -1 : 0;
+  }
+
+  public static int runeLen(int b) {
+    if (b < 0x80) {
+      return 1;
+    } else if (b < 0xE0) {
+      return 2;
+    } else if (b < 0xF0) {
+      return 3;
+    }
+    return 4;
+  }
+
+  private static final int DEFAULT_LEN = 0;
+  private static final byte b2Mask = 0x1F;
+  private static final byte b3Mask = 0x0F;
+  private static final byte b4Mask = 0x07;
+  private static final byte mbMask = 0x3F;
+
+  public static Pair<Integer, Integer> decodeRune(String s, int si) {
+    int r = 0;
+    int newIndex = 0;
+    byte[] sb = s.getBytes();
+    int b = sb[si] & 0xFF;
+    switch (runeLen(b)) {
+      case 1:
+        r = b;
+        newIndex = si + 1;
+        break;
+      case 2:
+        r = (b & b2Mask) << 6 | (sb[1 + si] & 0xFF & mbMask);
+        newIndex = si + 2;
+        break;
+      case 3:
+        r = (b & b3Mask) << 12 | (sb[1 + si] & 0xFF & mbMask) << 6 | (sb[2 + si] & 0xFF & mbMask);
+        newIndex = si + 3;
+        break;
+      default:
+        r =
+            (b & b4Mask) << 18
+                | (sb[1 + si] & 0xFF & mbMask) << 12
+                | (sb[2 + si] & 0xFF & mbMask) << 6
+                | (sb[3 + si] & 0xFF & mbMask);
+        newIndex = si + 4;
+    }
+    return new Pair<>(r, newIndex);
+  }
+
+  public static boolean isBinCollation(int collation) {
+    return translate(collation).equals("binary") || translate(collation).endsWith("_bin");
+  }
+
+  public static boolean isUTF8BinCollation(int collation) {
+    return collation == translate("utf8_bin") || collation == translate("utf8mb4_bin");
+  }
+
+  public static boolean isUTF8GeneralCICollation(int collation) {
+    return collation == translate("utf8_general_ci")
+        || collation == translate("utf8mb4_general_ci");
+  }
+
+  public static boolean isUTF8UnicodeCICollation(int collation) {
+    return collation == translate("utf8_unicode_ci")
+        || collation == translate("utf8mb4_unicode_ci");
   }
 }
