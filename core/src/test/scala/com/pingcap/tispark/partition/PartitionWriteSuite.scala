@@ -652,6 +652,57 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
+  test("test Year() partition when date type is not the first column") {
+    tidbStmt.execute(
+      s"create table `$database`.`$table` (name varchar(16), birthday date primary key ) partition by range(YEAR(birthday)) (" +
+        s"partition p0 values less than (1995)," +
+        s"partition p1 values less than (YEAR('1997-01-01'))," +
+        s"partition p2 values less than MAXVALUE)")
+    val data: RDD[Row] = sc.makeRDD(
+      List(
+        "Luo", Row(Date.valueOf("1995-06-15")),
+        "John", Row(Date.valueOf("1995-08-08")),
+        "Jack", Row(Date.valueOf("1993-08-22")),
+        "Mike", Row(Date.valueOf("1999-06-04"))
+      ))
+    val schema: StructType =
+      StructType(List(StructField("name", StringType), StructField("birthday", DateType)))
+    val df = sqlContext.createDataFrame(data, schema)
+    df.write
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", database)
+      .option("table", table)
+      .mode("append")
+      .save()
+    val insertResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    insertResultSpark.collect() should contain theSameElementsAs Array(
+      "Luo", Row(Date.valueOf("1995-06-15")),
+      "John", Row(Date.valueOf("1995-08-08")),
+      "Jack", Row(Date.valueOf("1993-08-22")),
+      "Mike", Row(Date.valueOf("1999-06-04")))
+    checkPartitionJDBCResult(
+      Map(
+        "p0" -> Array(Array("Jack", Date.valueOf("1993-08-22"))),
+        "p1" -> Array(
+          Array("Luo", Date.valueOf("1995-06-15")),
+          Array("John", Date.valueOf("1995-08-08"))),
+        "p2" -> Array("Mike", Array(Date.valueOf("1999-06-04")))))
+    spark.sql(
+      s"delete from `tidb_catalog`.`$database`.`$table` where birthday <= '1995-06-15' or name = 'Mike'")
+
+    val deleteResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    deleteResultSpark.collect() should contain theSameElementsAs Array(
+      Row("John", Date.valueOf("1995-08-08")))
+    checkPartitionJDBCResult(
+      Map(
+        "p0" -> Array(),
+        "p1" -> Array(Array("John", Date.valueOf("1995-08-08"))),
+        "p2" -> Array()))
+
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
+  }
+
   test("unsupported function UNIX_TIMESTAMP() and range partition replace and delete test") {
     tidbStmt.execute(
       s"create table `$database`.`$table` (birthday timestamp primary key , name varchar(16)) partition by range(UNIX_TIMESTAMP(birthday)) (" +

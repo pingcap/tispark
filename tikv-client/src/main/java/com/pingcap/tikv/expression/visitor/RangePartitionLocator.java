@@ -56,7 +56,12 @@ public class RangePartitionLocator extends DefaultVisitor<Boolean, PartitionLoca
       // TODO: support more function partition
       FuncCallExpr partitionFuncExpr = (FuncCallExpr) left;
       if (partitionFuncExpr.getFuncTp() == YEAR) {
-        data = partitionFuncExpr.eval(Constant.create(row.getDate(0), DateType.DATE)).getValue();
+        Expression expression = left.getChildren().get(0);
+        ColumnRef columnRef = (ColumnRef) expression;
+        columnRef.resolve(tableInfo);
+        data = partitionFuncExpr.eval(
+                Constant.create(row.get(columnRef.getColumnOffset(), DateType.DATE)))
+            .getValue();
       } else {
         throw new UnsupportedOperationException("Partition write only support YEAR() function");
       }
