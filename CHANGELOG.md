@@ -1,6 +1,31 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 3.1.0] 2022-09-08
+### Compatibility Changes
+- We will not provide the mysql-connector-java dependency because of the limit of the GPL license.[#2457](https://github.com/pingcap/tispark/pull/2457)
+
+### New Features
+- Add authorization check for datasource api  [#2366](https://github.com/pingcap/tispark/pull/2366)
+- Make TiSpark's Explain clearer and easier to read  [#2439](https://github.com/pingcap/tispark/pull/2439)
+- Support host mapping in TiSpark [#2436](https://github.com/pingcap/tispark/pull/2436)
+- Support bypass-TiDB write into partition table [#2451](https://github.com/pingcap/tispark/pull/2451)
+- Support insert sql [#2471](https://github.com/pingcap/tispark/pull/2471)
+- Support Spark3.3 [#2492](https://github.com/pingcap/tispark/pull/2492)
+- Only do auth check for tables in TiDB [#2489](https://github.com/pingcap/tispark/pull/2489)
+
+### Fixes
+- Fix when TiDB has more than 10,000 tables in one Database, TiSpark may throw Table not found exceptions [#2433](https://github.com/pingcap/tispark/pull/2433)
+- Fix the bug that count/avg can not push down [#2445](https://github.com/pingcap/tispark/pull/2445)
+- Fix the bug that when the primary key is not integer type, the two rows with null unique index will conflict and the bug that when the unique index conflicts, the conflicting unique index column cannot be deleted correctly  [#2455](https://github.com/pingcap/tispark/pull/2455)
+- Fix the bug that exception would through when the size of pdAddresse is > 1 [#2473](https://github.com/pingcap/tispark/pull/2473)
+- Fix the bug that Count(bit) should not be pushed down before TiKV 6.0.0  [#2476](https://github.com/pingcap/tispark/pull/2476)
+- Upgraded Spark 3.1 support version from 3.0.2 to 3.0.3，Upgraded Spark 3.1 support version from 3.1.1 to 3.1.3，Upgraded Spark 3.2 support version from 3.2.1 to 3.2.2 [#2486](https://github.com/pingcap/tispark/pull/2486)
+- Fix the bug that  exception will be throw when date col is not the first col ref [#2538](https://github.com/pingcap/tispark/pull/2538)
+
+### DOC
+- TiSpark Development Guide  [#2497](https://github.com/pingcap/tispark/pull/2497)
+ 
 ## [TiSpark 3.0.1] 2022-06-23
 ## Fixes
 - Fix the bug that the single column condition is in the incorrect if branch [#2395](https://github.com/pingcap/tispark/pull/2395)
