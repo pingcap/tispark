@@ -10,7 +10,7 @@
 
     <groupId>com.pingcap.tispark</groupId>
     <artifactId>tispark-parent</artifactId>
-    <version>3.1.0-SNAPSHOT</version>
+    <version>3.1.0</version>
     <packaging>pom</packaging>
     <name>TiSpark Project Parent POM</name>
     <url>http://github.copm/pingcap/tispark</url>
@@ -81,7 +81,7 @@
         <scalatest.version>3.0.8</scalatest.version>
         <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
         <mysql.connector.version>8.0.29</mysql.connector.version>
-        <gpg.keyname>fake gpg keyname</gpg.keyname>
+        <gpg.pub.key>fake gpg keyname</gpg.pub.key>
         <gpg.skip>true</gpg.skip>
         <javadoc.skip>true</javadoc.skip>
         <skipFetchTestData>false</skipFetchTestData>
@@ -291,7 +291,7 @@
                 <artifactId>maven-gpg-plugin</artifactId>
                 <version>1.5</version>
                 <configuration>
-                    <keyname>${gpg.keyname}</keyname>
+                    <keyname>${gpg.pub.key}</keyname>
                     <skip>${gpg.skip}</skip>
                 </configuration>
                 <executions>
