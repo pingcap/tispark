@@ -140,6 +140,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
 
       } else {
         long msBeforeLockExpired = TsoUtils.untilExpired(l.getTxnID(), status.getTtl());
+        logger.warn("until expired " + msBeforeLockExpired);
         msBeforeTxnExpired.update(msBeforeLockExpired);
 
         if (forWrite) {
