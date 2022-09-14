@@ -77,6 +77,8 @@ public class ConvertUpstreamUtils {
     tikvConf.setJksTrustPath(conf.getJksTrustPath());
     tikvConf.setJksTrustPassword(conf.getJksTrustPassword());
     tikvConf.setJksEnable(conf.isJksEnable());
+    // follower read
+    tikvConf.setReplicaSelector(conf.getReplicaReadPolicy());
     return tikvConf;
   }
 

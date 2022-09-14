@@ -78,4 +78,15 @@ object TiConfigConst {
   val HOST_MAPPING: String = "spark.tispark.host_mapping"
 
   val NEW_COLLATION_ENABLE: String = "spark.tispark.new_collation_enable"
+
+  // REPLICA READ
+  val REPLICA_READ: String = "spark.tispark.replica_read"
+  val REPLICA_READ_DEFAULT = "leader"
+
+  val REPLICA_READ_LABEL = "spark.tispark.replica_read.label"
+  val REPLICA_READ_LABEL_DEFAULT = ""
+
+  val REPLICA_READ_ADDRESS_WHITELIST = "spark.tispark.replica_read.address_whitelist"
+  val REPLICA_READ_ADDRESS_BLACKLIST = "spark.tispark.replica_read.address_blacklist"
+  val REPLICA_READ_ADDRESS_DEFAULT = ""
 }

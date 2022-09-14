@@ -178,6 +178,9 @@ public class TiConfiguration implements Serializable {
   private String jksTrustPassword;
   private boolean jksEnable = false;
 
+  // replica read
+  private ReplicaReadPolicy replicaReadPolicy = ReplicaReadPolicy.DEFAULT;
+
   private static Long getTimeAsSeconds(String key) {
     return Utils.timeStringAsSec(key);
   }
