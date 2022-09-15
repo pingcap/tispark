@@ -70,7 +70,7 @@ public class ClientSession implements AutoCloseable {
       this.conf = com.pingcap.tikv.TiConfiguration.createDefault("127.0.0.1:2379");
     }
     this.tiKVSession =
-        org.tikv.common.TiSession.getInstance(
+        org.tikv.common.TiSession.create(
             ConvertUpstreamUtils.convertTiConfiguration(getConf()));
     refreshNewCollationEnabled();
   }
