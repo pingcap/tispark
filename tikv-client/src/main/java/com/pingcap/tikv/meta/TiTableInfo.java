@@ -315,6 +315,24 @@ public class TiTableInfo implements Serializable {
     return autoRandomBits > 0;
   }
 
+  public TiColumnInfo getAutoRandomColInfo() {
+    if (!hasAutoRandomColumn()) {
+      return null;
+    }
+
+    for (TiColumnInfo tiColumnInfo : getColumns(true)) {
+      if (tiColumnInfo.isPrimaryKey()) {
+        return tiColumnInfo;
+      }
+    }
+    return null;
+  }
+
+  public boolean isAutoRandomColUnsigned() {
+    TiColumnInfo col = getAutoRandomColInfo();
+    return col.getType().isUnsigned();
+  }
+
   public TiFlashReplicaInfo getTiflashReplicaInfo() {
     return tiflashReplicaInfo;
   }

@@ -38,19 +38,24 @@ public class RowIDAllocatorTest {
       long maxShardRowIDBits = 1L;
       long partitionIndex = 0L;
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000000000000000L),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000000000000000L, false),
           0x0000000000000000L);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0fffffffffffffffL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0fffffffffffffffL, false),
           0x0fffffffffffffffL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x10000000000000efL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x10000000000000efL, false),
           0x10000000000000efL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x200000000000000fL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x200000000000000fL, false),
           0x200000000000000fL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x3000000000000000L),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x3000000000000000L, false),
           0x3000000000000000L);
     }
 
@@ -58,19 +63,24 @@ public class RowIDAllocatorTest {
       long maxShardRowIDBits = 1L;
       long partitionIndex = 1L;
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000000000000000L),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000000000000000L, false),
           0x4000000000000000L);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0fffffffffffffffL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0fffffffffffffffL, false),
           0x4fffffffffffffffL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x10000000000000efL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x10000000000000efL, false),
           0x50000000000000efL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x200000000000000fL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x200000000000000fL, false),
           0x600000000000000fL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x3000000000000000L),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x3000000000000000L, false),
           0x7000000000000000L);
     }
 
@@ -78,16 +88,20 @@ public class RowIDAllocatorTest {
       long maxShardRowIDBits = 15L;
       long partitionIndex = 0L;
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000000000000000L),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000000000000000L, false),
           0x0000000000000000L);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL, false),
           0x0000ffffffffffffL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x00001000000000efL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x00001000000000efL, false),
           0x00001000000000efL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL, false),
           0x0000ffffffffffffL);
     }
 
@@ -95,16 +109,20 @@ public class RowIDAllocatorTest {
       long maxShardRowIDBits = 15L;
       long partitionIndex = 1L;
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000000000000000L),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000000000000000L, false),
           0x0001000000000000L);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL, false),
           0x0001ffffffffffffL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x00001000000000efL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x00001000000000efL, false),
           0x00011000000000efL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL, false),
           0x0001ffffffffffffL);
     }
 
@@ -112,16 +130,20 @@ public class RowIDAllocatorTest {
       long maxShardRowIDBits = 15L;
       long partitionIndex = (1L << 15) - 2;
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000000000000000L),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000000000000000L, false),
           0x7ffe000000000000L);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL, false),
           0x7ffeffffffffffffL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x00001000000000efL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x00001000000000efL, false),
           0x7ffe1000000000efL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL, false),
           0x7ffeffffffffffffL);
     }
 
@@ -129,16 +151,20 @@ public class RowIDAllocatorTest {
       long maxShardRowIDBits = 15L;
       long partitionIndex = (1L << 15) - 1;
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000000000000000L),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000000000000000L, false),
           0x7fff000000000000L);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL, false),
           0x7fffffffffffffffL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x00001000000000efL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x00001000000000efL, false),
           0x7fff1000000000efL);
       assertEquals(
-          RowIDAllocator.getShardRowId(maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL),
+          RowIDAllocator.getShardRowId(
+              maxShardRowIDBits, partitionIndex, 0x0000ffffffffffffL, false),
           0x7fffffffffffffffL);
     }
   }
