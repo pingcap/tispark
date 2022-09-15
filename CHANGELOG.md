@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 - Support insert sql [#2471](https://github.com/pingcap/tispark/pull/2471)
 - Support Spark 3.3 [#2492](https://github.com/pingcap/tispark/pull/2492)
 - Only do auth check for tables in TiDB [#2489](https://github.com/pingcap/tispark/pull/2489)
+- Support new Collation [#2524](https://github.com/pingcap/tispark/pull/2524)
+  If you previously ran TiSpark with TiDB 6.0, and set TiDB's `new_collations_enabled_on_first_bootstrap` to false, you must set `new_collations_enabled_on_first_bootstrap` to false in the TiSpark when you run TiSpark 3.1
 
 ### Fixes
 - Fix when TiDB has more than 10,000 tables in one Database, TiSpark may throw table not found exceptions [#2433](https://github.com/pingcap/tispark/pull/2433)
@@ -23,7 +25,7 @@ All notable changes to this project will be documented in this file.
 - Upgraded Spark 3.1 support version from 3.0.2 to 3.0.3, upgraded Spark 3.1 support version from 3.1.1 to 3.1.3, upgraded Spark 3.2 support version from 3.2.1 to 3.2.2 [#2486](https://github.com/pingcap/tispark/pull/2486)
 - Fix the bug that exception will be throw when date col is not the first col ref [#2538](https://github.com/pingcap/tispark/pull/2538)
 
-### DOC
+### Documents
 - TiSpark Development Guide [#2497](https://github.com/pingcap/tispark/pull/2497)
 
 ## [TiSpark 3.0.2] 2022-08-29
