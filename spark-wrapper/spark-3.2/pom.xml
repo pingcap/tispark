@@ -15,7 +15,7 @@
     <url>http://github.copm/pingcap/tispark</url>
 
     <properties>
-        <spark.version.wrapper>3.2.2</spark.version.wrapper>
+        <spark.version.wrapper>[3.2.0, 3.3.0)</spark.version.wrapper>
     </properties>
 
     <dependencies>
