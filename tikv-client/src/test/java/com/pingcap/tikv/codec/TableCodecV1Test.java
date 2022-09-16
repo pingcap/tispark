@@ -18,8 +18,7 @@ package com.pingcap.tikv.codec;
 
 import static org.junit.Assert.assertEquals;
 
-import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.key.IntHandle;
+import com.pingcap.tikv.handle.IntHandle;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
@@ -32,6 +31,7 @@ import java.util.List;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class TableCodecV1Test {
   private Object[] values;

@@ -16,18 +16,17 @@
 
 package com.pingcap.tispark.v2
 
-import com.pingcap.tikv.TiSession
-import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.key.Handle
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
+import com.pingcap.tikv.ClientSession
+import com.pingcap.tikv.handle.Handle
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
+import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
 import com.pingcap.tispark.v2.TiDBTable.{getDagRequestToRegionTaskExec, getLogicalPlanToRDD}
-import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions, TiDBWriter}
-import com.pingcap.tispark.TiTableReference
+import com.pingcap.tispark.write.{TiDBDelete, TiDBOptions}
 import org.apache.commons.codec.binary.Hex
 import org.apache.commons.lang3.StringUtils
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
-import org.apache.spark.sql.catalyst.util.{CaseInsensitiveMap, DateTimeUtils, TimestampFormatter}
+import org.apache.spark.sql.catalyst.util.{DateTimeUtils, TimestampFormatter}
 import org.apache.spark.sql.connector.catalog.{
   SupportsDelete,
   SupportsRead,
@@ -44,6 +43,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.sql.{SQLContext, execution}
 import org.slf4j.LoggerFactory
+import org.tikv.common.meta.TiTimestamp
 
 import java.sql.{Date, SQLException, Timestamp}
 import java.time.{Instant, LocalDate}
@@ -53,7 +53,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
 case class TiDBTable(
-    session: TiSession,
+    clientSession: ClientSession,
     tableRef: TiTableReference,
     table: TiTableInfo,
     var ts: TiTimestamp = null,
@@ -119,11 +119,11 @@ case class TiDBTable(
   override def toString: String = s"TiDBTable($name)"
 
   def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
-    getDagRequestToRegionTaskExec(dagRequest, output, session, sqlContext, tableRef)
+    getDagRequestToRegionTaskExec(dagRequest, output, clientSession, sqlContext, tableRef)
   }
 
   def logicalPlanToRDD(dagRequest: TiDAGRequest, output: Seq[Attribute]): List[TiRowRDD] = {
-    getLogicalPlanToRDD(dagRequest, output, session, sqlContext, tableRef)
+    getLogicalPlanToRDD(dagRequest, output, clientSession, sqlContext, tableRef)
   }
 
   override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = {
@@ -157,7 +157,7 @@ case class TiDBTable(
     }
 
     // TODO It's better to use the start_ts of read. We can't get it now.
-    val startTs = session.getTimestamp.getVersion
+    val startTs = clientSession.getTiKVSession.getTimestamp.getVersion
     logger.info(s"startTS: $startTs")
 
     // Query data from TiKV (ByPass TiDB)
@@ -188,7 +188,7 @@ object TiDBTable {
   private def getDagRequestToRegionTaskExec(
       dagRequest: TiDAGRequest,
       output: Seq[Attribute],
-      session: TiSession,
+      clientSession: ClientSession,
       sqlContext: SQLContext,
       tableRef: TiTableReference): SparkPlan = {
     import scala.collection.JavaConverters._
@@ -201,7 +201,7 @@ object TiDBTable {
         ArrayType(ObjectType(classOf[Handle]), containsNull = false),
         nullable = false,
         Metadata.empty)())
-    val tiConf = session.getConf
+    val tiConf = clientSession.getConf
     tiConf.setPartitionPerSplit(TiUtil.getPartitionPerSplit(sqlContext))
     ids.foreach(id => {
       tiHandleRDDs +=
@@ -211,7 +211,7 @@ object TiDBTable {
           attributeRef,
           tiConf,
           tableRef,
-          session,
+          clientSession,
           sqlContext.sparkSession)
     })
 
@@ -223,21 +223,21 @@ object TiDBTable {
       output,
       TiUtil.getChunkBatchSize(sqlContext),
       dagRequest,
-      session.getConf,
-      session.getTimestamp,
+      clientSession.getConf,
+      clientSession.getTiKVSession.getTimestamp,
       sqlContext.sparkSession)
   }
 
   private def getLogicalPlanToRDD(
       dagRequest: TiDAGRequest,
       output: Seq[Attribute],
-      session: TiSession,
+      clientSession: ClientSession,
       sqlContext: SQLContext,
       tableRef: TiTableReference): List[TiRowRDD] = {
     import scala.collection.JavaConverters._
     val ids = dagRequest.getPrunedPhysicalIds.asScala
     val tiRDDs = new ListBuffer[TiRowRDD]
-    val tiConf = session.getConf
+    val tiConf = clientSession.getConf
     tiConf.setPartitionPerSplit(TiUtil.getPartitionPerSplit(sqlContext))
     ids.foreach(id => {
       tiRDDs += new TiRowRDD(
@@ -247,7 +247,7 @@ object TiDBTable {
         tiConf,
         output,
         tableRef,
-        session,
+        clientSession,
         sqlContext.sparkSession)
     })
     tiRDDs.toList

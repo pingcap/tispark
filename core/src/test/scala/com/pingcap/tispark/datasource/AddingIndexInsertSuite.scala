@@ -16,9 +16,9 @@
 
 package com.pingcap.tispark.datasource
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+import org.tikv.common.exception.TiBatchWriteException
 
 // TODO: once exception message is stable, we need also check the exception's message.
 class AddingIndexInsertSuite extends BaseBatchWriteTest("adding_index_insert") {

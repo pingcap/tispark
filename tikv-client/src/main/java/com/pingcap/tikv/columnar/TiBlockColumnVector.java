@@ -18,9 +18,9 @@ package com.pingcap.tikv.columnar;
 
 import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
 
-import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.codec.Codec.DateCodec;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
+import com.pingcap.tikv.codec.ExtendedDateTime;
 import com.pingcap.tikv.columnar.datatypes.CHType;
 import com.pingcap.tikv.types.AbstractDateTimeType;
 import com.pingcap.tikv.types.BytesType;

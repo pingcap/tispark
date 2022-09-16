@@ -18,8 +18,6 @@ package com.pingcap.tikv.parser;
 
 import static com.pingcap.tikv.types.IntegerType.BOOLEAN;
 
-import com.google.common.primitives.Doubles;
-import com.pingcap.tikv.exception.UnsupportedSyntaxException;
 import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
@@ -38,6 +36,8 @@ import java.nio.charset.StandardCharsets;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
+import org.tikv.common.exception.UnsupportedSyntaxException;
+import org.tikv.shade.com.google.common.primitives.Doubles;
 
 // AstBuilder will convert ParseTree into Ast Node.
 // In tikv java client, we only need to parser expression

@@ -19,12 +19,12 @@
 package com.pingcap.tikv.types;
 
 import com.pingcap.tikv.codec.CodecDataInput;
-import com.pingcap.tikv.exception.ConvertNotSupportException;
-import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.sql.Timestamp;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.tikv.common.exception.ConvertNotSupportException;
+import org.tikv.common.exception.ConvertOverflowException;
 
 /**
  * Datetime is a timezone neutral version of timestamp While most of decoding logic is the same it

@@ -16,8 +16,6 @@
 
 package com.pingcap.tikv.expression.visitor;
 
-import com.google.common.collect.RangeSet;
-import com.google.common.collect.TreeRangeSet;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
@@ -25,6 +23,8 @@ import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.key.TypedKey;
 import java.util.Set;
+import org.tikv.shade.com.google.common.collect.RangeSet;
+import org.tikv.shade.com.google.common.collect.TreeRangeSet;
 
 /**
  * Apply partition pruning rule on filter condition. Partition pruning is based on a simple idea and

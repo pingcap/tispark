@@ -16,13 +16,13 @@
 
 package com.pingcap.tikv.expression;
 
-import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
 import java.util.List;
 import java.util.Objects;
+import org.tikv.common.exception.TiExpressionException;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class ColumnRef extends Expression {
 
