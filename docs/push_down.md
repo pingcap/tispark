@@ -49,7 +49,7 @@ Here is the detail table:
 
 ## Aggregate
 
-Aggregate push down is supported After TiSpark 2.5.0(include)
+Aggregate push down is supported since TiSpark 2.5.0
 
 Here are some limits:
 - Sum(float) can't be pushed down because Spark will cast float to double, but `cast` can't be pushed down in TiSpark.

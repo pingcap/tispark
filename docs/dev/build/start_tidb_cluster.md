@@ -31,11 +31,11 @@ You can find more details about TiUP [here](https://docs.pingcap.com/tidb/stable
    ```
 3. Config
 
-   The default config of TiDB may not enough, youou needs to change some configs of TiDB,TiKV and PD for test.
+   The default config of TiDB may not enough, you need to change some configs of TiDB,TiKV and PD for test.
    You can get a copy of TiDB config file from [here](https://github.com/pingcap/tidb/blob/master/config/config.toml.example) with the default value.
    rename it to `config.toml` and at least set `index-limit` to 512 if you want to pass the tispark test.
    
-   About other configs you may need to change, see [here](../../../config) for more detail.
+   About other configs you may need to change, see [here](../../../config) for more details.
   
 5. Start the cluster locally
    
@@ -43,7 +43,7 @@ You can find more details about TiUP [here](https://docs.pingcap.com/tidb/stable
    tiup playground --db.config config.toml
    ```
 
-   This command will download required files and  start a TiDB cluster of the latest version with 1 TiDB instance, 1 TiKV instance, 1 PD instance, and 1 TiFlash instance.
+   This command will download required files and start a TiDB cluster of the latest version with 1 TiDB instance, 1 TiKV instance, 1 PD instance, and 1 TiFlash instance.
 
 ## Use docker-compose
 

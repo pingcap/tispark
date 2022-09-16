@@ -4,7 +4,7 @@ Before developing, you need to install the following software.
 ## Install Scala
 We use Scala to develop TiSpark, so we need to install Scala.
 
-TiSpark3 are using Scala 2.12 . You can find out how to install Scala at [here](https://www.scala-lang.org/download/2.12.16.html).
+TiSpark3.x are using Scala 2.12 . You can find out how to install Scala at [here](https://www.scala-lang.org/download/2.12.16.html).
 
 ## Install Java 8
 Our client for TiKV is written in Java, so we need to install Java.
@@ -26,8 +26,8 @@ If you are using MacOS for M1, [Zulu JDK](https://www.azul.com/downloads/?versio
 
 You need to install spark once you want to use TiSpark with jar package. see [Getting-Started](https://github.com/pingcap/tispark/wiki/Getting-Started) on how to use it.
  
-See [versions info](https://github.com/pingcap/tispark/wiki/Getting-TiSpark#getting-tispark-jar) here to determine which spark you need.
+See [versions info](https://github.com/pingcap/tispark/wiki/Getting-TiSpark#getting-tispark-jar) here to determine which spark version you need.
 
 You can get Spark at [Downloads | Apache Spark](https://spark.apache.org/downloads.html).
-   
-We don't support the installation of spark. If you have any questions, please turn to [Spark](https://spark.apache.org/) for help.   
+
+Installation of spark is out of the scope of this document. If you have any questions, please turn to [Spark](https://spark.apache.org/) for help.   

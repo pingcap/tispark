@@ -54,6 +54,6 @@ There may be a conflict when you submit a pull request since others may change t
 
 Ask the reviewer to review your code. If there is a problem, you need to modify it and push it again. The reviewer will review it again until it is approved.
 
-## merged
+## Merged
 
 After you passed all the GitHub action and no review comments left, your code will be merged into the master branch. 

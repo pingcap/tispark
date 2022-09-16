@@ -2,7 +2,7 @@
 
 ### Usage
 
-1. Prepare your TiDB cluster environment. See [here](../../../docs/dev/build/start_tidb_cluster.md) for more detail.
+1. Prepare your TiDB cluster environment. See [here](../../../docs/dev/build/start_tidb_cluster.md) for more details.
 
 2. Run `mvn test -am -pl core -Dtest=moo -DwildcardSuites=com.pingcap.tispark.xxx.xxxSuite` to run a test.
 
