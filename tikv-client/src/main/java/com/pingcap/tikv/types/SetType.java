@@ -22,11 +22,11 @@ import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.Codec.SetCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.ConvertNotSupportException;
-import com.pingcap.tikv.exception.ConvertOverflowException;
-import com.pingcap.tikv.exception.TypeException;
-import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import org.tikv.common.exception.ConvertNotSupportException;
+import org.tikv.common.exception.ConvertOverflowException;
+import org.tikv.common.exception.TypeException;
+import org.tikv.common.exception.UnsupportedTypeException;
 
 public class SetType extends DataType {
   public static final SetType SET = new SetType(MySQLType.TypeSet);

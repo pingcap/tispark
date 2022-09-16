@@ -19,10 +19,10 @@ package com.pingcap.tikv.meta;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiPartitionInfo implements Serializable {

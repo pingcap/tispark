@@ -18,16 +18,16 @@
 
 package com.pingcap.tispark.statistics
 
-import com.google.common.cache.CacheBuilder
 import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
 import com.pingcap.tikv.types.DataType
-import com.pingcap.tikv.{Snapshot, TiSession}
+import com.pingcap.tikv.{ClientSession, Snapshot}
 import com.pingcap.tispark.statistics.StatisticsHelper.shouldUpdateHistogram
 import com.pingcap.tispark.statistics.estimate.{DefaultTableSizeEstimator, TableSizeEstimator}
 import org.slf4j.LoggerFactory
+import org.tikv.shade.com.google.common.cache.CacheBuilder
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -70,7 +70,7 @@ object StatisticsManager {
     .newBuilder()
     .build[java.lang.Long, TableStatistics]
   protected var initialized: Boolean = false
-  private var session: TiSession = _
+  private var clientSession: ClientSession = _
   private var snapshot: Snapshot = _
   private var catalog: Catalog = _
   private var dbPrefix: String = _
@@ -157,7 +157,7 @@ object StatisticsManager {
     // load count, modify_count, version info
     loadMetaToTblStats(tblId, tblStatistic)
     val req = StatisticsHelper
-      .buildHistogramsRequest(histTable, tblId, session.getTimestamp)
+      .buildHistogramsRequest(histTable, tblId, clientSession.getTiKVSession.getTimestamp)
 
     val rows = readDAGRequest(req, histTable.getId)
     if (rows.isEmpty) return
@@ -201,7 +201,10 @@ object StatisticsManager {
 
   private def loadMetaToTblStats(tableId: Long, tableStatistics: TableStatistics): Unit = {
     val req =
-      StatisticsHelper.buildMetaRequest(metaTable, tableId, session.getTimestamp)
+      StatisticsHelper.buildMetaRequest(
+        metaTable,
+        tableId,
+        clientSession.getTiKVSession.getTimestamp)
 
     val rows = readDAGRequest(req, metaTable.getId)
     if (rows.isEmpty) return
@@ -219,7 +222,10 @@ object StatisticsManager {
       tableId: Long,
       requests: Seq[StatisticsDTO]): Seq[StatisticsResult] = {
     val req =
-      StatisticsHelper.buildBucketRequest(bucketTable, tableId, session.getTimestamp)
+      StatisticsHelper.buildBucketRequest(
+        bucketTable,
+        tableId,
+        clientSession.getTiKVSession.getTimestamp)
 
     val rows = readDAGRequest(req, bucketTable.getId)
     if (rows.isEmpty) return Nil
@@ -260,28 +266,28 @@ object StatisticsManager {
 
   def setEstimator(estimator: TableSizeEstimator): Unit = tableSizeEstimator = estimator
 
-  def initStatisticsManager(tiSession: TiSession): Unit =
+  def initStatisticsManager(clientSession: ClientSession): Unit =
     if (!initialized) {
       synchronized {
         if (!initialized) {
-          initialize(tiSession)
+          initialize(clientSession)
           initialized = true
         }
       }
     }
 
-  protected def initialize(tiSession: TiSession): Unit = {
-    session = tiSession
-    snapshot = tiSession.createSnapshot()
-    catalog = tiSession.getCatalog
-    dbPrefix = tiSession.getConf.getDBPrefix
+  protected def initialize(clientSession: ClientSession): Unit = {
+    this.clientSession = clientSession
+    this.snapshot = clientSession.createSnapshot()
+    this.catalog = clientSession.getCatalog
+    this.dbPrefix = clientSession.getConf.getDBPrefix
     // An estimator used to calculate table size.
-    tableSizeEstimator = DefaultTableSizeEstimator
+    this.tableSizeEstimator = DefaultTableSizeEstimator
     val mysqlDB = catalog.getDatabaseFromCache(s"${dbPrefix}mysql")
-    metaTable = catalog.getTableFromCache(mysqlDB, "stats_meta")
-    histTable = catalog.getTableFromCache(mysqlDB, "stats_histograms")
-    bucketTable = catalog.getTableFromCache(mysqlDB, "stats_buckets")
-    statisticsMap.invalidateAll()
+    this.metaTable = catalog.getTableFromCache(mysqlDB, "stats_meta")
+    this.histTable = catalog.getTableFromCache(mysqlDB, "stats_histograms")
+    this.bucketTable = catalog.getTableFromCache(mysqlDB, "stats_buckets")
+    this.statisticsMap.invalidateAll()
   }
 
   def reset(): Unit = initialized = false

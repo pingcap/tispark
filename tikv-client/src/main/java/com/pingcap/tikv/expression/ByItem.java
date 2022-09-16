@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.expression;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.tikv.shade.com.google.common.base.Preconditions.checkNotNull;
 
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import java.io.Serializable;

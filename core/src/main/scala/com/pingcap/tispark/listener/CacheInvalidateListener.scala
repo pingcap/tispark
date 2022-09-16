@@ -18,12 +18,12 @@
 
 package com.pingcap.tispark.listener
 
-import com.pingcap.tikv.event.CacheInvalidateEvent
-import com.pingcap.tikv.region.RegionManager
 import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
 import com.pingcap.tispark.handler.CacheInvalidateEventHandler
 import org.apache.spark.SparkContext
 import org.slf4j.LoggerFactory
+import org.tikv.common.event.CacheInvalidateEvent
+import org.tikv.common.region.RegionManager
 
 class CacheInvalidateListener()
     extends Serializable

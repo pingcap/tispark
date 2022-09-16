@@ -20,38 +20,44 @@ import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getHandleI
 import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getRowIterator;
 import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getTiChunkIterator;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.columnar.TiChunk;
-import com.pingcap.tikv.key.Handle;
+import com.pingcap.tikv.handle.Handle;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiDAGRequest;
-import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
 import com.pingcap.tikv.operation.iterator.IndexScanIterator;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
-import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import org.tikv.common.BytePairWrapper;
+import org.tikv.common.TiSession;
+import org.tikv.common.meta.TiTimestamp;
+import org.tikv.common.util.ConcreteBackOffer;
+import org.tikv.common.util.RangeSplitter.RegionTask;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
+import org.tikv.shade.com.google.protobuf.ByteString;
+import org.tikv.txn.KVClient;
 
 public class Snapshot {
   private final TiTimestamp timestamp;
-  private final TiSession session;
-  private final TiConfiguration conf;
 
-  public Snapshot(@Nonnull TiTimestamp timestamp, TiConfiguration conf) {
+  public ClientSession getClientSession() {
+    return clientSession;
+  }
+
+  private final ClientSession clientSession;
+
+  public Snapshot(@Nonnull TiTimestamp timestamp, ClientSession clientSession) {
     this.timestamp = timestamp;
-    this.conf = conf;
-    this.session = TiSession.getInstance(conf);
+    this.clientSession = clientSession;
   }
 
   public TiSession getSession() {
-    return session;
+    return clientSession.getTiKVSession();
   }
 
   public long getVersion() {
@@ -71,9 +77,7 @@ public class Snapshot {
   public ByteString get(ByteString key) {
     try (KVClient client =
         new KVClient(
-            session.getConf(),
-            session.getRegionStoreClientBuilder(),
-            session.getThreadPoolForBatchGet())) {
+            getSession().getConf(), getSession().getRegionStoreClientBuilder(), getSession())) {
       return client.get(key, timestamp.getVersion());
     }
   }
@@ -85,9 +89,7 @@ public class Snapshot {
     }
     try (KVClient client =
         new KVClient(
-            session.getConf(),
-            session.getRegionStoreClientBuilder(),
-            session.getThreadPoolForBatchGet())) {
+            getSession().getConf(), getSession().getRegionStoreClientBuilder(), getSession())) {
       List<KvPair> kvPairList =
           client.batchGet(
               ConcreteBackOffer.newCustomBackOff(backOffer), list, timestamp.getVersion());
@@ -107,7 +109,7 @@ public class Snapshot {
       throw new UnsupportedOperationException(
           "double read case should first read handle in row-wise fashion");
     } else {
-      return getTiChunkIterator(dagRequest, tasks, getSession(), numOfRows);
+      return getTiChunkIterator(dagRequest, tasks, getClientSession(), numOfRows);
     }
   }
   /**
@@ -119,7 +121,7 @@ public class Snapshot {
   public Iterator<Row> tableReadRow(TiDAGRequest dagRequest, long physicalId) {
     return tableReadRow(
         dagRequest,
-        RangeSplitter.newSplitter(session.getRegionManager())
+        RangeSplitter.newSplitter(getSession().getRegionManager())
             .splitRangeByRegion(
                 dagRequest.getRangesByPhysicalId(physicalId), dagRequest.getStoreType()));
   }
@@ -134,10 +136,10 @@ public class Snapshot {
    */
   private Iterator<Row> tableReadRow(TiDAGRequest dagRequest, List<RegionTask> tasks) {
     if (dagRequest.isDoubleRead()) {
-      Iterator<Handle> iter = getHandleIterator(dagRequest, tasks, getSession());
+      Iterator<Handle> iter = getHandleIterator(dagRequest, tasks, getClientSession());
       return new IndexScanIterator(this, dagRequest, iter);
     } else {
-      return getRowIterator(dagRequest, tasks, getSession());
+      return getRowIterator(dagRequest, tasks, getClientSession());
     }
   }
 
@@ -150,7 +152,7 @@ public class Snapshot {
    * @return Row iterator to iterate over resulting rows
    */
   public Iterator<Handle> indexHandleRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
-    return getHandleIterator(dagRequest, tasks, session);
+    return getHandleIterator(dagRequest, tasks, getClientSession());
   }
 
   /**
@@ -162,14 +164,14 @@ public class Snapshot {
   public Iterator<KvPair> scanPrefix(ByteString prefix) {
     ByteString nextPrefix = Key.toRawKey(prefix).nextPrefix().toByteString();
     return new ConcreteScanIterator(
-        session.getConf(),
-        session.getRegionStoreClientBuilder(),
+        clientSession.getConf(),
+        getSession().getRegionStoreClientBuilder(),
         prefix,
         nextPrefix,
         timestamp.getVersion());
   }
 
   public TiConfiguration getConf() {
-    return conf;
+    return clientSession.getConf();
   }
 }

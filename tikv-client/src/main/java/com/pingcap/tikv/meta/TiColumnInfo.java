@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.ColumnInfo;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType;
@@ -33,6 +31,8 @@ import com.pingcap.tikv.types.MySQLType;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
+import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiColumnInfo implements Serializable {
@@ -239,11 +239,25 @@ public class TiColumnInfo implements Serializable {
     return new TiIndexColumn(CIStr.newCIStr(getName()), getOffset(), getType().getLength());
   }
 
-  ColumnInfo toProto(TiTableInfo tableInfo) {
+  ColumnInfo toOldProto(TiTableInfo tableInfo) {
     return ColumnInfo.newBuilder()
         .setColumnId(id)
         .setTp(type.getTypeCode())
         .setCollation(type.getCollationCode())
+        .setColumnLen((int) type.getLength())
+        .setDecimal(type.getDecimal())
+        .setFlag(type.getFlag())
+        .setDefaultVal(getOriginDefaultValueAsByteString())
+        .setPkHandle(tableInfo.isPkHandle() && isPrimaryKey())
+        .addAllElems(type.getElems())
+        .build();
+  }
+
+  ColumnInfo toProto(TiTableInfo tableInfo) {
+    return ColumnInfo.newBuilder()
+        .setColumnId(id)
+        .setTp(type.getTypeCode())
+        .setCollation(Collation.rewriteNewCollationIDIfNeeded(type.getCollationCode()))
         .setColumnLen((int) type.getLength())
         .setDecimal(type.getDecimal())
         .setFlag(type.getFlag())

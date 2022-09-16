@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.columnar;
 
-import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.MyDecimal;
 import com.pingcap.tikv.types.AbstractDateTimeType;
@@ -29,7 +28,6 @@ import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.JsonType;
 import com.pingcap.tikv.types.TimeType;
 import com.pingcap.tikv.types.TimestampType;
-import com.pingcap.tikv.util.JsonUtils;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
@@ -38,6 +36,8 @@ import java.time.ZonedDateTime;
 import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.tikv.common.util.JsonUtils;
+import org.tikv.shade.com.google.common.primitives.UnsignedLong;
 
 /** An implementation of {@link TiColumnVector}. All data is stored in TiDB chunk format. */
 public class TiChunkColumnVector extends TiColumnVector {

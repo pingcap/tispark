@@ -69,7 +69,6 @@ public class PartitionedTable implements Serializable {
               logicalTable.getLogicalTableId(),
               tiPartitionDef.getId(),
               logicalTable.getTableInfo());
-      ;
     }
 
     return new PartitionedTable(
