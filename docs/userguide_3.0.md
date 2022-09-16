@@ -110,7 +110,7 @@ customerDF.write
 ```
 See [Data Source API User Guide](https://github.com/pingcap/tispark/blob/master/docs/datasource_api_userguide.md) for more details.
 
-You can also write with Spark SQL since TiSpark 3.1. See [insert SQL](./insert_sql_userguide.md) for more detail.
+You can also write with Spark SQL since TiSpark 3.1. See [insert SQL](features/insert_sql_userguide.md) for more detail.
 
 ### Write With JDBC DataSource
 
@@ -185,7 +185,7 @@ spark.sql("select t1.id,t2.id from spark_catalog.default.t t1 left join tidb_cat
 | `spark.tispark.request.isolation.level`         | `SI`             | Isolation level means whether to resolve locks for the underlying TiDB clusters. When you use the "RC", you get the latest version of record smaller than your `tso` and ignore the locks. If you use "SI", you resolve the locks and get the records depending on whether the resolved lock is committed or aborted.                                                                                                                               |
 | `spark.tispark.coprocessor.chunk_batch_size`    | `1024`           | How many rows fetched from Coprocessor                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `spark.tispark.isolation_read_engines`          | `tikv,tiflash`   | List of readable engines of TiSpark, comma separated, storage engines not listed will not be read                                                                                                                                                                                                                                                                                                                                                   |
-| `spark.tispark.stale_read`                      | it is optional   | The stale read timestamp(ms). see [here](stale_read.md) for more detail                                                                                                                                                                                                                                                                                                                                                                             |
+| `spark.tispark.stale_read`                      | it is optional   | The stale read timestamp(ms). see [here](features/stale_read.md) for more detail                                                                                                                                                                                                                                                                                                                                                                             |
 | `spark.tispark.tikv.tls_enable`                 | `false`          | Whether to enable TiSpark TLS. 　                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `spark.tispark.tikv.trust_cert_collection`      | ``               | Trusted certificates for TiKV Client, which is used for verifying the remote pd's certificate, e.g. `/home/tispark/config/root.pem` The file should contain an X.509 certificate collection.                                                                                                                                                                                                                                                        |
 | `spark.tispark.tikv.key_cert_chain`             | ``               | An X.509 certificate chain file for TiKV Client, e.g. `/home/tispark/config/client.pem`.                                                                                                                                                                                                                                                                                                                                                            |
@@ -340,14 +340,14 @@ There are two ways to write into partition table:
 
 
 ### Other Features
-- [Push down](./push_down.md)
-- [Delete with TiSpark](./delete_userguide.md)
-- [Stale read](https://github.com/pingcap/tispark/blob/master/docs/stale_read.md)
-- [Authorization and authentication](https://github.com/pingcap/tispark/blob/master/docs/authorization_userguide.md)
+- [Push down](features/push_down.md)
+- [Delete with TiSpark](features/delete_userguide.md)
+- [Stale read](features/stale_read.md)
+- [Authorization and authentication](features/authorization_userguide.md)
 - [TiSpark with multiple catalogs](https://github.com/pingcap/tispark/wiki/TiSpark-with-multiple-catalogs)
-- [TiSpark TLS](https://github.com/pingcap/tispark/blob/master/docs/configuration.md#tls-notes)
-- [TiSpark Telemetry](https://github.com/pingcap/tispark/blob/master/docs/telemetry.md)
-- [TiSpark plan](./query_execution_plan_in_TiSpark.md)
+- TiSpark TLS : See TLS Configuration section in this article
+- [TiSpark Telemetry](features/telemetry.md)
+- [TiSpark plan](features/query_execution_plan_in_TiSpark.md)
 
 # Statistics information
 
