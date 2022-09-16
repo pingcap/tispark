@@ -24,5 +24,8 @@ jobs:
       - name: deploy TiDB
         run: /home/runner/.tiup/bin/tiup playground --db.config ./config/followerread/tidb.toml --pd.config ./config/followerread/pd.toml --kv.config ./config/followerread/tikv.toml --kv 3 &
 
+      - name: build
+        run: mvn clean package -Dmaven.test.skip=true -B
+
       - name: test follower read
         run: mvn test -am -pl core -Dtest=moo -DwildcardSuites=org.apache.spark.sql.followerread.FollowerReadSuite -DfailIfNoTests=false
