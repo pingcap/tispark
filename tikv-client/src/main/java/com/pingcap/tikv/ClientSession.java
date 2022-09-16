@@ -71,7 +71,6 @@ public class ClientSession implements AutoCloseable {
     }
     this.tiKVSession =
         org.tikv.common.TiSession.create(ConvertUpstreamUtils.convertTiConfiguration(getConf()));
-    this.catalog = getCatalog();
     refreshNewCollationEnabled();
   }
 

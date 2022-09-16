@@ -1,3 +1,5 @@
+name: Follower Read test
+
 on:
   push:
     branches: [master]

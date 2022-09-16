@@ -79,7 +79,7 @@ object TiConfigConst {
 
   val NEW_COLLATION_ENABLE: String = "spark.tispark.new_collation_enable"
 
-  // REPLICA READ
+  // Follower Read
   val REPLICA_READ: String = "spark.tispark.replica_read"
   val REPLICA_READ_DEFAULT = "leader"
 
