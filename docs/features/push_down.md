@@ -11,8 +11,8 @@ TiSpark can push down some operators to TiKV
 
 Here is the detail table:
 
-| 数据类型 | sum | count | avg | min | max | predicate & order by & group by |
-| ---------- | --- | ----- | --- | --- | --- | ------------------------------- |
+| data type  | sum | count | avg | min | max | predicate & order by & group by |
+|------------| --- | ----- | --- | --- | --- | ------------------------------- |
 | BIT        | ❌ | ✅   | ❌ | ✅ | ✅ | ❌                             |
 | BOOLEAN    | ✅ | ✅   | ✅ | ✅ | ✅ | ✅                             |
 | TINYINT    | ✅ | ✅   | ✅ | ✅ | ✅ | ✅                             |
