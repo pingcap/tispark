@@ -2,7 +2,7 @@
 
 > **Note:**
 >
-> This is a user guide for TiSpark version >= 3.0 which is compatible with spark 3.x. If you are using Spark version earlier than 3.0, refer to [Document for Spark 2.x](./userguide_spark2.1.md).
+> This is a user guide for TiSpark version >= 3.0 which is compatible with spark 3.x. If you are using Spark version earlier than 3.0, refer to [Document for TiSpark 2.x](./userguide_2.0.md).
 > 
 > TiSpark >= 3.0 is developed with Spark catalog plugin. If you want to use TiSpark without catalog plugin mode, please turn to TiSpark 2.5.
 
