@@ -46,7 +46,7 @@ class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") 
 
     // hack: update AllocateId on TiKV to a huge number to trigger overflow
     val size = Math.pow(2, 64 - shardBits - 1).toLong - 3
-    val allocator = allocateID(size, RowIDAllocator.RowIDAllocatorType.AUTO_RANDOM)
+    allocateID(size, RowIDAllocator.RowIDAllocatorType.AUTO_RANDOM)
 
     // TiSpark insert
     tidbWrite(
@@ -85,7 +85,7 @@ class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") 
 
     // hack: update AllocateId on TiKV to a huge number to trigger overflow
     val size = Math.pow(2, 64 - shardBits - 1).toLong - 3
-    val allocator = allocateID(size, RowIDAllocator.RowIDAllocatorType.AUTO_RANDOM)
+    allocateID(size, RowIDAllocator.RowIDAllocatorType.AUTO_RANDOM)
 
     // TiDB insert
     jdbcUpdate(s"insert into $dbtable values(null)")
@@ -94,7 +94,7 @@ class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") 
     val caught = intercept[java.sql.SQLException] {
       jdbcUpdate(s"insert into $dbtable values(null)")
     }
-    assert(caught.getMessage.equals("Failed to read auto-increment value from storage engine"))
+    assert(caught.getMessage.equals("Failed to read auto-random value from storage engine"))
   }
 
   test("test insert into unsigned auto_random") {
@@ -138,7 +138,7 @@ class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") 
   }
 
   test("test insert into signed auto_random") {
-    val shardBits = 1
+    val shardBits = 15
 
     if (StoreVersion.isTiKVVersionGreatEqualThanVersion(this.ti.tiSession.getPDClient, "5.0.0")) {
       jdbcUpdate(
