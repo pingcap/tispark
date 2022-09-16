@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.hostmap;
 
-import com.pingcap.tikv.util.HostMapping;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
@@ -25,6 +24,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.HostMapping;
 
 public class UriHostMapping implements HostMapping {
 

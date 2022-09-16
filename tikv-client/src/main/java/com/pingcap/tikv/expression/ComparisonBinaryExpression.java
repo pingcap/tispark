@@ -16,7 +16,6 @@
 
 package com.pingcap.tikv.expression;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.EQUAL;
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.GREATER_EQUAL;
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.GREATER_THAN;
@@ -24,14 +23,15 @@ import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.LE
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.LESS_THAN;
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.NOT_EQUAL;
 import static java.util.Objects.requireNonNull;
+import static org.tikv.shade.com.google.common.base.Preconditions.checkArgument;
 
-import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import java.util.List;
 import java.util.Objects;
+import org.tikv.common.exception.TiExpressionException;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class ComparisonBinaryExpression extends Expression {
   private final Expression left;

@@ -16,7 +16,7 @@
 
 package com.pingcap.tispark.tls
 
-import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import org.scalatest.FunSuite
 import org.scalatest.Matchers.{be, noException}
 
@@ -32,11 +32,9 @@ class TiKVClientTLSSuite extends FunSuite {
       conf.setTrustCertCollectionFile("/config/cert/pem/root.pem")
       conf.setKeyCertChainFile("/config/cert/pem/client.pem")
       conf.setKeyFile("/config/cert/pem/client-pkcs8.key")
-      val session = TiSession.getInstance(conf)
-      val pdClient = session.getPDClient
-      pdClient.updateLeader()
-      session.getCatalog()
-      session.createSnapshot()
+      val clientSession = ClientSession.getInstance(conf)
+      clientSession.getCatalog
+      clientSession.createSnapshot()
     }
   }
 
@@ -52,11 +50,9 @@ class TiKVClientTLSSuite extends FunSuite {
       conf.setJksKeyPassword("123456")
       conf.setJksTrustPath("/config/cert/jks/server-cert-store")
       conf.setJksTrustPassword("12345678")
-      val session = TiSession.getInstance(conf)
-      val pdClient = session.getPDClient
-      pdClient.updateLeader()
-      session.getCatalog()
-      session.createSnapshot()
+      val clientSession = ClientSession.getInstance(conf)
+      clientSession.getCatalog
+      clientSession.createSnapshot()
     }
   }
 }

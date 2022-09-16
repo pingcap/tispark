@@ -16,8 +16,8 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tikv.tools.RegionUtils
-import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tikv.util.RegionUtils
+import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark._
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.listener.CacheInvalidateListener
@@ -26,7 +26,6 @@ import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd}
-import org.apache.spark.sql.catalyst.catalog._
 import org.json4s.DefaultFormats
 import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
@@ -47,27 +46,27 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
     if (TiAuthorization.enableAuth) {
       Option(tiAuthorization.get.getPDAddresses())
     } else Option.empty)
-  final val tiSession: TiSession = TiSession.getInstance(tiConf)
+  final val clientSession = ClientSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
 
   sparkSession.sparkContext.addSparkListener(new SparkListener() {
     override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {
-      if (tiSession != null) {
+      if (clientSession != null) {
         try {
-          tiSession.close()
+          clientSession.close()
         } catch {
-          case e: Throwable => logWarning("fail to close TiSession!", e)
+          case e: Throwable => logWarning("fail to close ClientSession!", e)
         }
       }
     }
   })
 
   TiUtil.registerUDFs(sparkSession)
-  StatisticsManager.initStatisticsManager(tiSession)
+  StatisticsManager.initStatisticsManager(clientSession)
   CacheInvalidateListener
-    .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
-  tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
-  val meta: MetaManager = new MetaManager(tiSession.getCatalog)
+    .initCacheListener(sparkSession.sparkContext, clientSession.getTiKVSession.getRegionManager)
+  clientSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
+  val meta: MetaManager = new MetaManager(clientSession.getCatalog)
   val debug: DebugTool = new DebugTool
 
   // add backtick for table name in case it contains, e.g., a minus sign
@@ -98,7 +97,8 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
         maxTrans: Int = 50): Map[String, Integer] = {
       val regionIDPrefix = "pd/api/v1/region/id"
       val operatorsPrefix = "pd/api/v1/operators"
-      val storeRegionId = RegionUtils.getStoreRegionIdDistribution(tiSession, dbName, tableName)
+      val storeRegionId =
+        RegionUtils.getStoreRegionIdDistribution(clientSession, dbName, tableName)
       val storeRegionCount = mutable.Map[Long, Long]()
 
       storeRegionId.asScala.foreach((tuple: (lang.Long, java.util.List[lang.Long])) => {
@@ -149,6 +149,6 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
     }
 
     def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] =
-      RegionUtils.getRegionDistribution(tiSession, dbName, tableName).asScala.toMap
+      RegionUtils.getRegionDistribution(clientSession, dbName, tableName).asScala.toMap
   }
 }

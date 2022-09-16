@@ -16,7 +16,6 @@
 
 package com.pingcap.tispark.telemetry
 
-import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.auth.TiAuthorization.tiConf
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.HttpClientUtil

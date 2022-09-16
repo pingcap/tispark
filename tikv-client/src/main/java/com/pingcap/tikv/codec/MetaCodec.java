@@ -16,21 +16,21 @@
 
 package com.pingcap.tikv.codec;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static org.tikv.shade.com.google.common.base.Preconditions.checkArgument;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
-import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.exception.TiClientInternalException;
+import org.tikv.common.util.Pair;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class MetaCodec {
   protected static final Logger logger = LoggerFactory.getLogger(MetaCodec.class);

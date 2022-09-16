@@ -20,7 +20,8 @@ import java.util
 
 import com.pingcap.tikv.codec.KeyUtils
 import com.pingcap.tikv.key.Key
-import com.pingcap.tikv.util.{FastByteComparisons, LogDesensitization}
+import com.pingcap.tikv.util.LogDesensitization
+import org.tikv.common.util.FastByteComparisons
 
 class SerializableKey(val bytes: Array[Byte])
     extends Comparable[SerializableKey]

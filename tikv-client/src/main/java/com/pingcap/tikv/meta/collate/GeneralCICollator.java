@@ -17,8 +17,8 @@
 package com.pingcap.tikv.meta.collate;
 
 import com.pingcap.tikv.meta.Collation;
-import com.pingcap.tikv.util.Pair;
 import java.io.ByteArrayOutputStream;
+import org.tikv.common.util.Pair;
 
 public class GeneralCICollator {
 

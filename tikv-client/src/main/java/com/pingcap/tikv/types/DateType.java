@@ -21,13 +21,13 @@ package com.pingcap.tikv.types;
 import com.pingcap.tikv.codec.Codec.DateCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.ConvertNotSupportException;
-import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.sql.Date;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
 import org.joda.time.LocalDate;
+import org.tikv.common.exception.ConvertNotSupportException;
+import org.tikv.common.exception.ConvertOverflowException;
 
 public class DateType extends AbstractDateTimeType {
   private static final LocalDate EPOCH = new LocalDate(0);

@@ -16,12 +16,12 @@
 
 package com.pingcap.tispark.telemetry
 
-import com.pingcap.tispark.utils.{HttpClientUtil, TiUtil}
-import com.pingcap.tispark.TiSparkVersion
-import org.apache.spark.sql.SparkSession
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tispark.TiSparkVersion
 import com.pingcap.tispark.auth.TiAuthorization
+import com.pingcap.tispark.utils.{HttpClientUtil, TiUtil}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.internal.SQLConf
 import org.slf4j.LoggerFactory
 import scalaj.http.HttpResponse
