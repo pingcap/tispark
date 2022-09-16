@@ -16,11 +16,12 @@
 
 package com.pingcap.tispark.telemetry
 
-import com.pingcap.tikv.util.ConcreteBackOffer
-import com.pingcap.tikv.{TiConfiguration, TiSession, TwoPhaseCommitter}
+import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark.utils.{SystemInfoUtil, TiUtil}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
+import org.tikv.common.util.ConcreteBackOffer
+import org.tikv.txn.TwoPhaseCommitter
 import java.util.UUID
 
 /**
@@ -45,15 +46,15 @@ class TeleMsg(sparkSession: SparkSession) {
     try {
       val conf = TiConfiguration.createDefault(pdAddr.get)
       TiUtil.sparkConfToTiConfWithoutPD(SparkSession.active.sparkContext.getConf, conf)
-      val tiSession = TiSession.getInstance(conf)
-      val snapShot = tiSession.createSnapshot()
+      val clientSession = ClientSession.getInstance(conf)
+      val snapShot = clientSession.createSnapshot()
       val value = snapShot.get(TRACK_ID.getBytes("UTF-8"))
 
       if (value.nonEmpty)
         return new String(value, "UTF-8")
 
       val uuid = TRACK_ID_PREFIX + UUID.randomUUID().toString
-      putKeyValue(TRACK_ID, uuid, conf, tiSession)
+      putKeyValue(TRACK_ID, uuid, clientSession)
       uuid
     } catch {
       case e: Throwable =>
@@ -62,14 +63,10 @@ class TeleMsg(sparkSession: SparkSession) {
     }
   }
 
-  private def putKeyValue(
-      key: String,
-      value: String,
-      conf: TiConfiguration,
-      tiSession: TiSession): Unit = {
-    val startTS = tiSession.getTimestamp.getVersion
+  private def putKeyValue(key: String, value: String, clientSession: ClientSession): Unit = {
+    val startTS = clientSession.getTiKVSession.getTimestamp.getVersion
     try {
-      val twoPhaseCommitter = new TwoPhaseCommitter(conf, startTS)
+      val twoPhaseCommitter = new TwoPhaseCommitter(clientSession.getTiKVSession, startTS)
       val backOffer = ConcreteBackOffer.newCustomBackOff(1000)
       twoPhaseCommitter.prewritePrimaryKey(
         backOffer,
@@ -78,7 +75,7 @@ class TeleMsg(sparkSession: SparkSession) {
       twoPhaseCommitter.commitPrimaryKey(
         backOffer,
         key.getBytes("UTF-8"),
-        tiSession.getTimestamp.getVersion)
+        clientSession.getTiKVSession.getTimestamp.getVersion)
     } catch {
       case e: Throwable =>
         logger.warn("Failed to set telemetry ID to TiKV.", e.getMessage)

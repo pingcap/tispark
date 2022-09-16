@@ -16,9 +16,9 @@
 
 package com.pingcap.tispark.concurrency
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
+import org.tikv.common.exception.TiBatchWriteException
 
 class WriteDDLConflictSuite extends ConcurrencyTest {
   test("write ddl conflict using SchemaVersionCheck") {

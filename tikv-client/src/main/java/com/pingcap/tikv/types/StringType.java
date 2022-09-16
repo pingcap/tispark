@@ -21,15 +21,15 @@ package com.pingcap.tikv.types;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.CodecException;
-import com.pingcap.tikv.exception.ConvertNotSupportException;
-import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.collate.BinPaddingCollator;
 import com.pingcap.tikv.meta.collate.GeneralCICollator;
 import com.pingcap.tikv.meta.collate.UnicodeCICollator;
 import java.nio.charset.StandardCharsets;
+import org.tikv.common.exception.CodecException;
+import org.tikv.common.exception.ConvertNotSupportException;
+import org.tikv.common.exception.ConvertOverflowException;
 
 public class StringType extends BytesType {
 

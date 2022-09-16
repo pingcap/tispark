@@ -19,7 +19,7 @@
 package org.apache.spark.sql.catalyst.expressions
 
 import java.sql.Timestamp
-import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
+import org.tikv.common.region.RegionStoreClient.RequestTypes
 import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime

@@ -17,7 +17,7 @@
 package com.pingcap.tikv.codec;
 
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
-import com.pingcap.tikv.key.Handle;
+import com.pingcap.tikv.handle.Handle;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.ObjectRowImpl;

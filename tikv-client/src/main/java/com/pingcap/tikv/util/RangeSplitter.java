@@ -17,19 +17,11 @@
 package com.pingcap.tikv.util;
 
 import static com.pingcap.tikv.key.Key.toRawKey;
-import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
+import static org.tikv.common.util.KeyRangeUtils.makeCoprocRange;
 
-import com.google.common.collect.ImmutableList;
-import com.google.protobuf.ByteString;
-import com.pingcap.tikv.key.Handle;
+import com.pingcap.tikv.handle.Handle;
 import com.pingcap.tikv.key.RowKey;
-import com.pingcap.tikv.pd.PDUtils;
-import com.pingcap.tikv.region.RegionManager;
-import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.region.TiStoreType;
 import gnu.trove.map.hash.TLongObjectHashMap;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,8 +30,19 @@ import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.region.RegionManager;
+import org.tikv.common.region.TiRegion;
+import org.tikv.common.region.TiStore;
+import org.tikv.common.region.TiStoreType;
+import org.tikv.common.util.BackOffFunction;
+import org.tikv.common.util.BackOffer;
+import org.tikv.common.util.ConcreteBackOffer;
+import org.tikv.common.util.FastByteComparisons;
+import org.tikv.common.util.Pair;
+import org.tikv.common.util.RangeSplitter.RegionTask;
 import org.tikv.kvproto.Coprocessor.KeyRange;
-import org.tikv.kvproto.Metapb;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class RangeSplitter {
   private final RegionManager regionManager;
@@ -61,12 +64,11 @@ public class RangeSplitter {
    * @param handles Handle list
    * @return <Region, HandleList> map
    */
-  public Map<Pair<TiRegion, Metapb.Store>, List<Handle>> groupByAndSortHandlesByRegionId(
+  public Map<Pair<TiRegion, TiStore>, List<Handle>> groupByAndSortHandlesByRegionId(
       long tableId, List<Handle> handles) {
     TLongObjectHashMap<List<Handle>> regionHandles = new TLongObjectHashMap<>();
-    TLongObjectHashMap<Pair<TiRegion, Metapb.Store>> idToRegionStorePair =
-        new TLongObjectHashMap<>();
-    Map<Pair<TiRegion, Metapb.Store>, List<Handle>> result = new HashMap<>();
+    TLongObjectHashMap<Pair<TiRegion, TiStore>> idToRegionStorePair = new TLongObjectHashMap<>();
+    Map<Pair<TiRegion, TiStore>, List<Handle>> result = new HashMap<>();
     handles.sort(Handle::compare);
 
     byte[] endKey = null;
@@ -80,7 +82,7 @@ public class RangeSplitter {
           regionHandles.put(curRegion.getId(), handlesInCurRegion);
           handlesInCurRegion = new ArrayList<>();
         }
-        Pair<TiRegion, Metapb.Store> regionStorePair =
+        Pair<TiRegion, TiStore> regionStorePair =
             regionManager.getRegionStorePairByKey(ByteString.copyFrom(key.getBytes()));
         curRegion = regionStorePair.first;
         idToRegionStorePair.put(curRegion.getId(), regionStorePair);
@@ -93,7 +95,7 @@ public class RangeSplitter {
     }
     regionHandles.forEachEntry(
         (k, v) -> {
-          Pair<TiRegion, Metapb.Store> regionStorePair = idToRegionStorePair.get(k);
+          Pair<TiRegion, TiStore> regionStorePair = idToRegionStorePair.get(k);
           result.put(regionStorePair, v);
           return true;
         });
@@ -119,7 +121,7 @@ public class RangeSplitter {
     // Max value for current index handle range
     ImmutableList.Builder<RegionTask> regionTasks = ImmutableList.builder();
 
-    Map<Pair<TiRegion, Metapb.Store>, List<Handle>> regionHandlesMap =
+    Map<Pair<TiRegion, TiStore>, List<Handle>> regionHandlesMap =
         groupByAndSortHandlesByRegionId(tableId, handles);
 
     regionHandlesMap.forEach((k, v) -> createTask(0, v.size(), tableId, v, k, regionTasks));
@@ -132,7 +134,7 @@ public class RangeSplitter {
       int endPos,
       long tableId,
       List<Handle> handles,
-      Pair<TiRegion, Metapb.Store> regionStorePair,
+      Pair<TiRegion, TiStore> regionStorePair,
       ImmutableList.Builder<RegionTask> regionTasks) {
     List<KeyRange> newKeyRanges = new ArrayList<>(endPos - startPos + 1);
     Handle startHandle = handles.get(startPos);
@@ -154,7 +156,8 @@ public class RangeSplitter {
         makeCoprocRange(
             RowKey.toRowKey(tableId, startHandle).toByteString(),
             RowKey.toRowKey(tableId, endHandle.next()).toByteString()));
-    regionTasks.add(new RegionTask(regionStorePair.first, regionStorePair.second, newKeyRanges));
+    regionTasks.add(
+        RegionTask.newInstance(regionStorePair.first, regionStorePair.second, newKeyRanges));
   }
 
   /**
@@ -172,12 +175,12 @@ public class RangeSplitter {
     int i = 0;
     KeyRange range = keyRanges.get(i++);
     Map<Long, List<KeyRange>> idToRange = new HashMap<>(); // region id to keyRange list
-    Map<Long, Pair<TiRegion, Metapb.Store>> idToRegion = new HashMap<>();
+    Map<Long, Pair<TiRegion, TiStore>> idToRegion = new HashMap<>();
 
     while (true) {
-      Pair<TiRegion, Metapb.Store> regionStorePair = null;
+      Pair<TiRegion, TiStore> regionStorePair = null;
 
-      BackOffer bo = ConcreteBackOffer.newGetBackOff();
+      BackOffer bo = ConcreteBackOffer.newGetBackOff(BackOffer.GET_MAX_BACKOFF);
       while (regionStorePair == null) {
         try {
           regionStorePair = regionManager.getRegionStorePairByKey(range.getStart(), storeType, bo);
@@ -185,6 +188,13 @@ public class RangeSplitter {
           if (regionStorePair == null) {
             throw new NullPointerException(
                 "fail to get region/store pair by key " + formatByteString(range.getStart()));
+          }
+
+          // TODO: cherry-pick https://github.com/pingcap/tispark/pull/1380 to client-java and flush
+          // cache.
+          if (regionStorePair.second == null) {
+            LOG.warn("Cannot find valid store on " + storeType);
+            regionStorePair = null;
           }
         } catch (Exception e) {
           LOG.warn("getRegionStorePairByKey error", e);
@@ -222,8 +232,9 @@ public class RangeSplitter {
     ImmutableList.Builder<RegionTask> resultBuilder = ImmutableList.builder();
     idToRange.forEach(
         (k, v) -> {
-          Pair<TiRegion, Metapb.Store> regionStorePair = idToRegion.get(k);
-          resultBuilder.add(new RegionTask(regionStorePair.first, regionStorePair.second, v));
+          Pair<TiRegion, TiStore> regionStorePair = idToRegion.get(k);
+          resultBuilder.add(
+              RegionTask.newInstance(regionStorePair.first, regionStorePair.second, v));
         });
     return resultBuilder.build();
   }
@@ -238,59 +249,16 @@ public class RangeSplitter {
     return splitRangeByRegion(keyRanges, TiStoreType.TiKV);
   }
 
-  public static class RegionTask implements Serializable {
-    private final TiRegion region;
-    private final Metapb.Store store;
-    private final List<KeyRange> ranges;
-    private final String host;
+  static String formatByteString(ByteString key) {
+    StringBuilder sb = new StringBuilder();
 
-    RegionTask(TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
-      this.region = region;
-      this.store = store;
-      this.ranges = ranges;
-      String host = null;
-      try {
-        host = PDUtils.addrToUrl(store.getAddress()).getHost();
-      } catch (Exception ignored) {
+    for (int i = 0; i < key.size(); ++i) {
+      sb.append(key.byteAt(i) & 255);
+      if (i < key.size() - 1) {
+        sb.append(",");
       }
-      this.host = host;
     }
 
-    public static RegionTask newInstance(
-        TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
-      return new RegionTask(region, store, ranges);
-    }
-
-    public TiRegion getRegion() {
-      return region;
-    }
-
-    public Metapb.Store getStore() {
-      return store;
-    }
-
-    public List<KeyRange> getRanges() {
-      return ranges;
-    }
-
-    public String getHost() {
-      return host;
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder();
-      sb.append(String.format("Region [%s]", region));
-      sb.append(" ");
-
-      for (KeyRange range : ranges) {
-        sb.append(
-            String.format(
-                "Range Start: [%s] Range End: [%s]",
-                formatByteString(range.getStart()), formatByteString(range.getEnd())));
-      }
-
-      return sb.toString();
-    }
+    return sb.toString();
   }
 }

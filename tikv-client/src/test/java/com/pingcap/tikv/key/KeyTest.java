@@ -21,13 +21,13 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.primitives.UnsignedBytes;
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import java.util.Arrays;
 import java.util.function.Function;
 import org.junit.Test;
+import org.tikv.shade.com.google.common.primitives.UnsignedBytes;
+import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class KeyTest {
   @Test

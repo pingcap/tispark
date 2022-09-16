@@ -17,7 +17,7 @@
 package com.pingcap.tikv.key;
 
 import com.pingcap.tikv.predicates.IndexRange;
-import com.pingcap.tikv.util.Pair;
+import org.tikv.common.util.Pair;
 
 // A builder to build key range for Statistics keys
 public class StatisticsKeyRangeBuilder extends KeyRangeBuilder {
