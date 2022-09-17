@@ -347,18 +347,19 @@ Do not use `spark.sql.session.timeZone`.
 
 > Main Features
 
-| Feature Support                   | TiSpark 2.4.x | TiSpark 2.5.x | TiSpark 3.0.x | TiSpark master |
-| --------------------------------- | ------------- | ------------- | ----------- | -------------- |
-| SQL select without tidb_catalog   | ✔           | ✔           |             |                |
-| SQL select with tidb_catalog      |               | ✔           | ✔         | ✔            |
-| DataFrame append                  | ✔           | ✔           | ✔         | ✔            |
-| DataFrame reads                   | ✔           | ✔           | ✔         | ✔            |
-| SQL show databases                | ✔           | ✔           | ✔         | ✔            |
-| SQL show tables                   | ✔           | ✔           | ✔         | ✔            |
-| SQL auth                          |               | ✔           | ✔         | ✔            |
-| SQL delete from with tidb_catalog |               |               | ✔         | ✔            |
-| TLS                               |               |               | ✔         | ✔            |
-| DataFrame auth                    |               |               |             | ✔            |
+| Feature Support                 | TiSpark 2.4.x | TiSpark 2.5.x | TiSpark 3.0.x | TiSpark 3.1.x |
+|---------------------------------| ------------- | ------------- | ----------- |---------------|
+| SQL select without tidb_catalog | ✔           | ✔           |             |               |
+| SQL select with tidb_catalog    |               | ✔           | ✔         | ✔             |
+| DataFrame append                | ✔           | ✔           | ✔         | ✔             |
+| DataFrame reads                 | ✔           | ✔           | ✔         | ✔             |
+| SQL show databases              | ✔           | ✔           | ✔         | ✔             |
+| SQL show tables                 | ✔           | ✔           | ✔         | ✔             |
+| SQL auth                        |               | ✔           | ✔         | ✔             |
+| SQL delete                      |               |               | ✔         | ✔             |
+| SQL insert                      |               |               |           | ✔              |
+| TLS                             |               |               | ✔         | ✔             |
+| DataFrame auth                  |               |               |             | ✔             |
 
 ### Expression Index
 
