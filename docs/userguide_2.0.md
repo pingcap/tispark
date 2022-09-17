@@ -5,7 +5,10 @@
 > TiSpark 2.4 is the only version we still maintain that supports spark 2.3 and 2.4
 
 - [Requirements](#requirements)
-- [Recommended deployment configurations](#recommended-deployment-configurations)
+- [Recommended deployment configurations of Spark](#recommended-deployment-configurations-of-spark)
+- [Getting TiSpark](#getting-tispark)
+  + [Choose TiSpark Version](#choose-tispark-version)
+  + [Get TiSpark jar](#get-tispark-jar)
 - [Getting Started](#getting-started)
     + [Start spark-shell](#start-spark-shell)
     + [Get TiSpark version](#get-tispark-version)
@@ -28,9 +31,9 @@
 + TiSpark requires JDK 1.8 and Scala 2.11/2.12.
 + TiSpark runs in any Spark mode such as `YARN`, `Mesos`, and `Standalone`.
 
-# Recommended deployment configurations
+# Recommended deployment configurations of Spark
 
-Refer to the [Spark official website](https://spark.apache.org/docs/latest/hardware-provisioning.html) for detailed hardware recommendations.
+The following is for reference only. Turn to the [Spark official website](https://spark.apache.org/docs/latest/hardware-provisioning.html) for detailed hardware recommendations.
 
 For independent deployment of Spark cluster:
 + It is recommended to allocate 32G memory for Spark. Reserve at least 25% of the memory for the operating system and the buffer cache.
@@ -45,6 +48,38 @@ SPARK_WORKER_CORES = 8
 ```
 
 For the hybrid deployment of Spark and TiKV, add the resources required by Spark to the resources reserved in TiKV, and allocate 25% of the memory for the system.
+
+# Getting TiSpark
+
+TiSpark is a third-party jar package for Spark that provides the ability to read/write TiKV
+
+### Choose TiSpark Version
+
+You can choose TiSpark version according to your TiDB and Spark version
+
+| TiSpark version | TiDB、TiKV、PD version | Spark version | Scala version |
+| ---------------  | -------------------- | ------------- | ------------- |
+| 2.4.x-scala_2.11 | 5.x, 4.x             | 2.3.x, 2.4.x   | 2.11          |
+| 2.4.x-scala_2.12 | 5.x, 4.x             | 2.4.x         | 2.12          |
+
+### Get TiSpark jar
+- get from [maven central](https://search.maven.org/) and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap)
+- get from [TiSpark releases](https://github.com/pingcap/tispark/releases)
+- build from source with the steps below
+
+Currently, java8 is the only choice to build TiSpark, run mvn -version to check.
+```
+git clone https://github.com/pingcap/tispark.git
+```
+Run the following command under the TiSpark root directory:
+
+```
+// add -Dmaven.test.skip=true to skip the tests
+mvn clean install -Dmaven.test.skip=true
+// or you can add properties to specify spark version
+mvn clean install -Dmaven.test.skip=true -Pspark3.2.1
+```
+
 
 # Getting Started
 
