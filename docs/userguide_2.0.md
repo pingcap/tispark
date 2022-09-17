@@ -2,7 +2,7 @@
 
 > **Note:**
 >
-> TiSpark 2.4 is the only version we still maintain in TiSpark 2.x.
+> TiSpark 2.4 is the only version we still maintain that supports spark 2.3 and 2.4
 
 - [Requirements](#requirements)
 - [Recommended deployment configurations](#recommended-deployment-configurations)
@@ -24,8 +24,8 @@
 
 # Requirements
 
-+ TiSpark supports Spark >= 2.3.x, but does not support any Spark versions earlier than 2.3.
-+ TiSpark requires JDK 1.8+ and Scala 2.11/2.12.
++ TiSpark supports Spark >= 2.3, but does not support any Spark versions earlier than 2.3.
++ TiSpark requires JDK 1.8 and Scala 2.11/2.12.
 + TiSpark runs in any Spark mode such as `YARN`, `Mesos`, and `Standalone`.
 
 # Recommended deployment configurations

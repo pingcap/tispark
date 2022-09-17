@@ -2,9 +2,9 @@
 
 > **Note:**
 >
-> This is a user guide for TiSpark version >= 3.0 which is compatible with spark 3.x. If you are using Spark version earlier than 3.0, refer to [Document for TiSpark 2.x](./userguide_2.0.md).
+> This is a user guide for TiSpark version >= 3.0 which is compatible with spark 3.x. If you are using Spark version earlier than 3.0, refer to [Document for TiSpark 2.4](./userguide_2.0.md).
 > 
-> TiSpark >= 3.0 is developed with Spark catalog plugin. If you want to use TiSpark without catalog plugin mode, please turn to TiSpark 2.5.
+> TiSpark >= 3.0 is developed with Spark catalog plugin. If you want to use TiSpark without catalog plugin mode, please turn to TiSpark 2.5 (compatible with Spark 3.0 and 3.1)
 
 - [Requirements](#requirements)
 - [Recommended deployment configurations](#recommended-deployment-configurations)
@@ -30,8 +30,8 @@
 
 # Requirements
 
-+ TiSpark supports Spark >= 2.3.x, but does not support any Spark versions earlier than 2.3.
-+ TiSpark requires JDK 1.8+ and Scala 2.11/2.12.
++ TiSpark supports Spark >= 2.3, but does not support any Spark versions earlier than 2.3.
++ TiSpark requires JDK 1.8 and Scala 2.11/2.12.
 + TiSpark runs in any Spark mode such as `YARN`, `Mesos`, and `Standalone`.
 
 # Recommended deployment configurations

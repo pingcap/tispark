@@ -20,7 +20,7 @@ Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](http
 
 ## Doc TOC
 
-- [User Guide](https://github.com/pingcap/tispark/blob/master/docs/userguide.md)
+- [User Guide](docs/userguide_3.0.md)
 - [Dev Guide](https://github.com/pingcap/tispark/wiki/Dev-Guide)
 - [Benchmark](https://github.com/pingcap/tispark/wiki/TiSpark-Benchmark)
 
