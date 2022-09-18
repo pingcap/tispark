@@ -123,6 +123,10 @@
                 <enabled>false</enabled>
             </snapshots>
         </repository>
+        <repository>
+            <id>Spark 3.3.1-rc1</id>
+            <url>https://repository.apache.org/content/repositories/orgapachespark-1418</url>
+        </repository>
     </repositories>
     <pluginRepositories>
         <pluginRepository>
@@ -203,8 +207,8 @@
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <spark.version.compile>3.3.0</spark.version.compile>
-                <spark.version.test>3.3.0</spark.version.test>
+                <spark.version.compile>3.3.1</spark.version.compile>
+                <spark.version.test>3.3.1</spark.version.test>
                 <spark.version.release>3.3</spark.version.release>
             </properties>
         </profile>
