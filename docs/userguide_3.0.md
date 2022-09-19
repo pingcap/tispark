@@ -41,7 +41,9 @@
 
 # Recommended deployment configurations of Spark
 
-The following is for reference only. Turn to the [Spark official website](https://spark.apache.org/docs/latest/hardware-provisioning.html) for detailed hardware recommendations.
+Since TiSpark is a TiDB connector of Spark, to use it, a running Spark cluster is required.
+
+Here we give some basic advice for the deployment of Spark. Please Turn to the [Spark official website](https://spark.apache.org/docs/latest/hardware-provisioning.html) for detailed hardware recommendations.
 
 For independent deployment of Spark cluster:
 + It is recommended to allocate 32G memory for Spark. Reserve at least 25% of the memory for the operating system and the buffer cache.
@@ -183,7 +185,7 @@ You can also write with Spark SQL since TiSpark 3.1. See [insert SQL](features/i
 
 You can also write to TiDB with Spark JDBC. You need not TiSpark when you decide to write in this way.
 
-This is beyond the scope of TiSpark. We just give a simple example here, you can get detail info in [official doc](https://spark.apache.org/docs/latest/sql-data-sources-jdbc.html)
+This is beyond the scope of TiSpark. We just give a simple example here, you can get detailed info in [official doc](https://spark.apache.org/docs/latest/sql-data-sources-jdbc.html)
 
 ```scala
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
