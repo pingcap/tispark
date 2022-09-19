@@ -18,8 +18,8 @@ package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.allocator.RowIDAllocator.RowIDAllocatorType
-import com.pingcap.tikv.meta.TiTimestamp
 import org.apache.spark.sql.BaseTiSparkTest
+import org.tikv.common.meta.TiTimestamp
 
 class RowIDAllocatorSuite extends BaseTiSparkTest {
   test("test unsigned allocator") {

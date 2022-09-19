@@ -17,7 +17,8 @@
 package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.allocator.RowIDAllocator
-import com.pingcap.tikv.meta.{TiColumnInfo, TiTimestamp}
+import com.pingcap.tikv.meta.TiColumnInfo
+import org.tikv.common.meta.TiTimestamp
 import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import org.apache.spark.SparkException
 import org.apache.spark.rdd.RDD
@@ -247,12 +248,12 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
       allocatorType: RowIDAllocator.RowIDAllocatorType): RowIDAllocator = {
     val tiDBInfo = ti.clientSession.getCatalog.getDatabase(databaseWithPrefix)
     val tiTableInfo = ti.clientSession.getCatalog.getTable(databaseWithPrefix, table)
-    RowIDAllocator.create(
+    RowIDAllocator.createRowIDAllocator(
       tiDBInfo.getId,
       tiTableInfo,
       ti.clientSession.getConf,
       size,
-      new TiTimeStamp(0, 0),
+      new TiTimestamp(0, 0),
       allocatorType)
   }
 }

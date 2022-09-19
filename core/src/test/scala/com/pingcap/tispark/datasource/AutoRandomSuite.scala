@@ -16,12 +16,11 @@
 
 package com.pingcap.tispark.datasource
 
-import com.pingcap.tikv.StoreVersion
 import com.pingcap.tikv.allocator.RowIDAllocator
-import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
-import org.tikv.common.exception.{ConvertOverflowException, TiBatchWriteException}
+import org.tikv.common.StoreVersion
+import org.tikv.common.exception.TiBatchWriteException
 
 class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") {
 
@@ -29,7 +28,7 @@ class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") 
   test("tispark overflow") {
     val shardBits = 15
 
-    if (StoreVersion.isTiKVVersionGreatEqualThanVersion(this.ti.tiSession.getPDClient, "5.0.0")) {
+    if (StoreVersion.minTiKVVersion("5.0.0", this.ti.clientSession.getTiKVSession.getPDClient)) {
       jdbcUpdate(
         s"create table $dbtable(i bigint primary key clustered NOT NULL AUTO_RANDOM($shardBits))")
     } else {
@@ -58,7 +57,7 @@ class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") 
 
     // TiSpark insert overflow
 
-    val caught = intercept[com.pingcap.tikv.exception.AllocateRowIDOverflowException] {
+    val caught = intercept[org.tikv.common.exception.AllocateRowIDOverflowException] {
       tidbWrite(
         List {
           Row(null)
@@ -71,7 +70,7 @@ class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") 
   test("tidb overflow") {
     val shardBits = 15
 
-    if (StoreVersion.isTiKVVersionGreatEqualThanVersion(this.ti.tiSession.getPDClient, "5.0.0")) {
+    if (StoreVersion.minTiKVVersion("5.0.0", this.ti.clientSession.getTiKVSession.getPDClient)) {
       jdbcUpdate(
         s"create table $dbtable(i bigint primary key clustered NOT NULL AUTO_RANDOM($shardBits))")
     } else {
@@ -101,7 +100,7 @@ class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") 
   test("test insert into unsigned auto_random") {
     val shardBits = 15
 
-    if (StoreVersion.isTiKVVersionGreatEqualThanVersion(this.ti.tiSession.getPDClient, "5.0.0")) {
+    if (StoreVersion.minTiKVVersion("5.0.0", this.ti.clientSession.getTiKVSession.getPDClient)) {
       jdbcUpdate(
         s"create table $dbtable(i bigint unsigned  primary key clustered NOT NULL AUTO_RANDOM($shardBits))")
     } else {
@@ -141,7 +140,7 @@ class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") 
   test("test insert into signed auto_random") {
     val shardBits = 15
 
-    if (StoreVersion.isTiKVVersionGreatEqualThanVersion(this.ti.tiSession.getPDClient, "5.0.0")) {
+    if (StoreVersion.minTiKVVersion("5.0.0", this.ti.clientSession.getTiKVSession.getPDClient)) {
       jdbcUpdate(
         s"create table $dbtable(i bigint primary key clustered NOT NULL AUTO_RANDOM($shardBits))")
     } else {
