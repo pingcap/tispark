@@ -386,7 +386,7 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
     }
     assert(
       caught.getMessage.equals(
-        "currently user provided auto increment value is only supported in update mode!"))
+        "currently user provided auto id value is only supported in update mode!"))
   }
 
   test("auto increment but not primary key") {
