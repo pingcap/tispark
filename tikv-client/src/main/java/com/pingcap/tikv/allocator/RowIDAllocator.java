@@ -148,7 +148,8 @@ public final class RowIDAllocator implements Serializable {
       long shardBits,
       long step,
       RowIDAllocatorType allocatorType) {
-    BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(ROW_ID_ALLOCATOR_BACKOFF);
+    BackOffer backOffer =
+        ConcreteBackOffer.newCustomBackOff(TiConfiguration.ROW_ID_ALLOCATOR_BACKOFF);
     while (true) {
       try {
         return doCreate(dbId, table, conf, timestamp, unsigned, shardBits, step, allocatorType);
@@ -176,7 +177,8 @@ public final class RowIDAllocator implements Serializable {
       allocator.initUnsigned(
           ClientSession.getInstance(conf).createSnapshot(), table.getId(), shardBits);
     } else {
-      allocator.initSigned(ClientSession.getInstance(conf).createSnapshot(), table.getId(), shardBits);
+      allocator.initSigned(
+          ClientSession.getInstance(conf).createSnapshot(), table.getId(), shardBits);
     }
 
     return allocator;
