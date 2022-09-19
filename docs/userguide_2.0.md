@@ -1,4 +1,4 @@
-# TiSpark (version >= 2.0) User Guide
+# TiSpark (version = 2.4.x ) User Guide
 
 > **Note:**
 >

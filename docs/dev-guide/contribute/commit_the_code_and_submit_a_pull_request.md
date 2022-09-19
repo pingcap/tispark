@@ -52,7 +52,7 @@ There may be a conflict when you submit a pull request since others may change t
 
 ## Review
 
-Ask the reviewer to review your code. If there is a problem, you need to modify it and push it again. The reviewer will review it again until it is approved.
+Ask the reviewer to review your code. If the reviewers leave some comments, you should resolve them by modifying the code or discuss with the reviewer.
 
 ## Merged
 
