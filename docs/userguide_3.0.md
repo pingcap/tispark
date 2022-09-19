@@ -9,7 +9,7 @@
 - [Requirements](#requirements)
 - [Recommended deployment configurations of Spark](#recommended-deployment-configurations-of-spark)
 - [Getting TiSpark](#getting-tispark)
-  + [Getting mysql-connector-j](#getting-mysql-connector-j)
+  + [Get mysql-connector-j](#get-mysql-connector-j)
   + [Choose TiSpark Version](#choose-tispark-version)
   + [Get TiSpark jar](#get-tispark-jar)
   + [TiSpark jar's Artifact ID](#tispark-jar-s-artifact-id)
@@ -61,7 +61,7 @@ For the hybrid deployment of Spark and TiKV, add the resources required by Spark
 
 TiSpark is a third-party jar package for Spark that provides the ability to read/write TiKV
 
-### Getting mysql-connector-j
+### Get mysql-connector-j
 
 We will not provide the `mysql-connector-java` dependency because of the limit of the GPL license.
 
