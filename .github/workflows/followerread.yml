@@ -27,7 +27,7 @@ jobs:
 
       - name: copy properties
         run: |
-          echo "spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog" > tidb_config.properties
+          echo "spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog\ntest.data.load false" > tidb_config.properties
           mv tidb_config.properties core/src/test/resources/tidb_config.properties
 
       - name: test follower read
