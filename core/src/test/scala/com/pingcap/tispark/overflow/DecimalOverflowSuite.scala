@@ -19,6 +19,7 @@ package com.pingcap.tispark.overflow
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, _}
+import org.tikv.common.exception.ConvertOverflowException
 
 /**
  * DECIMAL type include:
@@ -91,7 +92,7 @@ class DecimalOverflowSuite extends BaseBatchWriteTest("test_data_type_decimal_ov
       val schema = StructType(List(StructField("i", IntegerType), StructField("c1", DoubleType)))
 
       val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-      val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+      val tidbErrorClass = classOf[ConvertOverflowException]
       val tidbErrorMsg = "Out of range"
 
       compareTiDBWriteFailureWithJDBC(

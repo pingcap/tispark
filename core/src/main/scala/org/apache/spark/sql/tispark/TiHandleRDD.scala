@@ -16,10 +16,10 @@
 
 package org.apache.spark.sql.tispark
 
-import com.pingcap.tikv.key.Handle
+import com.pingcap.tikv.handle.Handle
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.util.RangeSplitter
-import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.sql.catalyst.expressions.Attribute
@@ -46,9 +46,9 @@ class TiHandleRDD(
     val output: Seq[Attribute],
     override val tiConf: TiConfiguration,
     override val tableRef: TiTableReference,
-    @transient private val session: TiSession,
+    @transient private val clientSession: ClientSession,
     @transient private val sparkSession: SparkSession)
-    extends TiRDD(dagRequest, physicalId, tiConf, tableRef, session, sparkSession) {
+    extends TiRDD(dagRequest, physicalId, tiConf, tableRef, clientSession, sparkSession) {
 
   private val outputTypes = output.map(_.dataType)
   private val converters =
@@ -57,14 +57,13 @@ class TiHandleRDD(
   override def compute(split: Partition, context: TaskContext): Iterator[InternalRow] =
     new Iterator[InternalRow] {
       checkTimezone()
-
+      private val clientSession = ClientSession.getInstance(tiConf)
       private val tiPartition = split.asInstanceOf[TiPartition]
-      private val session = TiSession.getInstance(tiConf)
-      private val snapshot = session.createSnapshot(dagRequest.getStartTs)
+      private val snapshot = clientSession.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks
 
       private val handleIterator = snapshot.indexHandleRead(dagRequest, tasks)
-      private val regionManager = session.getRegionManager
+      private val regionManager = clientSession.getTiKVSession.getRegionManager
       private lazy val handleList = {
         val lst = new util.ArrayList[Handle]()
         handleIterator.asScala.foreach {

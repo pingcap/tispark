@@ -424,12 +424,6 @@ public class TiTableInfoTest {
   }
 
   @Test
-  public void testPartitionInfo() throws Exception {}
-
-  @Test
-  public void testPartitionDef() throws Exception {}
-
-  @Test
   public void testSerializable() throws Exception {
     ObjectMapper mapper = new ObjectMapper();
     TiTableInfo tableInfo = mapper.readValue(tableJson, TiTableInfo.class);

@@ -16,9 +16,9 @@
 
 package com.pingcap.tispark.datasource
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+import org.tikv.common.exception.TiBatchWriteException
 
 import scala.collection.mutable.ArrayBuffer
 

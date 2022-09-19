@@ -19,7 +19,6 @@ package com.pingcap.tikv.columnar.datatypes;
 import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
 import static com.pingcap.tikv.util.MemoryUtil.allocateDirect;
 
-import com.google.common.base.Preconditions;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.columnar.TiBlockColumnVector;
@@ -27,6 +26,7 @@ import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.util.MemoryUtil;
 import java.nio.ByteBuffer;
+import org.tikv.shade.com.google.common.base.Preconditions;
 
 public class CHTypeString extends CHType {
   // Use to prevent frequently reallocate the chars buffer.

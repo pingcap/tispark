@@ -31,15 +31,15 @@ class RowIDAllocatorSuite extends BaseTiSparkTest {
 
     val dbName = dbPrefix + "tispark_test"
     val tableName = "rowid_allocator"
-    val tiDBInfo = ti.tiSession.getCatalog.getDatabase(dbName)
+    val tiDBInfo = ti.clientSession.getCatalog.getDatabase(dbName)
     val tiTableInfo =
-      ti.tiSession.getCatalog.getTable(dbName, tableName)
+      ti.clientSession.getCatalog.getTable(dbName, tableName)
     // corner case allocate unsigned long's max value.
     val allocator =
       RowIDAllocator.create(
         tiDBInfo.getId,
         tiTableInfo,
-        ti.tiSession.getConf,
+        ti.clientSession.getConf,
         new TiTimestamp(0, 0),
         true,
         0,
@@ -57,15 +57,15 @@ class RowIDAllocatorSuite extends BaseTiSparkTest {
 
     val dbName = dbPrefix + "tispark_test"
     val tableName = "t"
-    val tiDBInfo = ti.tiSession.getCatalog.getDatabase(dbName)
+    val tiDBInfo = ti.clientSession.getCatalog.getDatabase(dbName)
     val tiTableInfo =
-      ti.tiSession.getCatalog.getTable(dbName, tableName)
+      ti.clientSession.getCatalog.getTable(dbName, tableName)
     // first
     var allocator =
       RowIDAllocator.create(
         tiDBInfo.getId,
         tiTableInfo,
-        ti.tiSession.getConf,
+        ti.clientSession.getConf,
         new TiTimestamp(0, 0),
         false,
         0,
@@ -77,7 +77,7 @@ class RowIDAllocatorSuite extends BaseTiSparkTest {
     allocator = RowIDAllocator.create(
       tiDBInfo.getId,
       tiTableInfo,
-      ti.tiSession.getConf,
+      ti.clientSession.getConf,
       new TiTimestamp(0, 0),
       false,
       0,
@@ -89,7 +89,7 @@ class RowIDAllocatorSuite extends BaseTiSparkTest {
     allocator = RowIDAllocator.create(
       tiDBInfo.getId,
       tiTableInfo,
-      ti.tiSession.getConf,
+      ti.clientSession.getConf,
       new TiTimestamp(0, 0),
       false,
       0,

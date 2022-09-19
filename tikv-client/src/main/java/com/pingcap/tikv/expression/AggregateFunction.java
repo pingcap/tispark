@@ -18,11 +18,11 @@ package com.pingcap.tikv.expression;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.types.DataType;
 import java.util.List;
 import java.util.Objects;
+import org.tikv.shade.com.google.common.base.Joiner;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class AggregateFunction extends Expression {
   private final FunctionType type;

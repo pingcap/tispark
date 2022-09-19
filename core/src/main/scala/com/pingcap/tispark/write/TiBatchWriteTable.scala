@@ -19,12 +19,12 @@ package com.pingcap.tispark.write
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.allocator.RowIDAllocator.RowIDAllocatorType
 import com.pingcap.tikv.codec.TableCodec
-import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.key.{Handle, IndexKey, IntHandle, RowKey}
+import com.pingcap.tikv.handle.{Handle, IntHandle}
+import com.pingcap.tikv.key.{IndexKey, RowKey}
 import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType
-import com.pingcap.tikv.meta._
+import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiIndexInfo}
 import com.pingcap.tikv.partition.TableCommon
-import com.pingcap.tikv.{BytePairWrapper, TiConfiguration, TiDBJDBCClient, TiSession}
+import com.pingcap.tikv.{ClientSession, TiConfiguration, TiDBJDBCClient}
 import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.WriteUtil.locatePhysicalTable
@@ -34,6 +34,9 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions.lit
 import org.slf4j.LoggerFactory
+import org.tikv.common.BytePairWrapper
+import org.tikv.common.exception.TiBatchWriteException
+import org.tikv.common.meta.TiTimestamp
 
 import java.util
 import scala.collection.JavaConverters._
@@ -49,12 +52,14 @@ class TiBatchWriteTable(
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  @transient private val tiSession = tiContext.tiSession
+  import com.pingcap.tispark.write.TiBatchWrite._
+
+  @transient private val clientSession = tiContext.clientSession
   // only fetch row format version once for each batch write process
 
   private val enableNewRowFormat: Boolean = options.tidbRowFormatVersion == 2
   private val tiTableRef: TiTableReference = options.getTiTableRef(tiConf)
-  private val tiDBInfo: TiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
+  private val tiDBInfo: TiDBInfo = clientSession.getCatalog.getDatabase(tiTableRef.databaseName)
   private val tiTableInfo = tiTable.getTableInfo
   private val tableColSize: Int = tiTableInfo.getColumns.size()
   private val colsMapInTiDB: Map[String, TiColumnInfo] =
@@ -64,7 +69,6 @@ class TiBatchWriteTable(
     tiTableInfo.getIndices.asScala.filter(index => index.isUnique)
   private val handleCol: TiColumnInfo = tiTableInfo.getPKIsHandleColumn
   private var tableLocked: Boolean = false
-
   private var autoIncProvidedID: Boolean = false
   private var autoRandomProvidedID: Boolean = false
   // isCommonHandle = true => clustered index
@@ -409,7 +413,8 @@ class TiBatchWriteTable(
       startTs: TiTimestamp): RDD[WrappedRow] = {
     rdd
       .mapPartitions { wrappedRows =>
-        val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs.getPrevious)
+        val snapshot =
+          ClientSession.getInstance(tiConf).createSnapshot(startTs.getPrevious)
         wrappedRows.map { wrappedRow =>
           val rowBuf = mutable.ListBuffer.empty[WrappedRow]
           //  check handle key
@@ -447,7 +452,8 @@ class TiBatchWriteTable(
       rdd: RDD[WrappedRow],
       startTs: TiTimestamp): RDD[WrappedRow] = {
     rdd.mapPartitions { wrappedRows =>
-      val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs.getPrevious)
+      val snapshot =
+        ClientSession.getInstance(tiConf).createSnapshot(startTs.getPrevious)
       var rowBuf = mutable.ListBuffer.empty[WrappedRow]
       var rowBufIterator = rowBuf.iterator
 

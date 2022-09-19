@@ -16,23 +16,17 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 import static java.util.Objects.requireNonNull;
+import static org.tikv.common.util.KeyRangeUtils.makeCoprocRange;
+import static org.tikv.shade.com.google.common.base.Preconditions.checkArgument;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.BoundType;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Range;
-import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tidb.tipb.EncodeType;
-import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.PartitionPruner;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
+import com.pingcap.tikv.handle.IntHandle;
 import com.pingcap.tikv.key.IndexScanKeyRangeBuilder;
-import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
@@ -43,13 +37,10 @@ import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiPartitionDef;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.meta.TiTimestamp;
-import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.MySQLType;
-import com.pingcap.tikv.util.Pair;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -62,7 +53,16 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.common.exception.TiClientInternalException;
+import org.tikv.common.meta.TiTimestamp;
+import org.tikv.common.region.TiStoreType;
+import org.tikv.common.util.Pair;
 import org.tikv.kvproto.Coprocessor.KeyRange;
+import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
+import org.tikv.shade.com.google.common.collect.BoundType;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
+import org.tikv.shade.com.google.common.collect.Range;
+import org.tikv.shade.com.google.common.primitives.UnsignedLong;
 
 public class TiKVScanAnalyzer {
 

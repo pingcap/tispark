@@ -19,6 +19,7 @@ package com.pingcap.tispark.overflow
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, _}
+import org.tikv.common.exception.ConvertOverflowException
 
 /**
  * SRTING type include:
@@ -54,7 +55,7 @@ class StringOverflowSuite extends BaseBatchWriteTest("test_data_type_string_over
       StructType(List(StructField("c1", StringType)))
 
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorClass = classOf[ConvertOverflowException]
     val tidbErrorMsg = "value \uD83D\uDE09\uD83D\uDE09 length > max length 1"
 
     compareTiDBWriteFailureWithJDBC(
@@ -91,7 +92,7 @@ class StringOverflowSuite extends BaseBatchWriteTest("test_data_type_string_over
     val row = Row("123456789")
     val schema = StructType(List(StructField("c1", StringType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorClass = classOf[ConvertOverflowException]
     val tidbErrorMsg = "value 123456789 length > max length 8"
 
     compareTiDBWriteFailureWithJDBC(
@@ -120,7 +121,7 @@ class StringOverflowSuite extends BaseBatchWriteTest("test_data_type_string_over
     val row = Row("123456789")
     val schema = StructType(List(StructField("c1", StringType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorClass = classOf[ConvertOverflowException]
     val tidbErrorMsg = "value 123456789 length > max length 8"
 
     compareTiDBWriteFailureWithJDBC(
@@ -156,7 +157,7 @@ class StringOverflowSuite extends BaseBatchWriteTest("test_data_type_string_over
     val row = Row(str)
     val schema = StructType(List(StructField("c1", StringType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorClass = classOf[ConvertOverflowException]
     val tidbErrorMsg = s"value $str length > max length 255"
 
     compareTiDBWriteFailureWithJDBC(
@@ -177,7 +178,7 @@ class StringOverflowSuite extends BaseBatchWriteTest("test_data_type_string_over
     val row = Row("123456789")
     val schema = StructType(List(StructField("c1", StringType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorClass = classOf[ConvertOverflowException]
     val tidbErrorMsg = "value 123456789 length > max length 8"
 
     compareTiDBWriteFailureWithJDBC(

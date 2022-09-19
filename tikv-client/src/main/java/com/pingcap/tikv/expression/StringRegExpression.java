@@ -22,12 +22,12 @@ import static com.pingcap.tikv.expression.StringRegExpression.Type.LIKE;
 import static com.pingcap.tikv.expression.StringRegExpression.Type.STARTS_WITH;
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import java.util.List;
 import java.util.Objects;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class StringRegExpression extends Expression {
   private final Expression left;
@@ -144,5 +144,10 @@ public class StringRegExpression extends Expression {
     CONTAINS,
     ENDS_WITH,
     LIKE
+  }
+
+  @Override
+  public void setNewCollation() {
+    this.dataType.setCollation(left.dataType.getCollationCode());
   }
 }

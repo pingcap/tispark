@@ -18,14 +18,12 @@ package com.pingcap.tikv.expression.visitor;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.collect.ImmutableMap;
 import com.pingcap.tidb.tipb.Expr;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tidb.tipb.FieldType;
 import com.pingcap.tidb.tipb.ScalarFuncSig;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.AggregateFunction;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
 import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
@@ -40,6 +38,7 @@ import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.expression.Not;
 import com.pingcap.tikv.expression.StringRegExpression;
 import com.pingcap.tikv.expression.Visitor;
+import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.types.BitType;
 import com.pingcap.tikv.types.BytesType;
 import com.pingcap.tikv.types.DataType;
@@ -54,6 +53,8 @@ import com.pingcap.tikv.types.TimeType;
 import com.pingcap.tikv.types.TimestampType;
 import java.util.Map;
 import java.util.Objects;
+import org.tikv.common.exception.TiExpressionException;
+import org.tikv.shade.com.google.common.collect.ImmutableMap;
 
 public class ProtoConverter extends Visitor<Expr, Object> {
   // All concrete data type should be hooked to a type name
@@ -128,7 +129,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
         .setFlen((int) fieldType.getLength())
         .setDecimal(fieldType.getDecimal())
         .setCharset(fieldType.getCharset())
-        .setCollate(fieldType.getCollationCode())
+        .setCollate(Collation.rewriteNewCollationIDIfNeeded(fieldType.getCollationCode()))
         .build();
   }
 
@@ -140,6 +141,9 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     builder.setTp(ExprType.ScalarFunc);
 
     // Return type
+    if (Collation.isNewCollationEnabled()) {
+      node.setNewCollation();
+    }
     builder.setFieldType(toPBFieldType(getType(node)));
 
     for (Expression child : node.getChildren()) {

@@ -18,7 +18,8 @@
 
 package org.apache.spark.sql.test
 
-import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient, Version}
+import com.pingcap.tikv.TiDBJDBCClient
+import com.pingcap.tikv.util.ConvertUpstreamUtils
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
@@ -31,6 +32,7 @@ import org.apache.spark.{SharedSparkContext, SparkConf, SparkFunSuite}
 import org.joda.time.DateTimeZone
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
+import org.tikv.common.{StoreVersion, Version}
 
 import java.io.File
 import java.sql.{Connection, Date, Statement}
@@ -116,7 +118,7 @@ trait SharedSQLContext
         s"$tableName not found in TiDB after load. Load Data to TiFlash failed.")
     }
     logger.info(s"Table $tableName found present in ${check.head.head}")
-    for (_ <- 0 until 60) {
+    for (_ <- 0 until 120) {
       // check every 2 secs
       Thread.sleep(2000)
       val available = database match {
@@ -170,7 +172,9 @@ trait SharedSQLContext
     // 3.0.x (x >= 14)
     // 3.1.x (x >= 0)
     // >= 4.0.0
-    StoreVersion.isTiKVVersionGreatEqualThanVersion(ti.tiSession.getPDClient, Version.BATCH_WRITE)
+    ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
+      ti.clientSession.getTiKVSession.getPDClient,
+      Version.BATCH_WRITE)
   }
 
   protected def initializeStatement(): Unit = {
@@ -482,7 +486,7 @@ trait SharedSQLContext
       }
 
       if (_ti != null) {
-        _ti.tiSession.close()
+        _ti.clientSession.close()
         _ti = null
       }
     }

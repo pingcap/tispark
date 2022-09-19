@@ -49,7 +49,7 @@ alter-primary-key = true
 index-limit = 512
 
 # Whether new collations are enabled, as indicated by its name, this configuration entry take effect ONLY when a TiDB cluster bootstraps for the first time.
-new_collations_enabled_on_first_bootstrap = false
+# new_collations_enabled_on_first_bootstrap = false
 
 [log]
 # Log level: info, debug, warn, error, fatal.

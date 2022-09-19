@@ -16,17 +16,19 @@
 
 package org.apache.spark.sql.catalyst.plans.logical
 
-import com.pingcap.tikv.StoreVersion
 import com.pingcap.tikv.codec.KeyUtils
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.{greaterEqual, lessEqual}
 import com.pingcap.tikv.expression.{ColumnRef, Constant, Expression, LogicalBinaryExpression}
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
+import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.types.{DataType, DataTypeFactory, IntegerType, MySQLType}
+import com.pingcap.tikv.util.ConvertUpstreamUtils
 import com.pingcap.tispark.telemetry.TiSparkTeleInfo
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 import org.apache.spark.sql.execution.{ExplainMode, SimpleMode}
 import org.scalatest.Matchers.{be, contain, convertToAnyShouldWrapper}
+import org.tikv.common.StoreVersion
+import org.tikv.common.meta.TiTimestamp
 import org.tikv.kvproto.Coprocessor
 
 import java.util
@@ -129,7 +131,9 @@ class LogicalPlanTestSuite extends BasePlanTest {
   // https://github.com/pingcap/tispark/issues/2290
   test("fix cannot encode row key with non-long type") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    if (StoreVersion.isTiKVVersionGreatEqualThanVersion(this.ti.tiSession.getPDClient, "5.0.0")) {
+    if (ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
+        this.ti.clientSession.getTiKVSession.getPDClient,
+        "5.0.0")) {
       tidbStmt.execute("""
           |CREATE TABLE `t1` (
           |  `a` BIGINT UNSIGNED  NOT NULL,
@@ -287,18 +291,17 @@ class LogicalPlanTestSuite extends BasePlanTest {
   test("test physical plan explain which table with cluster index") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     val tiSparkTeleInfo = TiSparkTeleInfo.getTiSparkTeleInfo()
-    val version = tiSparkTeleInfo.get("tidb_version")
-    if (version.isEmpty) {
-      fail("TiDB version can not be empty")
-    }
-    if (version.get.toString.compareTo("v5") > 0) {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    if (ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
+        this.ti.clientSession.getTiKVSession.getPDClient,
+        "5.0.0")) {
       tidbStmt.execute("""
-                         |CREATE TABLE `t1` (
-                         |  `a` BIGINT(20) NOT NULL,
-                         |  `b` varchar(255) NOT NULL,
-                         |  `c` varchar(255) DEFAULT NULL,
-                         |   PRIMARY KEY (`a`) clustered
-                         |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
+          |CREATE TABLE `t1` (
+          |  `a` BIGINT(20) NOT NULL,
+          |  `b` varchar(255) NOT NULL,
+          |  `c` varchar(255) DEFAULT NULL,
+          |   PRIMARY KEY (`a`) clustered
+          |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
     } else {
       val config =
         tidbStmt.executeQuery("show config where type='tidb' and name='alter-primary-key'")

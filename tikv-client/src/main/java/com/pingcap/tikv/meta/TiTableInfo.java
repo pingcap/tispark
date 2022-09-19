@@ -21,9 +21,7 @@ import static java.util.Objects.requireNonNull;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.TableInfo;
-import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataTypeFactory;
@@ -32,10 +30,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.tikv.common.exception.TiClientInternalException;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiTableInfo implements Serializable {
-
   private final long id;
   private final String name;
   private final String charset;

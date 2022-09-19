@@ -18,17 +18,19 @@ package com.pingcap.tikv.codec;
 
 import static org.junit.Assert.assertArrayEquals;
 
-import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.key.CommonHandle;
-import com.pingcap.tikv.key.Handle;
-import com.pingcap.tikv.key.IntHandle;
-import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.handle.CommonHandle;
+import com.pingcap.tikv.handle.Handle;
+import com.pingcap.tikv.handle.IntHandle;
+import com.pingcap.tikv.meta.*;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class TableCodecTest {
   @Rule public ExpectedException expectedEx = ExpectedException.none();
@@ -47,23 +49,80 @@ public class TableCodecTest {
     }
   }
 
+  private TiTableInfo generateTiTableInfo() {
+    TiColumnInfo col1 = new TiColumnInfo(1, "a", 0, IntegerType.BIGINT, false);
+    List<TiColumnInfo> tableColumns = new ArrayList<>();
+    tableColumns.add(col1);
+    TiIndexColumn index1 = new TiIndexColumn(CIStr.newCIStr("a"), 0, DataType.UNSPECIFIED_LEN);
+    List<TiIndexColumn> indexColumns = new ArrayList<>();
+    indexColumns.add(index1);
+    TiIndexInfo indexInfo1 =
+        new TiIndexInfo(
+            1,
+            CIStr.newCIStr("test"),
+            CIStr.newCIStr("test"),
+            indexColumns,
+            true,
+            false,
+            0,
+            "",
+            0,
+            false,
+            true);
+    List<TiIndexInfo> indexInfos = new ArrayList<>();
+    indexInfos.add(indexInfo1);
+    TiTableInfo tableInfo =
+        new TiTableInfo(
+            1,
+            CIStr.newCIStr("test"),
+            "",
+            "",
+            false,
+            true,
+            1,
+            tableColumns,
+            indexInfos,
+            "",
+            0,
+            0,
+            0,
+            0,
+            null,
+            null,
+            null,
+            1,
+            1,
+            0,
+            null,
+            0);
+    return tableInfo;
+  }
+
   @Test
   public void testIndexValueCodec() {
     Handle commonHandle =
         CommonHandle.newCommonHandle(new DataType[] {StringType.VARCHAR}, new Object[] {"1"});
+    TiTableInfo tableInfo = generateTiTableInfo();
+
     // test common handle version0
-    byte[] version0Value = TableCodec.genIndexValue(commonHandle, 0, true);
+    byte[] version0Value =
+        TableCodec.genIndexValue(
+            null, commonHandle, 0, true, tableInfo.getIndices(true).get(0), tableInfo);
     Handle decodeCommonHandle0 = TableCodec.decodeHandleInUniqueIndexValue(version0Value, true);
     assertArrayEquals(commonHandle.encoded(), decodeCommonHandle0.encoded());
 
     // test common handle version1
-    byte[] version1Value = TableCodec.genIndexValue(commonHandle, 1, true);
+    byte[] version1Value =
+        TableCodec.genIndexValue(
+            null, commonHandle, 1, true, tableInfo.getIndices(true).get(0), tableInfo);
     Handle decodeCommonHandle1 = TableCodec.decodeHandleInUniqueIndexValue(version1Value, true);
     assertArrayEquals(commonHandle.encoded(), decodeCommonHandle1.encoded());
 
     // test int handle
     Handle intHandle = new IntHandle(1);
-    byte[] intHandleValue = TableCodec.genIndexValue(intHandle, 0, true);
+    byte[] intHandleValue =
+        TableCodec.genIndexValue(
+            null, intHandle, 0, true, tableInfo.getIndices(true).get(0), tableInfo);
     Handle decodeIntHandle = TableCodec.decodeHandleInUniqueIndexValue(intHandleValue, false);
     assertArrayEquals(intHandle.encoded(), decodeIntHandle.encoded());
   }

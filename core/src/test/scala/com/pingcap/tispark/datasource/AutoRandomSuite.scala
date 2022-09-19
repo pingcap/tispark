@@ -21,6 +21,7 @@ import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
+import org.tikv.common.exception.{ConvertOverflowException, TiBatchWriteException}
 
 class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") {
 

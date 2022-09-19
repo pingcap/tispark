@@ -18,9 +18,9 @@ package com.pingcap.tikv.columnar;
 
 import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
 
-import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.codec.Codec.DateCodec;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
+import com.pingcap.tikv.codec.ExtendedDateTime;
 import com.pingcap.tikv.columnar.datatypes.CHType;
 import com.pingcap.tikv.types.AbstractDateTimeType;
 import com.pingcap.tikv.types.BytesType;
@@ -142,7 +142,10 @@ public class TiBlockColumnVector extends TiColumnVector {
    */
   @Override
   public boolean getBoolean(int rowId) {
-    return false;
+    // Use getLong, because getLong will call different method according to fixedLength
+    // Maybe decode has some problems, use getInt directly will cause strange result
+    long value = getLong(rowId);
+    return value == 1;
   }
 
   /**
