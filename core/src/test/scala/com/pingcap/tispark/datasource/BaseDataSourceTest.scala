@@ -242,8 +242,9 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
     "0x" + str
   }
 
-  protected def allocateID(size: Long,
-                           allocatorType:RowIDAllocator.RowIDAllocatorType): RowIDAllocator = {
+  protected def allocateID(
+      size: Long,
+      allocatorType: RowIDAllocator.RowIDAllocatorType): RowIDAllocator = {
     val tiDBInfo = ti.clientSession.getCatalog.getDatabase(databaseWithPrefix)
     val tiTableInfo = ti.clientSession.getCatalog.getTable(databaseWithPrefix, table)
     RowIDAllocator.create(
@@ -251,7 +252,7 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
       tiTableInfo,
       ti.clientSession.getConf,
       size,
-      new TiTimeStamp(0,0),
+      new TiTimeStamp(0, 0),
       allocatorType)
   }
 }
