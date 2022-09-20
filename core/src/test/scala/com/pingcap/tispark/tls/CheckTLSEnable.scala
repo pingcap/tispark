@@ -19,7 +19,7 @@ package com.pingcap.tispark.tls
 import java.util.Properties
 
 object CheckTLSEnable {
-  val tidbConfig = "tidb_config.properties"
+  val tidbConfig = "tidb_config.properties.withoutdataload.template"
   val TLSEnable = "spark.tispark.tikv.tls_enable"
 
   // TLS TEST will open only when spark.tispark.tikv.tls_enable == true

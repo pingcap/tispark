@@ -17,7 +17,7 @@
 package org.apache.spark.sql.followerread
 
 import com.pingcap.tikv.{ClientSession, TiConfiguration}
-import org.apache.spark.sql.{BaseTiSparkTest, TiExtensions}
+import org.apache.spark.sql.BaseTiSparkTest
 import org.scalatest.Matchers.{be, noException}
 
 // This test needs 3 tikv with
@@ -26,10 +26,10 @@ import org.scalatest.Matchers.{be, noException}
 // 3. pd's config replication.max-replicas = 3
 class FollowerReadSuite extends BaseTiSparkTest {
 
-  val table = "follower_read_test"
+  val table = "test.follower_read_test"
 
   override def beforeAll(): Unit = {
-    super.beforeAll()
+    super.beforeAllWithoutLoadData()
     tidbStmt.execute("set config pd `replication.max-replicas` = 3")
     Thread.sleep(3000)
     ti.clientSession.close()
@@ -49,7 +49,7 @@ class FollowerReadSuite extends BaseTiSparkTest {
     val spark_new = spark.newSession()
     spark_new.sparkContext.conf.set("spark.tispark.replica_read", "follower")
     noException should be thrownBy spark_new
-      .sql(s"select * from tidb_catalog.tispark_test.$table")
+      .sql(s"select * from tidb_catalog.$table")
       .show()
     val config = TiConfiguration.createDefault(pdAddresses)
     ClientSession.getInstance(config).close()
@@ -61,7 +61,7 @@ class FollowerReadSuite extends BaseTiSparkTest {
     spark_new.sparkContext.conf.set("spark.tispark.replica_read.label", "key1=value1")
     spark_new.sparkContext.conf.set("spark.tispark.replica_read", "follower")
     noException should be thrownBy spark_new
-      .sql(s"select * from tidb_catalog.tispark_test.$table")
+      .sql(s"select * from tidb_catalog.$table")
       .show()
     val config = TiConfiguration.createDefault(pdAddresses)
     ClientSession.getInstance(config).close()
@@ -73,7 +73,7 @@ class FollowerReadSuite extends BaseTiSparkTest {
     spark_new.sparkContext.conf.set("spark.tispark.replica_read.label", "key1=value2")
     spark_new.sparkContext.conf.set("spark.tispark.replica_read", "follower")
     assertThrows[Exception] {
-      spark_new.sql(s"select * from tidb_catalog.tispark_test.$table").show
+      spark_new.sql(s"select * from tidb_catalog.$table").show
     }
     // need not close clientSession for it fail to init
     val config = TiConfiguration.createDefault(pdAddresses)
@@ -89,7 +89,7 @@ class FollowerReadSuite extends BaseTiSparkTest {
     spark_new.sparkContext.conf
       .set("spark.tispark.replica_read.address_whitelist", "127.0.0.1:20161,127.0.0.1:20162")
     noException should be thrownBy spark_new
-      .sql(s"select * from tidb_catalog.tispark_test.$table")
+      .sql(s"select * from tidb_catalog.$table")
       .show
     val config = TiConfiguration.createDefault(pdAddresses)
     ClientSession.getInstance(config).close()
@@ -108,7 +108,7 @@ class FollowerReadSuite extends BaseTiSparkTest {
       "spark.tispark.replica_read.address_blacklist",
       "127.0.0.1:20160,127.0.0.1:20161,127.0.0.1:20162")
     assertThrows[Exception] {
-      spark_new.sql(s"select * from tidb_catalog.tispark_test.$table").show
+      spark_new.sql(s"select * from tidb_catalog.$table").show
     }
     val config = TiConfiguration.createDefault(pdAddresses)
     ClientSession.getInstance(config).close()

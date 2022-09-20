@@ -1,0 +1,4 @@
+test.data.load=false
+spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
+
+
