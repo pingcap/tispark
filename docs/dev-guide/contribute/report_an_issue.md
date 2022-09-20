@@ -16,12 +16,12 @@ If you want to report a new issue, you will come to this page. Please choose the
 - Feature Request: If you think a feature is missing when using TiSpark, you can choose it.
 - Ask a Question or Get Support: If you encounter any problems while using TiSpark, you can choose it.
 - Proposal: This type is used for significant changes to track the related pull request of design, code, test and document.
-![issue choose](pics/issue_choose.png)
+![issue choose](../pics/issue_choose.png)
 
 ## Fill an issue
 In order to better reproduce bugs or understand requirements, we set up templates for each type issue. 
 You should follow the instructions to fill the issue as completely as possible.
-![issue template](pics/issue_template.png)
+![issue template](../pics/issue_template.png)
 
 ## After the issue created
 After the issue is created, the contributors of the project may participate in the issue.

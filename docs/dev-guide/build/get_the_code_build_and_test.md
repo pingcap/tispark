@@ -1,4 +1,4 @@
-# Get the code, build, and run
+# Get the code, build, and test
 Prerequisites
 1. Please make sure you have installed `Scala`, `Java`, `Maven` and deploy a TiDB cluster.
 2. Please make sure you have installed `Git`.
@@ -33,35 +33,11 @@ Then you will find a jar under `assembly/target/` which is named
 `tispark-assembly-${spark_version}_${scala_version}-${tispark_version}-SNAPSHOT.jar`
 
 ## Run Test
-If you build it success, you also have downloaded needed files.
-Tests are required when add new features or fix bugs.
-You can add tests or modify tests according your codes.
-These tests are under `test` directories in each module.
 
-Before running test, you need to make a copy of `tidb_config.properties.template` and rename it to
-`tidb_config.properties` and update to configuration as yours and make sure you have deployed a TiDB cluster.
+> Make sure you have deployed the TiDB cluster. see [here](./start_tidb_cluster.md) on how to start a TiDB cluster.
 
+The tests are under `test` directories in each module.
 
-## Run Jar
-Please make sure you have installed spark before running TiSpark and add the following configuration in `spark-defaults.conf`.
-```
-spark.sql.extensions  org.apache.spark.sql.TiExtensions
-spark.tispark.pd.addresses  ${your_pd_adress}
-spark.sql.catalog.tidb_catalog  org.apache.spark.sql.catalyst.catalog.TiCatalog
-spark.sql.catalog.tidb_catalog.pd.addresses  ${your_pd_adress}
-```
+Please make sure you have added the tests for your bug fix or feature.
 
-We don't include mysql connector in our package. 
-You can download it from [here](https://mvnrepository.com/artifact/mysql/mysql-connector-java).
-
-And then you can use TiSpark in `spark` by run following command.
-
-```
-spark-submit --jars tispark-assembly-${spark_version}_${scala_version}-${tispark_version}-SNAPSHOT.jar,mysql-connector-java-8.0.29.jar
-```
-
-Spark will load the jar when running. But we can't use the feature TiSpark provides now. We implement it using catalog . Please run the following command to use TiSpark.
-
-```
-spark.sql("use tidb_catalog")
-```
+About how to test, see [here](../../../core/src/test/Readme.md).
