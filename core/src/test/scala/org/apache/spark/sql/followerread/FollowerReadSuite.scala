@@ -16,6 +16,7 @@
 
 package org.apache.spark.sql.followerread
 
+import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import org.apache.spark.sql.{BaseTiSparkTest, TiExtensions}
 import org.scalatest.Matchers.{be, noException}
 
@@ -50,7 +51,8 @@ class FollowerReadSuite extends BaseTiSparkTest {
     noException should be thrownBy spark_new
       .sql(s"select * from tidb_catalog.tispark_test.$table")
       .show()
-    TiExtensions.getTiContext(spark_new).get.clientSession.close()
+    val config = TiConfiguration.createDefault(pdAddresses)
+    ClientSession.getInstance(config).close()
   }
 
   test("follower read with valid label") {
@@ -61,7 +63,8 @@ class FollowerReadSuite extends BaseTiSparkTest {
     noException should be thrownBy spark_new
       .sql(s"select * from tidb_catalog.tispark_test.$table")
       .show()
-    TiExtensions.getTiContext(spark_new).get.clientSession.close()
+    val config = TiConfiguration.createDefault(pdAddresses)
+    ClientSession.getInstance(config).close()
   }
 
   test("follower read with invalid label should throw exception") {
@@ -73,6 +76,8 @@ class FollowerReadSuite extends BaseTiSparkTest {
       spark_new.sql(s"select * from tidb_catalog.tispark_test.$table").show
     }
     // need not close clientSession for it fail to init
+    val config = TiConfiguration.createDefault(pdAddresses)
+    ClientSession.getInstance(config).close()
   }
 
   test("follower read with label and whitelist") {
@@ -86,7 +91,8 @@ class FollowerReadSuite extends BaseTiSparkTest {
     noException should be thrownBy spark_new
       .sql(s"select * from tidb_catalog.tispark_test.$table")
       .show
-    TiExtensions.getTiContext(spark_new).get.clientSession.close()
+    val config = TiConfiguration.createDefault(pdAddresses)
+    ClientSession.getInstance(config).close()
   }
 
   test("follower read with label, whitelist and blacklist") {
@@ -104,6 +110,8 @@ class FollowerReadSuite extends BaseTiSparkTest {
     assertThrows[Exception] {
       spark_new.sql(s"select * from tidb_catalog.tispark_test.$table").show
     }
+    val config = TiConfiguration.createDefault(pdAddresses)
+    ClientSession.getInstance(config).close()
   }
 
   // this method will block this suit be tested in CI triggered by `/run-all-tests`
