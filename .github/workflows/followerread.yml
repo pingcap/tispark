@@ -27,5 +27,8 @@ jobs:
       - name: copy properties
         run: cp core/src/test/resources/tidb_config.properties.withoutdataload.template core/src/test/resources/tidb_config.properties
 
+      - name: build
+        run: mvn clean package -Dmaven.test.skip=true -B
+
       - name: test follower read
-        run: mvn test -e -am -Dtest=moo -DwildcardSuites=org.apache.spark.sql.followerread.FollowerReadSuite -DfailIfNoTests=false
+        run: mvn test -e -am -pl core -Dtest=moo -DwildcardSuites=org.apache.spark.sql.followerread.FollowerReadSuite -DfailIfNoTests=false
