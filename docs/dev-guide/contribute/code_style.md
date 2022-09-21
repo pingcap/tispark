@@ -1,4 +1,5 @@
 # Code Style
+
 We have strict code style requirements. 
 If your code doesn't meet the requirements, it will not be allowed to be merged.
 
@@ -10,9 +11,9 @@ So, you have two ways to make your code conform to code style.
 The format files are under `dev/` called `.scalafmt.conf` and `intellij-java-google-style.xml`.
 
 You can set the Configuration to `.scalafmt.conf` as follows to enable Scala format check in IDEA.
-![scala format](pics/scala_format.png)
+![scala format](../pics/scala_format.png)
 You can import settings in `intellij-java-google-style.xml` as follows to enable Java format check in IDEA.
-![java format](pics/java_format.png)
+![java format](../pics/java_format.png)
 Once you have completed the above settings, you can use shortcut keys to format in IDEA to make your code conform to code style.
 
 ## Use maven to format
