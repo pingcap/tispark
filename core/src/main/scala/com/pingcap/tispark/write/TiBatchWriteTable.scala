@@ -29,7 +29,6 @@ import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.WriteUtil.locatePhysicalTable
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
-import com.pingcap.tispark.write.TiBatchWrite.TiRow
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions.lit
@@ -116,10 +115,10 @@ class TiBatchWriteTable(
 
     val rdd = if (tiTableInfo.hasAutoIncrementColumn && isNeedAllocateIdForAutoIncrementCol(df)) {
       // auto increment
-      allocateIdForAutoIncrementCol(count, startTimeStamp)
+      allocateIdForAutoIDCol(count, startTimeStamp, RowIDAllocatorType.AUTO_INCREMENT)
     } else if (tiTableInfo.hasAutoRandomColumn && isNeedAllocateIdForAutoRandomCol(df)) {
       // auto random
-      allocateIdForAutoRandomCol(count, startTimeStamp)
+      allocateIdForAutoIDCol(count, startTimeStamp, RowIDAllocatorType.AUTO_RANDOM)
     } else {
       df.rdd
     }
@@ -273,15 +272,33 @@ class TiBatchWriteTable(
       .count()
   }
 
-  private def allocateIdForAutoIncrementCol(count: Long, timestamp: TiTimestamp): RDD[Row] = {
+  private def allocateIdForAutoIDCol(count: Long, timestamp: TiTimestamp,
+                                     allocatorType: RowIDAllocatorType): RDD[Row] = {
+
+    val rowIDAllocator = getRowIDAllocator(count, timestamp, allocatorType)
+    val (isAutoIDCol, allocatorID, autoIDColName) = allocatorType match {
+      case RowIDAllocatorType.AUTO_INCREMENT => (
+        (columnName: String) => {
+          colsMapInTiDB(columnName).isAutoIncrement
+        },
+        (index: Long) => {
+          rowIDAllocator.getAutoIncId(index)
+        },
+        tiTableInfo.getAutoIncrementColInfo.getName)
+      case RowIDAllocatorType.AUTO_RANDOM => (
+        (columnName: String) => {
+          colsMapInTiDB(columnName).isPrimaryKey
+        },
+        (index: Long) => {
+          rowIDAllocator.getAutoRandomId(index)
+        },
+        tiTableInfo.getAutoRandomColInfo.getName)
+    }
     // if auto increment column is not provided, we need allocate id for it.
-    val autoIncrementColName = tiTableInfo.getAutoIncrementColInfo.getName
-    if (colsInDf.contains(autoIncrementColName)) {
-      df.drop(autoIncrementColName)
+    if (colsInDf.contains(autoIDColName)) {
+      df.drop(autoIDColName)
     }
-    val newDf = df.withColumn(autoIncrementColName, lit(null).cast("long"))
-    val rowIDAllocator = getRowIDAllocator(count, timestamp, RowIDAllocatorType.AUTO_INCREMENT)
-
+    val newDf = df.withColumn(autoIDColName, lit(null).cast("long"))
     // update colsInDF since we just add one column in df
     colsInDf = newDf.columns.toList.map(_.toLowerCase())
     // last one is auto increment column
@@ -289,37 +306,9 @@ class TiBatchWriteTable(
       val rowSep = row._1.toSeq.zipWithIndex.map { data =>
         val colOffset = data._2
         if (colsMapInTiDB.contains(colsInDf(colOffset))) {
-          if (colsMapInTiDB(colsInDf(colOffset)).isAutoIncrement) {
+          if (isAutoIDCol(colsInDf(colOffset))) {
             val index = row._2 + 1
-            rowIDAllocator.getAutoIncId(index)
-          } else {
-            data._1
-          }
-        }
-      }
-      Row.fromSeq(rowSep)
-    }
-  }
-
-  private def allocateIdForAutoRandomCol(count: Long, timestamp: TiTimestamp): RDD[Row] = {
-    // if auto random column id is not provided, we need allocate id for it.
-    val autoRandomColName = tiTableInfo.getAutoRandomColInfo.getName
-    if (colsInDf.contains(autoRandomColName)) {
-      df.drop(autoRandomColName)
-    }
-    val newDf = df.withColumn(autoRandomColName, lit(null).cast("long"))
-    val rowIDAllocator = getRowIDAllocator(count, timestamp, RowIDAllocatorType.AUTO_RANDOM)
-
-    // update colsInDF since we just add one column in df
-    colsInDf = newDf.columns.toList.map(_.toLowerCase())
-    // last one is auto increment column
-    newDf.rdd.zipWithIndex.map { row =>
-      val rowSep = row._1.toSeq.zipWithIndex.map { data =>
-        val colOffset = data._2
-        if (colsMapInTiDB.contains(colsInDf(colOffset))) {
-          if (colsMapInTiDB(colsInDf(colOffset)).isPrimaryKey) {
-            val index = row._2 + 1
-            rowIDAllocator.getAutoRandomId(index)
+            allocatorID(index)
           } else {
             data._1
           }
