@@ -272,27 +272,31 @@ class TiBatchWriteTable(
       .count()
   }
 
-  private def allocateIdForAutoIDCol(count: Long, timestamp: TiTimestamp,
-                                     allocatorType: RowIDAllocatorType): RDD[Row] = {
+  private def allocateIdForAutoIDCol(
+      count: Long,
+      timestamp: TiTimestamp,
+      allocatorType: RowIDAllocatorType): RDD[Row] = {
 
     val rowIDAllocator = getRowIDAllocator(count, timestamp, allocatorType)
     val (isAutoIDCol, allocatorID, autoIDColName) = allocatorType match {
-      case RowIDAllocatorType.AUTO_INCREMENT => (
-        (columnName: String) => {
-          colsMapInTiDB(columnName).isAutoIncrement
-        },
-        (index: Long) => {
-          rowIDAllocator.getAutoIncId(index)
-        },
-        tiTableInfo.getAutoIncrementColInfo.getName)
-      case RowIDAllocatorType.AUTO_RANDOM => (
-        (columnName: String) => {
-          colsMapInTiDB(columnName).isPrimaryKey
-        },
-        (index: Long) => {
-          rowIDAllocator.getAutoRandomId(index)
-        },
-        tiTableInfo.getAutoRandomColInfo.getName)
+      case RowIDAllocatorType.AUTO_INCREMENT =>
+        (
+          (columnName: String) => {
+            colsMapInTiDB(columnName).isAutoIncrement
+          },
+          (index: Long) => {
+            rowIDAllocator.getAutoIncId(index)
+          },
+          tiTableInfo.getAutoIncrementColInfo.getName)
+      case RowIDAllocatorType.AUTO_RANDOM =>
+        (
+          (columnName: String) => {
+            colsMapInTiDB(columnName).isPrimaryKey
+          },
+          (index: Long) => {
+            rowIDAllocator.getAutoRandomId(index)
+          },
+          tiTableInfo.getAutoRandomColInfo.getName)
     }
     // if auto increment column is not provided, we need allocate id for it.
     if (colsInDf.contains(autoIDColName)) {
