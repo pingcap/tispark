@@ -7,13 +7,13 @@ The guide is composed of the following parts:
 4. Project Management: Helps you to participate in team working, lead feature development, manage projects in the TiSpark community.
   
 ## Get started
-   - [Install Scala && Java && Spark && Maven](install_scala_java_spark_maven.md)
-   - [Start a local TiDB cluster for testing](start_tidb_cluster.md)
-   - [Get the code, build, and run](get_the_code_build_and_run.md)
+   - [Install Scala && Java && Spark && Maven](build/install_scala_java_spark_maven.md)
+   - [Start a local TiDB cluster for testing](build/start_tidb_cluster.md)
+   - [Get the code, build, and test](build/get_the_code_build_and_test.md)
 ## Contribute to TiSpark
-   - [Report an Issue](report_an_issue.md)
-   - [Code Style and Quality Guide](code_style.md)
-   - [Commit the code and submit a pull request](commit_the_code_and_submit_a_pull_request.md)
+   - [Report an Issue](contribute/report_an_issue.md)
+   - [Code Style and Quality Guide](contribute/code_style.md)
+   - [Commit the code and submit a pull request](contribute/commit_the_code_and_submit_a_pull_request.md)
 ## Understand TiSpark
-   - [Overview](overview.md)
-   - [Write](write.md) 
+   - [Overview](understand/overview.md)
+   - [Write](understand/write.md) 
