@@ -3,7 +3,7 @@ This chapter will briefly introduce the project structure of TiSpark and the fun
 The structure of TiSpark as shown in the picture below.
 Please ignore `.github` and `.idea`.
  
-![overview](pics/overview.png)
+![overview](../pics/overview.png)
 ## Assembly
 TiSpark depends on multiple modules, so we integrate the compilation results of other modules in this module,
 and finally get the jar of TiSpark. If the compilation is done, you will find a jar file under `target` which is named `tispark-assembly-${spark_version}_${scala_version}-${tispark_version}-SNAPSHOT.jar`
