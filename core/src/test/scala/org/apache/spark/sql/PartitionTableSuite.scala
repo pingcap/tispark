@@ -91,6 +91,36 @@ class PartitionTableSuite extends BasePlanTest {
     }
   }
 
+  test("test read from range partition with function TO_DAYS()") {
+    enablePartitionForTiDB()
+    tidbStmt.execute("DROP TABLE IF EXISTS `pt`")
+    tidbStmt.execute("""
+        |CREATE TABLE `pt` (
+        |  `id` int(11) DEFAULT NULL,
+        |  `name` varchar(50) DEFAULT NULL,
+        |  `purchased` date DEFAULT NULL,
+        |  index `idx_id`(`id`)
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+        |PARTITION BY RANGE (TO_DAYS(purchased)) (
+        |  PARTITION p0 VALUES LESS THAN (TO_DAYS('1990-01-01')),
+        |  PARTITION p1 VALUES LESS THAN (TO_DAYS('1995-01-01')),
+        |  PARTITION p2 VALUES LESS THAN (TO_DAYS('2000-01-01')),
+        |  PARTITION p3 VALUES LESS THAN (MAXVALUE)
+        |)
+                     """.stripMargin)
+
+    tidbStmt.execute("insert into `pt` values(1, 'name', '1995-10-10')")
+    tidbStmt.execute("insert into `pt` values(1, 'name', '1985-10-10')")
+    tidbStmt.execute("insert into `pt` values(1, 'name', '2005-10-10')")
+    refreshConnections()
+
+    judge("select * from pt")
+    judge("select * from pt where purchased = date'1995-10-10'")
+    judge("select * from pt where purchased != date'1995-10-10'")
+    judge("select * from pt where purchased > date'1995-10-10'")
+    judge("select * from pt where purchased <= date'1995-10-10'")
+  }
+
   test(
     "test read from range partition and partition function (mod) is not supported by tispark") {
     enablePartitionForTiDB()
