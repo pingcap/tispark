@@ -67,8 +67,7 @@ class TiFlashSuite extends BaseTiSparkTest {
     explainAndRunTest("select * from quarterly_report_status", canTestTiFlash = true)
   }
 
-  // ignore for read partition table does not support UNIX_TIMESTAMP now
-  ignore("Test reading TiFlash partition table (UNIX_TIMESTAMP)") {
+  test("Test reading TiFlash partition table (UNIX_TIMESTAMP)") {
     cancelIfTiFlashDisabled()
 
     tidbStmt.execute("DROP TABLE IF EXISTS `quarterly_report_status`")

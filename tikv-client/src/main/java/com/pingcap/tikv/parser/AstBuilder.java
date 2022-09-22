@@ -44,7 +44,7 @@ import org.apache.commons.codec.binary.Hex;
 // which is used by partition pruning.
 public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
 
-  private TiTableInfo tableInfo;
+  protected TiTableInfo tableInfo;
 
   public AstBuilder() {}
 
@@ -64,7 +64,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
     throw new UnsupportedSyntaxException(ctx.getParent().toString() + ": it is not supported");
   }
 
-  private Expression createColRef(String id) {
+  protected Expression createColRef(String id) {
     if (tableInfo != null) {
       return ColumnRef.create(id, tableInfo);
     } else {
@@ -87,8 +87,6 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
       if (fnNameCtx.YEAR() != null) {
         Expression args = visitFunctionArgs(ctx.functionArgs());
         return new FuncCallExpr(args, Type.YEAR);
-      } else {
-        throw new UnsupportedOperationException("Unsupported function: " + fnNameCtx.getText());
       }
     }
     return visitChildren(ctx);
@@ -99,7 +97,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
     return visitUid(ctx.uid());
   }
 
-  private Expression parseIntOrLongOrDec(String val) {
+  protected Expression parseIntOrLongOrDec(String val) {
     try {
       return Constant.create(Integer.parseInt(val), IntegerType.INT);
     } catch (Exception e) {
