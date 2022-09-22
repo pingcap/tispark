@@ -102,7 +102,7 @@ public class PartitionedTable implements Serializable {
     }
 
     Map<String, List<Expression>> column2PartitionExps = new HashMap<>();
-    TiParser parser = new TiParser(tableInfo);
+    TiParser parser = TiParser.createParserForPartitionWrite(tableInfo);
 
     for (int i = 0; i < partitionInfo.getColumns().size(); i++) {
       List<Expression> partExprs = new ArrayList<>();
@@ -124,7 +124,7 @@ public class PartitionedTable implements Serializable {
   }
 
   private static Expression generateOriginExpression(TiTableInfo tableInfo) {
-    TiParser parser = new TiParser(tableInfo);
+    TiParser parser = TiParser.createParserForPartitionWrite(tableInfo);
     // For column, originExpression is like birthday@DATE
     // For function, originExpression is like year(birthday@DATE)
     return parser.parseExpression(tableInfo.getPartitionInfo().getExpr());
@@ -134,7 +134,8 @@ public class PartitionedTable implements Serializable {
     PartitionExpression partitionExpr = new PartitionExpression();
     TiPartitionInfo partitionInfo = tableInfo.getPartitionInfo();
     String originExpr = partitionInfo.getExpr();
-    TiParser parser = new TiParser(tableInfo);
+    TiParser parser = TiParser.createParserForPartitionWrite(tableInfo);
+    ;
     partitionExpr.setOriginExpression(parser.parseExpression(originExpr));
 
     List<Expression> rangePartitionExps = new ArrayList<>();
