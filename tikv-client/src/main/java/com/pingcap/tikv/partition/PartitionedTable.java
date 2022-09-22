@@ -175,8 +175,12 @@ public class PartitionedTable implements Serializable {
       // TODO: support more function partition
       FuncCallExpr partitionFuncExpr = (FuncCallExpr) originalExpr;
       if (partitionFuncExpr.getFuncTp() == YEAR) {
+        Expression expression = partitionFuncExpr.getChildren().get(0);
+        ColumnRef columnRef = (ColumnRef) expression;
+        columnRef.resolve(logicalTable.getTableInfo());
         int result =
-            (int) partitionFuncExpr.eval(Constant.create(row.getDate(0), DateType.DATE)).getValue();
+            (int) partitionFuncExpr.eval(
+                Constant.create(row.get(columnRef.getColumnOffset(), DateType.DATE))).getValue();
         int partitionId = result % physicalTables.length;
         return physicalTables[partitionId];
       } else {
