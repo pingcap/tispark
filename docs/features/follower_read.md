@@ -16,10 +16,13 @@ You can control the follower read with the following configs:
 Here are the rules of the configs:
 1. Only the TiKV store matches the `spark.tispark.replica_read` can be selected.
 2. Only The TiKV store matches the `spark.tispark.replica_read.label` or in the `spark.tispark.replica_read.address_whitelist` can be selected.
-3. A TiKV store will be regarded as matched if it matches all the labels of `spark.tispark.replica_read.label`. It can also be regarded as matched if the `spark.tispark.replica_read.label` is empty.
-4. The TiKV store in the `spark.tispark.replica_read.address_blacklist` will never be selected (even it in the `spark.tispark.replica_read.address_whitelist`)
+   - A TiKV store will be regarded as matching the `spark.tispark.replica_read.label` if it matches all the labels in `spark.tispark.replica_read.label`. It can also be regarded as matching if the `spark.tispark.replica_read.label` is empty.
+3. The TiKV store in the `spark.tispark.replica_read.address_blacklist` will never be selected (even it in the `spark.tispark.replica_read.address_whitelist`)
 
-Note that these configs are **session level**. It will not be changed in one spark session.
+In conclusion, The TiKV stores `matchRoles && (matchLabels || inWhitelist) && notInBlacklist` can be selected.
+
+
+> Note that these configs are **session level**. It will not be changed in one spark session.
 
 ## Example
 
