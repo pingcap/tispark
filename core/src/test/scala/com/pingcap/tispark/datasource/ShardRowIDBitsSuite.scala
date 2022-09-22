@@ -18,7 +18,6 @@ package com.pingcap.tispark.datasource
 
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
-import org.tikv.common.exception.AllocateRowIDOverflowException
 
 class ShardRowIDBitsSuite extends BaseBatchWriteTest("test_datasource_shard_row_id_bits") {
   private val schema = StructType(List(StructField("i", LongType)))
@@ -42,7 +41,7 @@ class ShardRowIDBitsSuite extends BaseBatchWriteTest("test_datasource_shard_row_
 
     // TiSpark insert overflow
 
-    val caught = intercept[AllocateRowIDOverflowException] {
+    val caught = intercept[com.pingcap.tikv.exception.AllocateRowIDOverflowException] {
       tidbWrite((1L to 1L).map(Row(_)).toList, schema)
     }
     assert(caught.getMessage.startsWith("Overflow when allocating row id"))

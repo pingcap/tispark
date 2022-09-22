@@ -15,15 +15,27 @@
  */
 package com.pingcap.tikv.allocator;
 
-import com.pingcap.tikv.ClientSession;
+import static com.pingcap.tikv.util.BackOffer.ROW_ID_ALLOCATOR_BACKOFF;
+
+import com.google.common.primitives.UnsignedLongs;
+import com.google.protobuf.ByteString;
+import com.pingcap.tikv.BytePairWrapper;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.TiConfiguration;
+import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.TwoPhaseCommitter;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.codec.MetaCodec;
+import com.pingcap.tikv.exception.AllocateRowIDOverflowException;
+import com.pingcap.tikv.exception.TiBatchWriteException;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.meta.TiTimestamp;
+import com.pingcap.tikv.util.BackOffFunction;
+import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,17 +46,6 @@ import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tikv.common.BytePairWrapper;
-import org.tikv.common.TiSession;
-import org.tikv.common.exception.AllocateRowIDOverflowException;
-import org.tikv.common.exception.TiBatchWriteException;
-import org.tikv.common.meta.TiTimestamp;
-import org.tikv.common.util.BackOffFunction;
-import org.tikv.common.util.BackOffer;
-import org.tikv.common.util.ConcreteBackOffer;
-import org.tikv.shade.com.google.common.primitives.UnsignedLongs;
-import org.tikv.shade.com.google.protobuf.ByteString;
-import org.tikv.txn.TwoPhaseCommitter;
 
 /**
  * RowIDAllocator read current start from TiKV and write back 'start+step' back to TiKV. It designs
@@ -95,8 +96,7 @@ public final class RowIDAllocator implements Serializable {
 
   public static RowIDAllocator create(
       long dbId, TiTableInfo table, TiConfiguration conf, boolean unsigned, long step) {
-    BackOffer backOffer =
-        ConcreteBackOffer.newCustomBackOff(TiConfiguration.ROW_ID_ALLOCATOR_BACKOFF);
+    BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(ROW_ID_ALLOCATOR_BACKOFF);
     while (true) {
       try {
         return doCreate(dbId, table, conf, unsigned, step);
@@ -114,12 +114,12 @@ public final class RowIDAllocator implements Serializable {
     RowIDAllocator allocator = new RowIDAllocator(table.getMaxShardRowIDBits(), dbId, step, conf);
     if (unsigned) {
       allocator.initUnsigned(
-          ClientSession.getInstance(conf).createSnapshot(),
+          TiSession.getInstance(conf).createSnapshot(),
           table.getId(),
           table.getMaxShardRowIDBits());
     } else {
       allocator.initSigned(
-          ClientSession.getInstance(conf).createSnapshot(),
+          TiSession.getInstance(conf).createSnapshot(),
           table.getId(),
           table.getMaxShardRowIDBits());
     }
@@ -141,21 +141,21 @@ public final class RowIDAllocator implements Serializable {
     if (!iterator.hasNext()) {
       return;
     }
-    TiSession session = ClientSession.getInstance(conf).getTiKVSession();
-    TwoPhaseCommitter twoPhaseCommitter = new TwoPhaseCommitter(session, timestamp.getVersion());
+    TiSession session = TiSession.getInstance(conf);
+    TwoPhaseCommitter twoPhaseCommitter = new TwoPhaseCommitter(conf, timestamp.getVersion());
     BytePairWrapper primaryPair = iterator.next();
     twoPhaseCommitter.prewritePrimaryKey(
-        ConcreteBackOffer.newCustomBackOff(TiConfiguration.PREWRITE_MAX_BACKOFF),
+        ConcreteBackOffer.newCustomBackOff(BackOffer.PREWRITE_MAX_BACKOFF),
         primaryPair.getKey(),
         primaryPair.getValue());
 
     if (iterator.hasNext()) {
       twoPhaseCommitter.prewriteSecondaryKeys(
-          primaryPair.getKey(), iterator, TiConfiguration.PREWRITE_MAX_BACKOFF);
+          primaryPair.getKey(), iterator, BackOffer.PREWRITE_MAX_BACKOFF);
     }
 
     twoPhaseCommitter.commitPrimaryKey(
-        ConcreteBackOffer.newCustomBackOff(TiConfiguration.BATCH_COMMIT_BACKOFF),
+        ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF),
         primaryPair.getKey(),
         session.getTimestamp().getVersion());
 

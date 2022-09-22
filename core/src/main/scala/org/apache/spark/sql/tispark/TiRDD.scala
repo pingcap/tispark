@@ -17,17 +17,16 @@
 package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
+import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.types.Converter
 import com.pingcap.tikv.util.RangeSplitter
+import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.Partition
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
-import org.tikv.common.exception
-import org.tikv.common.exception.TiInternalException
-import org.tikv.common.util.RangeSplitter.RegionTask
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -38,7 +37,7 @@ abstract class TiRDD(
     val physicalId: Long,
     val tiConf: TiConfiguration,
     val tableRef: TiTableReference,
-    @transient private val clientSession: ClientSession,
+    @transient private val session: TiSession,
     @transient private val sparkSession: SparkSession)
     extends RDD[InternalRow](sparkSession.sparkContext, Nil) {
 
@@ -54,7 +53,7 @@ abstract class TiRDD(
 
   override protected def getPartitions: Array[Partition] = {
     val keyWithRegionTasks = RangeSplitter
-      .newSplitter(clientSession.getTiKVSession.getRegionManager)
+      .newSplitter(session.getRegionManager)
       .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId), dagRequest.getStoreType)
 
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]

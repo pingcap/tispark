@@ -16,9 +16,9 @@
 
 package com.pingcap.tikv.predicates;
 
+import com.google.common.collect.Range;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.TypedKey;
-import org.tikv.shade.com.google.common.collect.Range;
 
 public class IndexRange {
 

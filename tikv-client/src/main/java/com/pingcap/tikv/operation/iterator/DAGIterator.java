@@ -22,9 +22,17 @@ import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tidb.tipb.SelectResponse;
-import com.pingcap.tikv.ClientSession;
+import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.exception.RegionTaskException;
+import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.operation.SchemaInfer;
+import com.pingcap.tikv.region.RegionStoreClient;
+import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.region.TiStoreType;
+import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.ConcreteBackOffer;
+import com.pingcap.tikv.util.RangeSplitter;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,16 +43,8 @@ import java.util.Queue;
 import java.util.concurrent.ExecutorCompletionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tikv.common.exception.RegionTaskException;
-import org.tikv.common.exception.TiClientInternalException;
-import org.tikv.common.region.RegionStoreClient;
-import org.tikv.common.region.TiRegion;
-import org.tikv.common.region.TiStore;
-import org.tikv.common.region.TiStoreType;
-import org.tikv.common.util.BackOffer;
-import org.tikv.common.util.ConcreteBackOffer;
-import org.tikv.common.util.RangeSplitter.RegionTask;
 import org.tikv.kvproto.Coprocessor;
+import org.tikv.kvproto.Metapb;
 
 public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
   private static final Logger logger = LoggerFactory.getLogger(DAGIterator.class.getName());
@@ -59,26 +59,22 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
 
   DAGIterator(
       DAGRequest req,
-      List<RegionTask> regionTasks,
-      ClientSession clientSession,
+      List<RangeSplitter.RegionTask> regionTasks,
+      TiSession session,
       SchemaInfer infer,
       PushDownType pushDownType,
       TiStoreType storeType,
       long startTs) {
-    super(req, regionTasks, clientSession, infer);
+    super(req, regionTasks, session, infer);
     this.pushDownType = pushDownType;
     this.storeType = storeType;
     this.startTs = startTs;
     switch (pushDownType) {
       case NORMAL:
-        dagService =
-            new ExecutorCompletionService<>(
-                clientSession.getTiKVSession().getThreadPoolForTableScan());
+        dagService = new ExecutorCompletionService<>(session.getThreadPoolForTableScan());
         break;
       case STREAMING:
-        streamingService =
-            new ExecutorCompletionService<>(
-                clientSession.getTiKVSession().getThreadPoolForTableScan());
+        streamingService = new ExecutorCompletionService<>(session.getThreadPoolForTableScan());
         break;
     }
     submitTasks();
@@ -86,7 +82,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
 
   @Override
   void submitTasks() {
-    for (RegionTask task : regionTasks) {
+    for (RangeSplitter.RegionTask task : regionTasks) {
       switch (pushDownType) {
         case STREAMING:
           streamingService.submit(() -> processByStreaming(task));
@@ -198,8 +194,8 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     return advanceNextResponse();
   }
 
-  private SelectResponse process(RegionTask regionTask) {
-    Queue<RegionTask> remainTasks = new ArrayDeque<>();
+  private SelectResponse process(RangeSplitter.RegionTask regionTask) {
+    Queue<RangeSplitter.RegionTask> remainTasks = new ArrayDeque<>();
     Queue<SelectResponse> responseQueue = new ArrayDeque<>();
     remainTasks.add(regionTask);
     BackOffer backOffer = ConcreteBackOffer.newCopNextMaxBackOff();
@@ -208,23 +204,20 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     // In case of one region task spilt into several others, we ues a queue to properly handle all
     // the remaining tasks.
     while (!remainTasks.isEmpty()) {
-      RegionTask task = remainTasks.poll();
+      RangeSplitter.RegionTask task = remainTasks.poll();
       if (task == null) {
         continue;
       }
       List<Coprocessor.KeyRange> ranges = task.getRanges();
       TiRegion region = task.getRegion();
-      TiStore store = task.getStore();
+      Metapb.Store store = task.getStore();
 
       try {
         RegionStoreClient client =
-            clientSession
-                .getTiKVSession()
-                .getRegionStoreClientBuilder()
-                .build(region, store, storeType);
+            session.getRegionStoreClientBuilder().build(region, store, storeType);
         client.addResolvedLocks(startTs, resolvedLocks);
-        Collection<RegionTask> tasks =
-            client.coprocess(backOffer, dagRequest, ranges, responseQueue, startTs);
+        Collection<RangeSplitter.RegionTask> tasks =
+            client.coprocess(backOffer, dagRequest, region, ranges, responseQueue, startTs);
         if (tasks != null) {
           remainTasks.addAll(tasks);
         }
@@ -255,18 +248,14 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     return SelectResponse.newBuilder().addAllChunks(resultChunk).setEncodeType(encodeType).build();
   }
 
-  private Iterator<SelectResponse> processByStreaming(RegionTask regionTask) {
+  private Iterator<SelectResponse> processByStreaming(RangeSplitter.RegionTask regionTask) {
     List<Coprocessor.KeyRange> ranges = regionTask.getRanges();
     TiRegion region = regionTask.getRegion();
-    TiStore store = regionTask.getStore();
+    Metapb.Store store = regionTask.getStore();
 
     RegionStoreClient client;
     try {
-      client =
-          clientSession
-              .getTiKVSession()
-              .getRegionStoreClientBuilder()
-              .build(region, store, storeType);
+      client = session.getRegionStoreClientBuilder().build(region, store, storeType);
       Iterator<SelectResponse> responseIterator =
           client.coprocessStreaming(dagRequest, ranges, startTs);
       if (responseIterator == null) {

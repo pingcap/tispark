@@ -17,18 +17,18 @@
 package com.pingcap.tikv.types;
 
 import com.pingcap.tidb.tipb.ExprType;
+import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.DateCodec;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.codec.ExtendedDateTime;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.sql.Timestamp;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
-import org.tikv.common.exception.ConvertNotSupportException;
-import org.tikv.common.exception.InvalidCodecFormatException;
 
 public abstract class AbstractDateTimeType extends DataType {
 

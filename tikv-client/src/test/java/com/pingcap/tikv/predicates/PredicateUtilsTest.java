@@ -31,6 +31,9 @@ import static com.pingcap.tikv.predicates.TiKVScanAnalyzer.extractConditions;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Range;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
@@ -48,9 +51,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import org.junit.Test;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
-import org.tikv.shade.com.google.common.collect.ImmutableSet;
-import org.tikv.shade.com.google.common.collect.Range;
 
 public class PredicateUtilsTest {
   private static TiTableInfo createTable() {

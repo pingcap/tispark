@@ -16,6 +16,9 @@
 
 package com.pingcap.tikv.expression;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.UnsignedLong;
+import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.types.BytesType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DateTimeType;
@@ -31,9 +34,6 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.Objects;
 import org.joda.time.DateTime;
-import org.tikv.common.exception.TiExpressionException;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
-import org.tikv.shade.com.google.common.primitives.UnsignedLong;
 
 // Refactor needed.
 // Refer to https://github.com/pingcap/tipb/blob/master/go-tipb/expression.pb.go

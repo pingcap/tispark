@@ -16,11 +16,11 @@
 
 package com.pingcap.tikv.codec;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
-import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
 
 // TODO: We shouldn't allow empty MyDecimal
 // TODO: It seems MyDecimal to BigDecimal is very slow

@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.EncodeType;
-import com.pingcap.tikv.ClientSession;
+import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.columnar.BatchedTiChunkColumnVector;
@@ -30,9 +30,9 @@ import com.pingcap.tikv.columnar.TiChunkColumnVector;
 import com.pingcap.tikv.columnar.TiColumnVector;
 import com.pingcap.tikv.columnar.TiRowColumnVector;
 import com.pingcap.tikv.columnar.datatypes.CHType;
-import com.pingcap.tikv.handle.CommonHandle;
-import com.pingcap.tikv.handle.Handle;
-import com.pingcap.tikv.handle.IntHandle;
+import com.pingcap.tikv.key.CommonHandle;
+import com.pingcap.tikv.key.Handle;
+import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.row.Row;
@@ -41,14 +41,14 @@ import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.CHTypeMapping;
+import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.tikv.common.util.RangeSplitter.RegionTask;
 
 public abstract class CoprocessorIterator<T> implements Iterator<T> {
-  protected final ClientSession clientSession;
+  protected final TiSession session;
   protected final List<RegionTask> regionTasks;
   protected final DAGRequest dagRequest;
   protected final DataType[] handleTypes;
@@ -61,12 +61,9 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
   protected SchemaInfer schemaInfer;
 
   CoprocessorIterator(
-      DAGRequest req,
-      List<RegionTask> regionTasks,
-      ClientSession clientSession,
-      SchemaInfer infer) {
+      DAGRequest req, List<RegionTask> regionTasks, TiSession session, SchemaInfer infer) {
     this.dagRequest = req;
-    this.clientSession = clientSession;
+    this.session = session;
     this.regionTasks = regionTasks;
     this.schemaInfer = infer;
     this.handleTypes = infer.getTypes().toArray(new DataType[] {});
@@ -81,11 +78,11 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
    *
    * @param req TiDAGRequest built
    * @param regionTasks a list or RegionTask each contains a task on a single region
-   * @param clientSession ClientSession
+   * @param session TiSession
    * @return a DAGIterator to be processed
    */
   public static CoprocessorIterator<Row> getRowIterator(
-      TiDAGRequest req, List<RegionTask> regionTasks, ClientSession clientSession) {
+      TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     TiDAGRequest dagRequest = req.copy();
     // set encode type to TypeDefault because currently, only
     // CoprocessorIterator<TiChunk> support TypeChunk and TypeCHBlock encode type
@@ -99,7 +96,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
     return new DAGIterator<Row>(
         request,
         regionTasks,
-        clientSession,
+        session,
         SchemaInfer.create(dagRequest.getResultTypes()),
         dagRequest.getPushDownType(),
         dagRequest.getStoreType(),
@@ -120,11 +117,11 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
    *
    * @param req TiDAGRequest built
    * @param regionTasks a list or RegionTask each contains a task on a single region
-   * @param clientSession ClientSession
+   * @param session TiSession
    * @return a DAGIterator to be processed
    */
   public static CoprocessorIterator<TiChunk> getTiChunkIterator(
-      TiDAGRequest req, List<RegionTask> regionTasks, ClientSession clientSession, int numOfRows) {
+      TiDAGRequest req, List<RegionTask> regionTasks, TiSession session, int numOfRows) {
     TiDAGRequest dagRequest = req.copy();
     DAGRequest request;
     if (!dagRequest.isDoubleRead() && dagRequest.hasIndex()) {
@@ -135,7 +132,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
     return new DAGIterator<TiChunk>(
         request,
         regionTasks,
-        clientSession,
+        session,
         SchemaInfer.create(dagRequest.getResultTypes()),
         dagRequest.getPushDownType(),
         dagRequest.getStoreType(),
@@ -219,11 +216,11 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
    *
    * @param req TiDAGRequest built
    * @param regionTasks a list or RegionTask each contains a task on a single region
-   * @param clientSession ClientSession
+   * @param session TiSession
    * @return a DAGIterator to be processed
    */
   public static CoprocessorIterator<Handle> getHandleIterator(
-      TiDAGRequest req, List<RegionTask> regionTasks, ClientSession clientSession) {
+      TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     TiDAGRequest dagRequest = req.copy();
     // set encode type to TypeDefault because currently, only
     // CoprocessorIterator<TiChunk> support TypeChunk and TypeCHBlock encode type
@@ -232,7 +229,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
     return new DAGIterator<Handle>(
         request,
         regionTasks,
-        clientSession,
+        session,
         SchemaInfer.create(dagRequest.getResultTypes()),
         dagRequest.getPushDownType(),
         dagRequest.getStoreType(),

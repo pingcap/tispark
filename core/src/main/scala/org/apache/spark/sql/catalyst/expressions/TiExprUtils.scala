@@ -31,8 +31,8 @@ import com.pingcap.tikv.expression.{
   ExpressionBlocklist
 }
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
+import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types.SetType
-import org.tikv.common.region.RegionStoreClient.RequestTypes
 import com.pingcap.tispark.v2.TiDBTable
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.execution.TiConverter.fromSparkType

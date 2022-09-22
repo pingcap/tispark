@@ -21,21 +21,21 @@ import static com.pingcap.tikv.codec.MetaCodec.KEY_DBs;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.protobuf.ByteString;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.codec.MetaCodec;
+import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.util.Pair;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tikv.common.exception.TiClientInternalException;
-import org.tikv.common.util.Pair;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
-import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class CatalogTransaction {
   protected static final Logger logger = LoggerFactory.getLogger(CatalogTransaction.class);

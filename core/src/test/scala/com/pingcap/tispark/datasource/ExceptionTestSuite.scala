@@ -16,10 +16,10 @@
 
 package com.pingcap.tispark.datasource
 
+import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
-import org.tikv.common.exception.TiBatchWriteException
 
 class ExceptionTestSuite extends BaseBatchWriteTest("test_datasource_exception_test") {
 

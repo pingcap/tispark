@@ -27,10 +27,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.ByteString;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.handle.IntHandle;
+import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.meta.CIStr;
 import com.pingcap.tikv.meta.IndexType;
@@ -53,9 +56,6 @@ import java.util.Map;
 import java.util.Set;
 import org.junit.Test;
 import org.tikv.kvproto.Coprocessor;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
-import org.tikv.shade.com.google.common.collect.ImmutableSet;
-import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class TiKVScanAnalyzerTest {
 

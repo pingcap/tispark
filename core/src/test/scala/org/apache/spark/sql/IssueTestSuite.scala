@@ -311,14 +311,14 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute("create table catalog_delay(c1 bigint)")
     refreshConnections()
     val tiTableInfo1 =
-      this.ti.clientSession.getCatalog.getTable(s"${dbPrefix}tispark_test", "catalog_delay")
+      this.ti.tiSession.getCatalog.getTable(s"${dbPrefix}tispark_test", "catalog_delay")
     assert("catalog_delay".equals(tiTableInfo1.getName))
     assert("c1".equals(tiTableInfo1.getColumns.get(0).getName))
 
     tidbStmt.execute("drop table if exists catalog_delay")
     tidbStmt.execute("create table catalog_delay(c2 bigint)")
     val tiTableInfo2 =
-      this.ti.clientSession.getCatalog.getTable(s"${dbPrefix}tispark_test", "catalog_delay")
+      this.ti.tiSession.getCatalog.getTable(s"${dbPrefix}tispark_test", "catalog_delay")
     assert("catalog_delay".equals(tiTableInfo2.getName))
     assert("c2".equals(tiTableInfo2.getColumns.get(0).getName))
 

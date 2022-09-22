@@ -16,6 +16,7 @@
 
 package com.pingcap.tispark
 
+import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
@@ -27,7 +28,6 @@ import org.apache.spark.sql.types.{
   StructType,
   TimestampType
 }
-import org.tikv.common.exception.TiBatchWriteException
 
 class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
 
@@ -96,11 +96,7 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
     assert(size.toString.equals(result(1).toString))
   }
 
-  ignore("batch get retry test") {
-    //Part of the code of the upstream client needs to be modified, and pr has been proposed
-    //Because of the modified retry logic. This test is no longer meaningful
-    //Due to the test code problem, the integration test cannot be passed temporarily. Later, you need to consider modifying the test logic or removing the test.
-    //https://github.com/tikv/client-java/pull/645
+  test("batch get retry test") {
     if (blockingRead) {
       cancel()
     }

@@ -16,8 +16,8 @@
 
 package com.pingcap.tispark.datasource
 
+import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
-import org.tikv.common.exception.TiBatchWriteException
 
 import scala.util.Random
 

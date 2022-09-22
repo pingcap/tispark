@@ -136,8 +136,8 @@ class WriteReadSuite extends ConcurrencyTest {
 
     if (blockingRead) {
       // Resolve Lock Timeout
-      // org.tikv.txn.exception.LockException
-      // KeyException: Lock
+      // com.pingcap.tikv.exception.LockException
+      // com.pingcap.tikv.exception.KeyException: com.pingcap.tikv.txn.Lock
       assert(result1.hasError)
       assert(result2.hasError)
       if (hasIndex) {

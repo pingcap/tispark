@@ -25,10 +25,10 @@ import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.MULTIP
 import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.PLUS;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.types.DataType;
 import java.util.List;
 import java.util.Objects;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class ArithmeticBinaryExpression extends Expression {
   private final Expression left;

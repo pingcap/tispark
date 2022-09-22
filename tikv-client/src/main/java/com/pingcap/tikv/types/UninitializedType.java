@@ -21,9 +21,9 @@ package com.pingcap.tikv.types;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
-import org.tikv.common.exception.ConvertNotSupportException;
-import org.tikv.common.exception.ConvertOverflowException;
 
 /**
  * UninitializedType is created to deal with MySQLType being 0. In TiDB, when type is 0, it

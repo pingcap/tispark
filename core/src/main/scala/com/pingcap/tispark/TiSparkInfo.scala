@@ -16,8 +16,8 @@
 
 package com.pingcap.tispark
 
+import com.pingcap.tikv.exception.TiInternalException
 import org.slf4j.LoggerFactory
-import org.tikv.common.exception.TiInternalException
 
 object TiSparkInfo {
   private final val logger = LoggerFactory.getLogger(getClass.getName)

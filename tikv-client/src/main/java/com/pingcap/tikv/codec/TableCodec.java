@@ -16,9 +16,10 @@
 
 package com.pingcap.tikv.codec;
 
-import com.pingcap.tikv.handle.CommonHandle;
-import com.pingcap.tikv.handle.Handle;
-import com.pingcap.tikv.handle.IntHandle;
+import com.pingcap.tikv.exception.CodecException;
+import com.pingcap.tikv.key.CommonHandle;
+import com.pingcap.tikv.key.Handle;
+import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
@@ -32,7 +33,6 @@ import com.pingcap.tikv.types.MySQLType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.tikv.common.exception.CodecException;
 
 public class TableCodec {
 

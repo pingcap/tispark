@@ -16,6 +16,9 @@
 
 package com.pingcap.tikv.expression.visitor;
 
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
@@ -27,9 +30,6 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
 import java.util.HashMap;
 import java.util.Map;
-import org.tikv.shade.com.google.common.collect.Range;
-import org.tikv.shade.com.google.common.collect.RangeSet;
-import org.tikv.shade.com.google.common.collect.TreeRangeSet;
 
 public class IndexRangeSetBuilder extends RangeSetBuilder<TypedKey> {
 

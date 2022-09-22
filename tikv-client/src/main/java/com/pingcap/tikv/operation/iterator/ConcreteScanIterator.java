@@ -20,24 +20,24 @@ package com.pingcap.tikv.operation.iterator;
 
 import static java.util.Objects.requireNonNull;
 
+import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiConfiguration;
+import com.pingcap.tikv.exception.GrpcException;
+import com.pingcap.tikv.exception.KeyException;
+import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.region.RegionStoreClient;
+import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder;
+import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.util.BackOffFunction;
+import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.ConcreteBackOffer;
+import com.pingcap.tikv.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tikv.common.exception.GrpcException;
-import org.tikv.common.exception.KeyException;
-import org.tikv.common.exception.TiKVException;
-import org.tikv.common.region.RegionStoreClient;
-import org.tikv.common.region.RegionStoreClient.RegionStoreClientBuilder;
-import org.tikv.common.region.TiRegion;
-import org.tikv.common.region.TiStore;
-import org.tikv.common.util.BackOffFunction;
-import org.tikv.common.util.BackOffer;
-import org.tikv.common.util.ConcreteBackOffer;
-import org.tikv.common.util.Pair;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
-import org.tikv.shade.com.google.protobuf.ByteString;
+import org.tikv.kvproto.Metapb;
 
 public class ConcreteScanIterator extends ScanIterator {
   private final long version;
@@ -64,7 +64,8 @@ public class ConcreteScanIterator extends ScanIterator {
           currentCache = null;
         } else {
           try {
-            currentCache = client.scan(backOffer, startKey, version, false);
+            int scanSize = Math.min(limit, conf.getScanBatchSize());
+            currentCache = client.scan(backOffer, startKey, scanSize, version);
             // If we get region before scan, we will use region from cache which
             // may have wrong end key. This may miss some regions that split from old region.
             // Client will get the newest region during scan. So we need to
@@ -82,12 +83,11 @@ public class ConcreteScanIterator extends ScanIterator {
 
   private ByteString resolveCurrentLock(Kvrpcpb.KvPair current) {
     logger.warn(String.format("resolve current key error %s", current.getError().toString()));
-    Pair<TiRegion, TiStore> pair =
+    Pair<TiRegion, Metapb.Store> pair =
         builder.getRegionManager().getRegionStorePairByKey(current.getKey());
     TiRegion region = pair.first;
-    TiStore store = pair.second;
-    BackOffer backOffer =
-        ConcreteBackOffer.newGetBackOff(builder.getRegionManager().getPDClient().getClusterId());
+    Metapb.Store store = pair.second;
+    BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
     try (RegionStoreClient client = builder.build(region, store)) {
       return client.get(backOffer, current.getKey(), version);
     } catch (Exception e) {

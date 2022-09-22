@@ -23,10 +23,10 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
+import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import com.pingcap.tikv.meta.TiColumnInfo;
-import org.tikv.common.exception.ConvertNotSupportException;
-import org.tikv.common.exception.ConvertOverflowException;
-import org.tikv.common.exception.InvalidCodecFormatException;
 
 /**
  * TODO: if we need to unify string type and binary types? Indeed they are encoded as the same

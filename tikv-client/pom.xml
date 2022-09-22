@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.pingcap.tispark</groupId>
@@ -180,11 +180,6 @@
             <artifactId>netty-handler</artifactId>
             <version>4.1.48.Final</version>
         </dependency>
-        <dependency>
-            <groupId>org.tikv</groupId>
-            <artifactId>tikv-client-java</artifactId>
-            <version>3.3.0</version>
-        </dependency>
       <dependency>
         <groupId>commons-codec</groupId>
         <artifactId>commons-codec</artifactId>
@@ -259,6 +254,26 @@
                         <configuration>
                             <outputDirectory>${proto.folder}</outputDirectory>
                             <resources>
+                                <resource>
+                                    <directory>${basedir}/kvproto/include</directory>
+                                    <includes>
+                                        <include>**/gogoproto/**</include>
+                                    </includes>
+                                </resource>
+                                <resource>
+                                    <directory>${basedir}/kvproto/include</directory>
+                                    <includes>
+                                        <include>*.proto</include>
+                                    </includes>
+                                </resource>
+                                <resource>
+                                    <directory>${basedir}/kvproto/proto</directory>
+                                    <filtering>true</filtering>
+                                </resource>
+                                <resource>
+                                    <directory>${basedir}/raft-rs/proto/proto</directory>
+                                    <filtering>true</filtering>
+                                </resource>
                                 <resource>
                                     <directory>${basedir}/tipb/proto</directory>
                                     <filtering>true</filtering>
@@ -479,39 +494,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>com.google.code.maven-replacer-plugin</groupId>
-                <artifactId>replacer</artifactId>
-                <version>1.5.3</version>
-                <executions>
-                    <execution>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>replace</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <ignoreMissingFile>false</ignoreMissingFile>
-                    <includes>
-                        <include>${basedir}/target/generated-sources/protobuf/**</include>
-                    </includes>
-                    <replacements>
-                        <replacement>
-                            <token>io.grpc</token>
-                            <value>org.tikv.shade.io.grpc</value>
-                        </replacement>
-                        <replacement>
-                            <token>com.google</token>
-                            <value>org.tikv.shade.com.google</value>
-                        </replacement>
-                        <replacement>
-                            <token>io.netty</token>
-                            <value>org.tikv.shade.io.netty</value>
-                        </replacement>
-                    </replacements>
-                </configuration>
             </plugin>
         </plugins>
     </build>

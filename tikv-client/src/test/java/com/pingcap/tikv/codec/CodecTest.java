@@ -27,6 +27,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.google.common.primitives.UnsignedLong;
+import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.DateCodec;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
@@ -43,7 +45,6 @@ import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.junit.Test;
-import org.tikv.shade.com.google.common.primitives.UnsignedLong;
 
 public class CodecTest {
   private static byte[] toBytes(int[] arr) {

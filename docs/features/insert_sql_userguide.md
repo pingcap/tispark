@@ -63,6 +63,7 @@ But you should not set `tidb.password` in `SparkConf` and only use `spark.conf.s
 | tidb.password               | false    | -               | TiDB Password, needed when enableUpdateTableStatistics is true                                                                |
 | enableRegionSplit           | false    | true            | To split Region to avoid hot Region during insertion                                                                          |
 | scatterWaitMS               | false    | 300000          | Max time to wait scatter region                                                                                               |
+| writeThreadPerTask          | false    | 1               | Thread number each spark task use to write data to TiKV                                                                       |
 | bytesPerRegion              | false    | 100663296 (96M) | Decrease this parameter to split more regions (increase write concurrency)                                                    |
 | enableUpdateTableStatistics | false    | false           | Update statistics in table `mysql.stats_meta` (`tidb.user` must own update privilege to table `mysql.stats_meta` if set true) |
 | rowFormatVersion            | false    | 2               | Version of row format to save data                                                                                            | 

@@ -23,11 +23,11 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
-import org.tikv.common.exception.ConvertNotSupportException;
-import org.tikv.common.exception.ConvertOverflowException;
-import org.tikv.common.exception.TypeException;
 
 // https://dev.mysql.com/doc/refman/8.0/en/time.html
 

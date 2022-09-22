@@ -139,6 +139,7 @@ The following table shows the TiDB-specific options, which can be passed in thro
 | useTableLock                | false    | true (3.x) false (4.x) | Whether to lock the table during writing                                                                                      |
 | enableRegionSplit           | false    | true                   | To split Region to avoid hot Region during insertion                                                                          |
 | scatterWaitMS               | false    | 300000                 | Max time to wait scatter region                                                                                               |
+| writeThreadPerTask          | false    | 1                      | Thread number each spark task use to write data to TiKV                                                                       |
 | bytesPerRegion              | false    | 100663296 (96M)        | Decrease this parameter to split more regions (increase write concurrency)                                                    |
 | enableUpdateTableStatistics | false    | false                  | Update statistics in table `mysql.stats_meta` (`tidb.user` must own update privilege to table `mysql.stats_meta` if set true) |
 | deduplicate                 | false    | true                   | Deduplicate data in DataFrame according to primary key and unique key                                                         |

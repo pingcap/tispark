@@ -16,9 +16,9 @@
 
 package com.pingcap.tikv.key;
 
+import com.google.common.collect.BoundType;
+import com.google.common.collect.Range;
 import com.pingcap.tikv.predicates.IndexRange;
-import org.tikv.shade.com.google.common.collect.BoundType;
-import org.tikv.shade.com.google.common.collect.Range;
 
 // An abstract class that computes key range from IndexRange
 // After computing lower and upper boundaries, the builder should

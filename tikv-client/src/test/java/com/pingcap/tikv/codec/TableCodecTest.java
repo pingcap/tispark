@@ -18,9 +18,10 @@ package com.pingcap.tikv.codec;
 
 import static org.junit.Assert.assertArrayEquals;
 
-import com.pingcap.tikv.handle.CommonHandle;
-import com.pingcap.tikv.handle.Handle;
-import com.pingcap.tikv.handle.IntHandle;
+import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.key.CommonHandle;
+import com.pingcap.tikv.key.Handle;
+import com.pingcap.tikv.key.IntHandle;
 import com.pingcap.tikv.meta.*;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
@@ -30,7 +31,6 @@ import java.util.List;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class TableCodecTest {
   @Rule public ExpectedException expectedEx = ExpectedException.none();

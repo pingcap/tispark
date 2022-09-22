@@ -16,6 +16,9 @@
 
 package com.pingcap.tikv.catalog;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
@@ -30,9 +33,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
-import org.tikv.shade.com.google.common.collect.ImmutableMap;
 
 public class Catalog implements AutoCloseable {
   private final boolean showRowId;

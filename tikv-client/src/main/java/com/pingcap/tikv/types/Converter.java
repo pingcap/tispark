@@ -24,8 +24,12 @@ import static com.pingcap.tikv.types.TimeType.MINUTE;
 import static com.pingcap.tikv.types.TimeType.SECOND;
 import static java.util.Objects.requireNonNull;
 
-import com.pingcap.tikv.codec.ExtendedDateTime;
-import com.pingcap.tikv.handle.Handle;
+import com.google.common.primitives.UnsignedLong;
+import com.pingcap.tikv.ExtendedDateTime;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
+import com.pingcap.tikv.exception.TypeException;
+import com.pingcap.tikv.key.Handle;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -36,10 +40,6 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-import org.tikv.common.exception.ConvertNotSupportException;
-import org.tikv.common.exception.ConvertOverflowException;
-import org.tikv.common.exception.TypeException;
-import org.tikv.shade.com.google.common.primitives.UnsignedLong;
 
 public class Converter {
 

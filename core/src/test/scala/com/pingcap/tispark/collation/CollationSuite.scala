@@ -16,10 +16,10 @@
 
 package com.pingcap.tispark.collation
 
+import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.meta.Collation
 import org.apache.spark.sql.BaseTiSparkTest
 import org.scalatest.Matchers.{convertToAnyShouldWrapper, have, the}
-import org.tikv.common.exception.TiBatchWriteException
 
 import scala.util.Random
 

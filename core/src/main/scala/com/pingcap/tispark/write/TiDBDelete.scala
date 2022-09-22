@@ -19,7 +19,7 @@ package com.pingcap.tispark.write
 import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.partition.{PartitionedTable, TableCommon}
-import com.pingcap.tikv.{ClientSession, TiConfiguration}
+import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.utils.TiUtil.sparkConfToTiConf
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TwoPhaseCommitHepler, WriteUtil}
 import com.pingcap.tispark.write.TiBatchWrite.TiRow
@@ -37,13 +37,13 @@ case class TiDBDelete(
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  @transient lazy val clientSession: ClientSession = getClientSessionFromSparkConf
+  @transient lazy val tiSession: TiSession = getTiSessionFromSparkConf
 
   // Call copyTableWithRowId to
   // 1.match the schema of dataframe
   // 2.make extract handle more convenience for (pkIsHandle || isCommonHandle) is always true.
   val tiTableInfo: TiTableInfo =
-    clientSession.getCatalog.getTable(database, tableName).copyTableWithRowId()
+    tiSession.getCatalog.getTable(database, tableName).copyTableWithRowId()
 
   @transient private var persistedDFList: List[DataFrame] = Nil
   @transient private var persistedRDDList: List[RDD[_]] = Nil
@@ -193,10 +193,10 @@ case class TiDBDelete(
     }
   }
 
-  private def getClientSessionFromSparkConf: ClientSession = {
+  private def getTiSessionFromSparkConf: TiSession = {
     val sparkConf: SparkConf = SparkContext.getOrCreate().getConf
     val tiConf: TiConfiguration = sparkConfToTiConf(sparkConf, Option.empty)
-    ClientSession.getInstance(tiConf)
+    TiSession.getInstance(tiConf)
   }
 
 }

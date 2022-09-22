@@ -17,13 +17,12 @@
 package com.pingcap.tispark.write
 
 import java.util.Locale
-import com.pingcap.tikv.TiConfiguration
+
+import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tikv.{TTLManager, TiConfiguration}
 import com.pingcap.tispark.TiTableReference
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
-import org.tikv.common.exception
-import org.tikv.common.exception.TiBatchWriteException
-import org.tikv.txn.TTLManager
 
 import scala.collection.mutable.ListBuffer
 
@@ -99,6 +98,17 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // ------------------------------------------------------------
   val prewriteBackOfferMS: Int = getOrDefault(TIDB_PREWRITE_BACKOFFER_MS, "240000").toInt
   val commitBackOfferMS: Int = getOrDefault(TIDB_COMMIT_BACKOFFER_MS, "20000").toInt
+  //https://github.com/pingcap/tispark/pull/1599
+  // 16 * 1024 = 16K
+  val txnPrewriteBatchSize: Long = getOrDefault(TIDB_TXN_PREWITE_BATCH_SIZE, "16384").toLong
+  // 16 * 1024 = 16K
+  val txnCommitBatchSize: Long = getOrDefault(TIDB_TXN_COMMIT_BATCH_SIZE, "16384").toLong
+  // 32 * 1024
+  val writeBufferSize: Int = getOrDefault(TIDB_WRITE_BUFFER_SIZE, "32768").toInt
+  val writeThreadPerTask: Int = getOrDefault(TIDB_WRITE_THREAD_PER_TASK, "2").toInt
+  val retryCommitSecondaryKey: Boolean =
+    getOrDefault(TIDB_RETRY_COMMIT_SECONDARY_KEY, "true").toBoolean
+  val prewriteMaxRetryTimes: Int = getOrDefault(TIDB_PREWRITE_MAX_RETRY_TIMES, "64").toInt
   val commitPrimaryKeyRetryNumber: Int =
     getOrDefault(TIDB_COMMIT_PRIMARY_KEY_RETRY_NUMBER, "4").toInt
   // It is an optimize by the nature of 2pc protocol
@@ -266,6 +276,12 @@ object TiDBOptions {
   val TIDB_MULTI_TABLES: String = newOption("multiTables")
   val TIDB_PREWRITE_BACKOFFER_MS: String = newOption("prewriteBackOfferMS")
   val TIDB_COMMIT_BACKOFFER_MS: String = newOption("commitBackOfferMS")
+  val TIDB_TXN_PREWITE_BATCH_SIZE: String = newOption("txnPrewriteBatchSize")
+  val TIDB_TXN_COMMIT_BATCH_SIZE: String = newOption("txnCommitBatchSize")
+  val TIDB_WRITE_BUFFER_SIZE: String = newOption("writeBufferSize")
+  val TIDB_WRITE_THREAD_PER_TASK: String = newOption("writeThreadPerTask")
+  val TIDB_RETRY_COMMIT_SECONDARY_KEY: String = newOption("retryCommitSecondaryKey")
+  val TIDB_PREWRITE_MAX_RETRY_TIMES: String = newOption("prewriteMaxRetryTimes")
   val TIDB_COMMIT_PRIMARY_KEY_RETRY_NUMBER: String = newOption("commitPrimaryKeyRetryNumber")
   val TIDB_ENABLE_UPDATE_TABLE_STATISTICS: String = newOption("enableUpdateTableStatistics")
   val TIDB_DEDUPLICATE: String = newOption("deduplicate")

@@ -16,16 +16,16 @@
 
 package com.pingcap.tispark.v2
 
-import com.pingcap.tispark.write.{TiDBOptions, TiDBWriter}
+import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.{TiDBRelation, TiTableReference}
+import com.pingcap.tispark.write.{TiDBOptions, TiDBWriter}
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession, TiExtensions}
 import org.apache.spark.sql.connector.catalog.{Identifier, Table, TableProvider}
 import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.sources.{BaseRelation, CreatableRelationProvider, DataSourceRegister}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
-import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession, TiExtensions}
-import org.tikv.common.exception.TiBatchWriteException
 
 import java.util
 import scala.collection.JavaConverters._
@@ -52,7 +52,7 @@ class TiDBTableProvider
 
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
-        val ts = tiContext.clientSession.getTiKVSession.getTimestamp
+        val ts = tiContext.tiSession.getTimestamp
         val tiTableRef = TiTableReference(
           properties.get(TiDBOptions.TIDB_DATABASE),
           properties.get(TiDBOptions.TIDB_TABLE))
@@ -65,7 +65,7 @@ class TiDBTableProvider
         } else {
           table
         }
-        TiDBTable(tiContext.clientSession, tiTableRef, copyTable, ts, Some(scalaMap))(
+        TiDBTable(tiContext.tiSession, tiTableRef, copyTable, ts, Some(scalaMap))(
           sparkSession.sqlContext)
       case None => throw new TiBatchWriteException("TiExtensions is disable!")
     }

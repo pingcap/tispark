@@ -21,12 +21,12 @@ package com.pingcap.tikv.types;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.exception.CastingException;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.util.Base64;
-import org.tikv.common.exception.CastingException;
-import org.tikv.common.exception.ConvertNotSupportException;
-import org.tikv.common.exception.ConvertOverflowException;
-import org.tikv.common.exception.TypeException;
 
 public class BitType extends IntegerType {
   public static final BitType BIT = new BitType(MySQLType.TypeBit);

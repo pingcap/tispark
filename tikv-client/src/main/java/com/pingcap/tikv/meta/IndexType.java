@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.meta;
 
-import org.tikv.common.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TiClientInternalException;
 
 // Actually we are not using either real btree or hash index
 // TiDB has its own way for indexing as key value pair.

@@ -16,10 +16,10 @@
 
 package com.pingcap.tikv.expression;
 
+import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class FuncCallExpr extends Expression {
 

@@ -17,9 +17,9 @@
 package com.pingcap.tispark.write
 
 import com.pingcap.tikv._
+import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.partition.{PartitionedTable, TableCommon}
-import com.pingcap.tikv.util.ConvertUpstreamUtils
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.{TiUtil, TwoPhaseCommitHepler, WriteUtil}
@@ -28,8 +28,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.slf4j.LoggerFactory
-import org.tikv.common.exception.TiBatchWriteException
-import org.tikv.txn.TTLManager
 
 import scala.collection.JavaConverters._
 
@@ -78,7 +76,7 @@ class TiBatchWrite(
   import com.pingcap.tispark.write.TiBatchWrite._
 
   private var tiConf: TiConfiguration = _
-  @transient private var clientSession: ClientSession = _
+  @transient private var tiSession: TiSession = _
   private var useTableLock: Boolean = _
   @transient private var ttlManager: TTLManager = _
   private var isTTLUpdate: Boolean = _
@@ -124,14 +122,10 @@ class TiBatchWrite(
 
     // initialize
     tiConf = mergeSparkConfWithDataSourceConf(tiContext.conf, options)
-    clientSession = tiContext.clientSession
+    tiSession = tiContext.tiSession
     val tikvSupportUpdateTTL =
-      ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
-        clientSession.getTiKVSession.getPDClient,
-        "3.0.5")
-    val isTiDBV4 = ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
-      clientSession.getTiKVSession.getPDClient,
-      "4.0.0")
+      StoreVersion.isTiKVVersionGreatEqualThanVersion(tiSession.getPDClient, "3.0.5")
+    val isTiDBV4 = StoreVersion.isTiKVVersionGreatEqualThanVersion(tiSession.getPDClient, "4.0.0")
     isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
     lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
 
@@ -141,7 +135,7 @@ class TiBatchWrite(
         case (dbTable, df) =>
           val tableOptions = options.setDBTable(dbTable)
           val tiTableRef = tableOptions.getTiTableRef(tiConf)
-          val tiTableInfo = clientSession.getCatalog.getTable(
+          val tiTableInfo = tiContext.tiSession.getCatalog.getTable(
             tableOptions.getTiTableRef(tiConf).databaseName,
             tableOptions.getTiTableRef(tiConf).tableName)
 
@@ -189,7 +183,7 @@ class TiBatchWrite(
     tiBatchWriteTables.foreach(_.checkColumnNumbers())
 
     // get timestamp as start_ts
-    val startTimeStamp = clientSession.getTiKVSession.getTimestamp
+    val startTimeStamp = tiSession.getTimestamp
     startTs = startTimeStamp.getVersion
     logger.info(s"startTS: $startTs")
 
@@ -222,7 +216,7 @@ class TiBatchWrite(
       val orderedSplitPoints = getRegionSplitPoints(insertRDD)
 
       try {
-        clientSession.getTiKVSession.splitRegionAndScatter(
+        tiSession.splitRegionAndScatter(
           orderedSplitPoints.map(_.bytes).asJava,
           options.splitRegionBackoffMS,
           options.scatterRegionBackoffMS,
@@ -395,4 +389,5 @@ class TiBatchWrite(
     clonedConf.setAll(options.parameters)
     TiUtil.sparkConfToTiConf(clonedConf, Option.empty)
   }
+
 }

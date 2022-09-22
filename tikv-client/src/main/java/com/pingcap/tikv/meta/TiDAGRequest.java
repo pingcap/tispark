@@ -16,11 +16,15 @@
 
 package com.pingcap.tikv.meta;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
 import static java.util.Objects.requireNonNull;
-import static org.tikv.shade.com.google.common.base.Preconditions.checkArgument;
-import static org.tikv.shade.com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.pingcap.tidb.tipb.Aggregation;
 import com.pingcap.tidb.tipb.ColumnInfo;
 import com.pingcap.tidb.tipb.DAGRequest;
@@ -33,6 +37,8 @@ import com.pingcap.tidb.tipb.Selection;
 import com.pingcap.tidb.tipb.TableScan;
 import com.pingcap.tidb.tipb.TopN;
 import com.pingcap.tikv.codec.KeyUtils;
+import com.pingcap.tikv.exception.DAGRequestException;
+import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.AggregateFunction;
 import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.ColumnRef;
@@ -41,6 +47,7 @@ import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.predicates.IndexRange;
 import com.pingcap.tikv.predicates.PredicateUtils;
 import com.pingcap.tikv.predicates.TiKVScanAnalyzer;
+import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import java.io.ByteArrayInputStream;
@@ -56,16 +63,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import org.tikv.common.exception.DAGRequestException;
-import org.tikv.common.exception.TiClientInternalException;
-import org.tikv.common.meta.TiTimestamp;
-import org.tikv.common.region.TiStoreType;
 import org.tikv.kvproto.Coprocessor;
-import org.tikv.shade.com.google.common.annotations.VisibleForTesting;
-import org.tikv.shade.com.google.common.base.Joiner;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
-import org.tikv.shade.com.google.common.collect.ImmutableMap;
-import org.tikv.shade.com.google.common.collect.Range;
 
 /**
  * Type TiDAGRequest.
@@ -1180,7 +1178,7 @@ public class TiDAGRequest implements Serializable {
       requireNonNull(tableInfo);
       setTableInfo(tableInfo);
       TiKVScanAnalyzer tiKVScanAnalyzer = new TiKVScanAnalyzer();
-      IndexRange range = new IndexRange(null, Range.all());
+      IndexRange range = new IndexRange(null, com.google.common.collect.Range.all());
       List<IndexRange> indexRanges = new ArrayList<>();
       indexRanges.add(range);
       List<TiPartitionDef> prunedParts = new ArrayList<>();

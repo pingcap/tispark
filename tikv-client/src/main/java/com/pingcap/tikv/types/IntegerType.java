@@ -18,18 +18,18 @@
 
 package com.pingcap.tikv.types;
 
+import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.math.BigDecimal;
-import org.tikv.common.exception.ConvertNotSupportException;
-import org.tikv.common.exception.ConvertOverflowException;
-import org.tikv.common.exception.TypeException;
-import org.tikv.shade.com.google.common.primitives.UnsignedLong;
 
 public class IntegerType extends DataType {
   public static final IntegerType TINYINT = new IntegerType(MySQLType.TypeTiny);

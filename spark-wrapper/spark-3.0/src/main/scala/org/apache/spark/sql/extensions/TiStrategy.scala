@@ -17,10 +17,12 @@
 package org.apache.spark.sql.extensions
 
 import com.pingcap.tidb.tipb.EncodeType
+import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression._
-import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
+import com.pingcap.tikv.region.TiStoreType
 import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.statistics.StatisticsManager
@@ -54,9 +56,6 @@ import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.internal.SQLConf
 import org.joda.time.{DateTime, DateTimeZone}
-import org.tikv.common.exception.IgnoreUnsupportedTypeException
-import org.tikv.common.meta.TiTimestamp
-import org.tikv.common.region.TiStoreType
 
 import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
@@ -104,9 +103,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     TiExtensions.validateCatalog(sparkSession)
     val ts = if (TiUtil.getTiDBSnapshot(sparkSession).isEmpty) {
-      tiContext.clientSession.getTiKVSession.getTimestamp
+      tiContext.tiSession.getTimestamp
     } else {
-      tiContext.clientSession.getSnapshotTimestamp
+      tiContext.tiSession.getSnapshotTimestamp
     }
 
     if (plan.isStreaming) {

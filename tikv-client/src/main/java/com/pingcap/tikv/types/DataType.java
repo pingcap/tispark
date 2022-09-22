@@ -20,11 +20,15 @@ import static com.pingcap.tikv.codec.Codec.isNullFlag;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.columnar.TiChunkColumnVector;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
@@ -32,10 +36,6 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
-import org.tikv.common.exception.ConvertNotSupportException;
-import org.tikv.common.exception.ConvertOverflowException;
-import org.tikv.common.exception.TypeException;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 /** Base Type for encoding and decoding TiDB row information. */
 public abstract class DataType implements Serializable {

@@ -21,12 +21,12 @@ import static java.util.Objects.requireNonNull;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.KeyUtils;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.types.BytesType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.util.LogDesensitization;
-import org.tikv.common.exception.TypeException;
 
 public class TypedKey extends Key {
   private final DataType type;

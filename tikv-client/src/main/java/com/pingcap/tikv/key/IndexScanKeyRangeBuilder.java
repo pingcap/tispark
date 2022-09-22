@@ -16,7 +16,7 @@
 
 package com.pingcap.tikv.key;
 
-import static org.tikv.common.util.KeyRangeUtils.makeCoprocRange;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.predicates.IndexRange;

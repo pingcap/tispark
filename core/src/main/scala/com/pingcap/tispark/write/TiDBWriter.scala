@@ -16,10 +16,9 @@
 
 package com.pingcap.tispark.write
 
+import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.TiDBUtils
 import org.apache.spark.sql._
-import org.tikv.common.exception
-import org.tikv.common.exception.TiBatchWriteException
 
 object TiDBWriter {
 
@@ -33,7 +32,7 @@ object TiDBWriter {
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
         val tableExists =
-          tiContext.clientSession.getCatalog.getTable(options.database, options.table) != null
+          tiContext.tiSession.getCatalog.getTable(options.database, options.table) != null
 
         if (tableExists) {
           saveMode match {

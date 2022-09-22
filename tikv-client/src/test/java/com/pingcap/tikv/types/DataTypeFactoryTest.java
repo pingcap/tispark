@@ -20,9 +20,9 @@ package com.pingcap.tikv.types;
 
 import static org.junit.Assert.assertEquals;
 
+import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import org.junit.Test;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class DataTypeFactoryTest {
 

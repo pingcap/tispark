@@ -17,6 +17,7 @@
 package com.pingcap.tikv.meta.collate;
 
 import com.pingcap.tikv.meta.Collation;
+import com.pingcap.tikv.util.Pair;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -28,7 +29,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tikv.common.util.Pair;
 
 public class UnicodeCICollator {
   private static final Logger logger = LoggerFactory.getLogger(UnicodeCICollator.class);

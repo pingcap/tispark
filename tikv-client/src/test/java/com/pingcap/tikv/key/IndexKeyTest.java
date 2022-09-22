@@ -22,9 +22,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.handle.CommonHandle;
-import com.pingcap.tikv.handle.Handle;
-import com.pingcap.tikv.handle.IntHandle;
 import com.pingcap.tikv.meta.CIStr;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
@@ -35,10 +32,10 @@ import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
+import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
-import org.tikv.common.util.Pair;
 
 public class IndexKeyTest {
 

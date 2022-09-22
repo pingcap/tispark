@@ -19,7 +19,6 @@ package com.pingcap.tispark.overflow
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
-import org.tikv.common.exception.ConvertOverflowException
 
 /**
  * ENUM type include:
@@ -54,7 +53,7 @@ class EnumOverflowSuite extends BaseBatchWriteTest("test_data_type_enum_overflow
     val row = Row("abc")
     val schema = StructType(List(StructField("c1", StringType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[ConvertOverflowException]
+    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "Incorrect enum value: 'abc'"
 
     compareTiDBWriteFailureWithJDBC(
@@ -76,7 +75,7 @@ class EnumOverflowSuite extends BaseBatchWriteTest("test_data_type_enum_overflow
     val row = Row("5")
     val schema = StructType(List(StructField("c1", StringType)))
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val tidbErrorClass = classOf[ConvertOverflowException]
+    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 5 > upperBound 4"
 
     compareTiDBWriteFailureWithJDBC(

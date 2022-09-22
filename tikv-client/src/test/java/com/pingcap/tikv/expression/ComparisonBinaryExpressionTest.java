@@ -28,6 +28,7 @@ import static com.pingcap.tikv.expression.ComparisonBinaryExpression.notEqual;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiTableInfo;
@@ -35,7 +36,6 @@ import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import org.junit.Test;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class ComparisonBinaryExpressionTest {
   private static TiTableInfo createTable() {

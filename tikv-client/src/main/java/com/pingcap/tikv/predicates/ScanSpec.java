@@ -19,6 +19,8 @@ package com.pingcap.tikv.predicates;
 import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
@@ -31,8 +33,6 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import org.tikv.common.exception.TiExpressionException;
-import org.tikv.shade.com.google.common.collect.ImmutableList;
 
 public class ScanSpec {
   private final List<Expression> pointPredicates;

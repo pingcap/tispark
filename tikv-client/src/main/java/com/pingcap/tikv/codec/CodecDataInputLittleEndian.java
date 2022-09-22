@@ -16,9 +16,9 @@
 
 package com.pingcap.tikv.codec;
 
+import com.google.protobuf.ByteString;
+import com.pingcap.tikv.exception.CodecException;
 import javax.annotation.Nonnull;
-import org.tikv.common.exception.CodecException;
-import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class CodecDataInputLittleEndian extends CodecDataInput {
 

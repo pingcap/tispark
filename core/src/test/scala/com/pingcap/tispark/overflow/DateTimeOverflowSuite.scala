@@ -16,10 +16,10 @@
 
 package com.pingcap.tispark.overflow
 
+import com.pingcap.tikv.exception.TiDBConvertException
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
-import org.tikv.common.exception.TiDBConvertException
 
 /**
  * DATETIME type include:
