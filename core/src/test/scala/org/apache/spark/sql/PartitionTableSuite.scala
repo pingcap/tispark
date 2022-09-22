@@ -91,12 +91,10 @@ class PartitionTableSuite extends BasePlanTest {
     }
   }
 
-  test(
-    "test read from range partition with function TO_DAYS()") {
+  test("test read from range partition with function TO_DAYS()") {
     enablePartitionForTiDB()
     tidbStmt.execute("DROP TABLE IF EXISTS `pt`")
-    tidbStmt.execute(
-      """
+    tidbStmt.execute("""
         |CREATE TABLE `pt` (
         |  `id` int(11) DEFAULT NULL,
         |  `name` varchar(50) DEFAULT NULL,
