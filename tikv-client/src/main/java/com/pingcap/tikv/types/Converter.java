@@ -115,7 +115,7 @@ public class Converter {
       UnsignedLong unsignedLong = stringToUnsignedLong((String) value);
       result = unsignedLong.longValue();
     } else if (value instanceof java.math.BigDecimal) {
-      result = ((java.math.BigDecimal) value).longValueExact();
+      result = ((java.math.BigDecimal) value).longValue();
     } else {
       throw new ConvertNotSupportException(value.getClass().getName(), "UNSIGNED");
     }

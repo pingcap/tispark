@@ -174,12 +174,12 @@ class BatchWritePKAndIndexSuite
       cancel("TiDB version must bigger than 5.0.0")
     }
     tidbStmt.execute("""
-        |CREATE TABLE `tispark_test`.`t` (
-        |  `id`  int(20),
-        |  `name` varchar(255) primary key clustered,
-        |  `age` int(11) null default null,
-        |   unique index(id)
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                       |CREATE TABLE `tispark_test`.`t` (
+                       |  `id`  int(20),
+                       |  `name` varchar(255) primary key clustered,
+                       |  `age` int(11) null default null,
+                       |   unique index(id)
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
       """.stripMargin)
     val schema = StructType(
       List(
