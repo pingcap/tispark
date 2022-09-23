@@ -85,9 +85,9 @@
         <scalatest.version>3.0.8</scalatest.version>
         <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
         <mysql.connector.version>8.0.29</mysql.connector.version>
-        <gpg.pub.key>9E8FDF669640F19CB06E4C5E7C95D806A12FDCAF</gpg.pub.key>
-        <gpg.skip>false</gpg.skip>
-        <javadoc.skip>false</javadoc.skip>
+        <gpg.pub.key>fake gpg keyname</gpg.pub.key>
+        <gpg.skip>true</gpg.skip>
+        <javadoc.skip>true</javadoc.skip>
         <skipFetchTestData>false</skipFetchTestData>
         <skipCloneProtoFiles>false</skipCloneProtoFiles>
         <CodeCacheSize>1g</CodeCacheSize>
