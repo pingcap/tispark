@@ -16,9 +16,10 @@
 
 package com.pingcap.tispark.datasource
 
+import com.pingcap.tikv.allocator.RowIDAllocator
+import org.tikv.common.exception.{ConvertOverflowException, TiBatchWriteException}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
-import org.tikv.common.exception.{ConvertOverflowException, TiBatchWriteException}
 
 class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increment") {
 
@@ -110,7 +111,7 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
 
     // hack: update AllocateId on TiKV to a huge number to trigger overflow
     val size = Math.pow(2, 63).toLong - 5
-    val allocator = allocateID(size)
+    val allocator = allocateID(size, RowIDAllocator.RowIDAllocatorType.AUTO_INCREMENT)
     println(s"start: \t${getLongBinaryString(allocator.getStart)}")
     println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
 
@@ -141,7 +142,7 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
 
     // hack: update AllocateId on TiKV to a huge number to trigger overflow
     val size = Math.pow(2, 63).toLong - 6
-    val allocator = allocateID(size)
+    val allocator = allocateID(size, RowIDAllocator.RowIDAllocatorType.AUTO_INCREMENT)
     println(s"start: \t${getLongBinaryString(allocator.getStart)}")
     println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
 
@@ -173,7 +174,7 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
 
     // hack: update AllocateId on TiKV to a huge number to trigger overflow
     val size = 0xfffffffffffffffaL
-    val allocator = allocateID(size)
+    val allocator = allocateID(size, RowIDAllocator.RowIDAllocatorType.AUTO_INCREMENT)
     println(s"start: \t${getLongBinaryString(allocator.getStart)}")
     println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
 
@@ -203,7 +204,7 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
 
     // hack: update AllocateId on TiKV to a huge number to trigger overflow
     val size = 0xfffffffffffffff9L
-    val allocator = allocateID(size)
+    val allocator = allocateID(size, RowIDAllocator.RowIDAllocatorType.AUTO_INCREMENT)
     println(s"start: \t${getLongBinaryString(allocator.getStart)}")
     println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
 
@@ -235,7 +236,7 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
 
     // hack: update AllocateId on TiKV to a huge number to trigger overflow
     val size = 124
-    val allocator = allocateID(size)
+    val allocator = allocateID(size, RowIDAllocator.RowIDAllocatorType.AUTO_INCREMENT)
     println(s"start: \t${getLongBinaryString(allocator.getStart)}")
     println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
 
@@ -266,7 +267,7 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
 
     // hack: update AllocateId on TiKV to a huge number to trigger overflow
     val size = 124
-    val allocator = allocateID(size)
+    val allocator = allocateID(size, RowIDAllocator.RowIDAllocatorType.AUTO_INCREMENT)
     println(s"start: \t${getLongBinaryString(allocator.getStart)}")
     println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
 
@@ -297,7 +298,7 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
 
     // hack: update AllocateId on TiKV to a huge number to trigger overflow
     val size = 252
-    val allocator = allocateID(size)
+    val allocator = allocateID(size, RowIDAllocator.RowIDAllocatorType.AUTO_INCREMENT)
     println(s"start: \t${getLongBinaryString(allocator.getStart)}")
     println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
 
@@ -327,7 +328,7 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
 
     // hack: update AllocateId on TiKV to a huge number to trigger overflow
     val size = 252
-    val allocator = allocateID(size)
+    val allocator = allocateID(size, RowIDAllocator.RowIDAllocatorType.AUTO_INCREMENT)
     println(s"start: \t${getLongBinaryString(allocator.getStart)}")
     println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
 
@@ -385,7 +386,7 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
     }
     assert(
       caught.getMessage.equals(
-        "currently user provided auto increment value is only supported in update mode!"))
+        "currently user provided auto id value is only supported in update mode!"))
   }
 
   test("auto increment but not primary key") {

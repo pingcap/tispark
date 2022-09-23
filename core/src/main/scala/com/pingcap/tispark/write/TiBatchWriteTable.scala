@@ -17,6 +17,7 @@
 package com.pingcap.tispark.write
 
 import com.pingcap.tikv.allocator.RowIDAllocator
+import com.pingcap.tikv.allocator.RowIDAllocator.RowIDAllocatorType
 import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.handle.{Handle, IntHandle}
 import com.pingcap.tikv.key.{IndexKey, RowKey}
@@ -29,8 +30,8 @@ import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.utils.WriteUtil.locatePhysicalTable
 import com.pingcap.tispark.utils.{SchemaUpdateTime, TiUtil, WriteUtil}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{TiContext, _}
+import org.apache.spark.sql._
+import org.apache.spark.sql.functions.lit
 import org.slf4j.LoggerFactory
 import org.tikv.common.BytePairWrapper
 import org.tikv.common.exception.TiBatchWriteException
@@ -68,6 +69,7 @@ class TiBatchWriteTable(
   private val handleCol: TiColumnInfo = tiTableInfo.getPKIsHandleColumn
   private var tableLocked: Boolean = false
   private var autoIncProvidedID: Boolean = false
+  private var autoRandomProvidedID: Boolean = false
   // isCommonHandle = true => clustered index
   private val isCommonHandle = tiTableInfo.isCommonHandle
   private var deltaCount: Long = 0
@@ -111,94 +113,12 @@ class TiBatchWriteTable(
     deltaCount = count
     modifyCount = count
 
-    // auto increment
-    val rdd = if (tiTableInfo.hasAutoIncrementColumn) {
-      val autoIncrementColName = tiTableInfo.getAutoIncrementColInfo.getName
-
-      def allNullOnAutoIncrement: Boolean = {
-        df.select(autoIncrementColName)
-          .rdd
-          .filter { row => row.get(0) != null }
-          .isEmpty()
-      }
-
-      def isProvidedID: Boolean = {
-        if (tableColSize != colsInDf.length) {
-          false
-        } else {
-          if (allNullOnAutoIncrement) {
-            df = df.drop(autoIncrementColName)
-            false
-          } else {
-            true
-          }
-        }
-      }
-
-      // when auto increment column is provided but the corresponding column in df contains null,
-      // we need throw exception
-      if (isProvidedID) {
-        autoIncProvidedID = true
-
-        if (!options.replace) {
-
-          val colNames =
-            tiTableInfo.getColumns.asScala.map(col => col.getName).mkString(", ")
-          throw new TiBatchWriteException(
-            s"""currently user provided auto increment value is only supported in update mode!
-               |please set parameter replace to true!
-               |
-               |colsInDf.length = ${colsInDf.length}
-               |
-               |df.schema = ${df.schema}
-               |
-               |tableColSize = $tableColSize
-               |
-               |colNames = $colNames
-               |
-               |tiTableInfo = $tiTableInfo
-            """.stripMargin)
-        }
-
-        if (!colsInDf.contains(autoIncrementColName)) {
-          throw new TiBatchWriteException(
-            "Column size is matched but cannot find auto increment column by name")
-        }
-
-        val hasNullValue = !df
-          .select(autoIncrementColName)
-          .rdd
-          .filter { row => row.get(0) == null }
-          .isEmpty()
-        if (hasNullValue) {
-          throw new TiBatchWriteException(
-            "cannot allocate id on the condition of having null value and valid value on auto increment column")
-        }
-        df.rdd
-      } else {
-        // if auto increment column is not provided, we need allocate id for it.
-        // adding an auto increment column to df
-        val newDf = df.withColumn(autoIncrementColName, lit(null).cast("long"))
-        val rowIDAllocator = getRowIDAllocator(count)
-
-        // update colsInDF since we just add one column in df
-        colsInDf = newDf.columns.toList.map(_.toLowerCase())
-        // last one is auto increment column
-        newDf.rdd.zipWithIndex.map { row =>
-          val rowSep = row._1.toSeq.zipWithIndex.map { data =>
-            val colOffset = data._2
-            if (colsMapInTiDB.contains(colsInDf(colOffset))) {
-              if (colsMapInTiDB(colsInDf(colOffset)).isAutoIncrement) {
-                val index = row._2 + 1
-                rowIDAllocator.getAutoIncId(index)
-              } else {
-                data._1
-              }
-            }
-          }
-          Row.fromSeq(rowSep)
-        }
-      }
+    val rdd = if (tiTableInfo.hasAutoIncrementColumn && isNeedAllocateIdForAutoIncrementCol(df)) {
+      // auto increment
+      allocateIdForAutoIDCol(count, startTimeStamp, RowIDAllocatorType.AUTO_INCREMENT)
+    } else if (tiTableInfo.hasAutoRandomColumn && isNeedAllocateIdForAutoRandomCol(df)) {
+      // auto random
+      allocateIdForAutoIDCol(count, startTimeStamp, RowIDAllocatorType.AUTO_RANDOM)
     } else {
       df.rdd
     }
@@ -215,7 +135,8 @@ class TiBatchWriteTable(
       }
     } else {
       // For rows with a null primary key, we need to assign RowIDs as handle to these inserted rows.
-      val rowIDAllocator = getRowIDAllocator(count)
+      val rowIDAllocator =
+        getRowIDAllocator(count, startTimeStamp, RowIDAllocatorType.IMPLICIT_ROWID)
       tiRowRdd.zipWithIndex.map { row =>
         val index = row._2 + 1
         val rowId = rowIDAllocator.getShardRowId(index)
@@ -253,9 +174,9 @@ class TiBatchWriteTable(
       if (!options.replace && !conflictRows.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
       }
-      if (autoIncProvidedID && conflictRows.count() != count) {
+      if ((autoIncProvidedID || autoRandomProvidedID) && conflictRows.count() != count) {
         throw new TiBatchWriteException(
-          "currently user provided auto increment value is only supported in update mode!")
+          "currently user provided auto id value is only supported in update mode!")
       }
 
       val deleteRowRDD = generateRecordKV(conflictRows, remove = true)
@@ -279,6 +200,128 @@ class TiBatchWriteTable(
     persistedKeyValueRDD
   }
 
+  private def isNeedAllocateIdForAutoIncrementCol(df: DataFrame): Boolean = {
+    val provideIDRowNum = getProvideIDRowNum(df, tiTableInfo.getAutoIncrementColInfo.getName)
+    if (provideIDRowNum == 0) {
+      return true
+    }
+    if (provideIDRowNum == df.count()) {
+      if (!options.replace) {
+        val colNames =
+          tiTableInfo.getColumns.asScala.map(col => col.getName).mkString(", ")
+        throw new TiBatchWriteException(
+          s"""currently user provided auto increment value is only supported in update mode!
+             |please set parameter replace to true!
+             |
+             |colsInDf.length = ${colsInDf.length}
+             |
+             |df.schema = ${df.schema}
+             |
+             |tableColSize = $tableColSize
+             |
+             |colNames = $colNames
+             |
+             |tiTableInfo = $tiTableInfo
+            """.stripMargin)
+      }
+      autoIncProvidedID = true
+      return false;
+    }
+    throw new TiBatchWriteException(
+      "cannot allocate id on the condition of having null value and valid value on auto increment column")
+  }
+
+  private def isNeedAllocateIdForAutoRandomCol(df: DataFrame): Boolean = {
+    val provideIDRowNum = getProvideIDRowNum(df, tiTableInfo.getAutoRandomColInfo.getName)
+    if (provideIDRowNum == 0) {
+      return true
+    }
+    if (provideIDRowNum == df.count()) {
+      if (!options.replace) {
+        val colNames =
+          tiTableInfo.getColumns.asScala.map(col => col.getName).mkString(", ")
+        throw new TiBatchWriteException(
+          s"""currently user provided auto random value is only supported in update mode!
+             |please set parameter replace to true!
+             |
+             |colsInDf.length = ${colsInDf.length}
+             |
+             |df.schema = ${df.schema}
+             |
+             |tableColSize = $tableColSize
+             |
+             |colNames = $colNames
+             |
+             |tiTableInfo = $tiTableInfo
+            """.stripMargin)
+      }
+      autoRandomProvidedID = true
+      return false;
+    }
+    throw new TiBatchWriteException(
+      "cannot allocate id on the condition of having null value and valid value on auto random column")
+  }
+
+  private def getProvideIDRowNum(df: DataFrame, colName: String): Long = {
+    if (!colsInDf.contains(colName)) {
+      return 0
+    }
+    df.select(colName)
+      .rdd
+      .filter { row => row.get(0) != null }
+      .count()
+  }
+
+  private def allocateIdForAutoIDCol(
+      count: Long,
+      timestamp: TiTimestamp,
+      allocatorType: RowIDAllocatorType): RDD[Row] = {
+
+    val rowIDAllocator = getRowIDAllocator(count, timestamp, allocatorType)
+    val (isAutoIDCol, allocatorID, autoIDColName) = allocatorType match {
+      case RowIDAllocatorType.AUTO_INCREMENT =>
+        (
+          (columnName: String) => {
+            colsMapInTiDB(columnName).isAutoIncrement
+          },
+          (index: Long) => {
+            rowIDAllocator.getAutoIncId(index)
+          },
+          tiTableInfo.getAutoIncrementColInfo.getName)
+      case RowIDAllocatorType.AUTO_RANDOM =>
+        (
+          (columnName: String) => {
+            colsMapInTiDB(columnName).isPrimaryKey
+          },
+          (index: Long) => {
+            rowIDAllocator.getAutoRandomId(index)
+          },
+          tiTableInfo.getAutoRandomColInfo.getName)
+    }
+    // if auto increment column is not provided, we need allocate id for it.
+    if (colsInDf.contains(autoIDColName)) {
+      df.drop(autoIDColName)
+    }
+    val newDf = df.withColumn(autoIDColName, lit(null).cast("long"))
+    // update colsInDF since we just add one column in df
+    colsInDf = newDf.columns.toList.map(_.toLowerCase())
+    // last one is auto increment column
+    newDf.rdd.zipWithIndex.map { row =>
+      val rowSep = row._1.toSeq.zipWithIndex.map { data =>
+        val colOffset = data._2
+        if (colsMapInTiDB.contains(colsInDf(colOffset))) {
+          if (isAutoIDCol(colsInDf(colOffset))) {
+            val index = row._2 + 1
+            allocatorID(index)
+          } else {
+            data._1
+          }
+        }
+      }
+      Row.fromSeq(rowSep)
+    }
+  }
+
   // if rdd contains same key, it means we need first delete the old value and insert the new value associated the
   // key. We can merge the two operation into one update operation.
   private def unionInsertDelete(
@@ -294,11 +337,6 @@ class TiBatchWriteTable(
   }
 
   def checkUnsupported(): Unit = {
-    // write to table with auto random column
-    if (tiTableInfo.hasAutoRandomColumn) {
-      throw new TiBatchWriteException(
-        "tispark currently does not support write data to table with auto random column!")
-    }
 
     // Only RangePartition and HashPartition are supported
     if (tiTableInfo.isPartitionEnabled) {
@@ -346,13 +384,17 @@ class TiBatchWriteTable(
     }
   }
 
-  private def getRowIDAllocator(step: Long): RowIDAllocator = {
-    RowIDAllocator.create(
+  private def getRowIDAllocator(
+      step: Long,
+      timestamp: TiTimestamp,
+      allocatorType: RowIDAllocatorType): RowIDAllocator = {
+    RowIDAllocator.createRowIDAllocator(
       tiDBInfo.getId,
       tiTableInfo,
       tiConf,
-      tiTableInfo.isAutoIncColUnsigned,
-      step)
+      step,
+      timestamp,
+      allocatorType)
   }
 
   private def isNullUniqueIndexValue(value: Array[Byte]): Boolean = {
