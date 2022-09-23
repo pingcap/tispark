@@ -70,9 +70,13 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-        <spark.version.compile>3.0.3</spark.version.compile>
-        <spark.version.test>3.0.3</spark.version.test>
+        <spark.version.compile>${spark3_0.version}</spark.version.compile>
+        <spark.version.test>${spark3_0.version}</spark.version.test>
         <spark.version.release>3.0</spark.version.release>
+        <spark3_0.version>3.0.3</spark3_0.version>
+        <spark3_1.version>3.1.3</spark3_1.version>
+        <spark3_2.version>3.2.2</spark3_2.version>
+        <spark3_3.version>3.3.0</spark3_3.version>
         <scala.binary.version>2.12</scala.binary.version>
         <scala.version>2.12.10</scala.version>
         <scala.version.release>2.12</scala.version.release>
@@ -181,8 +185,8 @@
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <spark.version.compile>3.1.3</spark.version.compile>
-                <spark.version.test>3.1.3</spark.version.test>
+                <spark.version.compile>${spark3_1.version}</spark.version.compile>
+                <spark.version.test>${spark3_1.version}</spark.version.test>
                 <spark.version.release>3.1</spark.version.release>
             </properties>
         </profile>
@@ -192,8 +196,8 @@
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <spark.version.compile>3.2.2</spark.version.compile>
-                <spark.version.test>3.2.2</spark.version.test>
+                <spark.version.compile>${spark3_2.version}</spark.version.compile>
+                <spark.version.test>${spark3_2.version}</spark.version.test>
                 <spark.version.release>3.2</spark.version.release>
             </properties>
         </profile>
@@ -203,8 +207,8 @@
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <spark.version.compile>3.3.0</spark.version.compile>
-                <spark.version.test>3.3.0</spark.version.test>
+                <spark.version.compile>${spark3_3.version}</spark.version.compile>
+                <spark.version.test>${spark3_3.version}</spark.version.test>
                 <spark.version.release>3.3</spark.version.release>
             </properties>
         </profile>
