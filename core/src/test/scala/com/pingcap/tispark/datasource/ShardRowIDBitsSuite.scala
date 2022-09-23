@@ -16,6 +16,7 @@
 
 package com.pingcap.tispark.datasource
 
+import com.pingcap.tikv.allocator.RowIDAllocator
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.tikv.common.exception.AllocateRowIDOverflowException
@@ -33,7 +34,7 @@ class ShardRowIDBitsSuite extends BaseBatchWriteTest("test_datasource_shard_row_
 
     // hack: update AllocateId on TiKV to a huge number to trigger overflow
     val size = Math.pow(2, 64 - maxShardRowIDBits - 1).toLong - 3
-    val allocator = allocateID(size)
+    val allocator = allocateID(size, RowIDAllocator.RowIDAllocatorType.IMPLICIT_ROWID)
     println(s"start: \t${getLongBinaryString(allocator.getStart)}")
     println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
 
@@ -58,7 +59,7 @@ class ShardRowIDBitsSuite extends BaseBatchWriteTest("test_datasource_shard_row_
 
     // hack: update AllocateId on TiKV to a huge number to trigger overflow
     val size = Math.pow(2, 64 - maxShardRowIDBits - 1).toLong - 3
-    val allocator = allocateID(size)
+    val allocator = allocateID(size, RowIDAllocator.RowIDAllocatorType.IMPLICIT_ROWID)
     println(s"start: \t${getLongBinaryString(allocator.getStart)}")
     println(s"end: \t${getLongBinaryString(allocator.getEnd)}")
 

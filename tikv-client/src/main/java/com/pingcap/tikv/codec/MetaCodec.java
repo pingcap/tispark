@@ -33,9 +33,11 @@ import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.shade.com.google.protobuf.ByteString;
 
 public class MetaCodec {
+
   protected static final Logger logger = LoggerFactory.getLogger(MetaCodec.class);
   public static final String ENCODED_DB_PREFIX = "DB";
-  public static final String KEY_TID = "TID";
+  public static final String INC_ID_PREFIX = "TID";
+  public static final String RANDOM_ID_PREFIX = "TARID";
   private static final byte[] META_PREFIX = new byte[] {'m'};
   private static final byte HASH_DATA_FLAG = 'h';
   private static final byte HASH_META_FLAG = 'H';
@@ -86,7 +88,11 @@ public class MetaCodec {
   }
 
   public static ByteString autoTableIDKey(long tableId) {
-    return ByteString.copyFrom(String.format("%s:%d", KEY_TID, tableId).getBytes());
+    return ByteString.copyFrom(String.format("%s:%d", INC_ID_PREFIX, tableId).getBytes());
+  }
+
+  public static ByteString autoRandomTableIDKey(long tableId) {
+    return ByteString.copyFrom(String.format("%s:%d", RANDOM_ID_PREFIX, tableId).getBytes());
   }
 
   public static ByteString tableKey(long tableId) {

@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
@@ -54,20 +55,32 @@ import org.tikv.txn.TwoPhaseCommitter;
  */
 public final class RowIDAllocator implements Serializable {
 
-  private final long maxShardRowIDBits;
+  private final long shardBits;
+  private final boolean isUnsigned;
   private final long dbId;
   private final TiConfiguration conf;
   private final long step;
   private long end;
-  private TiTimestamp timestamp;
+  private final long autoRandomPartition;
+  private final RowIDAllocatorType allocatorType;
 
   private static final Logger LOG = LoggerFactory.getLogger(RowIDAllocator.class);
 
-  private RowIDAllocator(long maxShardRowIDBits, long dbId, long step, TiConfiguration conf) {
-    this.maxShardRowIDBits = maxShardRowIDBits;
+  private RowIDAllocator(
+      long shardBits,
+      boolean isUnsigned,
+      long dbId,
+      long step,
+      TiConfiguration conf,
+      TiTimestamp timestamp,
+      RowIDAllocatorType allocatorType) {
+    this.shardBits = shardBits;
+    this.isUnsigned = isUnsigned;
     this.dbId = dbId;
     this.step = step;
     this.conf = conf;
+    this.autoRandomPartition = new Random(timestamp.getVersion()).nextLong();
+    this.allocatorType = allocatorType;
   }
 
   public long getAutoIncId(long index) {
@@ -79,27 +92,67 @@ public final class RowIDAllocator implements Serializable {
    * @return
    */
   public long getShardRowId(long index) {
-    return getShardRowId(maxShardRowIDBits, index, index + getStart());
+    return getShardRowId(shardBits, index, index + getStart(), isUnsigned);
   }
 
-  static long getShardRowId(long maxShardRowIDBits, long partitionIndex, long rowID) {
-    if (maxShardRowIDBits <= 0 || maxShardRowIDBits >= 16) {
+  public long getAutoRandomId(long index) {
+    return getShardRowId(shardBits, autoRandomPartition, index + getStart(), isUnsigned);
+  }
+
+  static long getShardRowId(long shardBits, long partitionIndex, long rowID, boolean isUnsigned) {
+    if (shardBits <= 0 || shardBits >= 16) {
       return rowID;
     }
-
+    int signBitLength = isUnsigned ? 0 : 1;
     // assert rowID < Math.pow(2, 64 - maxShardRowIDBits)
 
-    long partition = partitionIndex & ((1L << maxShardRowIDBits) - 1);
-    return rowID | (partition << (64 - maxShardRowIDBits - 1));
+    long partition = partitionIndex & ((1L << shardBits) - 1);
+    return rowID | (partition << (64 - shardBits - signBitLength));
+  }
+
+  public static RowIDAllocator createRowIDAllocator(
+      long dbId,
+      TiTableInfo tableInfo,
+      TiConfiguration conf,
+      long step,
+      TiTimestamp timestamp,
+      RowIDAllocatorType allocatorType) {
+    long shardBits = 0;
+    boolean isUnsigned = false;
+    switch (allocatorType) {
+      case AUTO_INCREMENT:
+        isUnsigned = tableInfo.isAutoIncColUnsigned();
+        // AUTO_INC doesn't have shard bits.
+        break;
+      case AUTO_RANDOM:
+        isUnsigned = tableInfo.isAutoRandomColUnsigned();
+        shardBits = tableInfo.getAutoRandomBits();
+        break;
+      case IMPLICIT_ROWID:
+        // IMPLICIT_ROWID is always signed.
+        shardBits = tableInfo.getMaxShardRowIDBits();
+        break;
+      default:
+        throw new IllegalArgumentException("Unsupported RowIDAllocatorType: " + allocatorType);
+    }
+    return RowIDAllocator.create(
+        dbId, tableInfo, conf, timestamp, isUnsigned, shardBits, step, allocatorType);
   }
 
   public static RowIDAllocator create(
-      long dbId, TiTableInfo table, TiConfiguration conf, boolean unsigned, long step) {
+      long dbId,
+      TiTableInfo table,
+      TiConfiguration conf,
+      TiTimestamp timestamp,
+      boolean unsigned,
+      long shardBits,
+      long step,
+      RowIDAllocatorType allocatorType) {
     BackOffer backOffer =
         ConcreteBackOffer.newCustomBackOff(TiConfiguration.ROW_ID_ALLOCATOR_BACKOFF);
     while (true) {
       try {
-        return doCreate(dbId, table, conf, unsigned, step);
+        return doCreate(dbId, table, conf, timestamp, unsigned, shardBits, step, allocatorType);
       } catch (AllocateRowIDOverflowException | IllegalArgumentException e) {
         throw e;
       } catch (Exception e) {
@@ -110,18 +163,22 @@ public final class RowIDAllocator implements Serializable {
   }
 
   private static RowIDAllocator doCreate(
-      long dbId, TiTableInfo table, TiConfiguration conf, boolean unsigned, long step) {
-    RowIDAllocator allocator = new RowIDAllocator(table.getMaxShardRowIDBits(), dbId, step, conf);
+      long dbId,
+      TiTableInfo table,
+      TiConfiguration conf,
+      TiTimestamp timestamp,
+      boolean unsigned,
+      long shardBits,
+      long step,
+      RowIDAllocatorType allocatorType) {
+    RowIDAllocator allocator =
+        new RowIDAllocator(shardBits, unsigned, dbId, step, conf, timestamp, allocatorType);
     if (unsigned) {
       allocator.initUnsigned(
-          ClientSession.getInstance(conf).createSnapshot(),
-          table.getId(),
-          table.getMaxShardRowIDBits());
+          ClientSession.getInstance(conf).createSnapshot(), table.getId(), shardBits);
     } else {
       allocator.initSigned(
-          ClientSession.getInstance(conf).createSnapshot(),
-          table.getId(),
-          table.getMaxShardRowIDBits());
+          ClientSession.getInstance(conf).createSnapshot(), table.getId(), shardBits);
     }
 
     return allocator;
@@ -254,12 +311,13 @@ public final class RowIDAllocator implements Serializable {
    * read current row id from TiKV and write the calculated value back to TiKV. The calculation rule
    * is start(read from TiKV) + step.
    */
-  public long udpateAllocateId(
+  public long updateAllocateId(
       long dbId, long tableId, long step, Snapshot snapshot, long shard, boolean hasSignedBit) {
     if (isDBExisted(dbId, snapshot) && isTableExisted(dbId, tableId, snapshot)) {
+      ByteString idField = getIdField(tableId, allocatorType);
       return updateHash(
           MetaCodec.encodeDatabaseID(dbId),
-          MetaCodec.autoTableIDKey(tableId),
+          idField,
           (oldVal) -> {
             long base = 0;
             if (oldVal != null && oldVal.length != 0) {
@@ -277,13 +335,28 @@ public final class RowIDAllocator implements Serializable {
     throw new IllegalArgumentException("table or database is not existed");
   }
 
+  public static ByteString getIdField(long tableId, RowIDAllocatorType allocatorType) {
+    switch (allocatorType) {
+      case AUTO_INCREMENT:
+      case IMPLICIT_ROWID:
+        return MetaCodec.autoTableIDKey(tableId);
+      case AUTO_RANDOM:
+        return MetaCodec.autoRandomTableIDKey(tableId);
+      default:
+        throw new IllegalArgumentException("Unsupported RowIDAllocatorType: " + allocatorType);
+    }
+  }
+
   /** read current row id from TiKV according to database id and table id. */
-  public static long getAllocateId(long dbId, long tableId, Snapshot snapshot) {
+  public static long getAllocateId(
+      long dbId, long tableId, Snapshot snapshot, RowIDAllocatorType allocatorType) {
     if (isDBExisted(dbId, snapshot) && isTableExisted(dbId, tableId, snapshot)) {
       ByteString dbKey = MetaCodec.encodeDatabaseID(dbId);
-      ByteString tblKey = MetaCodec.autoTableIDKey(tableId);
-      ByteString val = MetaCodec.hashGet(dbKey, tblKey, snapshot);
-      if (val.isEmpty()) return 0L;
+      ByteString idField = getIdField(tableId, allocatorType);
+      ByteString val = MetaCodec.hashGet(dbKey, idField, snapshot);
+      if (val.isEmpty()) {
+        return 0L;
+      }
       return Long.parseLong(val.toStringUtf8());
     }
 
@@ -292,7 +365,7 @@ public final class RowIDAllocator implements Serializable {
 
   private void initSigned(Snapshot snapshot, long tableId, long shard) {
     // get new start from TiKV, and calculate new end and set it back to TiKV.
-    long newStart = getAllocateId(dbId, tableId, snapshot);
+    long newStart = getAllocateId(dbId, tableId, snapshot, allocatorType);
     long tmpStep = Math.min(Long.MAX_VALUE - newStart, step);
     if (tmpStep != step) {
       throw new TiBatchWriteException("cannot allocate ids for this write");
@@ -300,12 +373,12 @@ public final class RowIDAllocator implements Serializable {
     if (newStart == Long.MAX_VALUE) {
       throw new TiBatchWriteException("cannot allocate more ids since it ");
     }
-    end = udpateAllocateId(dbId, tableId, tmpStep, snapshot, shard, true);
+    end = updateAllocateId(dbId, tableId, tmpStep, snapshot, shard, true);
   }
 
   private void initUnsigned(Snapshot snapshot, long tableId, long shard) {
     // get new start from TiKV, and calculate new end and set it back to TiKV.
-    long newStart = getAllocateId(dbId, tableId, snapshot);
+    long newStart = getAllocateId(dbId, tableId, snapshot, allocatorType);
     // for unsigned long, -1L is max value.
     long tmpStep = UnsignedLongs.min(-1L - newStart, step);
     if (tmpStep != step) {
@@ -316,6 +389,12 @@ public final class RowIDAllocator implements Serializable {
       throw new TiBatchWriteException(
           "cannot allocate more ids since the start reaches " + "unsigned long's max value ");
     }
-    end = udpateAllocateId(dbId, tableId, tmpStep, snapshot, shard, false);
+    end = updateAllocateId(dbId, tableId, tmpStep, snapshot, shard, false);
+  }
+
+  public enum RowIDAllocatorType {
+    AUTO_INCREMENT,
+    AUTO_RANDOM,
+    IMPLICIT_ROWID
   }
 }

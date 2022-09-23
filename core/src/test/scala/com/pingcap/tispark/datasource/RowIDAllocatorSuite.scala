@@ -17,7 +17,9 @@
 package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.allocator.RowIDAllocator
+import com.pingcap.tikv.allocator.RowIDAllocator.RowIDAllocatorType
 import org.apache.spark.sql.BaseTiSparkTest
+import org.tikv.common.meta.TiTimestamp
 
 class RowIDAllocatorSuite extends BaseTiSparkTest {
   test("test unsigned allocator") {
@@ -34,7 +36,15 @@ class RowIDAllocatorSuite extends BaseTiSparkTest {
       ti.clientSession.getCatalog.getTable(dbName, tableName)
     // corner case allocate unsigned long's max value.
     val allocator =
-      RowIDAllocator.create(tiDBInfo.getId, tiTableInfo, ti.clientSession.getConf, true, -2L)
+      RowIDAllocator.create(
+        tiDBInfo.getId,
+        tiTableInfo,
+        ti.clientSession.getConf,
+        new TiTimestamp(0, 0),
+        true,
+        0,
+        -2L,
+        RowIDAllocatorType.AUTO_INCREMENT)
     assert(allocator.getEnd - allocator.getStart == -2L)
   }
 
@@ -52,17 +62,39 @@ class RowIDAllocatorSuite extends BaseTiSparkTest {
       ti.clientSession.getCatalog.getTable(dbName, tableName)
     // first
     var allocator =
-      RowIDAllocator.create(tiDBInfo.getId, tiTableInfo, ti.clientSession.getConf, false, 1000)
+      RowIDAllocator.create(
+        tiDBInfo.getId,
+        tiTableInfo,
+        ti.clientSession.getConf,
+        new TiTimestamp(0, 0),
+        false,
+        0,
+        1000,
+        RowIDAllocatorType.AUTO_INCREMENT)
     assert(allocator.getEnd - allocator.getStart == 1000)
 
     // second
-    allocator = RowIDAllocator
-      .create(tiDBInfo.getId, tiTableInfo, ti.clientSession.getConf, false, 10000)
+    allocator = RowIDAllocator.create(
+      tiDBInfo.getId,
+      tiTableInfo,
+      ti.clientSession.getConf,
+      new TiTimestamp(0, 0),
+      false,
+      0,
+      10000,
+      RowIDAllocatorType.AUTO_INCREMENT)
     assert(allocator.getEnd - allocator.getStart == 10000)
 
     // third
-    allocator =
-      RowIDAllocator.create(tiDBInfo.getId, tiTableInfo, ti.clientSession.getConf, false, 1000)
+    allocator = RowIDAllocator.create(
+      tiDBInfo.getId,
+      tiTableInfo,
+      ti.clientSession.getConf,
+      new TiTimestamp(0, 0),
+      false,
+      0,
+      1000,
+      RowIDAllocatorType.AUTO_INCREMENT)
     assert(allocator.getEnd - allocator.getStart == 1000)
   }
 

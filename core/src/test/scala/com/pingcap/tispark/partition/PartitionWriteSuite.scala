@@ -652,7 +652,7 @@ class PartitionWriteSuite extends BaseTiSparkTest {
     tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
-  test("test Year() partition when date type is not the first column") {
+  test("test Year() range partition when date type is not the first column") {
     tidbStmt.execute(
       s"create table `$database`.`$table` (name varchar(16), admission_date date, birthday date primary key ) partition by range(YEAR(birthday)) (" +
         s"partition p0 values less than (1995)," +
@@ -703,6 +703,117 @@ class PartitionWriteSuite extends BaseTiSparkTest {
         "p1" -> Array(Array("John", Date.valueOf("2002-09-01"), Date.valueOf("1995-08-08"))),
         "p2" -> Array()))
 
+    tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
+  }
+
+  test("test Year() hash partition when date type is not the first column") {
+    tidbStmt.execute(
+      s"create table `$database`.`$table` (name varchar(16), admission_date date , birthday date primary key,graduation date ) partition by hash(YEAR(birthday)) PARTITIONS 4 ")
+    val data: RDD[Row] = sc.makeRDD(
+      List(
+        Row(
+          "Luo",
+          Date.valueOf("2002-09-01"),
+          Date.valueOf("1995-06-15"),
+          Date.valueOf("2008-06-15")),
+        Row(
+          "John",
+          Date.valueOf("2002-09-01"),
+          Date.valueOf("1995-08-08"),
+          Date.valueOf("2009-06-15")),
+        Row(
+          "Jack",
+          Date.valueOf("2002-09-01"),
+          Date.valueOf("1993-08-22"),
+          Date.valueOf("2010-06-15")),
+        Row(
+          "Mike",
+          Date.valueOf("2002-09-01"),
+          Date.valueOf("1999-06-04"),
+          Date.valueOf("2011-06-15"))))
+    val schema: StructType =
+      StructType(
+        List(
+          StructField("name", StringType),
+          StructField("admission_date", DateType),
+          StructField("birthday", DateType),
+          StructField("graduation", DateType)))
+    val df = sqlContext.createDataFrame(data, schema)
+    df.write
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", database)
+      .option("table", table)
+      .mode("append")
+      .save()
+    val insertResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    insertResultSpark.collect() should contain theSameElementsAs Array(
+      Row(
+        "Luo",
+        Date.valueOf("2002-09-01"),
+        Date.valueOf("1995-06-15"),
+        Date.valueOf("2008-06-15")),
+      Row(
+        "John",
+        Date.valueOf("2002-09-01"),
+        Date.valueOf("1995-08-08"),
+        Date.valueOf("2009-06-15")),
+      Row(
+        "Jack",
+        Date.valueOf("2002-09-01"),
+        Date.valueOf("1993-08-22"),
+        Date.valueOf("2010-06-15")),
+      Row(
+        "Mike",
+        Date.valueOf("2002-09-01"),
+        Date.valueOf("1999-06-04"),
+        Date.valueOf("2011-06-15")))
+    checkPartitionJDBCResult(
+      Map(
+        "p0" -> Array(),
+        "p1" -> Array(
+          Array(
+            "Jack",
+            Date.valueOf("2002-09-01"),
+            Date.valueOf("1993-08-22"),
+            Date.valueOf("2010-06-15"))),
+        "p2" -> Array(),
+        "p3" -> Array(
+          Array(
+            "Luo",
+            Date.valueOf("2002-09-01"),
+            Date.valueOf("1995-06-15"),
+            Date.valueOf("2008-06-15")),
+          Array(
+            "John",
+            Date.valueOf("2002-09-01"),
+            Date.valueOf("1995-08-08"),
+            Date.valueOf("2009-06-15")),
+          Array(
+            "Mike",
+            Date.valueOf("2002-09-01"),
+            Date.valueOf("1999-06-04"),
+            Date.valueOf("2011-06-15")))))
+    spark.sql(
+      s"delete from `tidb_catalog`.`$database`.`$table` where birthday <= '1995-06-15' or name = 'Mike'")
+    val deleteResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
+    deleteResultSpark.collect() should contain theSameElementsAs Array(
+      Row(
+        "John",
+        Date.valueOf("2002-09-01"),
+        Date.valueOf("1995-08-08"),
+        Date.valueOf("2009-06-15")))
+    checkPartitionJDBCResult(
+      Map(
+        "p0" -> Array(),
+        "p1" -> Array(),
+        "p2" -> Array(),
+        "p3" -> Array(
+          Array(
+            "John",
+            Date.valueOf("2002-09-01"),
+            Date.valueOf("1995-08-08"),
+            Date.valueOf("2009-06-15")))))
     tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 
