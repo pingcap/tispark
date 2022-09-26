@@ -405,8 +405,7 @@ There are two ways to write into partition table:
 2. Use delete statement with Spark SQL.
 
 > [!NOTE]
-> Currently the charset only supported is utf8mb4 and [`new_collations_enabled_on_first_bootstrap`](https://docs.pingcap.com/tidb/dev/tidb-configuration-file#new_collations_enabled_on_first_bootstrap)
-> need to be set to `false` in TiDB.
+> Currently we only support writing into the partition table with utf8mb4_bin collation
 
 
 ### Other Features
