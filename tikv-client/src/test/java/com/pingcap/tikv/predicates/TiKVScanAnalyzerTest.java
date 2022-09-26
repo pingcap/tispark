@@ -75,6 +75,19 @@ public class TiKVScanAnalyzerTest {
         .build();
   }
 
+  private static TiTableInfo createTableWithClusterIndex(long tableId, long indexId) {
+    return new MetaUtils.TableBuilder()
+        .name("testTable")
+        .addColumn("c1", IntegerType.INT)
+        .addColumn("c2", StringType.VARCHAR)
+        .addColumn("c3", StringType.VARCHAR)
+        .addColumn("c4", IntegerType.TINYINT)
+        .tableId(tableId)
+        .setIsCommonHandle(true)
+        .appendIndex(indexId, "testIndex", ImmutableList.of("c1", "c2", "c3"), true)
+        .build();
+  }
+
   private static TiTableInfo createTableWithPrefix() {
     InternalTypeHolder holder =
         new InternalTypeHolder(
@@ -376,6 +389,66 @@ public class TiKVScanAnalyzerTest {
             new byte[] {
               116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0, 0,
               0, 0, 0, 0, 1, 119, 116, 102, 0, 0, 0, 0, 0, -5
+            }),
+        keyRange.getEnd());
+  }
+
+  @Test
+  public void buildClusterIndexTableScanKeyRangeTest() {
+    TiTableInfo table = createTableWithClusterIndex(6, 5);
+    TiIndexInfo index = table.getIndices().get(0);
+
+    Expression eq1 = equal(ColumnRef.create("c1", table), Constant.create(0));
+    Expression eq2 = lessEqual(ColumnRef.create("c2", table), Constant.create("wtf"));
+
+    List<Expression> exprs = ImmutableList.of(eq1);
+
+    ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
+    List<IndexRange> irs =
+        expressionToIndexRanges(
+            result.getPointPredicates(), result.getRangePredicate(), table, index);
+
+    TiKVScanAnalyzer scanAnalyzer = new TiKVScanAnalyzer();
+
+    Map<Long, List<Coprocessor.KeyRange>> keyRanges =
+        scanAnalyzer.buildTableScanKeyRange(table, irs, null);
+
+    assertEquals(keyRanges.size(), 1);
+
+    Coprocessor.KeyRange keyRange = keyRanges.get(table.getId()).get(0);
+
+    assertEquals(
+        ByteString.copyFrom(
+            new byte[] {116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 114, 3, -128, 0, 0, 0, 0, 0, 0, 0}),
+        keyRange.getStart());
+    assertEquals(
+        ByteString.copyFrom(
+            new byte[] {116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 114, 3, -128, 0, 0, 0, 0, 0, 0, 1}),
+        keyRange.getEnd());
+
+    exprs = ImmutableList.of(eq1, eq2);
+    result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
+
+    irs =
+        expressionToIndexRanges(
+            result.getPointPredicates(), result.getRangePredicate(), table, index);
+
+    keyRanges = scanAnalyzer.buildTableScanKeyRange(table, irs, null);
+
+    assertEquals(keyRanges.size(), 1);
+
+    keyRange = keyRanges.get(table.getId()).get(0);
+
+    assertEquals(
+        ByteString.copyFrom(
+            new byte[] {116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 114, 3, -128, 0, 0, 0, 0, 0, 0, 0, 0}),
+        keyRange.getStart());
+
+    assertEquals(
+        ByteString.copyFrom(
+            new byte[] {
+              116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 114, 3, -128, 0, 0, 0, 0, 0, 0, 0, 1, 119, 116,
+              102, 0, 0, 0, 0, 0, -5
             }),
         keyRange.getEnd());
   }

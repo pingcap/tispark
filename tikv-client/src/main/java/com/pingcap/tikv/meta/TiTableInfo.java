@@ -26,6 +26,7 @@ import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataTypeFactory;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -280,6 +281,21 @@ public class TiTableInfo implements Serializable {
       }
     }
     return null;
+  }
+
+  public List<TiIndexColumn> indexInfo2PrefixCols(TiIndexInfo indexInfo) {
+    List<TiIndexColumn> tiIndexColumns = indexInfo.getIndexColumns();
+    List<TiIndexColumn> result = new ArrayList<>(tiIndexColumns.size());
+    for (TiIndexColumn tiIndexColumn : tiIndexColumns) {
+      TiColumnInfo columnInfo = getColumn(tiIndexColumn.getName());
+      if (columnInfo.getLength() != DataType.UNSPECIFIED_LEN
+          && columnInfo.getLength() == columnInfo.getType().getLength()) {
+        result.add(columnInfo.toFakeIndexColumn());
+      } else {
+        result.add(columnInfo.toIndexColumn());
+      }
+    }
+    return result;
   }
 
   public String getComment() {

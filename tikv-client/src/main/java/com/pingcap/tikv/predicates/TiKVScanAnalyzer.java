@@ -26,6 +26,7 @@ import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.PartitionPruner;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
 import com.pingcap.tikv.handle.IntHandle;
+import com.pingcap.tikv.key.ClusterIndexScanKeyRangeBuilder;
 import com.pingcap.tikv.key.IndexScanKeyRangeBuilder;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
@@ -469,7 +470,7 @@ public class TiKVScanAnalyzer {
     }
   }
 
-  private Map<Long, List<KeyRange>> buildTableScanKeyRangeWithIds(
+  private Map<Long, List<KeyRange>> buildTablePKScanKeyRangeWithIds(
       List<Long> ids, List<IndexRange> indexRanges, IntegerType handleDatatype) {
     Map<Long, List<KeyRange>> idRanges = new HashMap<>(ids.size());
     for (Long id : ids) {
@@ -498,22 +499,39 @@ public class TiKVScanAnalyzer {
       TiTableInfo table, List<IndexRange> indexRanges, List<TiPartitionDef> prunedParts) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
-    IntegerType handleDatatype;
-    if (table.isPkHandle()) {
-      handleDatatype = (IntegerType) table.getPKIsHandleColumn().getType();
-    } else {
-      handleDatatype = IntegerType.ROW_ID_TYPE;
-    }
+    List<Long> ids = new ArrayList<>();
     if (table.isPartitionEnabled()) {
-      List<Long> ids = new ArrayList<>();
       for (TiPartitionDef pDef : prunedParts) {
         ids.add(pDef.getId());
       }
-      return buildTableScanKeyRangeWithIds(ids, indexRanges, handleDatatype);
     } else {
-      return buildTableScanKeyRangeWithIds(
-          ImmutableList.of(table.getId()), indexRanges, handleDatatype);
+      ids.add(table.getId());
     }
+    if (table.isCommonHandle()) {
+      return buildTableCommonHandleScanKeyRange(ids, indexRanges);
+    } else {
+      IntegerType handleDatatype;
+      if (table.isPkHandle()) {
+        handleDatatype = (IntegerType) table.getPKIsHandleColumn().getType();
+      } else {
+        handleDatatype = IntegerType.ROW_ID_TYPE;
+      }
+      return buildTablePKScanKeyRangeWithIds(ids, indexRanges, handleDatatype);
+    }
+  }
+
+  private Map<Long, List<KeyRange>> buildTableCommonHandleScanKeyRange(
+      List<Long> ids, List<IndexRange> indexRanges) {
+    Map<Long, List<KeyRange>> idRanges = new HashMap<>();
+    for (long id : ids) {
+      List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
+      for (IndexRange ir : indexRanges) {
+        KeyRange keyRange = new ClusterIndexScanKeyRangeBuilder(id, ir).compute();
+        ranges.add(keyRange);
+      }
+      idRanges.put(id, ranges);
+    }
+    return idRanges;
   }
 
   @VisibleForTesting

@@ -79,12 +79,18 @@ public class TiIndexInfo implements Serializable {
 
   public static TiIndexInfo generateFakePrimaryKeyIndex(TiTableInfo table) {
     TiColumnInfo pkColumn = table.getPKIsHandleColumn();
-    if (pkColumn != null) {
+    if (table.isPkHandle() || table.isCommonHandle()) {
+      ImmutableList<TiIndexColumn> columns;
+      if (table.isPkHandle()) {
+        columns = ImmutableList.of(pkColumn.toFakeIndexColumn());
+      } else {
+        columns = ImmutableList.copyOf(table.indexInfo2PrefixCols(table.getPrimaryKey()));
+      }
       return new TiIndexInfo(
           -1,
           CIStr.newCIStr("fake_pk_" + table.getId()),
           CIStr.newCIStr(table.getName()),
-          ImmutableList.of(pkColumn.toFakeIndexColumn()),
+          columns,
           true,
           true,
           SchemaState.StatePublic.getStateCode(),

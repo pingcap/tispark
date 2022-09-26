@@ -50,4 +50,24 @@ class IndexScan0Suite extends ClusteredIndexTest {
       }
     }
   }
+
+  test("cluster index scan : primary key has multiply column") {
+    if (!supportClusteredIndex) {
+      cancel("currently tidb instance does not support clustered index")
+    }
+    for (dataType1 <- testDataTypes1) {
+      for (dataType2 <- testDataTypes2) {
+        val schemaAndDataList = genSchemaAndData(
+          rowCount,
+          List(dataType2, dataType1, dataType2, dataType1, INT).map(d =>
+            genDescription(d, NullableType.NumericNotNullable)),
+          database,
+          isClusteredIndex = true,
+          hasTiFlashReplica = enableTiFlashTest)
+        schemaAndDataList.foreach { schema =>
+          test(schema)
+        }
+      }
+    }
+  }
 }
