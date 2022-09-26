@@ -283,7 +283,7 @@ public class TiTableInfo implements Serializable {
     return null;
   }
 
-  public List<TiIndexColumn> indexInfo2PrefixCols(TiIndexInfo indexInfo) {
+  public List<TiIndexColumn> convertIndexColToPrefixCols(TiIndexInfo indexInfo) {
     List<TiIndexColumn> tiIndexColumns = indexInfo.getIndexColumns();
     List<TiIndexColumn> result = new ArrayList<>(tiIndexColumns.size());
     for (TiIndexColumn tiIndexColumn : tiIndexColumns) {

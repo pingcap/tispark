@@ -84,7 +84,7 @@ public class TiIndexInfo implements Serializable {
       if (table.isPkHandle()) {
         columns = ImmutableList.of(pkColumn.toFakeIndexColumn());
       } else {
-        columns = ImmutableList.copyOf(table.indexInfo2PrefixCols(table.getPrimaryKey()));
+        columns = ImmutableList.copyOf(table.convertIndexColToPrefixCols(table.getPrimaryKey()));
       }
       return new TiIndexInfo(
           -1,
