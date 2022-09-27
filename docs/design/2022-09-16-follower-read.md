@@ -10,7 +10,7 @@ New feature: TiSpark follower read
 
 ## Motivation or Background
 
-The Follower Read feature supports reading with follower or learner replica of a region under the premise of strongly consistent reads.
+The Follower Read feature supports reading with follower or learner replica of a region under the promise of strongly consistent reads.
 
 TiSpark will support follower read after this doc.
 
