@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+
 package org.apache.spark.sql.types.pk
 
 import com.pingcap.tikv.util.ConvertUpstreamUtils
@@ -20,7 +22,7 @@ import org.apache.spark.sql.{BaseTiSparkTest, Row}
 import org.scalatest.Matchers.{contain, convertToAnyShouldWrapper}
 
 class ClusterIndexScanSuites extends BaseTiSparkTest {
-  def isBiggerThanv5(): Unit = {
+  def isSupportCommonHandle(): Unit = {
     if (!ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
         this.ti.clientSession.getTiKVSession.getPDClient,
         "5.0.0")) {
@@ -29,7 +31,7 @@ class ClusterIndexScanSuites extends BaseTiSparkTest {
   }
 
   test("test signal col cluster index scan") {
-    isBiggerThanv5()
+    isSupportCommonHandle()
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     tidbStmt.execute("""
         |CREATE TABLE `t1` (
@@ -86,14 +88,14 @@ class ClusterIndexScanSuites extends BaseTiSparkTest {
   }
 
   test("test multi col cluster index scan") {
-    isBiggerThanv5()
+    isSupportCommonHandle()
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     tidbStmt.execute("""
         |CREATE TABLE `t1` (
         |  `a` BIGINT(20) NOT NULL,
         |  `b` varchar(255) NOT NULL,
         |  `c` varchar(255) DEFAULT NULL,
-        |   PRIMARY KEY (`b`,'a') clustered
+        |   PRIMARY KEY (`b`,`a`) clustered
         |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
     spark.sql("insert into t1 values(1,'1','1'),(2,'2','2'),(3,'3','3')")
     spark.sql("insert into t1 values(10,'1','1'),(20,'2','2'),(30,'3','3')")
@@ -126,7 +128,7 @@ class ClusterIndexScanSuites extends BaseTiSparkTest {
     // first range and second range
     val firstRangeSecondRange = spark.sql("select * from t1 where b<='2' and a<200")
     assert(firstRangeSecondRange.count() == 5)
-    secondRange.collect() should contain theSameElementsAs Array(
+    firstRangeSecondRange.collect() should contain theSameElementsAs Array(
       Row(1, "1", "1"),
       Row(10, "1", "1"),
       Row(100, "1", "1"),
