@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.spark.sql.types.pk
 
 import com.pingcap.tikv.util.ConvertUpstreamUtils
