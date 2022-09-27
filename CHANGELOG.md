@@ -1,6 +1,12 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 3.1.1] 2022-09-23
+### Fixes
+- Fix fail to read from some partition table [#2553](https://github.com/pingcap/tispark/pull/2553)
+- Bump spark version to avoid vulnerabilities [#2555](https://github.com/pingcap/tispark/pull/2555)
+- Fix error will be thrown when date col is not the first col in hash partition table [#2556](https://github.com/pingcap/tispark/pull/2556)
+
 ## [TiSpark 3.1.0] 2022-09-08
 ### Compatibility Changes
 - We will not provide the mysql-connector-java dependency because of the limit of the GPL license [#2457](https://github.com/pingcap/tispark/pull/2457)
