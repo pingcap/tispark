@@ -137,7 +137,7 @@ public class TiKVScanAnalyzerTest {
   @Test
   public void buildRangeWithUnsignedLongPKTest() {
     TiTableInfo table = createTableWithUnsignedLong(6, 5);
-    TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
+    TiIndexInfo pkIndex = TiIndexInfo.genClusterIndex(table);
 
     List<List<Expression>> situations = new ArrayList<>();
     List<byte[][]> expectations = new ArrayList<>();
@@ -294,7 +294,7 @@ public class TiKVScanAnalyzerTest {
     // This test also covers partitioned table. When it comes to partitioned table
     // we need to build key range from table ids(collect from partition definitions)
     TiTableInfo table = createTableWithIndex(6, 5);
-    TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
+    TiIndexInfo pkIndex = TiIndexInfo.genClusterIndex(table);
 
     Expression eq1 = lessThan(ColumnRef.create("c1", table), Constant.create(3, IntegerType.INT));
 
@@ -512,7 +512,7 @@ public class TiKVScanAnalyzerTest {
   @Test
   public void extractConditionsWithPrimaryKeyTest() {
     TiTableInfo table = createTableWithPrefix();
-    TiIndexInfo index = TiIndexInfo.generateFakePrimaryKeyIndex(table);
+    TiIndexInfo index = TiIndexInfo.genClusterIndex(table);
     requireNonNull(index);
     assertEquals(1, index.getIndexColumns().size());
     assertEquals("c1", index.getIndexColumns().get(0).getName());
@@ -543,7 +543,7 @@ public class TiKVScanAnalyzerTest {
   @Test
   public void testKeyRangeGenWithNoFilterTest() {
     TiTableInfo table = createTableWithPrefix();
-    TiIndexInfo index = TiIndexInfo.generateFakePrimaryKeyIndex(table);
+    TiIndexInfo index = TiIndexInfo.genClusterIndex(table);
     TiKVScanAnalyzer scanBuilder = new TiKVScanAnalyzer();
     TiKVScanAnalyzer.TiKVScanPlan scanPlan =
         scanBuilder.buildIndexScan(

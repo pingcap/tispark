@@ -287,12 +287,20 @@ public class TiTableInfo implements Serializable {
     List<TiIndexColumn> tiIndexColumns = indexInfo.getIndexColumns();
     List<TiIndexColumn> result = new ArrayList<>(tiIndexColumns.size());
     for (TiIndexColumn tiIndexColumn : tiIndexColumns) {
+      /**
+        We need to consider the prefix index.
+        For example: when we have 'a varchar(50), index idx(a(10))'
+        So we will get 'columnInfo.getLength() = 50' and 'columnInfo.getType().getLength() = 10'.
+        {@link TiIndexColumn#isPrefixIndex()} will use columnLength == DataType.UnspecifiedLength
+        to check check whether we have prefix index.
+        https://github.com/pingcap/tidb/issues/29805
+       */
       TiColumnInfo columnInfo = getColumn(tiIndexColumn.getName());
-      if (columnInfo.getLength() != DataType.UNSPECIFIED_LEN
-          && columnInfo.getLength() == columnInfo.getType().getLength()) {
-        result.add(columnInfo.toFakeIndexColumn());
+      if (tiIndexColumn.getLength() != DataType.UNSPECIFIED_LEN
+          && tiIndexColumn.getLength() == columnInfo.getType().getLength()) {
+        result.add(columnInfo.toUnSpecifiedLenIndexColumn());
       } else {
-        result.add(columnInfo.toIndexColumn());
+        result.add(tiIndexColumn);
       }
     }
     return result;

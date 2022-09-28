@@ -240,7 +240,7 @@ public class TiKVScanAnalyzer {
 
   private TiKVScanPlan buildTableScan(
       List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
-    TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
+    TiIndexInfo pkIndex = TiIndexInfo.genClusterIndex(table);
     return buildIndexScan(table.getColumns(), conditions, pkIndex, table, tableStatistics, false);
   }
 
@@ -249,7 +249,7 @@ public class TiKVScanAnalyzer {
       List<Expression> conditions,
       TiTableInfo table,
       TableStatistics tableStatistics) {
-    TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
+    TiIndexInfo pkIndex = TiIndexInfo.genClusterIndex(table);
     return buildIndexScan(columnList, conditions, pkIndex, table, tableStatistics, true);
   }
 

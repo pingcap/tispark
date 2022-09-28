@@ -77,24 +77,26 @@ public class TiIndexInfo implements Serializable {
     this.isInvisible = isInvisible;
   }
 
-  public static TiIndexInfo generateFakePrimaryKeyIndex(TiTableInfo table) {
-    TiColumnInfo pkColumn = table.getPKIsHandleColumn();
+  public static TiIndexInfo genClusterIndex(TiTableInfo table) {
     if (table.isPkHandle() || table.isCommonHandle()) {
       ImmutableList<TiIndexColumn> columns;
       if (table.isPkHandle()) {
-        columns = ImmutableList.of(pkColumn.toFakeIndexColumn());
+        TiColumnInfo pkColumn = table.getPKIsHandleColumn();
+        // The integer handle is no prefix when store in to Tikv.
+        columns = ImmutableList.of(pkColumn.toUnSpecifiedLenIndexColumn());
       } else {
+        // make cols which not has no prefix len to UNSPECIFIED_LEN.
         columns = ImmutableList.copyOf(table.convertIndexColToPrefixCols(table.getPrimaryKey()));
       }
       return new TiIndexInfo(
           -1,
-          CIStr.newCIStr("fake_pk_" + table.getId()),
+          CIStr.newCIStr("cluster_index_" + table.getId()),
           CIStr.newCIStr(table.getName()),
           columns,
           true,
           true,
           SchemaState.StatePublic.getStateCode(),
-          "Fake Column",
+          "Cluster Index",
           IndexType.IndexTypeHash.getTypeCode(),
           true,
           false);
