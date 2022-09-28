@@ -1,0 +1,3 @@
+[replication]
+## Doesn't work when deploy with tiup playground
+max-replicas = 3

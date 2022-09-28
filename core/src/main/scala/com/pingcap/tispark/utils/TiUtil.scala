@@ -16,7 +16,7 @@
 
 package com.pingcap.tispark.utils
 
-import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tikv.{ReplicaReadPolicy, TiConfiguration}
 import com.pingcap.tikv.datatype.TypeMapping
 import com.pingcap.tikv.hostmap.UriHostMapping
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
@@ -35,7 +35,8 @@ import org.tikv.common.region.TiStoreType
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import java.time.{Instant, LocalDate, ZoneId}
-import java.util.TimeZone
+import java.util
+import java.util.{Map, TimeZone}
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.NANOSECONDS
 
@@ -239,7 +240,17 @@ object TiUtil {
       tiConf.setNewCollationEnable(conf.get(TiConfigConst.NEW_COLLATION_ENABLE).toBoolean)
     }
 
-    tiConf
+    // follower read
+    val label =
+      conf.get(TiConfigConst.REPLICA_READ_LABEL, TiConfigConst.REPLICA_READ_LABEL_DEFAULT)
+    val role = conf.get(TiConfigConst.REPLICA_READ, TiConfigConst.REPLICA_READ_DEFAULT)
+    val whitelist = conf.get(
+      TiConfigConst.REPLICA_READ_ADDRESS_WHITELIST,
+      TiConfigConst.REPLICA_READ_ADDRESS_DEFAULT)
+    val blacklist = conf.get(
+      TiConfigConst.REPLICA_READ_ADDRESS_BLACKLIST,
+      TiConfigConst.REPLICA_READ_ADDRESS_DEFAULT)
+    tiConf.setReplicaReadPolicy(ReplicaReadPolicy.create(role, label, whitelist, blacklist))
   }
 
   private def getIsolationReadEnginesFromString(str: String): List[TiStoreType] = {
