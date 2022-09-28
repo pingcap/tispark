@@ -26,19 +26,19 @@ import org.tikv.shade.com.google.protobuf.ByteString;
 // TODO: more refactoring on the way
 public class ClusterIndexScanKeyRangeBuilder extends KeyRangeBuilder {
 
-  private final long id;
+  private final long tableId;
 
-  public ClusterIndexScanKeyRangeBuilder(long id, IndexRange ir) {
+  public ClusterIndexScanKeyRangeBuilder(long tableId, IndexRange ir) {
     super(ir);
-    this.id = id;
+    this.tableId = tableId;
   }
 
   private KeyRange toPairKey() {
     Key lbsKey = Key.toRawKey(lPointKey.append(lKey).getBytes());
     Key ubsKey = Key.toRawKey(uPointKey.append(uKey).getBytes());
     return makeCoprocRange(
-        ByteString.copyFrom(RowKey.encode(id, lbsKey.getBytes())),
-        ByteString.copyFrom(RowKey.encode(id, ubsKey.getBytes())));
+        ByteString.copyFrom(RowKey.encode(tableId, lbsKey.getBytes())),
+        ByteString.copyFrom(RowKey.encode(tableId, ubsKey.getBytes())));
   }
 
   public KeyRange compute() {
