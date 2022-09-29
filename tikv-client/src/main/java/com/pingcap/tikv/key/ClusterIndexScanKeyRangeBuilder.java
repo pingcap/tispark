@@ -23,7 +23,6 @@ import org.tikv.shade.com.google.protobuf.ByteString;
 
 // ClusterIndexScanKeyRangeBuilder accepts a table id and an cluster index range.
 // With these info, it can build a key range which can be used for cluster index scan.
-// TODO: more refactoring on the way
 public class ClusterIndexScanKeyRangeBuilder extends KeyRangeBuilder {
 
   private final long tableId;
