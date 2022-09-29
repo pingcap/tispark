@@ -142,8 +142,7 @@ class ClusterIndexScanSuites extends BaseTiSparkTest {
   test("test prefix cluster index scan") {
     isSupportCommonHandle()
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    tidbStmt.execute(
-      """
+    tidbStmt.execute("""
         |CREATE TABLE `t1` (
         |  `a` BIGINT(20) NOT NULL,
         |  `b` varchar(255) NOT NULL,
@@ -154,54 +153,40 @@ class ClusterIndexScanSuites extends BaseTiSparkTest {
     // equal filter condition length smaller than prefix length
     val df1 = spark.sql("select * from t1 where b='1'")
     assert(df1.count() == 1)
-    df1.collect() should contain theSameElementsAs Array(
-      Row(1, "1", "1"))
+    df1.collect() should contain theSameElementsAs Array(Row(1, "1", "1"))
     // equal filter condition length bigger than prefix length
     val df2 = spark.sql("select * from t1 where b='111'")
     assert(df2.count() == 1)
-    df2.collect() should contain theSameElementsAs Array(
-      Row(3, "111", "1"))
+    df2.collect() should contain theSameElementsAs Array(Row(3, "111", "1"))
     // equal filter condition length equal prefix length
     val df3 = spark.sql("select * from t1 where b='11'")
     assert(df3.count() == 1)
-    df3.collect() should contain theSameElementsAs Array(
-      Row(2, "11", "1"))
+    df3.collect() should contain theSameElementsAs Array(Row(2, "11", "1"))
     // bigger filter condition length smaller prefix length
     val df4 = spark.sql("select * from t1 where b>'1'")
     assert(df4.count() == 3)
     df4.collect() should contain theSameElementsAs Array(
       Row(2, "11", "1"),
       Row(3, "111", "1"),
-      Row(4, "1111", "1")
-    )
+      Row(4, "1111", "1"))
     // bigger filter condition length bigger prefix length
     val df5 = spark.sql("select * from t1 where b>'111'")
     assert(df5.count() == 1)
-    df5.collect() should contain theSameElementsAs Array(
-      Row(4, "1111", "1")
-    )
+    df5.collect() should contain theSameElementsAs Array(Row(4, "1111", "1"))
     // bigger filter condition length equal prefix length
     val df6 = spark.sql("select * from t1 where b>'11'")
     assert(df6.count() == 2)
-    df6.collect() should contain theSameElementsAs Array(
-      Row(3, "111", "1"),
-      Row(4, "1111", "1")
-    )
+    df6.collect() should contain theSameElementsAs Array(Row(3, "111", "1"), Row(4, "1111", "1"))
     // smaller filter condition length smaller prefix length
     val df7 = spark.sql("select * from t1 where b<'1'")
     assert(df7.count() == 0)
     // smaller filter condition length bigger prefix length
     val df8 = spark.sql("select * from t1 where b<'111'")
     assert(df8.count() == 2)
-    df8.collect() should contain theSameElementsAs Array(
-      Row(1, "1", "1"),
-      Row(2, "11", "1"),
-    )
+    df8.collect() should contain theSameElementsAs Array(Row(1, "1", "1"), Row(2, "11", "1"))
     // smaller filter condition length equal prefix length
     val df9 = spark.sql("select * from t1 where b<'11'")
     assert(df9.count() == 1)
-    df9.collect() should contain theSameElementsAs Array(
-      Row(1, "1", "1"),
-    )
+    df9.collect() should contain theSameElementsAs Array(Row(1, "1", "1"))
   }
 }
