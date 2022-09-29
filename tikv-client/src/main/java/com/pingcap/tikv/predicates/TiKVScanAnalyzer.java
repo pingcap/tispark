@@ -26,7 +26,7 @@ import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.PartitionPruner;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
 import com.pingcap.tikv.handle.IntHandle;
-import com.pingcap.tikv.key.ClusterIndexScanKeyRangeBuilder;
+import com.pingcap.tikv.key.CommonHandleScanKeyRangeBuilder;
 import com.pingcap.tikv.key.IndexScanKeyRangeBuilder;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
@@ -470,7 +470,7 @@ public class TiKVScanAnalyzer {
     }
   }
 
-  private Map<Long, List<KeyRange>> buildTablePKScanKeyRangeWithIds(
+  private Map<Long, List<KeyRange>> buildPKTableScanKeyRangeWithIds(
       List<Long> ids, List<IndexRange> indexRanges, IntegerType handleDatatype) {
     Map<Long, List<KeyRange>> idRanges = new HashMap<>(ids.size());
     for (Long id : ids) {
@@ -508,7 +508,7 @@ public class TiKVScanAnalyzer {
       ids.add(table.getId());
     }
     if (table.isCommonHandle()) {
-      return buildTableCommonHandleScanKeyRange(ids, indexRanges);
+      return buildCommonHandleTableScanKeyRange(ids, indexRanges);
     } else {
       IntegerType handleDatatype;
       if (table.isPkHandle()) {
@@ -516,17 +516,17 @@ public class TiKVScanAnalyzer {
       } else {
         handleDatatype = IntegerType.ROW_ID_TYPE;
       }
-      return buildTablePKScanKeyRangeWithIds(ids, indexRanges, handleDatatype);
+      return buildPKTableScanKeyRangeWithIds(ids, indexRanges, handleDatatype);
     }
   }
 
-  private Map<Long, List<KeyRange>> buildTableCommonHandleScanKeyRange(
+  private Map<Long, List<KeyRange>> buildCommonHandleTableScanKeyRange(
       List<Long> ids, List<IndexRange> indexRanges) {
     Map<Long, List<KeyRange>> idRanges = new HashMap<>();
     for (long id : ids) {
       List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
       for (IndexRange ir : indexRanges) {
-        KeyRange keyRange = new ClusterIndexScanKeyRangeBuilder(id, ir).compute();
+        KeyRange keyRange = new CommonHandleScanKeyRangeBuilder(id, ir).compute();
         ranges.add(keyRange);
       }
       idRanges.put(id, ranges);

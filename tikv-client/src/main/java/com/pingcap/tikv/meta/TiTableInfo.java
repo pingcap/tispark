@@ -289,14 +289,14 @@ public class TiTableInfo implements Serializable {
     for (TiIndexColumn tiIndexColumn : tiIndexColumns) {
       /**
        * We need to consider the prefix index. For example: when we have 'a varchar(50), index
-       * idx(a(10))' So we will get 'columnInfo.getLength() = 50' and
-       * 'columnInfo.getType().getLength() = 10'. {@link TiIndexColumn#isPrefixIndex()} will use
-       * columnLength == DataType.UnspecifiedLength to check check whether we have prefix index.
+       * idx(a(10))' So we will get 'columnInfo.getLength() = 50' and 'tiIndexColumn.getLength() =
+       * 10'. {@link TiIndexColumn#isPrefixIndex()} will use columnLength ==
+       * DataType.UnspecifiedLength to check whether we have prefix index.
        * https://github.com/pingcap/tidb/issues/29805
        */
       TiColumnInfo columnInfo = getColumn(tiIndexColumn.getName());
       if (tiIndexColumn.getLength() != DataType.UNSPECIFIED_LEN
-          && tiIndexColumn.getLength() == columnInfo.getType().getLength()) {
+          && tiIndexColumn.getLength() == columnInfo.getLength()) {
         result.add(columnInfo.toUnSpecifiedLenIndexColumn());
       } else {
         result.add(tiIndexColumn);

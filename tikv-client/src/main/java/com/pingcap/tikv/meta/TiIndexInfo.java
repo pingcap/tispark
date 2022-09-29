@@ -77,15 +77,16 @@ public class TiIndexInfo implements Serializable {
     this.isInvisible = isInvisible;
   }
 
+  // To reuse the logic of buildIndexScan, we wrap the primary key as an index here.
   public static TiIndexInfo genClusterIndex(TiTableInfo table) {
     if (table.isPkHandle() || table.isCommonHandle()) {
       ImmutableList<TiIndexColumn> columns;
       if (table.isPkHandle()) {
         TiColumnInfo pkColumn = table.getPKIsHandleColumn();
-        // The integer handle is no prefix when store in to Tikv.
+        // The integer handle has no prefix when store in to Tikv.
         columns = ImmutableList.of(pkColumn.toUnSpecifiedLenIndexColumn());
       } else {
-        // make cols which not has no prefix len to UNSPECIFIED_LEN.
+        // make the len of cols which don't have prefix to UNSPECIFIED_LEN.
         columns = ImmutableList.copyOf(table.convertIndexColToPrefixCols(table.getPrimaryKey()));
       }
       return new TiIndexInfo(
