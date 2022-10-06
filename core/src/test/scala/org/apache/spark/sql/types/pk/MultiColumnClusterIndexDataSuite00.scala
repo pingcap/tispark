@@ -18,6 +18,8 @@ package org.apache.spark.sql.types.pk
  *
  */
 class MultiColumnClusterIndexDataSuite00 extends MultiColumnPKDataTypeSuites {
+  init()
+
   override def currentTest: Seq[(Int, Int)] = tests(getId)
 
   if (!supportClusteredIndex) {
