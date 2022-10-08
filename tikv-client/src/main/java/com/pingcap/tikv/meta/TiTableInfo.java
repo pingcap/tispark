@@ -26,6 +26,7 @@ import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataTypeFactory;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -280,6 +281,28 @@ public class TiTableInfo implements Serializable {
       }
     }
     return null;
+  }
+
+  public List<TiIndexColumn> convertIndexColToPrefixCols(TiIndexInfo indexInfo) {
+    List<TiIndexColumn> tiIndexColumns = indexInfo.getIndexColumns();
+    List<TiIndexColumn> result = new ArrayList<>(tiIndexColumns.size());
+    for (TiIndexColumn tiIndexColumn : tiIndexColumns) {
+      /**
+       * We need to consider the prefix index. For example: when we have 'a varchar(50), index
+       * idx(a(10))' So we will get 'columnInfo.getLength() = 50' and 'tiIndexColumn.getLength() =
+       * 10'. {@link TiIndexColumn#isPrefixIndex()} will use columnLength ==
+       * DataType.UnspecifiedLength to check whether we have prefix index.
+       * https://github.com/pingcap/tidb/issues/29805
+       */
+      TiColumnInfo columnInfo = getColumn(tiIndexColumn.getName());
+      if (tiIndexColumn.getLength() != DataType.UNSPECIFIED_LEN
+          && tiIndexColumn.getLength() == columnInfo.getLength()) {
+        result.add(columnInfo.toUnSpecifiedLenIndexColumn());
+      } else {
+        result.add(tiIndexColumn);
+      }
+    }
+    return result;
   }
 
   public String getComment() {

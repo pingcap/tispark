@@ -26,6 +26,7 @@ import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.PartitionPruner;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
 import com.pingcap.tikv.handle.IntHandle;
+import com.pingcap.tikv.key.CommonHandleScanKeyRangeBuilder;
 import com.pingcap.tikv.key.IndexScanKeyRangeBuilder;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
@@ -239,7 +240,7 @@ public class TiKVScanAnalyzer {
 
   private TiKVScanPlan buildTableScan(
       List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
-    TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
+    TiIndexInfo pkIndex = TiIndexInfo.genClusterIndex(table);
     return buildIndexScan(table.getColumns(), conditions, pkIndex, table, tableStatistics, false);
   }
 
@@ -248,7 +249,7 @@ public class TiKVScanAnalyzer {
       List<Expression> conditions,
       TiTableInfo table,
       TableStatistics tableStatistics) {
-    TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
+    TiIndexInfo pkIndex = TiIndexInfo.genClusterIndex(table);
     return buildIndexScan(columnList, conditions, pkIndex, table, tableStatistics, true);
   }
 
@@ -469,7 +470,7 @@ public class TiKVScanAnalyzer {
     }
   }
 
-  private Map<Long, List<KeyRange>> buildTableScanKeyRangeWithIds(
+  private Map<Long, List<KeyRange>> buildPKTableScanKeyRangeWithIds(
       List<Long> ids, List<IndexRange> indexRanges, IntegerType handleDatatype) {
     Map<Long, List<KeyRange>> idRanges = new HashMap<>(ids.size());
     for (Long id : ids) {
@@ -498,22 +499,39 @@ public class TiKVScanAnalyzer {
       TiTableInfo table, List<IndexRange> indexRanges, List<TiPartitionDef> prunedParts) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
-    IntegerType handleDatatype;
-    if (table.isPkHandle()) {
-      handleDatatype = (IntegerType) table.getPKIsHandleColumn().getType();
-    } else {
-      handleDatatype = IntegerType.ROW_ID_TYPE;
-    }
+    List<Long> ids = new ArrayList<>();
     if (table.isPartitionEnabled()) {
-      List<Long> ids = new ArrayList<>();
       for (TiPartitionDef pDef : prunedParts) {
         ids.add(pDef.getId());
       }
-      return buildTableScanKeyRangeWithIds(ids, indexRanges, handleDatatype);
     } else {
-      return buildTableScanKeyRangeWithIds(
-          ImmutableList.of(table.getId()), indexRanges, handleDatatype);
+      ids.add(table.getId());
     }
+    if (table.isCommonHandle()) {
+      return buildCommonHandleTableScanKeyRange(ids, indexRanges);
+    } else {
+      IntegerType handleDatatype;
+      if (table.isPkHandle()) {
+        handleDatatype = (IntegerType) table.getPKIsHandleColumn().getType();
+      } else {
+        handleDatatype = IntegerType.ROW_ID_TYPE;
+      }
+      return buildPKTableScanKeyRangeWithIds(ids, indexRanges, handleDatatype);
+    }
+  }
+
+  private Map<Long, List<KeyRange>> buildCommonHandleTableScanKeyRange(
+      List<Long> ids, List<IndexRange> indexRanges) {
+    Map<Long, List<KeyRange>> idRanges = new HashMap<>();
+    for (long id : ids) {
+      List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
+      for (IndexRange ir : indexRanges) {
+        KeyRange keyRange = new CommonHandleScanKeyRangeBuilder(id, ir).compute();
+        ranges.add(keyRange);
+      }
+      idRanges.put(id, ranges);
+    }
+    return idRanges;
   }
 
   @VisibleForTesting

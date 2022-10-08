@@ -229,7 +229,7 @@ public class TiColumnInfo implements Serializable {
     return this.type.isAutoIncrement();
   }
 
-  TiIndexColumn toFakeIndexColumn() {
+  TiIndexColumn toUnSpecifiedLenIndexColumn() {
     // we don't use original length of column since for a clustered index column
     // it always full index instead of prefix index
     return new TiIndexColumn(CIStr.newCIStr(getName()), getOffset(), DataType.UNSPECIFIED_LEN);

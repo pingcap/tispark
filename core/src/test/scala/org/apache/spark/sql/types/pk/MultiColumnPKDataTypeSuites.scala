@@ -18,7 +18,7 @@
 
 package org.apache.spark.sql.types.pk
 
-import com.pingcap.tispark.test.generator.DataGenerator.{baseDataTypes, isNumeric, isStringType}
+import com.pingcap.tispark.test.generator.DataGenerator.{baseDataTypes, isStringType}
 import com.pingcap.tispark.test.generator.DataType._
 import com.pingcap.tispark.test.generator._
 import org.apache.spark.sql.types.BaseRandomDataTypeTest
@@ -107,6 +107,23 @@ trait MultiColumnPKDataTypeSuites extends BaseRandomDataTypeTest {
           genDescription(dataTypes(j), NullableType.NotNullable)) ++ dataTypesWithDesc
         val schemaAndDataList =
           genSchemaAndData(rowCount, cols, database, hasTiFlashReplica = enableTiFlashTest)
+        startTest(schemaAndDataList, i, j)
+    }
+  }
+
+  protected def generateClusterIndexScanTestCases(): Unit = {
+    currentTest.foreach {
+      case (i, j) =>
+        val cols = List(
+          genDescription(dataTypes(i), NullableType.NotNullable),
+          genDescription(dataTypes(j), NullableType.NotNullable)) ++ dataTypesWithDesc
+        val schemaAndDataList =
+          genSchemaAndData(
+            rowCount,
+            cols,
+            database,
+            isClusteredIndex = true,
+            hasTiFlashReplica = enableTiFlashTest)
         startTest(schemaAndDataList, i, j)
     }
   }

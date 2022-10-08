@@ -95,10 +95,14 @@ public class RowKey extends Key implements Serializable {
     return toRowKey(tableId, handle);
   }
 
-  private static byte[] encode(long tableId, Handle handle) {
+  public static byte[] encode(long tableId, Handle handle) {
+    return encode(tableId, handle.encoded());
+  }
+
+  public static byte[] encode(long tableId, byte[] key) {
     CodecDataOutput cdo = new CodecDataOutput();
     encodePrefix(cdo, tableId);
-    cdo.write(handle.encoded());
+    cdo.write(key);
     return cdo.toBytes();
   }
 
