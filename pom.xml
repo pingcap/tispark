@@ -70,8 +70,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-        <spark.version.compile>2.4.6</spark.version.compile>
-        <spark.version.test>2.4.6</spark.version.test>
+        <spark.version.compile>2.4.8</spark.version.compile>
+        <spark.version.test>2.4.8</spark.version.test>
         <!-- for now, not running scalafmt as part of default verify pipeline -->
         <scalafmt.skip>true</scalafmt.skip>
         <scalatest.version>3.0.8</scalatest.version>
