@@ -11,7 +11,7 @@ All notable changes to this project will be documented in this file.
 
 - Fix the bug that single column condition is in the incorrect if branch [#2393](https://github.com/pingcap/tispark/pull/2393).
 - Fix region may be missed with too many tables [#2442](https://github.com/pingcap/tispark/pull/2442).
-- Fix count can not be pushed down bug [#2468](https://github.com/pingcap/tispark/pull/2468) [#2483](https://github.com/pingcap/tispark/pull/2483)
+- Fix the bug that count can not be pushed down [#2468](https://github.com/pingcap/tispark/pull/2468) [#2483](https://github.com/pingcap/tispark/pull/2483)
 
 ## [TiSpark 2.4.3] 2022-01-25
 ### New feature
