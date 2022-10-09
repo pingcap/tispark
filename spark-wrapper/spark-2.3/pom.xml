@@ -4,12 +4,12 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.pingcap.tispark</groupId>
-        <artifactId>tispark-parent</artifactId>
-        <version>2.4.4-SNAPSHOT</version>
+        <artifactId>tispark-parent_${scala.binary.version}</artifactId>
+        <version>2.4.4-scala_${scala.binary.version}-snapshot</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>spark-wrapper-spark-2.3_${scala.binary.version}</artifactId>
+    <artifactId>spark-wrapper-spark-2.3</artifactId>
     <packaging>jar</packaging>
     <name>TiSpark Project Spark Wrapper Spark-2.3</name>
     <url>http://github.copm/pingcap/tispark</url>
