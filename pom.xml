@@ -10,7 +10,7 @@
 
     <groupId>com.pingcap.tispark</groupId>
     <artifactId>tispark-parent_${scala.binary.version}</artifactId>
-    <version>2.4.4-scala_${scala.binary.version}-snapshot</version>
+    <version>2.4.4-scala_${scala.binary.version}</version>
     <packaging>pom</packaging>
     <name>TiSpark Project Parent POM</name>
     <url>http://github.copm/pingcap/tispark</url>
@@ -70,8 +70,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-        <spark.version.compile>2.4.6</spark.version.compile>
-        <spark.version.test>2.4.6</spark.version.test>
+        <spark.version.compile>2.4.8</spark.version.compile>
+        <spark.version.test>2.4.8</spark.version.test>
         <!-- for now, not running scalafmt as part of default verify pipeline -->
         <scalafmt.skip>true</scalafmt.skip>
         <scalatest.version>3.0.8</scalatest.version>
@@ -86,6 +86,8 @@
         <test.exclude.tags/>
         <test.include.tags/>
         <scalaj.version>2.3.0</scalaj.version>
+        <scala.binary.version>2.12</scala.binary.version>
+        <scala.version>2.12.10</scala.version>
     </properties>
     <repositories>
         <repository>
