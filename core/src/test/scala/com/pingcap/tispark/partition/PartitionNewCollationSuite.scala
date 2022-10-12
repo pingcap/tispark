@@ -88,7 +88,6 @@ class PartitionNewCollationSuite extends PartitionBaseSuite {
    * For utf8mb4_general_ci collation, "ß" < "ss"
    * For utf8mb4_unicode_ci collation, "ß" = "ss"
    */
-  /
   test("range column with utf8mb4_general_ci collation \"ss\" and \"ß\"") {
     checkNewCollationEnabled()
     tidbStmt.execute(
