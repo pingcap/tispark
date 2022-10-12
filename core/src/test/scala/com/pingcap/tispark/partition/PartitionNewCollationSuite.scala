@@ -59,12 +59,8 @@ class PartitionNewCollationSuite extends PartitionBaseSuite {
       .save()
 
     val insertResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
-    insertResultSpark.collect() should contain theSameElementsAs Array(
-      Row(57L, "A"))
-    checkPartitionJDBCResult(
-      Map(
-        "p0" -> Array(Array(57L, "A")),
-        "p1" -> Array()))
+    insertResultSpark.collect() should contain theSameElementsAs Array(Row(57L, "A"))
+    checkPartitionJDBCResult(Map("p0" -> Array(Array(57L, "A")), "p1" -> Array()))
 
     tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
@@ -90,12 +86,8 @@ class PartitionNewCollationSuite extends PartitionBaseSuite {
       .save()
 
     val insertResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
-    insertResultSpark.collect() should contain theSameElementsAs Array(
-      Row(57L, "A"))
-    checkPartitionJDBCResult(
-      Map(
-        "p0" -> Array(),
-        "p1" -> Array(Array(57L, "A"))))
+    insertResultSpark.collect() should contain theSameElementsAs Array(Row(57L, "A"))
+    checkPartitionJDBCResult(Map("p0" -> Array(), "p1" -> Array(Array(57L, "A"))))
 
     tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
@@ -125,12 +117,8 @@ class PartitionNewCollationSuite extends PartitionBaseSuite {
       .save()
 
     val insertResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
-    insertResultSpark.collect() should contain theSameElementsAs Array(
-      Row(57L, "ß"))
-    checkPartitionJDBCResult(
-      Map(
-        "p0" -> Array(Array(57L, "ß")),
-        "p1" -> Array()))
+    insertResultSpark.collect() should contain theSameElementsAs Array(Row(57L, "ß"))
+    checkPartitionJDBCResult(Map("p0" -> Array(Array(57L, "ß")), "p1" -> Array()))
 
     tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
@@ -156,14 +144,9 @@ class PartitionNewCollationSuite extends PartitionBaseSuite {
       .save()
 
     val insertResultSpark = spark.sql(s"select * from `tidb_catalog`.`$database`.`$table`")
-    insertResultSpark.collect() should contain theSameElementsAs Array(
-      Row(57L, "ß"))
-    checkPartitionJDBCResult(
-      Map(
-        "p0" -> Array(),
-        "p1" -> Array(Array(57L, "ß"))))
+    insertResultSpark.collect() should contain theSameElementsAs Array(Row(57L, "ß"))
+    checkPartitionJDBCResult(Map("p0" -> Array(), "p1" -> Array(Array(57L, "ß"))))
 
     tidbStmt.execute(s"ADMIN CHECK TABLE `$database`.`$table`")
   }
 }
-

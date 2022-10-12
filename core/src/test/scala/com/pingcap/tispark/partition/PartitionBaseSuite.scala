@@ -21,7 +21,7 @@ import org.scalatest.Matchers.{contain, convertToAnyShouldWrapper}
 
 import java.sql.ResultSet
 
-class PartitionBaseSuite extends BaseTiSparkTest{
+class PartitionBaseSuite extends BaseTiSparkTest {
 
   val table: String = "test_partition_write"
   val database: String = "tispark_test"

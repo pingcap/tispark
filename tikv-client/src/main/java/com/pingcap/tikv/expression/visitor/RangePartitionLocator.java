@@ -98,8 +98,8 @@ public class RangePartitionLocator extends DefaultVisitor<Boolean, PartitionLoca
     return evaluateComparison(data, dataType, boundString, comparisonType);
   }
 
-  Boolean evaluateComparison(Object data, DataType dataType, String boundString,
-      Operator comparisonType) {
+  Boolean evaluateComparison(
+      Object data, DataType dataType, String boundString, Operator comparisonType) {
     // MYSQL IntegerType, we can convert to long and then compare.
     if (data instanceof Number) {
       long dataLongValue = ((Number) data).longValue();
@@ -125,8 +125,7 @@ public class RangePartitionLocator extends DefaultVisitor<Boolean, PartitionLoca
             } else if (Collation.isBinCollation(collation)) {
               return BinPaddingCollator.compare(dataStringValue, boundString) >= 0;
             } else {
-              throw new UnsupportedOperationException(
-                  "Unsupported collation: " + collation);
+              throw new UnsupportedOperationException("Unsupported collation: " + collation);
             }
           } else {
             return BinPaddingCollator.compare(dataStringValue, boundString) >= 0;
@@ -140,8 +139,7 @@ public class RangePartitionLocator extends DefaultVisitor<Boolean, PartitionLoca
             } else if (Collation.isBinCollation(collation)) {
               return BinPaddingCollator.compare(dataStringValue, boundString) < 0;
             } else {
-              throw new UnsupportedOperationException(
-                  "Unsupported collation: " + collation);
+              throw new UnsupportedOperationException("Unsupported collation: " + collation);
             }
           } else {
             return BinPaddingCollator.compare(dataStringValue, boundString) < 0;
