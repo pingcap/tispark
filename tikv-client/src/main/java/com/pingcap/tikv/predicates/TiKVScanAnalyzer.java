@@ -175,38 +175,41 @@ public class TiKVScanAnalyzer {
 
     TiKVScanPlan minPlan = null;
     if (canUseTiKV) {
+      // tikv table scan
       minPlan = buildTableScan(conditions, table, tableStatistics);
+      // tikv index scan
+      if (allowIndexScan) {
+        minPlan.getFilters().forEach(dagRequest::addDowngradeFilter);
+        if (table.isPartitionEnabled()) {
+          // disable index scan
+        } else {
+          TiKVScanPlan minIndexPlan = null;
+          double minIndexCost = Double.MAX_VALUE;
+          for (TiIndexInfo index : table.getIndices()) {
+            if (table.isCommonHandle() && table.getPrimaryKey().equals(index)) {
+              continue;
+            }
+
+            if (supportIndexScan(index, table)) {
+              TiKVScanPlan plan =
+                  buildIndexScan(columnList, conditions, index, table, tableStatistics, false);
+              if (plan.getCost() < minIndexCost) {
+                minIndexPlan = plan;
+                minIndexCost = plan.getCost();
+              }
+            }
+          }
+          if (minIndexPlan != null && (minIndexCost < minPlan.getCost() || useIndexScanFirst)) {
+            minPlan = minIndexPlan;
+          }
+        }
+      }
     }
     if (canUseTiFlash) {
       // it is possible that only TiFlash plan exists due to isolation read.
       TiKVScanPlan plan = buildTiFlashScan(columnList, conditions, table, tableStatistics);
       if (minPlan == null || plan.getCost() < minPlan.getCost()) {
         minPlan = plan;
-      }
-    } else if (canUseTiKV && allowIndexScan) {
-      minPlan.getFilters().forEach(dagRequest::addDowngradeFilter);
-      if (table.isPartitionEnabled()) {
-        // disable index scan
-      } else {
-        TiKVScanPlan minIndexPlan = null;
-        double minIndexCost = Double.MAX_VALUE;
-        for (TiIndexInfo index : table.getIndices()) {
-          if (table.isCommonHandle() && table.getPrimaryKey().equals(index)) {
-            continue;
-          }
-
-          if (supportIndexScan(index, table)) {
-            TiKVScanPlan plan =
-                buildIndexScan(columnList, conditions, index, table, tableStatistics, false);
-            if (plan.getCost() < minIndexCost) {
-              minIndexPlan = plan;
-              minIndexCost = plan.getCost();
-            }
-          }
-        }
-        if (minIndexPlan != null && (minIndexCost < minPlan.getCost() || useIndexScanFirst)) {
-          minPlan = minIndexPlan;
-        }
       }
     }
     if (minPlan == null) {
