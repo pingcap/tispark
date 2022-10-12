@@ -409,8 +409,10 @@ There are two ways to write into partition table:
 2. Use delete statement with Spark SQL.
 
 > [!NOTE]
-> Currently we only support writing into the partition table with utf8mb4_bin collation
-
+> Because different character sets and collations have different sort orders, the character sets and 
+> collations in use may affect which partition of a table partitioned by RANGE COLUMNS a given row 
+> is stored in when using string columns as partitioning columns.
+> For supported character sets and collations, see [Limitations](../README.md#limitations)
 
 ### Other Features
 - [Push down](features/push_down.md)
