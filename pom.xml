@@ -86,8 +86,6 @@
         <test.exclude.tags/>
         <test.include.tags/>
         <scalaj.version>2.3.0</scalaj.version>
-        <scala.binary.version>2.12</scala.binary.version>
-        <scala.version>2.12.10</scala.version>
     </properties>
     <repositories>
         <repository>
