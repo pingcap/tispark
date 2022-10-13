@@ -198,7 +198,7 @@ public class TiKVScanAnalyzer {
               }
             }
           }
-          if (minIndexPlan != null && (minIndexCost < minCostPlan.getCost() || useIndexScanFirst)) {
+          if (minCostIndexPlan != null && (minIndexCost < minCostPlan.getCost() || useIndexScanFirst)) {
             minCostPlan = minIndexPlan;
           }
         }
