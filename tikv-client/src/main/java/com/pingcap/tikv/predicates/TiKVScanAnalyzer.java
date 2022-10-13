@@ -193,7 +193,7 @@ public class TiKVScanAnalyzer {
               TiKVScanPlan plan =
                   buildIndexScan(columnList, conditions, index, table, tableStatistics, false);
               if (plan.getCost() < minIndexCost) {
-                minIndexPlan = plan;
+                minCostIndexPlan = plan;
                 minIndexCost = plan.getCost();
               }
             }
