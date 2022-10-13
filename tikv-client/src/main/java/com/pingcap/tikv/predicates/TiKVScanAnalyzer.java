@@ -220,7 +220,7 @@ public class TiKVScanAnalyzer {
 
     TiStoreType minCostPlanStoreType = minCostPlan.getStoreType();
     // TiKV should not use CHBlock as Encode Type.
-    if (minPlanStoreType == TiStoreType.TiKV
+    if (minCostPlanStoreType == TiStoreType.TiKV
         && dagRequest.getEncodeType() == EncodeType.TypeCHBlock) {
       dagRequest.setEncodeType(EncodeType.TypeChunk);
     }
