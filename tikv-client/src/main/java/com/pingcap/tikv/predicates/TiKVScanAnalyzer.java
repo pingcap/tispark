@@ -218,7 +218,7 @@ public class TiKVScanAnalyzer {
           "No valid plan found for table '" + table.getName() + "'");
     }
 
-    TiStoreType minPlanStoreType = minCostPlan.getStoreType();
+    TiStoreType minCostPlanStoreType = minCostPlan.getStoreType();
     // TiKV should not use CHBlock as Encode Type.
     if (minPlanStoreType == TiStoreType.TiKV
         && dagRequest.getEncodeType() == EncodeType.TypeCHBlock) {
