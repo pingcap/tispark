@@ -98,6 +98,10 @@ public class RangePartitionLocator extends DefaultVisitor<Boolean, PartitionLoca
     return evaluateComparison(data, dataType, boundString, comparisonType);
   }
 
+  /**
+   * A better way to compare data is to use the encoded typed key.
+   * @see com.pingcap.tikv.expression.RangeColumnPartitionPruner#visit(ComparisonBinaryExpression node, LogicalBinaryExpression parent)
+   */
   Boolean evaluateComparison(
       Object data, DataType dataType, String boundString, Operator comparisonType) {
     // MYSQL IntegerType, we can convert to long and then compare.
