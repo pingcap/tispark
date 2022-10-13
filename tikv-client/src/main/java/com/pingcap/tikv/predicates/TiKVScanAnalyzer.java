@@ -173,13 +173,13 @@ public class TiKVScanAnalyzer {
       TiTimestamp ts,
       TiDAGRequest dagRequest) {
 
-    TiKVScanPlan minPlan = null;
+    TiKVScanPlan minCostPlan = null;
     if (canUseTiKV) {
       // tikv table scan
-      minPlan = buildTableScan(conditions, table, tableStatistics);
+      minCostPlan = buildTableScan(conditions, table, tableStatistics);
       // tikv index scan
       if (allowIndexScan) {
-        minPlan.getFilters().forEach(dagRequest::addDowngradeFilter);
+        minCostPlan.getFilters().forEach(dagRequest::addDowngradeFilter);
         if (table.isPartitionEnabled()) {
           // disable index scan
         } else {
@@ -199,8 +199,8 @@ public class TiKVScanAnalyzer {
               }
             }
           }
-          if (minIndexPlan != null && (minIndexCost < minPlan.getCost() || useIndexScanFirst)) {
-            minPlan = minIndexPlan;
+          if (minIndexPlan != null && (minIndexCost < minCostPlan.getCost() || useIndexScanFirst)) {
+            minCostPlan = minIndexPlan;
           }
         }
       }
@@ -208,16 +208,16 @@ public class TiKVScanAnalyzer {
     if (canUseTiFlash) {
       // it is possible that only TiFlash plan exists due to isolation read.
       TiKVScanPlan plan = buildTiFlashScan(columnList, conditions, table, tableStatistics);
-      if (minPlan == null || plan.getCost() < minPlan.getCost()) {
-        minPlan = plan;
+      if (minCostPlan == null || plan.getCost() < minCostPlan.getCost()) {
+        minCostPlan = plan;
       }
     }
-    if (minPlan == null) {
+    if (minCostPlan == null) {
       throw new TiClientInternalException(
           "No valid plan found for table '" + table.getName() + "'");
     }
 
-    TiStoreType minPlanStoreType = minPlan.getStoreType();
+    TiStoreType minPlanStoreType = minCostPlan.getStoreType();
     // TiKV should not use CHBlock as Encode Type.
     if (minPlanStoreType == TiStoreType.TiKV
         && dagRequest.getEncodeType() == EncodeType.TypeCHBlock) {
@@ -226,18 +226,18 @@ public class TiKVScanAnalyzer {
     // Set DAG Request's store type as minPlan's store type.
     dagRequest.setStoreType(minPlanStoreType);
 
-    dagRequest.addRanges(minPlan.getKeyRanges(), minPlan.getRangeFilters());
-    dagRequest.setPrunedParts(minPlan.getPrunedParts());
-    dagRequest.addFilters(new ArrayList<>(minPlan.getFilters()));
-    if (minPlan.isIndexScan()) {
-      dagRequest.setIndexInfo(minPlan.getIndex());
+    dagRequest.addRanges(minCostPlan.getKeyRanges(), minCostPlan.getRangeFilters());
+    dagRequest.setPrunedParts(minCostPlan.getPrunedParts());
+    dagRequest.addFilters(new ArrayList<>(minCostPlan.getFilters()));
+    if (minCostPlan.isIndexScan()) {
+      dagRequest.setIndexInfo(minCostPlan.getIndex());
       // need to set isDoubleRead to true for dagRequest in case of double read
-      dagRequest.setIsDoubleRead(minPlan.isDoubleRead());
+      dagRequest.setIsDoubleRead(minCostPlan.isDoubleRead());
     }
 
     dagRequest.setTableInfo(table);
     dagRequest.setStartTs(ts);
-    dagRequest.setEstimatedCount(minPlan.getEstimatedRowCount());
+    dagRequest.setEstimatedCount(minCostPlan.getEstimatedRowCount());
     return dagRequest;
   }
 
