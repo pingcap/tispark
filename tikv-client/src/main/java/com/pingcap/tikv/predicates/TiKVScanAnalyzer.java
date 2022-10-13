@@ -183,7 +183,7 @@ public class TiKVScanAnalyzer {
         if (table.isPartitionEnabled()) {
           // disable index scan
         } else {
-          TiKVScanPlan minIndexPlan = null;
+          TiKVScanPlan minCostIndexPlan = null;
           double minIndexCost = Double.MAX_VALUE;
           for (TiIndexInfo index : table.getIndices()) {
             if (table.isCommonHandle() && table.getPrimaryKey().equals(index)) {
