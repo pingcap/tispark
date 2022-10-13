@@ -224,7 +224,7 @@ public class TiKVScanAnalyzer {
       dagRequest.setEncodeType(EncodeType.TypeChunk);
     }
     // Set DAG Request's store type as minCostPlan's store type.
-    dagRequest.setStoreType(minPlanStoreType);
+    dagRequest.setStoreType(minCostPlanStoreType);
 
     dagRequest.addRanges(minCostPlan.getKeyRanges(), minCostPlan.getRangeFilters());
     dagRequest.setPrunedParts(minCostPlan.getPrunedParts());
