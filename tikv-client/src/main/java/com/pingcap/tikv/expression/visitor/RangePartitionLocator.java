@@ -100,7 +100,9 @@ public class RangePartitionLocator extends DefaultVisitor<Boolean, PartitionLoca
 
   /**
    * A better way to compare data is to use the encoded typed key.
-   * @see com.pingcap.tikv.expression.RangeColumnPartitionPruner#visit(ComparisonBinaryExpression node, LogicalBinaryExpression parent)
+   *
+   * @see com.pingcap.tikv.expression.RangeColumnPartitionPruner#visit(ComparisonBinaryExpression
+   *     node, LogicalBinaryExpression parent)
    */
   Boolean evaluateComparison(
       Object data, DataType dataType, String boundString, Operator comparisonType) {
