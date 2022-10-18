@@ -212,19 +212,11 @@ public class TiKVScanAnalyzer {
     // Set DAG Request's store type as minCostPlan's store type.
     dagRequest.setStoreType(minCostPlanStoreType);
 
-<<<<<<< HEAD
-    dagRequest.addRanges(minPlan.getKeyRanges());
-    dagRequest.setPrunedParts(minPlan.getPrunedParts());
-    dagRequest.addFilters(new ArrayList<>(minPlan.getFilters()));
-    if (minPlan.isIndexScan()) {
-      dagRequest.setIndexInfo(minPlan.getIndex());
-=======
     dagRequest.addRanges(minCostPlan.getKeyRanges(), minCostPlan.getRangeFilters());
     dagRequest.setPrunedParts(minCostPlan.getPrunedParts());
     dagRequest.addFilters(new ArrayList<>(minCostPlan.getFilters()));
     if (minCostPlan.isIndexScan()) {
       dagRequest.setIndexInfo(minCostPlan.getIndex());
->>>>>>> b1feaa36a (Enhancement CBO (#2563))
       // need to set isDoubleRead to true for dagRequest in case of double read
       dagRequest.setIsDoubleRead(minCostPlan.isDoubleRead());
     }
