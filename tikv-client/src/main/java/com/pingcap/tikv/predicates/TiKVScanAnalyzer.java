@@ -212,7 +212,7 @@ public class TiKVScanAnalyzer {
     // Set DAG Request's store type as minCostPlan's store type.
     dagRequest.setStoreType(minCostPlanStoreType);
 
-    dagRequest.addRanges(minCostPlan.getKeyRanges(), minCostPlan.getRangeFilters());
+    dagRequest.addRanges(minCostPlan.getKeyRanges());
     dagRequest.setPrunedParts(minCostPlan.getPrunedParts());
     dagRequest.addFilters(new ArrayList<>(minCostPlan.getFilters()));
     if (minCostPlan.isIndexScan()) {
