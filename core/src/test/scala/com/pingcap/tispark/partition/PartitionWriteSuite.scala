@@ -18,22 +18,18 @@ package com.pingcap.tispark.partition
 
 import com.pingcap.tikv.StoreVersion
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{BaseTiSparkTest, Row}
 import org.scalatest.Matchers.{contain, convertToAnyShouldWrapper, have, the}
 
-import java.sql.{Date, ResultSet, Timestamp}
+import java.sql.{Date, Timestamp}
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-class PartitionWriteSuite extends BaseTiSparkTest {
-
-  val table: String = "test_partition_write"
-  val database: String = "tispark_test"
+class PartitionWriteSuite extends PartitionBaseSuite {
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    tidbStmt.execute(s"drop table if exists `$database`.`$table`")
   }
 
   /**
@@ -845,29 +841,5 @@ class PartitionWriteSuite extends BaseTiSparkTest {
         .mode("append")
         .save()
     } should have message s"Unsupported function: UNIX_TIMESTAMP"
-  }
-
-  private def checkPartitionJDBCResult(expected: Map[String, Array[Array[Any]]]) = {
-    for ((partition, result) <- expected) {
-      val insertResultJDBC =
-        tidbStmt.executeQuery(s"select * from `$database`.`$table` partition(${partition})")
-      checkJDBCResult(insertResultJDBC, result)
-    }
-  }
-
-  def checkJDBCResult(resultJDBC: ResultSet, rows: Array[Array[Any]]): Unit = {
-    val rsMetaData = resultJDBC.getMetaData
-    var sqlData: Seq[Seq[AnyRef]] = Seq()
-    while (resultJDBC.next()) {
-      var row: Seq[AnyRef] = Seq()
-      for (i <- 1 to rsMetaData.getColumnCount) {
-        resultJDBC.getObject(i) match {
-          case x: Array[Byte] => row = row :+ new String(x)
-          case _ => row = row :+ resultJDBC.getObject(i)
-        }
-      }
-      sqlData = sqlData :+ row
-    }
-    sqlData should contain theSameElementsAs rows
   }
 }

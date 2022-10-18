@@ -26,9 +26,14 @@ import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.FuncCallExpr;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression.Type;
+import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.meta.collate.BinPaddingCollator;
+import com.pingcap.tikv.meta.collate.GeneralCICollator;
+import com.pingcap.tikv.meta.collate.UnicodeCICollator;
 import com.pingcap.tikv.partition.PartitionedTable.PartitionLocatorContext;
 import com.pingcap.tikv.row.Row;
+import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DateType;
 import com.pingcap.tikv.types.IntegerType;
 import java.nio.charset.StandardCharsets;
@@ -45,12 +50,14 @@ public class RangePartitionLocator extends DefaultVisitor<Boolean, PartitionLoca
   @Override
   public Boolean visit(ComparisonBinaryExpression node, PartitionLocatorContext context) {
     Object data;
+    DataType dataType;
     Row row = context.getRow();
     TiTableInfo tableInfo = context.getTableInfo();
     Expression left = node.getLeft();
     if (left instanceof ColumnRef) {
       ColumnRef columnRef = (ColumnRef) left;
       columnRef.resolve(tableInfo);
+      dataType = columnRef.getDataType();
       data = row.get(columnRef.getColumnOffset(), columnRef.getDataType());
     } else if (left instanceof FuncCallExpr) {
       // TODO: support more function partition
@@ -59,6 +66,7 @@ public class RangePartitionLocator extends DefaultVisitor<Boolean, PartitionLoca
         Expression expression = left.getChildren().get(0);
         ColumnRef columnRef = (ColumnRef) expression;
         columnRef.resolve(tableInfo);
+        dataType = IntegerType.BIGINT;
         data =
             partitionFuncExpr
                 .eval(Constant.create(row.get(columnRef.getColumnOffset(), DateType.DATE)))
@@ -87,10 +95,17 @@ public class RangePartitionLocator extends DefaultVisitor<Boolean, PartitionLoca
     }
     Operator comparisonType = node.getComparisonType();
 
-    return evaluateComparison(data, boundString, comparisonType);
+    return evaluateComparison(data, dataType, boundString, comparisonType);
   }
 
-  Boolean evaluateComparison(Object data, String boundString, Operator comparisonType) {
+  /**
+   * A better way to compare data is to use the encoded typed key.
+   *
+   * @see com.pingcap.tikv.expression.RangeColumnPartitionPruner#visit(ComparisonBinaryExpression
+   *     node, LogicalBinaryExpression parent)
+   */
+  Boolean evaluateComparison(
+      Object data, DataType dataType, String boundString, Operator comparisonType) {
     // MYSQL IntegerType, we can convert to long and then compare.
     if (data instanceof Number) {
       long dataLongValue = ((Number) data).longValue();
@@ -104,12 +119,37 @@ public class RangePartitionLocator extends DefaultVisitor<Boolean, PartitionLoca
           throw new UnsupportedOperationException("Unsupported comparison type: " + comparisonType);
       }
     } else if (data instanceof String) {
+      int collation = dataType.getCollationCode();
       String dataStringValue = (String) data;
       switch (comparisonType) {
         case GREATER_EQUAL:
-          return dataStringValue.compareTo(boundString) >= 0;
+          if (Collation.isNewCollationEnabled()) {
+            if (Collation.isUTF8GeneralCICollation(collation)) {
+              return GeneralCICollator.compare(dataStringValue, boundString) >= 0;
+            } else if (Collation.isUTF8UnicodeCICollation(collation)) {
+              return UnicodeCICollator.compare(dataStringValue, boundString) >= 0;
+            } else if (Collation.isBinCollation(collation)) {
+              return BinPaddingCollator.compare(dataStringValue, boundString) >= 0;
+            } else {
+              throw new UnsupportedOperationException("Unsupported collation: " + collation);
+            }
+          } else {
+            return BinPaddingCollator.compare(dataStringValue, boundString) >= 0;
+          }
         case LESS_THAN:
-          return dataStringValue.compareTo(boundString) < 0;
+          if (Collation.isNewCollationEnabled()) {
+            if (Collation.isUTF8GeneralCICollation(collation)) {
+              return GeneralCICollator.compare(dataStringValue, boundString) < 0;
+            } else if (Collation.isUTF8UnicodeCICollation(collation)) {
+              return UnicodeCICollator.compare(dataStringValue, boundString) < 0;
+            } else if (Collation.isBinCollation(collation)) {
+              return BinPaddingCollator.compare(dataStringValue, boundString) < 0;
+            } else {
+              throw new UnsupportedOperationException("Unsupported collation: " + collation);
+            }
+          } else {
+            return BinPaddingCollator.compare(dataStringValue, boundString) < 0;
+          }
         default:
           throw new UnsupportedOperationException("Unsupported comparison type: " + comparisonType);
       }
@@ -117,9 +157,9 @@ public class RangePartitionLocator extends DefaultVisitor<Boolean, PartitionLoca
       String dataStringValue = new String((byte[]) data, StandardCharsets.UTF_8);
       switch (comparisonType) {
         case GREATER_EQUAL:
-          return dataStringValue.compareTo(boundString) >= 0;
+          return BinPaddingCollator.compare(dataStringValue, boundString) >= 0;
         case LESS_THAN:
-          return dataStringValue.compareTo(boundString) < 0;
+          return BinPaddingCollator.compare(dataStringValue, boundString) < 0;
         default:
           throw new UnsupportedOperationException("Unsupported comparison type: " + comparisonType);
       }
