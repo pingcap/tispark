@@ -32,10 +32,8 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,17 +107,21 @@ public class RegionManager {
       Peer leader = region.getLeader();
       store = cache.getStoreById(leader.getStoreId(), backOffer);
     } else {
-      outerLoop:
+      List<Store> tiflashStores = new ArrayList<>();
       for (Peer peer : region.getLearnerList()) {
         Store s = getStoreById(peer.getStoreId(), backOffer);
         for (Metapb.StoreLabel label : s.getLabelsList()) {
           if (label.getKey().equals(storeType.getLabelKey())
-              && label.getValue().equals(storeType.getLabelValue())) {
-            store = s;
-            break outerLoop;
+                  && label.getValue().equals(storeType.getLabelValue())) {
+            tiflashStores.add(s);
           }
         }
       }
+      // select a tiflash randomly
+      Random random = new Random();
+      int randomIndex = random.nextInt(tiflashStores.size());
+      store = tiflashStores.get(randomIndex);
+
       if (store == null) {
         // clear the region cache so we may get the learner peer next time
         cache.invalidateRange(region.getStartKey(), region.getEndKey());
