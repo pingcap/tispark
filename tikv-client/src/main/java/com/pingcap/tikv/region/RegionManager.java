@@ -32,7 +32,6 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-
 import java.util.*;
 import java.util.function.Function;
 import org.slf4j.Logger;
@@ -112,7 +111,7 @@ public class RegionManager {
         Store s = getStoreById(peer.getStoreId(), backOffer);
         for (Metapb.StoreLabel label : s.getLabelsList()) {
           if (label.getKey().equals(storeType.getLabelKey())
-                  && label.getValue().equals(storeType.getLabelValue())) {
+              && label.getValue().equals(storeType.getLabelValue())) {
             tiflashStores.add(s);
           }
         }
