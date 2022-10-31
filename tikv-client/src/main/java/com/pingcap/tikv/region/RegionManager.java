@@ -141,8 +141,6 @@ public class RegionManager {
     return Pair.create(region, store);
   }
 
-  public Store balanceTiFlashStore() {}
-
   public Store getStoreById(long id) {
     return getStoreById(id, ConcreteBackOffer.newGetBackOff());
   }
