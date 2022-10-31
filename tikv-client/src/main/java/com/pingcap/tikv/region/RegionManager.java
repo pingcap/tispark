@@ -117,9 +117,9 @@ public class RegionManager {
         }
       }
       // select a tiflash randomly
-      Random random = new Random();
-      int randomIndex = random.nextInt(tiflashStores.size());
-      store = tiflashStores.get(randomIndex);
+      if(tiflashStores.size() > 0) {
+        store = tiflashStores.get(new Random().nextInt(tiflashStores.size()));
+      }
 
       if (store == null) {
         // clear the region cache so we may get the learner peer next time
