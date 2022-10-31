@@ -50,6 +50,8 @@ public class RegionManager {
 
   private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
 
+  private int TiFlashStoreIndex = 0;
+
   // To avoid double retrieval, we used the async version of grpc
   // When rpc not returned, instead of call again, it wait for previous one done
   public RegionManager(
@@ -116,9 +118,12 @@ public class RegionManager {
           }
         }
       }
-      // select a tiflash randomly
-      if(tiflashStores.size() > 0) {
-        store = tiflashStores.get(new Random().nextInt(tiflashStores.size()));
+
+      // select a tiflash with RR strategy
+      if (tiflashStores.size() > 0) {
+        store =
+            tiflashStores.get(TiFlashStoreIndex > tiflashStores.size() - 1 ? 0 : TiFlashStoreIndex);
+        TiFlashStoreIndex++;
       }
 
       if (store == null) {
@@ -134,6 +139,8 @@ public class RegionManager {
 
     return Pair.create(region, store);
   }
+
+  public Store balanceTiFlashStore() {}
 
   public Store getStoreById(long id) {
     return getStoreById(id, ConcreteBackOffer.newGetBackOff());
