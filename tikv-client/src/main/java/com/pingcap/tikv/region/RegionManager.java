@@ -34,6 +34,7 @@ import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +52,7 @@ public class RegionManager {
 
   private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
 
-  private int TiFlashStoreIndex = 0;
+  private AtomicInteger tiflashStoreIndex = new AtomicInteger(0);
 
   // To avoid double retrieval, we used the async version of grpc
   // When rpc not returned, instead of call again, it wait for previous one done
@@ -122,9 +123,7 @@ public class RegionManager {
 
       // select a tiflash with RR strategy
       if (tiflashStores.size() > 0) {
-        store =
-            tiflashStores.get(TiFlashStoreIndex > tiflashStores.size() - 1 ? 0 : TiFlashStoreIndex);
-        TiFlashStoreIndex++;
+        store = tiflashStores.get(tiflashStoreIndex.getAndIncrement() % tiflashStores.size());
       }
 
       if (store == null) {
