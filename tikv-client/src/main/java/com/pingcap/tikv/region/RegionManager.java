@@ -123,7 +123,8 @@ public class RegionManager {
       // select a tiflash with Round-Robin strategy
       if (tiflashStores.size() > 0) {
         store =
-            tiflashStores.get(Math.abs(tiflashStoreIndex.getAndIncrement() % tiflashStores.size()));
+            tiflashStores.get(
+                Math.floorMod(tiflashStoreIndex.getAndIncrement(), tiflashStores.size()));
       }
 
       if (store == null) {
