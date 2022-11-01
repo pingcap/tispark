@@ -190,6 +190,10 @@ public class RegionManager {
     cache.invalidateRegion(region);
   }
 
+  public void invalidateRange(ByteString startKey, ByteString endKey) {
+    cache.invalidateRange(startKey,endKey);
+  }
+
   public static class RegionCache {
     // private final Map<Long, TiRegion> regionCache;
     private final Map<Long, Store> storeCache;
@@ -254,19 +258,26 @@ public class RegionManager {
 
     private synchronized void invalidateRange(ByteString startKey, ByteString endKey) {
       regionCache.remove(makeRange(startKey, endKey));
+      if (logger.isDebugEnabled()) {
+        logger.debug(String.format("invalidateRange success, startKey[%s], endKey[%s]", startKey, endKey));
+      }
     }
 
     /** Removes region associated with regionId from regionCache. */
     public synchronized void invalidateRegion(TiRegion region) {
       try {
         if (logger.isDebugEnabled()) {
-          logger.debug(String.format("invalidateRegion ID[%s]", region.getId()));
+          logger.debug(String.format("invalidateRegion ID[%s] start", region.getId()));
         }
         TiRegion oldRegion = regionCache.get(getEncodedKey(region.getStartKey()));
         if (oldRegion != null && oldRegion.equals(region)) {
           regionCache.remove(makeRange(region.getStartKey(), region.getEndKey()));
+          if (logger.isDebugEnabled()) {
+            logger.debug(String.format("invalidateRegion ID[%s] success", region.getId()));
+          }
         }
-      } catch (Exception ignore) {
+      } catch (Exception e) {
+        logger.warn("invalidateRegion failed", e);
       }
     }
 
