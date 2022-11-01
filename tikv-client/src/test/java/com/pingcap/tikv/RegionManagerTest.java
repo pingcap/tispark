@@ -157,37 +157,36 @@ public class RegionManagerTest extends PDMockServerTest {
     int ver = 1027;
     long regionId = 233;
     pdServer.addGetRegionResp(
-            GrpcUtils.makeGetRegionResponse(
-                    pdServer.getClusterId(),
-                    GrpcUtils.makeRegion(
-                            regionId,
-                            GrpcUtils.encodeKey(startKey.toByteArray()),
-                            GrpcUtils.encodeKey(endKey.toByteArray()),
-                            GrpcUtils.makeRegionEpoch(confVer, ver),
-                            GrpcUtils.makeLearnerPeer(1, firstStoreId),
-                            GrpcUtils.makeLearnerPeer(2, secondStoreId))));
+        GrpcUtils.makeGetRegionResponse(
+            pdServer.getClusterId(),
+            GrpcUtils.makeRegion(
+                regionId,
+                GrpcUtils.encodeKey(startKey.toByteArray()),
+                GrpcUtils.encodeKey(endKey.toByteArray()),
+                GrpcUtils.makeRegionEpoch(confVer, ver),
+                GrpcUtils.makeLearnerPeer(1, firstStoreId),
+                GrpcUtils.makeLearnerPeer(2, secondStoreId))));
     pdServer.addGetStoreResp(
-            GrpcUtils.makeGetStoreResponse(
-                    pdServer.getClusterId(),
-                    GrpcUtils.makeStore(
-                            firstStoreId,
-                            testAddress,
-                            Metapb.StoreState.Up,
-                            GrpcUtils.makeStoreLabel("engine", "tiflash"),
-                            GrpcUtils.makeStoreLabel("k1", "v1"),
-                            GrpcUtils.makeStoreLabel("k2", "v2"))));
-
+        GrpcUtils.makeGetStoreResponse(
+            pdServer.getClusterId(),
+            GrpcUtils.makeStore(
+                firstStoreId,
+                testAddress,
+                Metapb.StoreState.Up,
+                GrpcUtils.makeStoreLabel("engine", "tiflash"),
+                GrpcUtils.makeStoreLabel("k1", "v1"),
+                GrpcUtils.makeStoreLabel("k2", "v2"))));
 
     pdServer.addGetStoreResp(
-            GrpcUtils.makeGetStoreResponse(
-                    pdServer.getClusterId(),
-                    GrpcUtils.makeStore(
-                            secondStoreId,
-                            testAddress,
-                            StoreState.Up,
-                            GrpcUtils.makeStoreLabel("engine", "tiflash"),
-                            GrpcUtils.makeStoreLabel("k1", "v1"),
-                            GrpcUtils.makeStoreLabel("k2", "v2"))));
+        GrpcUtils.makeGetStoreResponse(
+            pdServer.getClusterId(),
+            GrpcUtils.makeStore(
+                secondStoreId,
+                testAddress,
+                StoreState.Up,
+                GrpcUtils.makeStoreLabel("engine", "tiflash"),
+                GrpcUtils.makeStoreLabel("k1", "v1"),
+                GrpcUtils.makeStoreLabel("k2", "v2"))));
 
     Pair<TiRegion, Store> pair = mgr.getRegionStorePairByKey(searchKey, TiStoreType.TiFlash);
     assertEquals(pair.first.getId(), regionId);
