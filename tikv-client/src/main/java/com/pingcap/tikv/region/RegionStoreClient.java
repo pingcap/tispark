@@ -713,7 +713,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       // we need to invalidate cache
       // Do we need to invalidateAllRegion? Do we need to invalidate store cache?
       if (regionError.hasRegionNotFound()) {
-        this.regionManager.onRegionStale(region);
+        this.regionManager.invalidateRange(region.getStartKey(),region.getEndKey());
       }
       // Split ranges
       return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges, storeType);
