@@ -19,7 +19,11 @@ package org.apache.spark.sql
 import com.pingcap.tispark.TiConfigConst.TELEMETRY_ENABEL
 import com.pingcap.tispark.TiSparkInfo
 import com.pingcap.tispark.telemetry.TelemetryRule
-import org.apache.spark.sql.catalyst.rule.{TiAuthRuleFactory, TiAuthorizationRule, TiStatisticsRuleFactory}
+import org.apache.spark.sql.catalyst.rule.{
+  TiAuthRuleFactory,
+  TiAuthorizationRule,
+  TiStatisticsRuleFactory
+}
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
 import org.apache.spark.sql.catalyst.parser.TiParserFactory
 import org.apache.spark.sql.catalyst.planner.TiStrategyFactory

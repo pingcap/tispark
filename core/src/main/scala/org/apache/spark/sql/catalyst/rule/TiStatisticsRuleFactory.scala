@@ -41,12 +41,7 @@ case class TiStatisticsRule(getOrCreateTiContext: SparkSession => TiContext)(
   private lazy val autoLoad = tiContext.autoLoad
 
   protected def loadStatistics: PartialFunction[LogicalPlan, LogicalPlan] = {
-    case dr@DataSourceV2Relation(
-    tiTable@TiDBTable(_, _, _, _, _),
-    _,
-    _,
-    _,
-    _) =>
+    case dr @ DataSourceV2Relation(tiTable @ TiDBTable(_, _, _, _, _), _, _, _, _) =>
       if (autoLoad) {
         StatisticsManager.loadStatisticsInfo(tiTable.table)
       }

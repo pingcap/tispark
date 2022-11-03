@@ -27,8 +27,7 @@ class StatisticsManagerSuite extends BaseTiSparkTest {
   // fix issue: https://github.com/pingcap/tispark/issues/2573
   test("Physical Plan should print EstimatedCount") {
     val df = spark
-      .sql(
-        """select * from tidb_catalog.tpch_test.LINEITEM
+      .sql("""select * from tidb_catalog.tpch_test.LINEITEM
           |""".stripMargin)
       .groupBy("l_linestatus")
       .count()
