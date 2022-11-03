@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.util.Pair;
 import java.io.IOException;
 import org.junit.Before;
@@ -106,7 +107,7 @@ public class RegionManagerTest extends PDMockServerTest {
                 GrpcUtils.makeStoreLabel("k2", "v2"))));
     Pair<TiRegion, Store> pair = mgr.getRegionStorePairByKey(searchKey);
     assertEquals(pair.first.getId(), regionId);
-    assertEquals(pair.first.getId(), storeId);
+    assertEquals(pair.second.getId(), storeId);
   }
 
   @Test
@@ -142,5 +143,58 @@ public class RegionManagerTest extends PDMockServerTest {
       fail();
     } catch (Exception ignored) {
     }
+  }
+
+  @Test
+  public void getRegionStorePairByKeyWithTiFlash() {
+
+    ByteString startKey = ByteString.copyFrom(new byte[] {1});
+    ByteString endKey = ByteString.copyFrom(new byte[] {10});
+    ByteString searchKey = ByteString.copyFrom(new byte[] {5});
+    String testAddress = "testAddress";
+    long firstStoreId = 233;
+    long secondStoreId = 234;
+    int confVer = 1026;
+    int ver = 1027;
+    long regionId = 233;
+    pdServer.addGetRegionResp(
+        GrpcUtils.makeGetRegionResponse(
+            pdServer.getClusterId(),
+            GrpcUtils.makeRegion(
+                regionId,
+                GrpcUtils.encodeKey(startKey.toByteArray()),
+                GrpcUtils.encodeKey(endKey.toByteArray()),
+                GrpcUtils.makeRegionEpoch(confVer, ver),
+                GrpcUtils.makeLearnerPeer(1, firstStoreId),
+                GrpcUtils.makeLearnerPeer(2, secondStoreId))));
+    pdServer.addGetStoreResp(
+        GrpcUtils.makeGetStoreResponse(
+            pdServer.getClusterId(),
+            GrpcUtils.makeStore(
+                firstStoreId,
+                testAddress,
+                Metapb.StoreState.Up,
+                GrpcUtils.makeStoreLabel("engine", "tiflash"),
+                GrpcUtils.makeStoreLabel("k1", "v1"),
+                GrpcUtils.makeStoreLabel("k2", "v2"))));
+
+    pdServer.addGetStoreResp(
+        GrpcUtils.makeGetStoreResponse(
+            pdServer.getClusterId(),
+            GrpcUtils.makeStore(
+                secondStoreId,
+                testAddress,
+                StoreState.Up,
+                GrpcUtils.makeStoreLabel("engine", "tiflash"),
+                GrpcUtils.makeStoreLabel("k1", "v1"),
+                GrpcUtils.makeStoreLabel("k2", "v2"))));
+
+    Pair<TiRegion, Store> pair = mgr.getRegionStorePairByKey(searchKey, TiStoreType.TiFlash);
+    assertEquals(pair.first.getId(), regionId);
+    assertEquals(pair.second.getId(), firstStoreId);
+
+    Pair<TiRegion, Store> secondPair = mgr.getRegionStorePairByKey(searchKey, TiStoreType.TiFlash);
+    assertEquals(secondPair.first.getId(), regionId);
+    assertEquals(secondPair.second.getId(), secondStoreId);
   }
 }
