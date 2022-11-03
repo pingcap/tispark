@@ -23,7 +23,6 @@ import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.types.{DataType, DataTypeFactory, IntegerType, MySQLType}
 import com.pingcap.tikv.util.ConvertUpstreamUtils
-import com.pingcap.tispark.telemetry.TiSparkTeleInfo
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 import org.apache.spark.sql.execution.{ExplainMode, SimpleMode}
 import org.scalatest.Matchers.{be, contain, convertToAnyShouldWrapper}
@@ -591,23 +590,6 @@ class LogicalPlanTestSuite extends BasePlanTest {
       myExpectationPlan2
         .equals(sparkPhysicalPlan2))
 
-    // IndexScan with complex sql statements
-    val df3 = spark.sql("SELECT sum(a) FROM t1 where  b > 'cc' or b < 'bb' and a>0 limit(10)")
-    val dag3 = extractDAGRequests(df3).head
-    val regionTaskExec3 =
-      extractRegionTaskExecs(df3).head.verboseString(25).trim
-    val downgradeFilter3 = dag3.getDowngradeFilters.toArray.mkString(", ")
-    val selection3 = dag3.getFilters.toArray.mkString(", ")
-    var expectRegionTaskExec3 =
-      ("TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[%s]")
-    expectRegionTaskExec3 = expectRegionTaskExec3.format(downgradeFilter3)
-    var expectDAG3 = "[table: t1] IndexLookUp, Columns: b@VARCHAR(255), a@LONG: " +
-      "{ {IndexRangeScan(Index:testindex(b,a)): { RangeFilter: [], Range: [%s] }}; " +
-      "{TableRowIDScan, Selection: [%s], Aggregates: Sum(a@LONG)} }, startTs: %d"
-    expectDAG3 =
-      expectDAG3.format(stringKeyRangeInDAG(dag3), selection3, dag3.getStartTs.getVersion)
-    assert(expectRegionTaskExec3.equals(regionTaskExec3))
-    assert(expectDAG3.equals(dag3.toString))
   }
 
   // https://github.com/pingcap/tispark/issues/1498
