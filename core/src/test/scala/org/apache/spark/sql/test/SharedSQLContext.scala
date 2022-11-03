@@ -32,7 +32,7 @@ import org.apache.spark.{SharedSparkContext, SparkConf, SparkFunSuite}
 import org.joda.time.DateTimeZone
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
-import org.tikv.common.{StoreVersion, Version}
+import org.tikv.common.Version
 
 import java.io.File
 import java.sql.{Connection, Date, Statement}
@@ -459,6 +459,7 @@ trait SharedSQLContext
       }
       import com.pingcap.tispark.TiConfigConst._
       conf.set(PD_ADDRESSES, pdAddresses)
+      conf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
       conf.set(ALLOW_INDEX_READ, getFlagOrTrue(_tidbConf, ALLOW_INDEX_READ).toString)
       conf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
       conf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)

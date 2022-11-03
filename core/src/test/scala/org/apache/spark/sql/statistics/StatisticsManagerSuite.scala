@@ -19,5 +19,22 @@
 package org.apache.spark.sql.statistics
 
 import org.apache.spark.sql.BaseTiSparkTest
+import org.apache.spark.sql.execution.SimpleMode
+import org.scalatest.Matchers.{convertToAnyShouldWrapper, include}
 
-class StatisticsManagerSuite extends BaseTiSparkTest {}
+class StatisticsManagerSuite extends BaseTiSparkTest {
+
+  // fix issue: https://github.com/pingcap/tispark/issues/2573
+  test("Physical Plan should print EstimatedCount") {
+    val df = spark
+      .sql(
+        """select * from tidb_catalog.tpch_test.LINEITEM
+          |""".stripMargin)
+      .groupBy("l_linestatus")
+      .count()
+
+    val explainStr = df.queryExecution.explainString(SimpleMode)
+
+    explainStr should include("EstimatedCount:")
+  }
+}
