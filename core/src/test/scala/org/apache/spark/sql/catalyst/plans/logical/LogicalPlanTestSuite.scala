@@ -415,26 +415,19 @@ class LogicalPlanTestSuite extends BasePlanTest {
                        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
         """.stripMargin)
     tidbStmt.execute("CREATE INDEX `testIndex` ON `t1` (`a`,`b`)")
-    // IndexScan with Selection and with RangeFilter.
+    // TableRangeScan
     val df1 = spark.sql("SELECT * FROM t1 where a>0 and b > 'aa'")
     val dag1 = extractDAGRequests(df1).head
     val expectation1 =
       "== Physical Plan ==\n" +
         "*(1) ColumnarToRow\n" +
-        "+- TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[%s]\n" +
-        "   +- RowToColumnar\n" +
-        "      +- TiKV FetchHandleRDD{[table: t1] IndexLookUp, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
-        "{ {IndexRangeScan(Index:testindex(a,b)): { RangeFilter: [%s], Range: [%s] }, " +
-        "Selection: [%s]}; " +
-        "{TableRowIDScan, Selection: [%s]} }, startTs: %s}".trim
-    val downgradeFilter1 = dag1.getDowngradeFilters.toArray.mkString(", ")
+        ("+- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
+          "{ TableRangeScan: { RangeFilter: [%s], Range: [%s] }, Selection: [%s] }, startTs: %d}").trim
     val rangeFilter1 = dag1.getRangeFilter.toArray.mkString(", ")
     val selection1 = dag1.getFilters.toArray.mkString(", ")
     val myExpectationPlan1 = expectation1.format(
-      downgradeFilter1,
       rangeFilter1,
       stringKeyRangeInDAG(dag1),
-      selection1,
       selection1,
       dag1.getStartTs.getVersion)
     val sparkPhysicalPlan1 =
@@ -485,30 +478,23 @@ class LogicalPlanTestSuite extends BasePlanTest {
       myExpectationPlan3
         .equals(sparkPhysicalPlan3))
 
-    // IndexScan with complex sql statements
+    // TableRangeScan
     val df4 = spark.sql(
       "SELECT max(c) FROM t1 where a>0 and c > 'cc' and c < 'bb' group by c order by(c)")
     val dag4 = extractDAGRequests(df4).head
-    val regionTaskExec4 =
-      extractRegionTaskExecs(df4).head.verboseString(25).trim
+
     val rangeFilter4 = dag4.getRangeFilter.toArray.mkString(", ")
-    val downgradeFilter4 = dag4.getDowngradeFilters.toArray.mkString(", ")
     val selection4 = dag4.getFilters.toArray.mkString(", ")
-    var expectRegionTaskExec4 =
-      ("TiSpark RegionTaskExec{downgradeThreshold=1000000000,downgradeFilter=[%s]")
-    expectRegionTaskExec4 = expectRegionTaskExec4.format(downgradeFilter4)
-    var expectDAG4 = "[table: t1] IndexLookUp, Columns: c@VARCHAR(255), a@LONG: " +
-      "{ {IndexRangeScan(Index:testindex(a,b)): " +
-      "{ RangeFilter: [%s], " +
-      "Range: [%s] }}; " +
-      "{TableRowIDScan, Selection: [%s], Aggregates: Max(c@VARCHAR(255)), First(c@VARCHAR(255)), " +
-      "Group By: [c@VARCHAR(255) ASC]} }, startTs: %d"
+    var expectDAG4 = "[table: t1] TableReader, Columns: c@VARCHAR(255), a@LONG: " +
+      "{ TableRangeScan: { RangeFilter: [%s], Range: [%s] }, " +
+      "Selection: [%s], Aggregates: Max(c@VARCHAR(255)), First(c@VARCHAR(255)), " +
+      "Group By: [c@VARCHAR(255) ASC] }, startTs: %d"
+
     expectDAG4 = expectDAG4.format(
       rangeFilter4,
       stringKeyRangeInDAG(dag4),
       selection4,
       dag4.getStartTs.getVersion)
-    assert(expectRegionTaskExec4.equals(regionTaskExec4))
     assert(expectDAG4.equals(dag4.toString))
 
     // IndexScan with complex sql statements
@@ -590,6 +576,23 @@ class LogicalPlanTestSuite extends BasePlanTest {
       myExpectationPlan2
         .equals(sparkPhysicalPlan2))
 
+    // TableRangeScan
+    val df3 = spark.sql("SELECT sum(a) FROM t1 where  b > 'cc' or b < 'bb' and a>0 limit(10)")
+    val dag3 = extractDAGRequests(df3).head
+    val expectation3 =
+      ("[table: t1] TableReader, Columns: b@VARCHAR(255), a@LONG: " +
+        "{ TableRangeScan: { RangeFilter: [%s], Range: [%s] }, " +
+        "Selection: [%s], " +
+        "Aggregates: Sum(a@LONG) }, startTs: %d").trim
+
+    val rangeFilter3 = dag3.getRangeFilter.toArray.mkString(", ")
+    val selection3 = dag3.getFilters.toArray.mkString(", ")
+    val myExpectation3 = expectation3.format(
+      rangeFilter3,
+      stringKeyRangeInDAG(dag3),
+      selection3,
+      dag3.getStartTs.getVersion)
+    assert(myExpectation3.equals(dag3.toString.trim))
   }
 
   // https://github.com/pingcap/tispark/issues/1498
