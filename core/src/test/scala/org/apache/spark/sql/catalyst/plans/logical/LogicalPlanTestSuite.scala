@@ -34,11 +34,10 @@ import java.util
 class LogicalPlanTestSuite extends BasePlanTest {
 
   // When statistics is enabled, the plan will be different caused by CBO.
+  // In order to get the exact result, we need to disable statistics.
   override def beforeAll(): Unit = {
     _isStatisticsEnabled = false
     super.beforeAll()
-    initializeContext()
-    initializeSparkSession()
   }
 
   override def afterAll(): Unit = {
@@ -54,7 +53,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     }
   }
 
-    // https://github.com/pingcap/tispark/issues/2328
+  // https://github.com/pingcap/tispark/issues/2328
   test("limit push down fail in df.show") {
     tidbStmt.execute("DROP TABLE IF EXISTS `test_l`")
     tidbStmt.execute(
