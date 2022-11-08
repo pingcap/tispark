@@ -710,9 +710,9 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       backOffer.doBackOff(
           BackOffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(regionError.toString()));
       logger.warn("Re-splitting region task due to region error:" + regionError.getMessage());
-      // we need to invalidate cache
-      // Do we need to invalidateAllRegion? Do we need to invalidate store cache?
+      // we need to invalidate cache when region not find
       if (regionError.hasRegionNotFound()) {
+        logger.info("invalidateRange when Re-splitting region task because of region not find.");
         this.regionManager.invalidateRange(region.getStartKey(),region.getEndKey());
       }
       // Split ranges
