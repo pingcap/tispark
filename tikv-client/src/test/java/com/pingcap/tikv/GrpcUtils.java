@@ -20,6 +20,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import java.util.Arrays;
+import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Region;
 import org.tikv.kvproto.Metapb.RegionEpoch;
@@ -62,6 +63,10 @@ public class GrpcUtils {
 
   public static Peer makePeer(long id, long storeId) {
     return Peer.newBuilder().setStoreId(storeId).setId(id).build();
+  }
+
+  public static Peer makeLearnerPeer(long id, long storeId) {
+    return Peer.newBuilder().setRole(Metapb.PeerRole.Learner).setStoreId(storeId).setId(id).build();
   }
 
   public static ByteString encodeKey(byte[] key) {
