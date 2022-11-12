@@ -24,6 +24,7 @@ trait SharedSparkContext extends BeforeAndAfterAll with BeforeAndAfterEach { sel
 
   protected var _isAuthEnabled: Boolean = false
   protected var _isHiveEnabled: Boolean = false
+  protected var _isStatisticsEnabled: Boolean = true
   protected var conf: SparkConf = new SparkConf(false)
 
   def sc: SparkContext = _sc

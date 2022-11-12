@@ -20,7 +20,11 @@ import com.pingcap.tispark.TiConfigConst.TELEMETRY_ENABEL
 import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tispark.TiSparkInfo
 import com.pingcap.tispark.telemetry.TelemetryRule
-import org.apache.spark.sql.catalyst.analyzer.{TiAuthRuleFactory, TiAuthorizationRule}
+import org.apache.spark.sql.catalyst.rule.{
+  TiAuthRuleFactory,
+  TiAuthorizationRule,
+  TiStatisticsRuleFactory
+}
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
 import org.apache.spark.sql.catalyst.parser.TiParserFactory
 import org.apache.spark.sql.catalyst.planner.TiStrategyFactory
@@ -36,6 +40,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 
     e.injectParser(TiParserFactory(getOrCreateTiContext))
     e.injectResolutionRule(new TiAuthRuleFactory(getOrCreateTiContext))
+    e.injectResolutionRule(new TiStatisticsRuleFactory(getOrCreateTiContext))
     e.injectPlannerStrategy(new TiStrategyFactory(getOrCreateTiContext))
     e.injectCheckRule(TelemetryRule)
   }
