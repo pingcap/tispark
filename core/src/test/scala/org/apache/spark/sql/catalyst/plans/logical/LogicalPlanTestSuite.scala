@@ -23,7 +23,6 @@ import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.types.{DataType, DataTypeFactory, IntegerType, MySQLType}
 import com.pingcap.tikv.util.ConvertUpstreamUtils
-import com.pingcap.tispark.telemetry.TiSparkTeleInfo
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 import org.apache.spark.sql.execution.{ExplainMode, SimpleMode}
 import org.scalatest.Matchers.{be, contain, convertToAnyShouldWrapper}
@@ -33,6 +32,26 @@ import org.tikv.kvproto.Coprocessor
 import java.util
 
 class LogicalPlanTestSuite extends BasePlanTest {
+
+  // When statistics is enabled, the plan will be different caused by CBO.
+  // In order to get the exact result, we need to disable statistics.
+  override def beforeAll(): Unit = {
+    _isStatisticsEnabled = false
+    super.beforeAll()
+  }
+
+  override def afterAll(): Unit = {
+    _isStatisticsEnabled = true
+    try {
+      tidbStmt.execute("drop table if exists t")
+      tidbStmt.execute("drop table if exists t1")
+      tidbStmt.execute("drop table if exists test1")
+      tidbStmt.execute("drop table if exists test2")
+      tidbStmt.execute("drop table if exists test3")
+    } finally {
+      super.afterAll()
+    }
+  }
 
   // https://github.com/pingcap/tispark/issues/2328
   test("limit push down fail in df.show") {
@@ -759,17 +778,6 @@ class LogicalPlanTestSuite extends BasePlanTest {
       df3.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
     assert(myExpectation3.equals(sparkPhysicalPlan3))
   }
-
-  override def afterAll(): Unit =
-    try {
-      tidbStmt.execute("drop table if exists t")
-      tidbStmt.execute("drop table if exists t1")
-      tidbStmt.execute("drop table if exists test1")
-      tidbStmt.execute("drop table if exists test2")
-      tidbStmt.execute("drop table if exists test3")
-    } finally {
-      super.afterAll()
-    }
 
   def stringKeyRangeInDAG(dag: TiDAGRequest): String = {
     val sb = new StringBuilder()

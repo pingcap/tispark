@@ -68,6 +68,8 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   clientSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
   val meta: MetaManager = new MetaManager(clientSession.getCatalog)
   val debug: DebugTool = new DebugTool
+  val autoLoad: Boolean =
+    conf.getBoolean(TiConfigConst.ENABLE_AUTO_LOAD_STATISTICS, defaultValue = true)
 
   // add backtick for table name in case it contains, e.g., a minus sign
   private def getViewName(dbName: String, tableName: String, dbNameAsPrefix: Boolean): String =
