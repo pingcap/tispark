@@ -16,17 +16,7 @@
 
 package org.apache.spark.sql.catalyst.plans.logical
 
-<<<<<<< HEAD
 import com.pingcap.tikv.meta.TiTimestamp
-=======
-import com.pingcap.tikv.codec.KeyUtils
-import com.pingcap.tikv.expression.ComparisonBinaryExpression.{greaterEqual, lessEqual}
-import com.pingcap.tikv.expression.{ColumnRef, Constant, Expression, LogicalBinaryExpression}
-import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder
-import com.pingcap.tikv.meta.TiDAGRequest
-import com.pingcap.tikv.types.{DataType, DataTypeFactory, IntegerType, MySQLType}
-import com.pingcap.tikv.util.ConvertUpstreamUtils
->>>>>>> 0fccb5a40 (fix statistics (#2578))
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 
 class LogicalPlanTestSuite extends BasePlanTest {
@@ -91,38 +81,39 @@ class LogicalPlanTestSuite extends BasePlanTest {
       "insert into test3 values(1, 2, 3), (2, 1, 3), (2, 1, 4), (3, 2, 3), (4, 2, 1)")
     refreshConnections()
     val df =
-      spark.sql("""
-                  |select t1.*, (
-                  |	select count(*)
-                  |	from test2
-                  |	where id > 1
-                  |), t1.c1, t2.c1, t3.*, t4.c3
-                  |from (
-                  |	select id, c1, c2
-                  |	from test1) t1
-                  |left join (
-                  |	select id, c1, c2, c1 + coalesce(c2 % 2) as c3
-                  |	from test2 where c1 + c2 > 3) t2
-                  |on t1.id = t2.id
-                  |left join (
-                  |	select max(id) as id, min(c1) + c2 as c1, c2, count(*) as c3
-                  |	from test3
-                  |	where c2 <= 3 and exists (
-                  |		select * from (
-                  |			select id as c1 from test3)
-                  |    where (
-                  |      select max(id) from test1) = 4)
-                  |	group by c2) t3
-                  |on t1.id = t3.id
-                  |left join (
-                  |	select max(id) as id, min(c1) as c1, max(c1) as c1, count(*) as c2, c2 as c3
-                  |	from test3
-                  |	where id not in (
-                  |		select id
-                  |		from test1
-                  |		where c2 > 2)
-                  |	group by c2) t4
-                  |on t1.id = t4.id
+      spark.sql(
+        """
+          |select t1.*, (
+          |	select count(*)
+          |	from test2
+          |	where id > 1
+          |), t1.c1, t2.c1, t3.*, t4.c3
+          |from (
+          |	select id, c1, c2
+          |	from test1) t1
+          |left join (
+          |	select id, c1, c2, c1 + coalesce(c2 % 2) as c3
+          |	from test2 where c1 + c2 > 3) t2
+          |on t1.id = t2.id
+          |left join (
+          |	select max(id) as id, min(c1) + c2 as c1, c2, count(*) as c3
+          |	from test3
+          |	where c2 <= 3 and exists (
+          |		select * from (
+          |			select id as c1 from test3)
+          |    where (
+          |      select max(id) from test1) = 4)
+          |	group by c2) t3
+          |on t1.id = t3.id
+          |left join (
+          |	select max(id) as id, min(c1) as c1, max(c1) as c1, count(*) as c2, c2 as c3
+          |	from test3
+          |	where id not in (
+          |		select id
+          |		from test1
+          |		where c2 > 2)
+          |	group by c2) t4
+          |on t1.id = t4.id
       """.stripMargin)
 
     var v: TiTimestamp = null
@@ -139,7 +130,9 @@ class LogicalPlanTestSuite extends BasePlanTest {
         println("check ok " + v.getVersion)
       }
 
-    extractDAGRequests(df).map(_.getStartTs).foreach { checkTimestamp }
+    extractDAGRequests(df).map(_.getStartTs).foreach {
+      checkTimestamp
+    }
   }
 
   // https://github.com/pingcap/tispark/issues/1498
@@ -163,159 +156,4 @@ class LogicalPlanTestSuite extends BasePlanTest {
     checkIsIndexScan(df, "t")
     checkIndex(df, "artical_id")
   }
-
-<<<<<<< HEAD
-  override def afterAll(): Unit =
-    try {
-      tidbStmt.execute("drop table if exists t")
-      tidbStmt.execute("drop table if exists test1")
-      tidbStmt.execute("drop table if exists test2")
-      tidbStmt.execute("drop table if exists test3")
-    } finally {
-      super.afterAll()
-    }
-=======
-  test("test physical plan explain which table with common handle") {
-    if (!ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
-        this.ti.clientSession.getTiKVSession.getPDClient,
-        "5.0.0")) {
-      cancel("TiDB version must bigger or equal than 5.0")
-    }
-    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    tidbStmt.execute("""
-        |CREATE TABLE `t1` (
-        |  `a` BIGINT(20) NOT NULL,
-        |  `b` varchar(255) NOT NULL,
-        |  `c` varchar(255) DEFAULT NULL,
-        |   PRIMARY KEY (`b`) clustered
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
-    // TableScan with Selection and with RangeFilter.
-    val df1 = spark.sql("select * from t1 where a>0 and b>'aa'")
-    val dag1 = extractDAGRequests(df1).head
-    val expectation1 =
-      "== Physical Plan ==\n" +
-        "*(1) ColumnarToRow\n" +
-        "+- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
-        "{ TableRangeScan: { RangeFilter: [%s], Range: [%s] }, Selection: [%s] }, startTs: %d}".trim
-    val rangeFilter1 = dag1.getRangeFilter.toArray().mkString(", ")
-    val selection1 = dag1.getFilters.toArray.mkString(", ")
-    val myExpectation1 = expectation1.format(
-      rangeFilter1,
-      stringKeyRangeInDAG(dag1),
-      selection1,
-      dag1.getStartTs.getVersion)
-    val sparkPhysicalPlan1 =
-      df1.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
-    assert(myExpectation1.equals(sparkPhysicalPlan1))
-
-    // TableScan without Selection and with RangeFilter.
-    val df2 = spark.sql("select * from t1 where b>'aa'")
-    val dag2 = extractDAGRequests(df2).head
-    val expectation2 =
-      "== Physical Plan ==\n" +
-        "*(1) ColumnarToRow\n" +
-        "+- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
-        "{ TableRangeScan: { RangeFilter: [%s], Range: [%s] } }, startTs: %d}".trim
-    val rangeFilter2 = dag2.getRangeFilter.toArray().mkString(", ")
-    val myExpectation2 =
-      expectation2.format(rangeFilter2, stringKeyRangeInDAG(dag2), dag2.getStartTs.getVersion)
-    val sparkPhysicalPlan2 =
-      df2.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
-    assert(myExpectation2.equals(sparkPhysicalPlan2))
-
-    // TableScan with Selection and without RangeFilter.
-    val df3 = spark.sql("select * from t1 where a>0")
-    val dag3 = extractDAGRequests(df3).head
-    val expectation3 =
-      ("== Physical Plan ==\n" +
-        "*(1) ColumnarToRow\n" +
-        "+- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): { " +
-        "TableRangeScan: { RangeFilter: [], Range: [%s] }, Selection: [%s] }, startTs: %d}").trim
-    val selection3 = dag3.getFilters.toArray().mkString(", ")
-    val myExpectation3 =
-      expectation3.format(stringKeyRangeInDAG(dag3), selection3, dag3.getStartTs.getVersion)
-    val sparkPhysicalPlan3 =
-      df3.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
-    assert(myExpectation3.equals(sparkPhysicalPlan3))
-  }
-
-  test("test physical plan explain which table with multi col common handle") {
-    if (!ConvertUpstreamUtils.isTiKVVersionGreatEqualThanVersion(
-        this.ti.clientSession.getTiKVSession.getPDClient,
-        "5.0.0")) {
-      cancel("TiDB version must bigger or equal than 5.0")
-    }
-    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    tidbStmt.execute("""
-        |CREATE TABLE `t1` (
-        |  `a` BIGINT(20) NOT NULL,
-        |  `b` varchar(255) NOT NULL,
-        |  `c` varchar(255) DEFAULT NULL,
-        |   PRIMARY KEY (`b`,`a`) clustered
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin)
-    // TableScan with Selection and with RangeFilter.
-    val df1 = spark.sql("select * from t1 where a>0 and b>'aa'")
-    val dag1 = extractDAGRequests(df1).head
-    val expectation1 =
-      "== Physical Plan ==\n" +
-        "*(1) ColumnarToRow\n" +
-        "+- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
-        "{ TableRangeScan: { RangeFilter: [%s], Range: [%s] }, Selection: [%s] }, startTs: %d}".trim
-    val rangeFilter1 = dag1.getRangeFilter.toArray().mkString(", ")
-    val selection1 = dag1.getFilters.toArray.mkString(", ")
-    val myExpectation1 = expectation1.format(
-      rangeFilter1,
-      stringKeyRangeInDAG(dag1),
-      selection1,
-      dag1.getStartTs.getVersion)
-    val sparkPhysicalPlan1 =
-      df1.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
-    assert(myExpectation1.equals(sparkPhysicalPlan1))
-
-    // TableScan without Selection and with RangeFilter.
-    val df2 = spark.sql("select * from t1 where b='aa' and a>0")
-    val dag2 = extractDAGRequests(df2).head
-    val expectation2 =
-      "== Physical Plan ==\n" +
-        "*(1) ColumnarToRow\n" +
-        "+- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): " +
-        "{ TableRangeScan: { RangeFilter: [%s], Range: [%s] } }, startTs: %d}".trim
-    val rangeFilter2 = dag2.getRangeFilter.toArray().mkString(", ")
-    val myExpectation2 =
-      expectation2.format(rangeFilter2, stringKeyRangeInDAG(dag2), dag2.getStartTs.getVersion)
-    val sparkPhysicalPlan2 =
-      df2.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
-    assert(myExpectation2.equals(sparkPhysicalPlan2))
-
-    // TableScan with Selection and without RangeFilter.
-    val df3 = spark.sql("select * from t1 where a>0")
-    val dag3 = extractDAGRequests(df3).head
-    val expectation3 =
-      ("== Physical Plan ==\n" +
-        "*(1) ColumnarToRow\n" +
-        "+- TiKV CoprocessorRDD{[table: t1] TableReader, Columns: a@LONG, b@VARCHAR(255), c@VARCHAR(255): { " +
-        "TableRangeScan: { RangeFilter: [], Range: [%s] }, Selection: [%s] }, startTs: %d}").trim
-    val selection3 = dag3.getFilters.toArray().mkString(", ")
-    val myExpectation3 =
-      expectation3.format(stringKeyRangeInDAG(dag3), selection3, dag3.getStartTs.getVersion)
-    val sparkPhysicalPlan3 =
-      df3.queryExecution.explainString(ExplainMode.fromString(SimpleMode.name)).trim
-    assert(myExpectation3.equals(sparkPhysicalPlan3))
-  }
-
-  def stringKeyRangeInDAG(dag: TiDAGRequest): String = {
-    val sb = new StringBuilder()
-    dag.getRangesMaps.values.forEach((vList: util.List[Coprocessor.KeyRange]) => {
-      def foo(vList: util.List[Coprocessor.KeyRange]) = {
-        import scala.collection.JavaConversions._
-        for (range <- vList) { // LogDesensitization: show key range in coprocessor request in log
-          sb.append(KeyUtils.formatBytesUTF8(range))
-        }
-      }
-
-      foo(vList)
-    })
-    sb.toString()
-  }
->>>>>>> 0fccb5a40 (fix statistics (#2578))
 }

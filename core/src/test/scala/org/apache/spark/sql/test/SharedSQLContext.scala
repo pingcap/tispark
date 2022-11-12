@@ -34,10 +34,6 @@ import org.apache.spark.{SharedSparkContext, SparkConf, SparkFunSuite}
 import org.joda.time.DateTimeZone
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
-<<<<<<< HEAD
-=======
-import org.tikv.common.Version
->>>>>>> 0fccb5a40 (fix statistics (#2578))
 
 import scala.collection.mutable.ArrayBuffer
 
