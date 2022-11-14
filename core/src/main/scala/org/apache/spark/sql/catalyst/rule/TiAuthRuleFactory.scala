@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.spark.sql.catalyst.analyzer
+package org.apache.spark.sql.catalyst.rule
 
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tispark.auth.TiAuthorization
