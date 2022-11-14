@@ -21,6 +21,26 @@ import org.apache.spark.sql.catalyst.plans.BasePlanTest
 
 class LogicalPlanTestSuite extends BasePlanTest {
 
+  // When statistics is enabled, the plan will be different caused by CBO.
+  // In order to get the exact result, we need to disable statistics.
+  override def beforeAll(): Unit = {
+    _isStatisticsEnabled = false
+    super.beforeAll()
+  }
+
+  override def afterAll(): Unit = {
+    _isStatisticsEnabled = true
+    try {
+      tidbStmt.execute("drop table if exists t")
+      tidbStmt.execute("drop table if exists t1")
+      tidbStmt.execute("drop table if exists test1")
+      tidbStmt.execute("drop table if exists test2")
+      tidbStmt.execute("drop table if exists test3")
+    } finally {
+      super.afterAll()
+    }
+  }
+
   // https://github.com/pingcap/tispark/issues/2328
   test("limit push down fail in df.show") {
     tidbStmt.execute("DROP TABLE IF EXISTS `test_l`")
@@ -61,38 +81,39 @@ class LogicalPlanTestSuite extends BasePlanTest {
       "insert into test3 values(1, 2, 3), (2, 1, 3), (2, 1, 4), (3, 2, 3), (4, 2, 1)")
     refreshConnections()
     val df =
-      spark.sql("""
-                  |select t1.*, (
-                  |	select count(*)
-                  |	from test2
-                  |	where id > 1
-                  |), t1.c1, t2.c1, t3.*, t4.c3
-                  |from (
-                  |	select id, c1, c2
-                  |	from test1) t1
-                  |left join (
-                  |	select id, c1, c2, c1 + coalesce(c2 % 2) as c3
-                  |	from test2 where c1 + c2 > 3) t2
-                  |on t1.id = t2.id
-                  |left join (
-                  |	select max(id) as id, min(c1) + c2 as c1, c2, count(*) as c3
-                  |	from test3
-                  |	where c2 <= 3 and exists (
-                  |		select * from (
-                  |			select id as c1 from test3)
-                  |    where (
-                  |      select max(id) from test1) = 4)
-                  |	group by c2) t3
-                  |on t1.id = t3.id
-                  |left join (
-                  |	select max(id) as id, min(c1) as c1, max(c1) as c1, count(*) as c2, c2 as c3
-                  |	from test3
-                  |	where id not in (
-                  |		select id
-                  |		from test1
-                  |		where c2 > 2)
-                  |	group by c2) t4
-                  |on t1.id = t4.id
+      spark.sql(
+        """
+          |select t1.*, (
+          |	select count(*)
+          |	from test2
+          |	where id > 1
+          |), t1.c1, t2.c1, t3.*, t4.c3
+          |from (
+          |	select id, c1, c2
+          |	from test1) t1
+          |left join (
+          |	select id, c1, c2, c1 + coalesce(c2 % 2) as c3
+          |	from test2 where c1 + c2 > 3) t2
+          |on t1.id = t2.id
+          |left join (
+          |	select max(id) as id, min(c1) + c2 as c1, c2, count(*) as c3
+          |	from test3
+          |	where c2 <= 3 and exists (
+          |		select * from (
+          |			select id as c1 from test3)
+          |    where (
+          |      select max(id) from test1) = 4)
+          |	group by c2) t3
+          |on t1.id = t3.id
+          |left join (
+          |	select max(id) as id, min(c1) as c1, max(c1) as c1, count(*) as c2, c2 as c3
+          |	from test3
+          |	where id not in (
+          |		select id
+          |		from test1
+          |		where c2 > 2)
+          |	group by c2) t4
+          |on t1.id = t4.id
       """.stripMargin)
 
     var v: TiTimestamp = null
@@ -109,7 +130,9 @@ class LogicalPlanTestSuite extends BasePlanTest {
         println("check ok " + v.getVersion)
       }
 
-    extractDAGRequests(df).map(_.getStartTs).foreach { checkTimestamp }
+    extractDAGRequests(df).map(_.getStartTs).foreach {
+      checkTimestamp
+    }
   }
 
   // https://github.com/pingcap/tispark/issues/1498
@@ -133,14 +156,4 @@ class LogicalPlanTestSuite extends BasePlanTest {
     checkIsIndexScan(df, "t")
     checkIndex(df, "artical_id")
   }
-
-  override def afterAll(): Unit =
-    try {
-      tidbStmt.execute("drop table if exists t")
-      tidbStmt.execute("drop table if exists test1")
-      tidbStmt.execute("drop table if exists test2")
-      tidbStmt.execute("drop table if exists test3")
-    } finally {
-      super.afterAll()
-    }
 }
