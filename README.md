@@ -5,6 +5,7 @@
 
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer complex OLAP queries. It enjoys the merits of both the Spark platform and the distributed clusters of TiKV while seamlessly integrated to TiDB, a distributed OLTP database, to provide one-stop Hybrid Transactional/Analytical Processing (HTAP) solutions for online transactions and analyses.
 
+
 The figure below show the architecture of TiSpark.
 
 ![architecture](./docs/architecture.png)
