@@ -277,6 +277,15 @@ See [here](https://github.com/pingcap/docs/blob/master/statistics.md) for more d
 
 Since TiSpark 2.0, statistics information is default to auto-load.
 
+> **Note:**
+>
+> Table statistics is cached in your Spark driver node's memory, so you need to make sure that the memory is large enough for the statistics information.
+Currently, you can adjust these configurations in your `spark.conf` file.
+
+| Property Name | Default | Description
+| --------   | -----:   | :----: |
+| `spark.tispark.statistics.auto_load` | `true` | Whether to load the statistics information automatically during database mapping |
+
 # FAQ
 
 See our wiki [TiSpark FAQ](https://github.com/pingcap/tispark/wiki/TiSpark-FAQ)

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.catalyst.analyzer
+package org.apache.spark.sql.catalyst.rule
 
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.v2.TiDBTable
