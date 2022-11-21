@@ -33,6 +33,26 @@ import java.util
 
 class LogicalPlanTestSuite extends BasePlanTest {
 
+  // When statistics is enabled, the plan will be different caused by CBO.
+  // In order to get the exact result, we need to disable statistics.
+  override def beforeAll(): Unit = {
+    _isStatisticsEnabled = false
+    super.beforeAll()
+  }
+
+  override def afterAll(): Unit = {
+    _isStatisticsEnabled = true
+    try {
+      tidbStmt.execute("drop table if exists t")
+      tidbStmt.execute("drop table if exists t1")
+      tidbStmt.execute("drop table if exists test1")
+      tidbStmt.execute("drop table if exists test2")
+      tidbStmt.execute("drop table if exists test3")
+    } finally {
+      super.afterAll()
+    }
+  }
+
   // https://github.com/pingcap/tispark/issues/2328
   test("limit push down fail in df.show") {
     tidbStmt.execute("DROP TABLE IF EXISTS `test_l`")
@@ -627,16 +647,6 @@ class LogicalPlanTestSuite extends BasePlanTest {
     checkIsIndexLookUp(df, "t")
     checkIndex(df, "artical_id")
   }
-
-  override def afterAll(): Unit =
-    try {
-      tidbStmt.execute("drop table if exists t")
-      tidbStmt.execute("drop table if exists test1")
-      tidbStmt.execute("drop table if exists test2")
-      tidbStmt.execute("drop table if exists test3")
-    } finally {
-      super.afterAll()
-    }
 
   def stringKeyRangeInDAG(dag: TiDAGRequest): String = {
     val sb = new StringBuilder()
