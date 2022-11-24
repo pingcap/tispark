@@ -22,6 +22,10 @@ import com.pingcap.tikv.types.DateTimeType;
 import com.pingcap.tikv.types.DateType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -45,12 +49,31 @@ public class FuncCallExprEval {
             DateTime date = new DateTime(literal.getValue());
             return Constant.create(date.getYear(), IntegerType.INT);
           } else if (type instanceof DateTimeType) {
-            DateTime date = (DateTime) literal.getValue();
+              // literal can be java.sql.Timestamp, use new DateTime() to avoid convert error
+              DateTime date = new DateTime(literal.getValue());
             return Constant.create(date.getYear(), IntegerType.INT);
           }
           throw new UnsupportedOperationException(
               String.format("cannot apply year on %s", type.getName()));
         });
+
+      evalMap.put(
+              Type.TO_DAYS,
+              literal -> {
+                  DataType type = literal.getDataType();
+                  if (type instanceof StringType) {
+                      DateTime date = DateTime.parse((String) literal.getValue());
+                      return Constant.create(dateTime2ToDays(date), IntegerType.INT);
+                  } else if (type instanceof DateType) {
+                      DateTime date = new DateTime(literal.getValue());
+                      return Constant.create(dateTime2ToDays(date), IntegerType.INT);
+                  } else if (type instanceof DateTimeType) {
+                      DateTime date = new DateTime(literal.getValue());
+                      return Constant.create(dateTime2ToDays(date), IntegerType.INT);
+                  }
+                  throw new UnsupportedOperationException(
+                          String.format("cannot apply to_days on %s", type.getName()));
+              });
 
     // for newly adding type, please also adds the corresponding logic here.
   }
@@ -61,4 +84,12 @@ public class FuncCallExprEval {
     }
     return null;
   }
+
+    private static int dateTime2ToDays(DateTime date) {
+        // the number of day from 0000-00-00 to 1970-01-01
+        int var1 = 719528;
+        // the number of day from 1970-01-01 to `date` parameter
+        long var2 = date.getMillis() / 1000 / 3600 / 24;
+        return var1 + (int) var2;
+    }
 }
