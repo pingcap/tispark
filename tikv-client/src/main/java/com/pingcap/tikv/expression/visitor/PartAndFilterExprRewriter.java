@@ -53,7 +53,8 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
   }
 
   private boolean isToDays() {
-    return partExpr instanceof FuncCallExpr && ((FuncCallExpr) partExpr).getFuncTp() == Type.TO_DAYS;
+    return partExpr instanceof FuncCallExpr
+        && ((FuncCallExpr) partExpr).getFuncTp() == Type.TO_DAYS;
   }
 
   private boolean isColumnRef() {
@@ -106,11 +107,11 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
         FuncCallExpr year = new FuncCallExpr(predicate.getValue(), Type.YEAR);
         Constant newLiteral = year.eval(predicate.getValue());
         return new ComparisonBinaryExpression(node.getComparisonType(), node.getLeft(), newLiteral);
-      } else if (isToDays()){
+      } else if (isToDays()) {
         FuncCallExpr toDays = new FuncCallExpr(predicate.getValue(), Type.TO_DAYS);
         Constant newLiteral = toDays.eval(predicate.getValue());
         return new ComparisonBinaryExpression(node.getComparisonType(), node.getLeft(), newLiteral);
-      }else if (isColumnRef()) {
+      } else if (isColumnRef()) {
         return node;
       }
       unsupportedPartFnFound = true;

@@ -56,7 +56,7 @@ public class FuncCallExpr extends Expression {
   private String getFuncString() {
     if (funcTp == Type.YEAR) {
       return "year";
-    } else if(funcTp == Type.TO_DAYS){
+    } else if (funcTp == Type.TO_DAYS) {
       return "to_days";
     }
     return "";
