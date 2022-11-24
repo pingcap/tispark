@@ -411,12 +411,4 @@ public class Converter {
               "%s is not a valid format. Either hh:mm:ss.mmm or hh:mm:ss is accepted.", value));
     }
   }
-
-  private static int dateTime2ToDays(DateTime date) {
-    // the number of day from 0000-00-00 to 1970-01-01
-    int var1 = 719528;
-    // the number of day from 1970-01-01 to `date` parameter
-    long var2 = date.getMillis() / 1000 / 3600 / 24;
-    return var1 + (int) var2;
-  }
 }
