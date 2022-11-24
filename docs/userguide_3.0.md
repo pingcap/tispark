@@ -391,7 +391,7 @@ The partition pruning is applied when the partition expression of the range part
 
 + column expression
 + `YEAR(col)` and its type is datetime/string/date literal that can be parsed as datetime.
-+ `TO_DAYS(col)` and its type is datetime/string/date literal that can be parsed as datetime. The col need to bigger than 1970-01-01.
++ `TO_DAYS(col)` and its type is datetime/string/date literal that can be parsed as datetime.
 
 If partition pruning is not applied, TiSpark's reading is equivalent to doing a table scan over all partitions.
 
