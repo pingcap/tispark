@@ -262,10 +262,9 @@ public class Converter {
       } catch (Exception e) {
         throw new TypeException(String.format("Error parsing string %s to datetime", val), e);
       }
-    }
-    else if (val instanceof Integer) {
+    } else if (val instanceof Integer) {
       if ((int) val < 719528) {
-        return new ExtendedDateTime(new DateTime((int)val,1,1,0,0));
+        return new ExtendedDateTime(new DateTime((int) val, 1, 1, 0, 0));
       } else {
         long daysFrom1970 = (Integer) val - 719528;
         long millis = daysFrom1970 * 24 * 3600 * 1000;
@@ -412,6 +411,7 @@ public class Converter {
               "%s is not a valid format. Either hh:mm:ss.mmm or hh:mm:ss is accepted.", value));
     }
   }
+
   private static int dateTime2ToDays(DateTime date) {
     // the number of day from 0000-00-00 to 1970-01-01
     int var1 = 719528;
