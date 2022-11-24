@@ -414,6 +414,20 @@ class PartitionTableSuite extends BasePlanTest {
     enablePartitionForTiDB()
     tidbStmt.execute("DROP TABLE IF EXISTS `pt_todays`")
     // to_days('2005-01-02') = 732313
+    val s = ("""
+               |CREATE TABLE `pt_todays_date` (
+               |  `id` int(11) DEFAULT NULL,
+               |  `name` varchar(50) DEFAULT NULL,
+               |  `purchased` date DEFAULT NULL,
+               |  index `idx_id`(`id`)
+               |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+               |PARTITION BY RANGE (to_days(purchased)) (
+               |  PARTITION p0 VALUES LESS THAN (to_days('1995-01-02')),
+               |  PARTITION p1 VALUES LESS THAN (to_days('2000-01-02')),
+               |  PARTITION p2 VALUES LESS THAN (732313),
+               |  PARTITION p3 VALUES LESS THAN (MAXVALUE)
+               |)
+                     """.stripMargin)
     tidbStmt.execute("""
                        |CREATE TABLE `pt_todays_date` (
                        |  `id` int(11) DEFAULT NULL,
