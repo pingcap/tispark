@@ -411,7 +411,7 @@ class PartitionTableSuite extends BasePlanTest {
 
   test("part pruning on to_days function and date type") {
     enablePartitionForTiDB()
-    tidbStmt.execute("DROP TABLE IF EXISTS `pt_todays`")
+    tidbStmt.execute("DROP TABLE IF EXISTS `pt_todays_date`")
     // to_days('2005-01-02') = 732313
     val s = ("""
                |CREATE TABLE `pt_todays_date` (
@@ -517,9 +517,9 @@ class PartitionTableSuite extends BasePlanTest {
         |  index `idx_id`(`id`)
         |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
         |PARTITION BY RANGE (to_days(purchased)) (
-        |  PARTITION p0 VALUES LESS THAN (to_days('1995-01-01')),
-        |  PARTITION p1 VALUES LESS THAN (to_days('1995-01-02')),
-        |  PARTITION p2 VALUES LESS THAN (to_days('1995-01-03')),
+        |  PARTITION p0 VALUES LESS THAN (to_days('1969-12-31')),
+        |  PARTITION p1 VALUES LESS THAN (to_days('1970-01-01')),
+        |  PARTITION p2 VALUES LESS THAN (to_days('1970-01-02')),
         |  PARTITION p3 VALUES LESS THAN (MAXVALUE)
         |)
                      """.stripMargin)
@@ -528,7 +528,7 @@ class PartitionTableSuite extends BasePlanTest {
       val pDef = extractDAGReq(
         spark
         // expected part info only contains one part which is p0.
-          .sql("select * from pt_todays_datetime where purchased = '1994-12-31 00:00:00'")).getPrunedParts
+          .sql("select * from pt_todays_datetime where purchased = '1969-12-30 00:00:00'")).getPrunedParts
       pDef.size() == 1 && pDef.get(0).getName == "p0"
     }
 
@@ -536,7 +536,7 @@ class PartitionTableSuite extends BasePlanTest {
       val pDef = extractDAGReq(
         spark
         // expected part info only contains one part which is p1.
-          .sql("select * from pt_todays_datetime where purchased = '1995-01-01 00:00:01'")).getPrunedParts
+          .sql("select * from pt_todays_datetime where purchased = '1969-12-31 00:00:01'")).getPrunedParts
       pDef.size() == 1 && pDef.get(0).getName == "p1"
     }
 
@@ -544,7 +544,7 @@ class PartitionTableSuite extends BasePlanTest {
       val pDef = extractDAGReq(
         spark
         // expected part info only contains one part which is p2.
-          .sql("select * from pt_todays_datetime where purchased = '1995-01-02 00:01:00'")).getPrunedParts
+          .sql("select * from pt_todays_datetime where purchased = '1970-01-01 00:01:00'")).getPrunedParts
       pDef.size() == 1 && pDef.get(0).getName == "p2"
     }
 
@@ -552,7 +552,7 @@ class PartitionTableSuite extends BasePlanTest {
       val pDef = extractDAGReq(
         spark
         // expected part info only contains one part which is p3.
-          .sql("select * from pt_todays_datetime where purchased = '1995-01-03 01:00:00'")).getPrunedParts
+          .sql("select * from pt_todays_datetime where purchased = '1970-01-02 01:00:00'")).getPrunedParts
       pDef.size() == 1 && pDef.get(0).getName == "p3"
     }
 
@@ -560,7 +560,7 @@ class PartitionTableSuite extends BasePlanTest {
       val pDef = extractDAGReq(
         spark
         // expected part info only contains one part which is p2,p3
-          .sql("select * from pt_todays_datetime where purchased >= '1995-01-02 01:00:00'")).getPrunedParts
+          .sql("select * from pt_todays_datetime where purchased >= '1970-01-01 01:00:00'")).getPrunedParts
       pDef.size() == 2 && pDef.get(0).getName == "p2" && pDef.get(1).getName == "p3"
     }
   }

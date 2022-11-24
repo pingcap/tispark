@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import org.joda.time.DateTime;
+import org.joda.time.Days;
 
 public class FuncCallExprEval {
 
@@ -82,10 +83,7 @@ public class FuncCallExprEval {
   }
 
   private static int dateTime2ToDays(DateTime date) {
-    // the number of day from 0000-00-00 to 1970-01-01
-    int var1 = 719528;
-    // the number of day from 1970-01-01 to `date` parameter
-    long var2 = date.getMillis() / 1000 / 3600 / 24;
-    return var1 + (int) var2;
+      DateTime start = DateTime.parse("0000-01-01");
+      return Days.daysBetween(start.toLocalDate(), date.toLocalDate()).getDays();
   }
 }

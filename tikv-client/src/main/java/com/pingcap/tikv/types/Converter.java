@@ -263,12 +263,11 @@ public class Converter {
         throw new TypeException(String.format("Error parsing string %s to datetime", val), e);
       }
     } else if (val instanceof Integer) {
-      if ((int) val < 719528) {
+      if ((int) val < 10000) {
         return new ExtendedDateTime(new DateTime((int) val, 1, 1, 0, 0));
       } else {
-        long daysFrom1970 = (Integer) val - 719528;
-        long millis = daysFrom1970 * 24 * 3600 * 1000;
-        return new ExtendedDateTime(new DateTime(millis));
+        DateTime start = DateTime.parse("0000-01-01");
+        return new ExtendedDateTime(start.plusDays((int)val));
       }
     } else if (val instanceof Long) {
       return new ExtendedDateTime(new DateTime((long) val));
@@ -313,12 +312,12 @@ public class Converter {
       // It is a bad design which is hard to extension. We need to refactor it.
 
       // judge the val is a year or to_days, 719528 is the days from 0000-00-00 to 1970-01-01
-      if ((int) val < 719528) {
+      if ((int) val < 10000) {
         return new Date((Integer) val - 1970, 1, 1);
       } else {
-        long daysFrom1970 = (Integer) val - 719528;
-        long millis = daysFrom1970 * 24 * 3600 * 1000;
-        return new Date(millis);
+        DateTime start = DateTime.parse("0000-01-01");
+        String end = start.plusDays((int)val).toString("yyyy-MM-dd");
+        return Date.valueOf(end);
       }
     } else if (val instanceof Long) {
       return new Date((long) val);
