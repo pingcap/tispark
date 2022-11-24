@@ -83,7 +83,7 @@ public class FuncCallExprEval {
   }
 
   private static int dateTime2ToDays(DateTime date) {
-      DateTime start = DateTime.parse("0000-01-01");
-      return Days.daysBetween(start.toLocalDate(), date.toLocalDate()).getDays();
+    DateTime start = DateTime.parse("0000-01-01");
+    return Days.daysBetween(start.toLocalDate(), date.toLocalDate()).getDays();
   }
 }
