@@ -385,15 +385,13 @@ TiSpark reads the range and hash partition table from TiDB.
 
 Currently, TiSpark doesn't support a MySQL/TiDB partition table syntax `select col_name from table_name partition(partition_name)`, but you can still use `where` condition to filter the partitions.
 
-TiSpark decides whether to apply partition pruning according to the partition type and the partition expression associated with the table.
-
-Currently, TiSpark partially apply partition pruning on range partition.
+TiSpark decides whether to apply partition pruning according to the partition type and the partition expression associated with the table. Currently, TiSpark partially apply partition pruning on range partition.
 
 The partition pruning is applied when the partition expression of the range partition is one of the following:
 
 + column expression
-+ `YEAR($argument)` where the argument is a column and its type is datetime or string literal
-  that can be parsed as datetime.
++ `YEAR(col)` and its type is datetime/string/date literal that can be parsed as datetime.
++ `TO_DAYS(col)` and its type is datetime/string/date literal that can be parsed as datetime.
 
 If partition pruning is not applied, TiSpark's reading is equivalent to doing a table scan over all partitions.
 

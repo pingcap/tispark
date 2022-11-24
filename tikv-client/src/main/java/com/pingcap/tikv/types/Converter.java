@@ -262,6 +262,15 @@ public class Converter {
       } catch (Exception e) {
         throw new TypeException(String.format("Error parsing string %s to datetime", val), e);
       }
+    }
+    else if (val instanceof Integer) {
+      if ((int) val < 719528) {
+        return new ExtendedDateTime(new DateTime((int)val,1,1,0,0));
+      } else {
+        long daysFrom1970 = (Integer) val - 719528;
+        long millis = daysFrom1970 * 24 * 3600 * 1000;
+        return new ExtendedDateTime(new DateTime(millis));
+      }
     } else if (val instanceof Long) {
       return new ExtendedDateTime(new DateTime((long) val));
     } else if (val instanceof Timestamp) {
@@ -301,8 +310,17 @@ public class Converter {
         throw new TypeException(String.format("Error parsing string %s to date", val), e);
       }
     } else if (val instanceof Integer) {
-      // when the val is a Integer, it is only have year part of a Date.
-      return new Date((Integer) val - 1970, 1, 1);
+      // when the val is a Integer, it is only have year and to_days part of a Date.
+      // It is a bad design which is hard to extension. We need to refactor it.
+
+      // judge the val is a year or to_days, 719528 is the days from 0000-00-00 to 1970-01-01
+      if ((int) val < 719528) {
+        return new Date((Integer) val - 1970, 1, 1);
+      } else {
+        long daysFrom1970 = (Integer) val - 719528;
+        long millis = daysFrom1970 * 24 * 3600 * 1000;
+        return new Date(millis);
+      }
     } else if (val instanceof Long) {
       return new Date((long) val);
     } else if (val instanceof Timestamp) {
@@ -393,5 +411,12 @@ public class Converter {
           String.format(
               "%s is not a valid format. Either hh:mm:ss.mmm or hh:mm:ss is accepted.", value));
     }
+  }
+  private static int dateTime2ToDays(DateTime date) {
+    // the number of day from 0000-00-00 to 1970-01-01
+    int var1 = 719528;
+    // the number of day from 1970-01-01 to `date` parameter
+    long var2 = date.getMillis() / 1000 / 3600 / 24;
+    return var1 + (int) var2;
   }
 }
