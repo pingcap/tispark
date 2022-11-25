@@ -52,6 +52,11 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
     return partExpr instanceof FuncCallExpr && ((FuncCallExpr) partExpr).getFuncTp() == Type.YEAR;
   }
 
+  private boolean isToDays() {
+    return partExpr instanceof FuncCallExpr
+        && ((FuncCallExpr) partExpr).getFuncTp() == Type.TO_DAYS;
+  }
+
   private boolean isColumnRef() {
     return partExpr instanceof ColumnRef;
   }
@@ -73,6 +78,9 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
   @Override
   public Expression visit(FuncCallExpr node, Void context) {
     if (node.getFuncTp() == Type.YEAR) {
+      return node.getExpression();
+    }
+    if (node.getFuncTp() == Type.TO_DAYS) {
       return node.getExpression();
     }
     // other's is not supported right now.
@@ -98,6 +106,10 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
       if (isYear()) {
         FuncCallExpr year = new FuncCallExpr(predicate.getValue(), Type.YEAR);
         Constant newLiteral = year.eval(predicate.getValue());
+        return new ComparisonBinaryExpression(node.getComparisonType(), node.getLeft(), newLiteral);
+      } else if (isToDays()) {
+        FuncCallExpr toDays = new FuncCallExpr(predicate.getValue(), Type.TO_DAYS);
+        Constant newLiteral = toDays.eval(predicate.getValue());
         return new ComparisonBinaryExpression(node.getComparisonType(), node.getLeft(), newLiteral);
       } else if (isColumnRef()) {
         return node;
