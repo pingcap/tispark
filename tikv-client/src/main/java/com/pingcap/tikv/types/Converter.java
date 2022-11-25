@@ -262,6 +262,15 @@ public class Converter {
       } catch (Exception e) {
         throw new TypeException(String.format("Error parsing string %s to datetime", val), e);
       }
+    } else if (val instanceof Integer) {
+      // when the val is an Integer, it can only be year(date) or to_days(date).
+      // we assume year will not exceed 10000.
+      if ((int) val < 10000) {
+        return new ExtendedDateTime(new DateTime((int) val, 1, 1, 0, 0));
+      } else {
+        DateTime start = DateTime.parse("0000-01-01");
+        return new ExtendedDateTime(start.plusDays((int) val));
+      }
     } else if (val instanceof Long) {
       return new ExtendedDateTime(new DateTime((long) val));
     } else if (val instanceof Timestamp) {
@@ -301,8 +310,17 @@ public class Converter {
         throw new TypeException(String.format("Error parsing string %s to date", val), e);
       }
     } else if (val instanceof Integer) {
-      // when the val is a Integer, it is only have year part of a Date.
-      return new Date((Integer) val - 1970, 1, 1);
+      // when the val is an Integer, it can only be year(date) or to_days(date).
+      // It is a bad design which is hard to extension. We need to refactor it.
+
+      // we assume year will not exceed 10000
+      if ((int) val < 10000) {
+        return new Date((Integer) val - 1970, 1, 1);
+      } else {
+        DateTime start = DateTime.parse("0000-01-01");
+        String end = start.plusDays((int) val).toString("yyyy-MM-dd");
+        return Date.valueOf(end);
+      }
     } else if (val instanceof Long) {
       return new Date((long) val);
     } else if (val instanceof Timestamp) {

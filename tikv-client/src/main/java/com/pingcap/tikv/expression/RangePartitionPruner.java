@@ -47,6 +47,7 @@ public class RangePartitionPruner {
   RangePartitionPruner(TiTableInfo tableInfo) {
     this.partInfo = tableInfo.getPartitionInfo();
     try {
+      // convert partExprStr to Expression with AstBuilder
       this.partExprs = generateRangePartExprs(tableInfo);
       this.rangeBuilder = new PrunedPartitionBuilder(partExprColRefs);
     } catch (UnsupportedSyntaxException | UnsupportedPartitionExprException e) {
