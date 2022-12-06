@@ -677,7 +677,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
             forWrite);
     Coprocessor.Response resp =
         callWithRetry(backOffer, TikvGrpc.getCoprocessorMethod(), reqToSend, handler);
-    return handleCopResponse(backOffer, resp, ranges, responseQueue, startTs);
+    return handleCopResponse(backOffer, resp, ranges, responseQueue, startTs, region);
   }
 
   // handleCopResponse checks coprocessor Response for region split and lock,
@@ -689,7 +689,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       Coprocessor.Response response,
       List<Coprocessor.KeyRange> ranges,
       Queue<SelectResponse> responseQueue,
-      long startTs) {
+      long startTs,
+      TiRegion region) {
     boolean forWrite = false;
     if (response == null) {
       // Send request failed, reasons may:
@@ -708,6 +709,11 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       backOffer.doBackOff(
           BackOffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(regionError.toString()));
       logger.warn("Re-splitting region task due to region error:" + regionError.getMessage());
+      // we need to invalidate cache when region not find
+      if (regionError.hasRegionNotFound()) {
+        logger.info("invalidateRange when Re-splitting region task because of region not find.");
+        this.regionManager.invalidateRange(region.getStartKey(),region.getEndKey());
+      }
       // Split ranges
       return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges, storeType);
     }
