@@ -96,7 +96,8 @@ public class DateType extends AbstractDateTimeType {
   public int getDays(LocalDate d) {
     // count how many days from EPOCH
     int days = Days.daysBetween(EPOCH, d).getDays();
-    // if the timezone has negative offset, minus one day. Because daysBetween will be affected by the timezone.
+    // if the timezone has negative offset, minus one day to convert to UTC. Because daysBetween
+    // will be affected by the timezone.
     if (getTimezone().getOffset(0) < 0) {
       days -= 1;
     }
