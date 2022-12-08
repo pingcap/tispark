@@ -133,9 +133,9 @@ public class ColumnRef extends Expression {
   @Override
   public int hashCode() {
     if (isResolved()) {
-      return Objects.hash(this.name, this.dataType);
+      return Objects.hash(this.name.toLowerCase(), this.dataType);
     } else {
-      return Objects.hashCode(name);
+      return Objects.hashCode(name.toLowerCase());
     }
   }
 
