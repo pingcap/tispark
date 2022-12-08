@@ -750,6 +750,32 @@ class PartitionTableSuite extends BasePlanTest {
     judge("select id from p_t group by id", checkLimit = false)
   }
 
+  test("partition pruning with uppercase column") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `pt_uppercase_column`")
+    tidbStmt.execute("""
+                       |CREATE TABLE `pt_uppercase_column` (
+                       |  `id` int(11) DEFAULT NULL,
+                       |  `name` varchar(50) DEFAULT NULL,
+                       |  `ACT_DT` datetime DEFAULT NULL,
+                       |  index `idx_id`(`id`)
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                       |PARTITION BY RANGE (to_days(ACT_DT)) (
+                       |  PARTITION p0 VALUES LESS THAN (to_days('1969-12-31')),
+                       |  PARTITION p1 VALUES LESS THAN (to_days('1970-01-01')),
+                       |  PARTITION p2 VALUES LESS THAN (to_days('1970-01-02')),
+                       |  PARTITION p3 VALUES LESS THAN (MAXVALUE)
+                       |)
+                     """.stripMargin)
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p0.
+          .sql("select * from pt_uppercase_column where ACT_DT = '1969-12-30 00:00:00'")).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p0"
+    }
+  }
+
   def enablePartitionForTiDB(): Boolean =
     tidbStmt.execute("set @@tidb_enable_table_partition = 1")
 }
