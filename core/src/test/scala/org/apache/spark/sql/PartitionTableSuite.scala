@@ -770,13 +770,11 @@ class PartitionTableSuite extends BasePlanTest {
     assert {
       val pDef = extractDAGReq(
         spark
-          // expected part info only contains one part which is p0.
+        // expected part info only contains one part which is p0.
           .sql("select * from pt_uppercase_column where ACT_DT = '1969-12-30 00:00:00'")).getPrunedParts
       pDef.size() == 1 && pDef.get(0).getName == "p0"
     }
   }
-
-
 
   def enablePartitionForTiDB(): Boolean =
     tidbStmt.execute("set @@tidb_enable_table_partition = 1")
