@@ -76,10 +76,6 @@ public class CommonHandle implements Handle {
           days = (long) data[i];
         }
 
-        // Convert to UTC days for row key.
-        if (Converter.getLocalTimezone().getOffset(0) < 0) {
-          days += 1;
-        }
         dataTypes[i].encode(cdo, DataType.EncodeType.KEY, new Date((days) * MS_OF_ONE_DAY));
       } else {
         if (prefixLengthes[i] > 0 && data[i] instanceof String) {
