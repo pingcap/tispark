@@ -20,14 +20,15 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.MySQLType;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.stream.Collectors;
 import org.joda.time.Days;
 import org.joda.time.LocalDate;
@@ -76,12 +77,11 @@ public class CommonHandle implements Handle {
           days = (long) data[i];
         }
 
-        // new Date() will use the current timezone, it will decrease 1 day for the timezone which
-        // offset < 0. So we need to plus 1 to fix.
-        if (Converter.getLocalTimezone().getOffset(0) < 0) {
-          days += 1;
-        }
-        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, new Date(days * MS_OF_ONE_DAY));
+        SimpleDateFormat utcFmt = new SimpleDateFormat("yyyy-MM-dd");
+        utcFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        dataTypes[i].encode(
+            cdo, DataType.EncodeType.KEY, Date.valueOf(utcFmt.format(days * MS_OF_ONE_DAY)));
       } else {
         if (prefixLengthes[i] > 0 && data[i] instanceof String) {
           String source = (String) data[i];
