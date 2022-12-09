@@ -30,7 +30,7 @@ import org.joda.time.Days;
 import org.joda.time.LocalDate;
 
 public class DateType extends AbstractDateTimeType {
-  private static final LocalDate EPOCH = new LocalDate(0);
+  private static final LocalDate EPOCH = new LocalDate(1970, 1, 1);
   public static final DateType DATE = new DateType(MySQLType.TypeDate);
   public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeDate};
 
@@ -94,13 +94,8 @@ public class DateType extends AbstractDateTimeType {
   }
 
   public int getDays(LocalDate d) {
-    // count how many days from EPOCH
-    int days = Days.daysBetween(EPOCH, d).getDays();
-    // if the timezone has negative offset, minus one day.
-    if (getTimezone().getOffset(0) < 0) {
-      days -= 1;
-    }
-    return days;
+    // count how many days from EPOCH (UTC)
+    return Days.daysBetween(EPOCH, d).getDays();
   }
 
   /** {@inheritDoc} */
