@@ -273,7 +273,7 @@ class PartitionTableSuite extends BasePlanTest {
         .size() == 3)
   }
 
-  test("part pruning on year function") {
+  test("part pruning on year function and date type") {
     enablePartitionForTiDB()
     tidbStmt.execute("DROP TABLE IF EXISTS `pt3`")
     tidbStmt.execute("""
@@ -338,6 +338,230 @@ class PartitionTableSuite extends BasePlanTest {
         spark
           .sql("select * from pt3 where year(purchased) < 1995")).getPrunedParts
       pDef.size() == 4
+    }
+  }
+
+  test("part pruning on year function and datetime type") {
+    enablePartitionForTiDB()
+    tidbStmt.execute("DROP TABLE IF EXISTS `pt3`")
+    tidbStmt.execute("""
+                       |CREATE TABLE `pt3` (
+                       |  `id` int(11) DEFAULT NULL,
+                       |  `name` varchar(50) DEFAULT NULL,
+                       |  `purchased` datetime DEFAULT NULL,
+                       |  index `idx_id`(`id`)
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                       |PARTITION BY RANGE (year(purchased)) (
+                       |  PARTITION p0 VALUES LESS THAN (1995),
+                       |  PARTITION p1 VALUES LESS THAN (2000),
+                       |  PARTITION p2 VALUES LESS THAN (2005),
+                       |  PARTITION p3 VALUES LESS THAN (MAXVALUE)
+                       |)
+                     """.stripMargin)
+    refreshConnections()
+
+    assert(
+      extractDAGReq(
+        spark
+        // expected part info only contains one part which is p.
+          .sql("select * from pt3 where purchased = date'1994-10-10'")).getPrunedParts
+        .get(0)
+        .getName == "p0")
+
+    assert(extractDAGReq(spark
+    // expected part info only contains one part which is p1.
+      .sql(
+        "select * from pt3 where purchased > date'1996-10-10' and purchased < date'2000-10-10'")).getPrunedParts
+      .get(0)
+      .getName == "p1")
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains two parts which are p0 and p1.
+          .sql("select * from pt3 where purchased < date'2000-10-10'")).getPrunedParts
+      pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p1"
+    }
+
+    assert {
+      val pDef = extractDAGReq(spark
+      // expected part info only contains one part which is p1.
+        .sql(
+          "select * from pt3 where purchased < date'2005-10-10' and purchased > date'2000-10-10'")).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p2"
+    }
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // or with an unrelated column. All parts should be accessed.
+          .sql("select * from pt3 where id < 4 or purchased < date'1995-10-10'")).getPrunedParts
+      pDef.size() == 4
+    }
+
+    assert {
+      val pDef = extractDAGReq(
+        // for complicated expression, we do not support for now.
+        // this will be improved later.
+        spark
+          .sql("select * from pt3 where year(purchased) < 1995")).getPrunedParts
+      pDef.size() == 4
+    }
+  }
+
+  test("part pruning on to_days function and date type") {
+    enablePartitionForTiDB()
+    tidbStmt.execute("DROP TABLE IF EXISTS `pt_todays_date`")
+    // to_days('2005-01-02') = 732313
+    val s = ("""
+               |CREATE TABLE `pt_todays_date` (
+               |  `id` int(11) DEFAULT NULL,
+               |  `name` varchar(50) DEFAULT NULL,
+               |  `purchased` date DEFAULT NULL,
+               |  index `idx_id`(`id`)
+               |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+               |PARTITION BY RANGE (to_days(purchased)) (
+               |  PARTITION p0 VALUES LESS THAN (to_days('1995-01-02')),
+               |  PARTITION p1 VALUES LESS THAN (to_days('2000-01-02')),
+               |  PARTITION p2 VALUES LESS THAN (732313),
+               |  PARTITION p3 VALUES LESS THAN (MAXVALUE)
+               |)
+                     """.stripMargin)
+    tidbStmt.execute("""
+                       |CREATE TABLE `pt_todays_date` (
+                       |  `id` int(11) DEFAULT NULL,
+                       |  `name` varchar(50) DEFAULT NULL,
+                       |  `purchased` date DEFAULT NULL,
+                       |  index `idx_id`(`id`)
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                       |PARTITION BY RANGE (to_days(purchased)) (
+                       |  PARTITION p0 VALUES LESS THAN (to_days('1995-01-02')),
+                       |  PARTITION p1 VALUES LESS THAN (to_days('2000-01-02')),
+                       |  PARTITION p2 VALUES LESS THAN (732313),
+                       |  PARTITION p3 VALUES LESS THAN (MAXVALUE)
+                       |)
+                     """.stripMargin)
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p0.
+          .sql("select * from pt_todays_date where purchased = '1994-10-10'")).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p0"
+    }
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p1.
+          .sql(
+            "select * from pt_todays_date where purchased >= '2000-01-01 00:00:00' and purchased < '2000-01-02 23:59:59'")).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p1"
+    }
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p2.
+          .sql("select * from pt_todays_date where purchased = '2005-01-01'")).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p2"
+    }
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p3.
+          .sql("select * from pt_todays_date where purchased = '2005-01-02'")).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p3"
+    }
+
+    // more than one part is pruned
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains two parts which are p0 and p1.
+          .sql("select * from pt_todays_date where purchased < '2000-01-02'")).getPrunedParts
+      pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p1"
+    }
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains two parts which are p0 p2 and p3.
+          .sql(
+            "select * from pt_todays_date where purchased = '1995-01-01' or purchased >= '2005-01-01' ")).getPrunedParts
+      pDef.size() == 3 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p2" && pDef
+        .get(2)
+        .getName == "p3"
+    }
+
+    // not supported
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // or with an unrelated column. All parts should be accessed.
+          .sql("select * from pt_todays_date where id < 4 or purchased < date'1995-10-10'")).getPrunedParts
+      pDef.size() == 4
+    }
+
+  }
+
+  test("part pruning on to_days function and datetime type") {
+    enablePartitionForTiDB()
+    tidbStmt.execute("DROP TABLE IF EXISTS `pt_todays_datetime`")
+    tidbStmt.execute("""
+        |CREATE TABLE `pt_todays_datetime` (
+        |  `id` int(11) DEFAULT NULL,
+        |  `name` varchar(50) DEFAULT NULL,
+        |  `purchased` datetime DEFAULT NULL,
+        |  index `idx_id`(`id`)
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+        |PARTITION BY RANGE (to_days(purchased)) (
+        |  PARTITION p0 VALUES LESS THAN (to_days('1969-12-31')),
+        |  PARTITION p1 VALUES LESS THAN (to_days('1970-01-01')),
+        |  PARTITION p2 VALUES LESS THAN (to_days('1970-01-02')),
+        |  PARTITION p3 VALUES LESS THAN (MAXVALUE)
+        |)
+                     """.stripMargin)
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p0.
+          .sql("select * from pt_todays_datetime where purchased = '1969-12-30 00:00:00'")).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p0"
+    }
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p1.
+          .sql("select * from pt_todays_datetime where purchased = '1969-12-31 00:00:01'")).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p1"
+    }
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p2.
+          .sql("select * from pt_todays_datetime where purchased = '1970-01-01 00:01:00'")).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p2"
+    }
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p3.
+          .sql("select * from pt_todays_datetime where purchased = '1970-01-02 01:00:00'")).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p3"
+    }
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p2,p3
+          .sql("select * from pt_todays_datetime where purchased >= '1970-01-01 01:00:00'")).getPrunedParts
+      pDef.size() == 2 && pDef.get(0).getName == "p2" && pDef.get(1).getName == "p3"
     }
   }
 
@@ -524,6 +748,32 @@ class PartitionTableSuite extends BasePlanTest {
     assert(spark.sql("select * from p_t").count() == 8)
     judge("select count(*) from p_t where id = 1", checkLimit = false)
     judge("select id from p_t group by id", checkLimit = false)
+  }
+
+  test("partition pruning with uppercase column") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `pt_uppercase_column`")
+    tidbStmt.execute("""
+                       |CREATE TABLE `pt_uppercase_column` (
+                       |  `id` int(11) DEFAULT NULL,
+                       |  `name` varchar(50) DEFAULT NULL,
+                       |  `ACT_DT` datetime DEFAULT NULL,
+                       |  index `idx_id`(`id`)
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                       |PARTITION BY RANGE (to_days(ACT_DT)) (
+                       |  PARTITION p0 VALUES LESS THAN (to_days('1969-12-31')),
+                       |  PARTITION p1 VALUES LESS THAN (to_days('1970-01-01')),
+                       |  PARTITION p2 VALUES LESS THAN (to_days('1970-01-02')),
+                       |  PARTITION p3 VALUES LESS THAN (MAXVALUE)
+                       |)
+                     """.stripMargin)
+
+    assert {
+      val pDef = extractDAGReq(
+        spark
+        // expected part info only contains one part which is p0.
+          .sql("select * from pt_uppercase_column where ACT_DT = '1969-12-30 00:00:00'")).getPrunedParts
+      pDef.size() == 1 && pDef.get(0).getName == "p0"
+    }
   }
 
   def enablePartitionForTiDB(): Boolean =

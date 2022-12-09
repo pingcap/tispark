@@ -88,6 +88,10 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
         Expression args = visitFunctionArgs(ctx.functionArgs());
         return new FuncCallExpr(args, Type.YEAR);
       }
+      if (fnNameCtx.TO_DAYS() != null) {
+        Expression args = visitFunctionArgs(ctx.functionArgs());
+        return new FuncCallExpr(args, Type.TO_DAYS);
+      }
     }
     return visitChildren(ctx);
   }
