@@ -19,12 +19,7 @@ package com.pingcap.tikv.key;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-<<<<<<< HEAD:tikv-client/src/main/java/com/pingcap/tikv/key/CommonHandle.java
 import com.pingcap.tikv.exception.CodecException;
-import com.pingcap.tikv.types.Converter;
-=======
-import com.pingcap.tikv.key.Key;
->>>>>>> 47d082c7c (Compatible with TiDB mater (v6.5.0) (#2598)):tikv-client/src/main/java/com/pingcap/tikv/handle/CommonHandle.java
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.MySQLType;
 import com.pingcap.tikv.util.FastByteComparisons;
