@@ -30,7 +30,7 @@ import org.tikv.common.exception.ConvertNotSupportException;
 import org.tikv.common.exception.ConvertOverflowException;
 
 public class DateType extends AbstractDateTimeType {
-  private static final LocalDate EPOCH = new LocalDate(1970,1,1);
+  private static final LocalDate EPOCH = new LocalDate(1970, 1, 1);
   public static final DateType DATE = new DateType(MySQLType.TypeDate);
   public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeDate};
 
