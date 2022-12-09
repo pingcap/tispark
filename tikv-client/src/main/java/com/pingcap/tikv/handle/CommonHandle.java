@@ -71,12 +71,7 @@ public class CommonHandle implements Handle {
         // When indexScan or tableScan, it will pass `Long` object.
         // It's a compromise here since we don't have a good way to make them consistent.
         if (data[i] instanceof Date) {
-          days = Days.daysBetween(new LocalDate(0), new LocalDate(data[i])).getDays();
-          // if the timezone has negative offset, minus one day to convert to UTC. Because
-          // daysBetween will be affected by the timezone.
-          if (Converter.getLocalTimezone().getOffset(0) < 0) {
-            days -= 1;
-          }
+          days = Days.daysBetween(new LocalDate(1970,1,1), new LocalDate(data[i])).getDays();
         } else {
           days = (long) data[i];
         }
