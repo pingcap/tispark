@@ -1,6 +1,18 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 3.1.1] 2022-12-12
+### New Features
+- Support write into partition table with new collations [#2570](https://github.com/pingcap/tispark/pull/2570)
+- Support read TiFlash load balancing with Round-Robin strategy [#2576](https://github.com/pingcap/tispark/pull/2576)
+- Support partition pruning with to_days function when read from TiKV/TiFlash [#2594](https://github.com/pingcap/tispark/pull/2594) [#2600](https://github.com/pingcap/tispark/pull/2594)
+
+### Fixes
+- Fix CBO to let TiSpark choose the min cost between TiKV table scan, TiKV index scan and TiFlash scan correctly [#2568](https://github.com/pingcap/tispark/pull/2568)
+- FIx the `region not find` error when reading from TiKV [#2575](https://github.com/pingcap/tispark/pull/2575)
+- Fix the bug that statistics is not collected which may affect the choice of plans [#2589](https://github.com/pingcap/tispark/pull/2589)
+- Compatible with TiDB v6.5.0 [#2602](https://github.com/pingcap/tispark/pull/2602)
+
 ## [TiSpark 3.1.1] 2022-09-23
 ### Fixes
 - Fix fail to read from some partition table [#2553](https://github.com/pingcap/tispark/pull/2553)
