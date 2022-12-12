@@ -75,8 +75,8 @@
         <spark.version.release>3.0</spark.version.release>
         <spark3_0.version>3.0.3</spark3_0.version>
         <spark3_1.version>3.1.3</spark3_1.version>
-        <spark3_2.version>3.2.2</spark3_2.version>
-        <spark3_3.version>3.3.0</spark3_3.version>
+        <spark3_2.version>3.2.3</spark3_2.version>
+        <spark3_3.version>3.3.1</spark3_3.version>
         <scala.binary.version>2.12</scala.binary.version>
         <scala.version>2.12.10</scala.version>
         <scala.version.release>2.12</scala.version.release>
