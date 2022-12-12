@@ -1,7 +1,7 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
-## [TiSpark 3.1.1] 2022-12-12
+## [TiSpark 3.1.2] 2022-12-12
 ### New Features
 - Support write into partition table with new collations [#2570](https://github.com/pingcap/tispark/pull/2570)
 - Support read TiFlash load balancing with Round-Robin strategy [#2576](https://github.com/pingcap/tispark/pull/2576)
