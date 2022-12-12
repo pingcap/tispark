@@ -20,15 +20,16 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.CodecException;
-import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.MySQLType;
 import com.pingcap.tikv.util.FastByteComparisons;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.stream.Collectors;
 import org.joda.time.Days;
 import org.joda.time.LocalDate;
@@ -70,16 +71,16 @@ public class CommonHandle implements Handle {
         // When indexScan or tableScan, it will pass `Long` object.
         // It's a compromise here since we don't have a good way to make them consistent.
         if (data[i] instanceof Date) {
-          days = Days.daysBetween(new LocalDate(0), new LocalDate(data[i])).getDays();
+          days = Days.daysBetween(new LocalDate(1970, 1, 1), new LocalDate(data[i])).getDays();
         } else {
           days = (long) data[i];
         }
 
-        // Convert to UTC days for row key.
-        if (Converter.getLocalTimezone().getOffset(0) < 0) {
-          days += 1;
-        }
-        dataTypes[i].encode(cdo, DataType.EncodeType.KEY, new Date((days) * MS_OF_ONE_DAY));
+        SimpleDateFormat utcFmt = new SimpleDateFormat("yyyy-MM-dd");
+        utcFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        dataTypes[i].encode(
+            cdo, DataType.EncodeType.KEY, Date.valueOf(utcFmt.format(days * MS_OF_ONE_DAY)));
       } else {
         if (prefixLengthes[i] > 0 && data[i] instanceof String) {
           String source = (String) data[i];
