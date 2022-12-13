@@ -474,6 +474,7 @@ trait SharedSQLContext
       }
 
       conf.set("spark.tispark.telemetry.enable", "false")
+      conf.set("spark.sql.debug.maxToStringFields", "100")
     }
 
   private class TiContextCache {
