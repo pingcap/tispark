@@ -33,7 +33,7 @@ class StatisticsManagerSuite extends BaseTiSparkTest {
       .count()
 
     val explainStr = df.queryExecution.explainString(SimpleMode)
-
+    println(explainStr)
     explainStr should include("EstimatedCount:")
   }
 }
