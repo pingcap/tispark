@@ -181,7 +181,9 @@ public class RangeSplitter {
       Pair<TiRegion, TiStore> regionStorePair = null;
 
       BackOffer bo = ConcreteBackOffer.newGetBackOff(BackOffer.GET_MAX_BACKOFF);
-      while (regionStorePair == null ||  regionStorePair.first ==null || regionStorePair.second == null) {
+      while (regionStorePair == null
+          || regionStorePair.first == null
+          || regionStorePair.second == null) {
         try {
           regionStorePair = regionManager.getRegionStorePairByKey(range.getStart(), storeType, bo);
 
@@ -193,7 +195,8 @@ public class RangeSplitter {
           if (regionStorePair.second == null) {
             LOG.warn("Cannot find valid store on " + storeType);
             throw new NullPointerException(
-                    "fail to get store in regionStorePair by key " + formatByteString(range.getStart()));
+                "fail to get store in regionStorePair by key "
+                    + formatByteString(range.getStart()));
           }
         } catch (Exception e) {
           LOG.warn("getRegionStorePairByKey error", e);
