@@ -96,60 +96,6 @@ class BatchWriteIssueSuite extends BaseBatchWriteTest("test_batchwrite_issue") {
     assert(size.toString.equals(result(1).toString))
   }
 
-  ignore("batch get retry test") {
-    //Part of the code of the upstream client needs to be modified, and pr has been proposed
-    //Because of the modified retry logic. This test is no longer meaningful
-    //Due to the test code problem, the integration test cannot be passed temporarily. Later, you need to consider modifying the test logic or removing the test.
-    //https://github.com/tikv/client-java/pull/645
-    if (blockingRead) {
-      cancel()
-    }
-
-    jdbcUpdate(s"drop table if exists $table")
-    jdbcUpdate(s"create table $table(c1 int, c2 int, unique key(c2))")
-
-    val schema: StructType =
-      StructType(List(StructField("c1", LongType), StructField("c2", LongType)))
-
-    new Thread(new Runnable {
-      override def run(): Unit = {
-        val row1 = Row(1L, 1L)
-        val row2 = Row(2L, 2L)
-        val row3 = Row(3L, 3L)
-        val data: RDD[Row] = sc.makeRDD(List(row1, row2, row3))
-        val df = sqlContext.createDataFrame(data, schema)
-        df.write
-          .format("tidb")
-          .options(tidbOptions)
-          .option("database", database)
-          .option("table", table)
-          .option("sleepAfterGetCommitTS", 20000L)
-          .option("replace", "true")
-          .mode("append")
-          .save()
-      }
-    }).start()
-
-    Thread.sleep(10000L)
-
-    val row1 = Row(1L, 1L)
-    val row2 = Row(2L, 22L)
-    val row3 = Row(3L, 3L)
-    val data: RDD[Row] = sc.makeRDD(List(row1, row2, row3))
-    val df = sqlContext.createDataFrame(data, schema)
-    df.write
-      .format("tidb")
-      .options(tidbOptions)
-      .option("database", database)
-      .option("table", table)
-      .option("replace", "true")
-      .mode("append")
-      .save()
-
-    spark.sql(s"select * from $table").show(false)
-    assert(22 == spark.sql(s"select c2 from $table where c1 = 2").collect().head.get(0))
-  }
-
   ignore("bigdecimal conversion test") {
     jdbcUpdate(s"drop table if exists t")
     jdbcUpdate(s"create table t(a bigint unsigned)")
