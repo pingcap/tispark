@@ -111,7 +111,9 @@ case class IndexInfo(
     isUnique: Boolean) {
 
   def toString(isClusteredIndex: Boolean): String = {
-    val clusteredIndexStr = if (isClusteredIndex) " /*T![clustered_index] CLUSTERED */" else ""
+    val clusteredIndexStr =
+      if (isClusteredIndex) " /*T![clustered_index] CLUSTERED */"
+      else "/*T![clustered_index] NONCLUSTERED */"
     val indexColumnString = indexColumns.mkString("(", ",", ")")
     if (isPrimary) {
       s"PRIMARY KEY $indexColumnString$clusteredIndexStr"

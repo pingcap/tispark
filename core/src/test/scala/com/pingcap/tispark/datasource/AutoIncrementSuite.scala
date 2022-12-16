@@ -31,7 +31,7 @@ class AutoIncrementSuite extends BaseBatchWriteTest("test_datasource_auto_increm
     val schema = StructType(List(StructField("j", LongType)))
 
     jdbcUpdate(
-      s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i)) SHARD_ROW_ID_BITS=4")
+      s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, j int NOT NULL, primary key (i)/*T![clustered_index] NONCLUSTERED */) SHARD_ROW_ID_BITS=4")
 
     val tiTableInfo = ti.clientSession.getCatalog.getTable(dbPrefix + database, table)
     assert(!tiTableInfo.isPkHandle)
