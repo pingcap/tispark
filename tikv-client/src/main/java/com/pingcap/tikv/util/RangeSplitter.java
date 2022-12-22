@@ -181,7 +181,9 @@ public class RangeSplitter {
       Pair<TiRegion, TiStore> regionStorePair = null;
 
       BackOffer bo = ConcreteBackOffer.newGetBackOff(BackOffer.GET_MAX_BACKOFF);
-      while (regionStorePair == null) {
+      while (regionStorePair == null
+          || regionStorePair.first == null
+          || regionStorePair.second == null) {
         try {
           regionStorePair = regionManager.getRegionStorePairByKey(range.getStart(), storeType, bo);
 
@@ -190,11 +192,11 @@ public class RangeSplitter {
                 "fail to get region/store pair by key " + formatByteString(range.getStart()));
           }
 
-          // TODO: cherry-pick https://github.com/pingcap/tispark/pull/1380 to client-java and flush
-          // cache.
           if (regionStorePair.second == null) {
             LOG.warn("Cannot find valid store on " + storeType);
-            regionStorePair = null;
+            throw new NullPointerException(
+                "fail to get store in regionStorePair by key "
+                    + formatByteString(range.getStart()));
           }
         } catch (Exception e) {
           LOG.warn("getRegionStorePairByKey error", e);
