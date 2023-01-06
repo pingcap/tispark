@@ -26,6 +26,8 @@ class StatisticsManagerSuite extends BaseTiSparkTest {
 
   // fix issue: https://github.com/pingcap/tispark/issues/2573
   test("Physical Plan should print EstimatedCount") {
+    // analyze table to avoid stats not be loaded
+    tidbStmt.execute("analyze table tpch_test.LINEITEM")
     val df = spark
       .sql("""select * from tidb_catalog.tpch_test.LINEITEM
           |""".stripMargin)
