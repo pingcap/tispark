@@ -22,7 +22,7 @@ import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.execution.SimpleMode
 import org.scalatest.Matchers.{convertToAnyShouldWrapper, include}
 
-class StatisticsMan_stsagerSuite extends BaseTiSparkTest {
+class StatisticsManagerSuite extends BaseTiSparkTest {
 
   // fix issue: https://github.com/pingcap/tispark/issues/2573
   test("Physical Plan should print EstimatedCount") {
