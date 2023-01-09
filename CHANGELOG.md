@@ -23,11 +23,9 @@ All notable changes to this project will be documented in this file.
 - Fix the bug that statistics are not collected which may affect the choice of the plan [#2578](https://github.com/pingcap/tispark/pull/2578)
 - Fix the bug that partition pruning fails with the uppercase column [#2593](https://github.com/pingcap/tispark/pull/2593)
 
-
 ### Documents
 
 - Optimize user guide and dev guide [#2533](https://github.com/pingcap/tispark/pull/2533)
-
 
 ## [TiSpark 3.1.2] 2022-12-12
 ### New Features
