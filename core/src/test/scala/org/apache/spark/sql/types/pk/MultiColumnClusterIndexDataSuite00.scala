@@ -22,9 +22,8 @@ class MultiColumnClusterIndexDataSuite00 extends MultiColumnPKDataTypeSuites {
 
   override def currentTest: Seq[(Int, Int)] = tests(getId)
 
-  if (!supportClusteredIndex) {
-    cancel("currently tidb instance does not support clustered index")
+  if (supportClusteredIndex) {
+    generateClusterIndexScanTestCases()
   }
-  generateClusterIndexScanTestCases()
 
 }
