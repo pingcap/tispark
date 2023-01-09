@@ -1,6 +1,34 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 3.2.0] 2022-01-09
+
+### New Features
+
+- **Normalize the Java client in TiSpark and use the official [client-java](https://github.com/tikv/client-java) [#2491](https://github.com/pingcap/tispark/pull/2491)**
+- **Compatible with TiDB v6.5.0 [#2598](https://github.com/pingcap/tispark/pull/2598)**
+- Support writing into the table with auto random primary key [#2545](https://github.com/pingcap/tispark/pull/2545)
+- Support follower read [#2546](https://github.com/pingcap/tispark/pull/2546)
+- Support writing into partition table with new collations [#2565](https://github.com/pingcap/tispark/pull/2565)
+- Support partition pruning with to_days function when read from TiKV/TiFlash [#2593](https://github.com/pingcap/tispark/pull/2593)
+- Support reading TiFlash load balancing with Round-Robin strategy [client-java #662](https://github.com/tikv/client-java/pull/662)
+
+### Fixes
+
+- Bump Spark version from 3.0.2 to 3.0.3, from 3.1.1 to 3.1.3, from 3.2.1 to 3.2.3, from 3.3.0 to 3.3.1 [#2544](https://github.com/pingcap/tispark/pull/2544) [#2607](https://github.com/pingcap/tispark/pull/2607)
+- Fix break change in partition read. For example, to_days is not supported [#2552](https://github.com/pingcap/tispark/pull/2552)
+- Fix exception will be thrown when we insert into a table partitioned by `year` and the first col of the table is not date type [#2554](https://github.com/pingcap/tispark/pull/2554)
+- Fix the bug that cluster index can not be used if the clustered index is not the Integer type [#2560](https://github.com/pingcap/tispark/pull/2560)
+- Fix the bug that CBO may not choose min cost between TiKV table scan, TiKV index scan, and TiFlash scan [#2563](https://github.com/pingcap/tispark/pull/2563)
+- Fix the bug that statistics are not collected which may affect the choice of the plan [#2578](https://github.com/pingcap/tispark/pull/2578)
+- Fix the bug that partition pruning fails with the uppercase column [#2593](https://github.com/pingcap/tispark/pull/2593)
+
+
+### Documents
+
+- Optimize user guide and dev guide [#2533](https://github.com/pingcap/tispark/pull/2533)
+
+
 ## [TiSpark 3.1.2] 2022-12-12
 ### New Features
 - Support write into partition table with new collations [#2570](https://github.com/pingcap/tispark/pull/2570)
