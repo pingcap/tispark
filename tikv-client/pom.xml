@@ -23,7 +23,7 @@
         <grpc.version>1.29.0</grpc.version>
         <powermock.version>1.6.6</powermock.version>
         <jackson.annotations.version>2.12.6</jackson.annotations.version>
-        <jackson.databind.version>2.12.6.1</jackson.databind.version>
+        <jackson.databind.version>2.12.7.1</jackson.databind.version>
         <trove4j.version>3.0.1</trove4j.version>
         <jetcd.version>0.4.1</jetcd.version>
         <joda-time.version>2.9.9</joda-time.version>
