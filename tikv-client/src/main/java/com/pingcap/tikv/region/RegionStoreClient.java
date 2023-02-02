@@ -40,6 +40,7 @@ import com.pingcap.tikv.exception.SelectException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.operation.KVErrorHandler;
+import com.pingcap.tikv.operation.NoopHandler;
 import com.pingcap.tikv.streaming.StreamingResponse;
 import com.pingcap.tikv.txn.AbstractLockResolverClient;
 import com.pingcap.tikv.txn.Lock;
@@ -62,6 +63,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -106,6 +108,7 @@ import org.tikv.kvproto.Kvrpcpb.SplitRegionResponse;
 import org.tikv.kvproto.Kvrpcpb.TxnHeartBeatRequest;
 import org.tikv.kvproto.Kvrpcpb.TxnHeartBeatResponse;
 import org.tikv.kvproto.Metapb.Store;
+import org.tikv.kvproto.Mpp;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import org.tikv.kvproto.TikvGrpc.TikvStub;
@@ -713,7 +716,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       // we need to invalidate cache when region not find
       if (regionError.hasRegionNotFound()) {
         logger.info("invalidateRange when Re-splitting region task because of region not find.");
-        this.regionManager.invalidateRange(region.getStartKey(),region.getEndKey());
+        this.regionManager.invalidateRange(region.getStartKey(), region.getEndKey());
       }
       // Split ranges
       return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges, storeType);
@@ -1199,6 +1202,18 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     }
     if (resp.hasRegionError()) {
       throw new RegionException(resp.getRegionError());
+    }
+  }
+
+  public Boolean isAlive() {
+    Supplier<Mpp.IsAliveRequest> factory = () -> Mpp.IsAliveRequest.newBuilder().build();
+    try {
+      Mpp.IsAliveResponse resp =
+          callWithRetryAndTimeout(ConcreteBackOffer.newIsAliveBackOff(),TikvGrpc.getIsAliveMethod(), factory, new NoopHandler<>(),1, TimeUnit.SECONDS);
+      return resp != null && resp.getAvailable();
+    } catch (GrpcException e) {
+      logger.warn("Call mpp isAlive fail with GrpcException", e);
+      return false;
     }
   }
 

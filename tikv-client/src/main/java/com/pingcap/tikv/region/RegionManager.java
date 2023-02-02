@@ -191,7 +191,7 @@ public class RegionManager {
   }
 
   public void invalidateRange(ByteString startKey, ByteString endKey) {
-    cache.invalidateRange(startKey,endKey);
+    cache.invalidateRange(startKey, endKey);
   }
 
   public static class RegionCache {
@@ -259,7 +259,8 @@ public class RegionManager {
     private synchronized void invalidateRange(ByteString startKey, ByteString endKey) {
       regionCache.remove(makeRange(startKey, endKey));
       if (logger.isDebugEnabled()) {
-        logger.debug(String.format("invalidateRange success, startKey[%s], endKey[%s]", startKey, endKey));
+        logger.debug(
+            String.format("invalidateRange success, startKey[%s], endKey[%s]", startKey, endKey));
       }
     }
 

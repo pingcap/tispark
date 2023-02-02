@@ -33,14 +33,10 @@ import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Coprocessor;
@@ -54,8 +50,10 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
   protected EncodeType encodeType;
   private ExecutorCompletionService<Iterator<SelectResponse>> streamingService;
   private ExecutorCompletionService<SelectResponse> dagService;
+  private ExecutorService aliveService;
   private SelectResponse response;
   private Iterator<SelectResponse> responseIterator;
+  private Map<Long, Boolean> storeStatusCache;
 
   DAGIterator(
       DAGRequest req,
@@ -69,6 +67,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     this.pushDownType = pushDownType;
     this.storeType = storeType;
     this.startTs = startTs;
+    storeStatusCache = new ConcurrentHashMap<>();
     switch (pushDownType) {
       case NORMAL:
         dagService = new ExecutorCompletionService<>(session.getThreadPoolForTableScan());
@@ -203,6 +202,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     HashSet<Long> resolvedLocks = new HashSet<>();
     // In case of one region task spilt into several others, we ues a queue to properly handle all
     // the remaining tasks.
+    // Do we need to set the timeout for this loop? If all the stores are suspended, it will not stop.
     while (!remainTasks.isEmpty()) {
       RangeSplitter.RegionTask task = remainTasks.poll();
       if (task == null) {
@@ -215,9 +215,18 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       try {
         RegionStoreClient client =
             session.getRegionStoreClientBuilder().build(region, store, storeType);
+        // if mpp store is not alive, drop it and generate a new task.
+        if (storeType == TiStoreType.TiFlash
+            && !isMppStoreAlive(store.getId(), client)) {
+          remainTasks.addAll(
+              RangeSplitter.newSplitter(client.regionManager)
+                  .splitRangeByRegion(ranges, storeType));
+          continue;
+        }
         client.addResolvedLocks(startTs, resolvedLocks);
         Collection<RangeSplitter.RegionTask> tasks =
             client.coprocess(backOffer, dagRequest, region, ranges, responseQueue, startTs);
+
         if (tasks != null) {
           remainTasks.addAll(tasks);
         }
@@ -268,5 +277,29 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       // see:https://github.com/pingcap/tikv-client-lib-java/pull/149
       throw new TiClientInternalException("Error Closing Store client.", e);
     }
+  }
+
+  public Boolean isMppStoreAlive(long id,RegionStoreClient client) {
+    try {
+      Boolean isStoreAlive = storeStatusCache.get(id);
+      if (isStoreAlive == null) {
+        isStoreAlive = client.isAlive();
+        storeStatusCache.put(id, isStoreAlive);
+      } else {
+        refreshStatusBackground(id, client);
+      }
+      return isStoreAlive;
+    } catch (Exception e) {
+      throw new TiClientInternalException("Error get MppStore Status.", e);
+    }
+  }
+
+  public void refreshStatusBackground(
+      long id, RegionStoreClient client) {
+    session.getThreadPoolForIsAlive().submit(
+        () -> {
+          Boolean isStoreAlive = client.isAlive();
+          storeStatusCache.put(id, isStoreAlive);
+        });
   }
 }

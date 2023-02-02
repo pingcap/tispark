@@ -39,8 +39,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -63,6 +62,7 @@ public class TiSession implements AutoCloseable {
   private volatile ExecutorService batchDeleteThreadPool;
   private volatile ExecutorService batchScanThreadPool;
   private volatile ExecutorService deleteRangeThreadPool;
+  private volatile ExecutorService isAliveThreadPool;
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
   private boolean isClosed = false;
@@ -349,6 +349,19 @@ public class TiSession implements AutoCloseable {
     return res;
   }
 
+  public ExecutorService getThreadPoolForIsAlive() {
+    if (isAliveThreadPool == null) {
+      synchronized (this) {
+        if (isAliveThreadPool == null) {
+          isAliveThreadPool = new ThreadPoolExecutor(20,
+                  20, 0, TimeUnit.MILLISECONDS
+                  , new ArrayBlockingQueue<>(1),new ThreadPoolExecutor.DiscardPolicy());
+        }
+      }
+    }
+    return isAliveThreadPool;
+  }
+
   /**
    * This is used for setting call back function to invalidate cache information
    *
@@ -485,6 +498,9 @@ public class TiSession implements AutoCloseable {
     }
     if (deleteRangeThreadPool != null) {
       deleteRangeThreadPool.shutdownNow();
+    }
+    if (isAliveThreadPool != null) {
+      isAliveThreadPool.shutdownNow();
     }
     if (client != null) {
       getPDClient().close();
