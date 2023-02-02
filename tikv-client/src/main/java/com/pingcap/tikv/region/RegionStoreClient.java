@@ -1214,8 +1214,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
               TikvGrpc.getIsAliveMethod(),
               factory,
               new NoopHandler<>(),
-              1,
-              TimeUnit.SECONDS);
+              500,
+              TimeUnit.MILLISECONDS);
       return resp != null && resp.getAvailable();
     } catch (GrpcException e) {
       logger.warn("Call mpp isAlive fail with GrpcException", e);

@@ -218,6 +218,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
             session.getRegionStoreClientBuilder().build(region, store, storeType);
         // if mpp store is not alive, drop it and generate a new task.
         if (storeType == TiStoreType.TiFlash && !isMppStoreAlive(store.getId(), client)) {
+          logger.warn("Re-splitting region task due to TiFlash is unavailable");
           remainTasks.addAll(
               RangeSplitter.newSplitter(client.regionManager)
                   .splitRangeByRegion(ranges, storeType));
