@@ -202,7 +202,8 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     HashSet<Long> resolvedLocks = new HashSet<>();
     // In case of one region task spilt into several others, we ues a queue to properly handle all
     // the remaining tasks.
-    // Do we need to set the timeout for this loop? If all the stores are suspended, it will not stop.
+    // Do we need to set the timeout for this loop? If all the stores are suspended, it will not
+    // stop.
     while (!remainTasks.isEmpty()) {
       RangeSplitter.RegionTask task = remainTasks.poll();
       if (task == null) {
@@ -216,8 +217,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
         RegionStoreClient client =
             session.getRegionStoreClientBuilder().build(region, store, storeType);
         // if mpp store is not alive, drop it and generate a new task.
-        if (storeType == TiStoreType.TiFlash
-            && !isMppStoreAlive(store.getId(), client)) {
+        if (storeType == TiStoreType.TiFlash && !isMppStoreAlive(store.getId(), client)) {
           remainTasks.addAll(
               RangeSplitter.newSplitter(client.regionManager)
                   .splitRangeByRegion(ranges, storeType));
@@ -279,7 +279,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     }
   }
 
-  public Boolean isMppStoreAlive(long id,RegionStoreClient client) {
+  public Boolean isMppStoreAlive(long id, RegionStoreClient client) {
     try {
       Boolean isStoreAlive = storeStatusCache.get(id);
       if (isStoreAlive == null) {
@@ -294,12 +294,13 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     }
   }
 
-  public void refreshStatusBackground(
-      long id, RegionStoreClient client) {
-    session.getThreadPoolForIsAlive().submit(
-        () -> {
-          Boolean isStoreAlive = client.isAlive();
-          storeStatusCache.put(id, isStoreAlive);
-        });
+  public void refreshStatusBackground(long id, RegionStoreClient client) {
+    session
+        .getThreadPoolForIsAlive()
+        .submit(
+            () -> {
+              Boolean isStoreAlive = client.isAlive();
+              storeStatusCache.put(id, isStoreAlive);
+            });
   }
 }

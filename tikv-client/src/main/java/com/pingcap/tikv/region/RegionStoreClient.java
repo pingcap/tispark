@@ -1209,7 +1209,13 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Supplier<Mpp.IsAliveRequest> factory = () -> Mpp.IsAliveRequest.newBuilder().build();
     try {
       Mpp.IsAliveResponse resp =
-          callWithRetryAndTimeout(ConcreteBackOffer.newIsAliveBackOff(),TikvGrpc.getIsAliveMethod(), factory, new NoopHandler<>(),1, TimeUnit.SECONDS);
+          callWithRetryAndTimeout(
+              ConcreteBackOffer.newIsAliveBackOff(),
+              TikvGrpc.getIsAliveMethod(),
+              factory,
+              new NoopHandler<>(),
+              1,
+              TimeUnit.SECONDS);
       return resp != null && resp.getAvailable();
     } catch (GrpcException e) {
       logger.warn("Call mpp isAlive fail with GrpcException", e);

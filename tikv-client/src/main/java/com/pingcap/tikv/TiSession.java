@@ -353,9 +353,14 @@ public class TiSession implements AutoCloseable {
     if (isAliveThreadPool == null) {
       synchronized (this) {
         if (isAliveThreadPool == null) {
-          isAliveThreadPool = new ThreadPoolExecutor(20,
-                  20, 0, TimeUnit.MILLISECONDS
-                  , new ArrayBlockingQueue<>(1),new ThreadPoolExecutor.DiscardPolicy());
+          isAliveThreadPool =
+              new ThreadPoolExecutor(
+                  20,
+                  20,
+                  0,
+                  TimeUnit.MILLISECONDS,
+                  new ArrayBlockingQueue<>(1),
+                  new ThreadPoolExecutor.DiscardPolicy());
         }
       }
     }

@@ -101,26 +101,26 @@ public abstract class AbstractGRPCClient<
   }
 
   public <ReqT, RespT> RespT callWithRetryAndTimeout(
-          BackOffer backOffer,
-          MethodDescriptor<ReqT, RespT> method,
-          Supplier<ReqT> requestFactory,
-          ErrorHandler<RespT> handler,
-          long timeout,
-          TimeUnit unit) {
+      BackOffer backOffer,
+      MethodDescriptor<ReqT, RespT> method,
+      Supplier<ReqT> requestFactory,
+      ErrorHandler<RespT> handler,
+      long timeout,
+      TimeUnit unit) {
     if (logger.isTraceEnabled()) {
       logger.trace(String.format("Calling %s...", method.getFullMethodName()));
     }
     RetryPolicy.Builder<RespT> builder = new Builder<>(backOffer);
     RespT resp =
-            builder
-                    .create(handler)
-                    .callWithRetry(
-                            () -> {
-                              BlockingStubT stub = getBlockingStub().withDeadlineAfter(timeout,unit);
-                              return ClientCalls.blockingUnaryCall(
-                                      stub.getChannel(), method, stub.getCallOptions(), requestFactory.get());
-                            },
-                            method.getFullMethodName());
+        builder
+            .create(handler)
+            .callWithRetry(
+                () -> {
+                  BlockingStubT stub = getBlockingStub().withDeadlineAfter(timeout, unit);
+                  return ClientCalls.blockingUnaryCall(
+                      stub.getChannel(), method, stub.getCallOptions(), requestFactory.get());
+                },
+                method.getFullMethodName());
 
     if (logger.isTraceEnabled()) {
       logger.trace(String.format("leaving %s...", method.getFullMethodName()));
@@ -210,7 +210,7 @@ public abstract class AbstractGRPCClient<
       try {
         ManagedChannel channel = channelFactory.getChannel(addressStr, hostMapping);
         HealthGrpc.HealthBlockingStub stub =
-            HealthGrpc.newBlockingStub(channel).withDeadlineAfter(getTimeout(), TimeUnit.SECONDS);
+            HealthGrpc.newBlockingStub(channel).withDeadlineAfter(getTimeout(), TimeUnit.MINUTES);
         HealthCheckRequest req = HealthCheckRequest.newBuilder().build();
         HealthCheckResponse resp = stub.check(req);
         return resp.getStatus() == HealthCheckResponse.ServingStatus.SERVING;
