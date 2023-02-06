@@ -280,6 +280,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     }
   }
 
+  // See https://github.com/pingcap/tispark/pull/2619 for more details
   public Boolean isMppStoreAlive(long id, RegionStoreClient client) {
     try {
       Boolean isStoreAlive = storeStatusCache.get(id);
