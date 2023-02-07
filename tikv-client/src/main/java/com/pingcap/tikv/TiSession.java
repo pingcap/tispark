@@ -360,6 +360,10 @@ public class TiSession implements AutoCloseable {
                   0,
                   TimeUnit.MILLISECONDS,
                   new ArrayBlockingQueue<>(1),
+                  new ThreadFactoryBuilder()
+                      .setNameFormat("isAlive-thread-%d")
+                      .setDaemon(true)
+                      .build(),
                   new ThreadPoolExecutor.DiscardPolicy());
         }
       }
