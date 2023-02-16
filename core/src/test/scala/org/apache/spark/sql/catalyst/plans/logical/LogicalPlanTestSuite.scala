@@ -61,6 +61,7 @@ class LogicalPlanTestSuite extends BasePlanTest {
     refreshConnections()
     val df =
       spark.sql("""
+<<<<<<< HEAD
                   |select t1.*, (
                   |	select count(*)
                   |	from test2
@@ -92,6 +93,39 @@ class LogicalPlanTestSuite extends BasePlanTest {
                   |		where c2 > 2)
                   |	group by c2) t4
                   |on t1.id = t4.id
+=======
+          |select t1.*, (
+          |	select count(*)
+          |	from test2
+          |	where id > 1
+          |), t1.c1, t2.c1, t3.*, t4.c3
+          |from (
+          |	select id, c1, c2
+          |	from test1) t1
+          |left join (
+          |	select id, c1, c2, c1 + coalesce(c2 % 2) as c3
+          |	from test2 where c1 + c2 > 3) t2
+          |on t1.id = t2.id
+          |left join (
+          |	select max(id) as id, min(c1) + c2 as c1, c2, count(*) as c3
+          |	from test3
+          |	where c2 <= 3 and exists (
+          |		select * from (
+          |			select id as c1 from test3)
+          |    where (
+          |      select max(id) from test1) = 4)
+          |	group by c2) t3
+          |on t1.id = t3.id
+          |left join (
+          |	select max(id) as id, min(c1) as c1, max(c1) as c1, count(*) as c2, c2 as c3
+          |	from test3
+          |	where id not in (
+          |		select id
+          |		from test1
+          |		where c2 > 2)
+          |	group by c2) t4
+          |on t1.id = t4.id
+>>>>>>> 9b065cc6a (Fix cacheInvalidateCallback does not work (#2626))
       """.stripMargin)
 
     var v: TiTimestamp = null
