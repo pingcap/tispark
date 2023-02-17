@@ -1,6 +1,6 @@
 # Telemetry
-By default, TiSpark collect usage information and share the information with PingCAP. You can close it by configuring
-`spark.tispark.telemetry.enable = false` in `spark-default.conf`.
+By default, TiSpark does not collect usage information and share the information with PingCAP. You can enable it by configuring
+`spark.tispark.telemetry.enable = true` in `spark-default.conf`.
 
 When the telemetry collection feature is enabled, usage information will be shared, including(but not limited to):
 * A randomly generated telemetry ID.
