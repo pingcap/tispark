@@ -39,10 +39,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -66,12 +66,14 @@ public class TiSession implements AutoCloseable {
   private volatile ExecutorService batchDeleteThreadPool;
   private volatile ExecutorService batchScanThreadPool;
   private volatile ExecutorService deleteRangeThreadPool;
-  private volatile ExecutorService isAliveThreadPool;
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
   private boolean isClosed = false;
   private volatile TiTimestamp snapshotTimestamp;
   private volatile Catalog snapshotCatalog;
+  // storeStatusCache will be init at @see DAGIterator#isMppStoreAlive
+  private volatile Map<String, Boolean> storeStatusCache;
+  private ScheduledExecutorService storeStatusCacheExecutor;
 
   private TiSession(TiConfiguration conf) {
     this.conf = conf;
@@ -115,6 +117,10 @@ public class TiSession implements AutoCloseable {
       sessionCachedMap.put(key, newSession);
       return newSession;
     }
+  }
+
+  public ChannelFactory getChannelFactory() {
+    return this.channelFactory;
   }
 
   // if NewCollationEnabled is not set in configuration file,
@@ -221,6 +227,28 @@ public class TiSession implements AutoCloseable {
       }
     }
     return res;
+  }
+
+  public Map<String, Boolean> getStoreStatusCache() {
+    if (storeStatusCache == null) {
+      synchronized (this) {
+        if (storeStatusCache == null) {
+          storeStatusCache = new ConcurrentHashMap<>();
+          storeStatusCacheExecutor = Executors.newScheduledThreadPool(1);
+          storeStatusCacheExecutor.scheduleAtFixedRate(
+              () -> {
+                storeStatusCache.replaceAll(
+                    (k, v) ->
+                        RegionStoreClient.isMppAlive(
+                            channelFactory.getChannel(k, getPDClient().getHostMapping())));
+              },
+              0,
+              5,
+              TimeUnit.SECONDS);
+        }
+      }
+    }
+    return storeStatusCache;
   }
 
   public ExecutorService getThreadPoolForIndexScan() {
@@ -351,28 +379,6 @@ public class TiSession implements AutoCloseable {
       }
     }
     return res;
-  }
-
-  public ExecutorService getThreadPoolForIsAlive() {
-    if (isAliveThreadPool == null) {
-      synchronized (this) {
-        if (isAliveThreadPool == null) {
-          isAliveThreadPool =
-              new ThreadPoolExecutor(
-                  2 * conf.getPartitionPerSplit(),
-                  2 * conf.getPartitionPerSplit(),
-                  0,
-                  TimeUnit.MILLISECONDS,
-                  new ArrayBlockingQueue<>(1),
-                  new ThreadFactoryBuilder()
-                      .setNameFormat("isAlive-thread-%d")
-                      .setDaemon(true)
-                      .build(),
-                  new ThreadPoolExecutor.DiscardPolicy());
-        }
-      }
-    }
-    return isAliveThreadPool;
   }
 
   /**
@@ -512,8 +518,8 @@ public class TiSession implements AutoCloseable {
     if (deleteRangeThreadPool != null) {
       deleteRangeThreadPool.shutdownNow();
     }
-    if (isAliveThreadPool != null) {
-      isAliveThreadPool.shutdownNow();
+    if (storeStatusCacheExecutor != null) {
+      storeStatusCacheExecutor.shutdownNow();
     }
     if (client != null) {
       getPDClient().close();

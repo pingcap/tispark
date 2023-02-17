@@ -41,7 +41,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorCompletionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +57,6 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
   private ExecutorCompletionService<SelectResponse> dagService;
   private SelectResponse response;
   private Iterator<SelectResponse> responseIterator;
-  private Map<Long, Boolean> storeStatusCache;
 
   DAGIterator(
       DAGRequest req,
@@ -72,7 +70,6 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     this.pushDownType = pushDownType;
     this.storeType = storeType;
     this.startTs = startTs;
-    storeStatusCache = new ConcurrentHashMap<>();
     switch (pushDownType) {
       case NORMAL:
         dagService = new ExecutorCompletionService<>(session.getThreadPoolForTableScan());
@@ -222,7 +219,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
         RegionStoreClient client =
             session.getRegionStoreClientBuilder().build(region, store, storeType);
         // if mpp store is not alive, drop it and generate a new task.
-        if (storeType == TiStoreType.TiFlash && !isMppStoreAlive(store.getId(), client)) {
+        if (storeType == TiStoreType.TiFlash && !isMppStoreAlive(store.getAddress())) {
           logger.debug("Re-splitting region task due to TiFlash is unavailable");
           remainTasks.addAll(
               RangeSplitter.newSplitter(client.regionManager)
@@ -286,28 +283,18 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
   }
 
   // See https://github.com/pingcap/tispark/pull/2619 for more details
-  public Boolean isMppStoreAlive(long id, RegionStoreClient client) {
+  public Boolean isMppStoreAlive(String address) {
     try {
-      Boolean isStoreAlive = storeStatusCache.get(id);
-      if (isStoreAlive == null) {
-        isStoreAlive = client.isAlive();
-        storeStatusCache.put(id, isStoreAlive);
-      } else {
-        refreshStatusBackground(id, client);
-      }
-      return isStoreAlive;
+      Map<String, Boolean> storeStatusCache = session.getStoreStatusCache();
+      return storeStatusCache.computeIfAbsent(
+          address,
+          key ->
+              RegionStoreClient.isMppAlive(
+                  session
+                      .getChannelFactory()
+                      .getChannel(address, session.getPDClient().getHostMapping())));
     } catch (Exception e) {
       throw new TiClientInternalException("Error get MppStore Status.", e);
     }
-  }
-
-  public void refreshStatusBackground(long id, RegionStoreClient client) {
-    session
-        .getThreadPoolForIsAlive()
-        .submit(
-            () -> {
-              Boolean isStoreAlive = client.isAlive();
-              storeStatusCache.put(id, isStoreAlive);
-            });
   }
 }

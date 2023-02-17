@@ -1205,9 +1205,9 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     }
   }
 
-  public Boolean isAlive() {
-    // no need to backoff because isAlive is designed to detect the true status.
-    TikvBlockingStub stub = getBlockingStub().withDeadlineAfter(500, TimeUnit.MILLISECONDS);
+  public static boolean isMppAlive(ManagedChannel channel) {
+    TikvGrpc.TikvBlockingStub stub =
+        TikvGrpc.newBlockingStub(channel).withDeadlineAfter(500, TimeUnit.MILLISECONDS);
     Supplier<Mpp.IsAliveRequest> factory = () -> Mpp.IsAliveRequest.newBuilder().build();
     try {
       Mpp.IsAliveResponse resp =
