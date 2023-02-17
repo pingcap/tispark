@@ -207,7 +207,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     HashSet<Long> resolvedLocks = new HashSet<>();
     // In case of one region task spilt into several others, we ues a queue to properly handle all
     // the remaining tasks.
-    // Do we need to set the timeout for this loop? If all the stores are suspended, it will not
+    // Need to set the timeout for this loop? If all the stores are suspended, it will not
     // stop.
     while (!remainTasks.isEmpty()) {
       RangeSplitter.RegionTask task = remainTasks.poll();
