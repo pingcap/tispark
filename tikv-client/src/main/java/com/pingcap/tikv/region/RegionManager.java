@@ -50,7 +50,7 @@ public class RegionManager {
   // https://github.com/pingcap/tispark/issues/1170
   private final RegionCache cache;
 
-  private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
+  private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
 
   private AtomicInteger tiflashStoreIndex = new AtomicInteger(0);
 
@@ -65,6 +65,11 @@ public class RegionManager {
   public RegionManager(ReadOnlyPDClient pdClient) {
     this.cache = new RegionCache(pdClient);
     this.cacheInvalidateCallback = null;
+  }
+
+  public synchronized void setCacheInvalidateCallback(
+          Function<CacheInvalidateEvent, Void> cacheInvalidateCallback) {
+    this.cacheInvalidateCallback = cacheInvalidateCallback;
   }
 
   public Function<CacheInvalidateEvent, Void> getCacheInvalidateCallback() {
