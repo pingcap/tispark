@@ -40,7 +40,6 @@ import com.pingcap.tikv.exception.SelectException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.operation.KVErrorHandler;
-import com.pingcap.tikv.operation.NoopHandler;
 import com.pingcap.tikv.streaming.StreamingResponse;
 import com.pingcap.tikv.txn.AbstractLockResolverClient;
 import com.pingcap.tikv.txn.Lock;
@@ -53,6 +52,7 @@ import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
+import io.grpc.stub.ClientCalls;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -1206,19 +1206,16 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
   }
 
   public Boolean isAlive() {
+    // no need to backoff because isAlive is designed to detect the true status.
+    TikvBlockingStub stub = getBlockingStub().withDeadlineAfter(500, TimeUnit.MILLISECONDS);
     Supplier<Mpp.IsAliveRequest> factory = () -> Mpp.IsAliveRequest.newBuilder().build();
     try {
       Mpp.IsAliveResponse resp =
-          callWithRetryAndTimeout(
-              ConcreteBackOffer.newIsAliveBackOff(),
-              TikvGrpc.getIsAliveMethod(),
-              factory,
-              new NoopHandler<>(),
-              500,
-              TimeUnit.MILLISECONDS);
+          ClientCalls.blockingUnaryCall(
+              stub.getChannel(), TikvGrpc.getIsAliveMethod(), stub.getCallOptions(), factory.get());
       return resp != null && resp.getAvailable();
-    } catch (GrpcException e) {
-      logger.warn("Call mpp isAlive fail with GrpcException", e);
+    } catch (Exception e) {
+      logger.warn("Call mpp isAlive fail with Exception", e);
       return false;
     }
   }

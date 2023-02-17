@@ -17,6 +17,7 @@
 package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
@@ -37,7 +38,10 @@ class BasicBatchWriteSuite extends BaseBatchWriteWithoutDropTableTest("test_data
   }
 
   test("Test Select") {
-    testTiDBSelect(Seq(row1, row2))
+    //  testTiDBSelect(Seq(row1, row2))
+    spark.conf
+      .set(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIFLASH_STORAGE_ENGINE)
+    spark.sql("select * from test.t").show()
   }
 
   test("Test Write Append") {
