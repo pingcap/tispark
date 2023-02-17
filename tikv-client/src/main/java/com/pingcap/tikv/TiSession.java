@@ -39,7 +39,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -355,8 +359,8 @@ public class TiSession implements AutoCloseable {
         if (isAliveThreadPool == null) {
           isAliveThreadPool =
               new ThreadPoolExecutor(
-                  20,
-                  20,
+                  2 * conf.getPartitionPerSplit(),
+                  2 * conf.getPartitionPerSplit(),
                   0,
                   TimeUnit.MILLISECONDS,
                   new ArrayBlockingQueue<>(1),
