@@ -77,10 +77,6 @@ public class ConcreteBackOffer implements BackOffer {
     return new ConcreteBackOffer(TSO_MAX_BACKOFF);
   }
 
-  public static ConcreteBackOffer newIsAliveBackOff() {
-    return new ConcreteBackOffer(IS_ALIVE_BACKOFF);
-  }
-
   public static ConcreteBackOffer create(BackOffer source) {
     return new ConcreteBackOffer(((ConcreteBackOffer) source));
   }

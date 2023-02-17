@@ -38,10 +38,7 @@ class BasicBatchWriteSuite extends BaseBatchWriteWithoutDropTableTest("test_data
   }
 
   test("Test Select") {
-    //  testTiDBSelect(Seq(row1, row2))
-    spark.conf
-      .set(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIFLASH_STORAGE_ENGINE)
-    spark.sql("select * from test.t").show()
+    testTiDBSelect(Seq(row1, row2))
   }
 
   test("Test Write Append") {
