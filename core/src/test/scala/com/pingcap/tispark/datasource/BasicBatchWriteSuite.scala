@@ -17,7 +17,6 @@
 package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
