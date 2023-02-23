@@ -24,6 +24,26 @@ Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](http
 - [Dev Guide](https://github.com/pingcap/tispark/wiki/Dev-Guide)
 - [Benchmark](https://github.com/pingcap/tispark/wiki/TiSpark-Benchmark)
 
+## About TiDB Garbage Collection
+
+TiKV uses MVCC to control transaction concurrency. When you update the data, the original data is not deleted immediately but is kept together with the new data, with a timestamp to distinguish the version. Garbage Collection (GC) controlled by TiDB will clear the obsolete data before gc safe point.
+
+TiSpark guarantee transaction by the distributed reading of the same version. Thus, we need to ensure the version is always behind the gc safe point during the running of the Spark job, or you may get the wrong data.
+
+You can use TiDB system variables [tidb_gc_life_time](https://docs.pingcap.com/tidb/stable/system-variables#tidb_gc_life_time-new-in-v50) to control the gc safe point. The gc safe point will be less than or equal to ${now-tidb_gc_life_time}.
+
+Set `tidb_gc_life_time` bigger than execute time of TiSpark is a good practice. For example, If your job run about 1-2 hours:
+
+```
+SET GLOBAL tidb_gc_life_time = '2h'
+```
+
+Do not forget to recover after the Spark job is finished.
+
+```
+SET GLOBAL tidb_gc_life_time = ${original_value}
+```
+
 ## About mysql-connector-java
 
 We will not provide the `mysql-connector-java` dependency because of the limit of the GPL license.
