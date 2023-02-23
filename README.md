@@ -26,7 +26,7 @@ Most of the TiSpark logic is inside a thin layer, namely, the [tikv-client](http
 
 ## About Garbage Collection
 
-TiKV uses MVCC to control transaction concurrency. When you update the data, the original data is not deleted immediately but is kept together with the new data, with a timestamp to distinguish the version. Garbage Collection (GC) controlled by TiDB will clear the obsolete data before gc safe point.
+TiKV uses MVCC to control transaction concurrency. When you update the data, the original data is not deleted immediately but is kept together with the new data, with a timestamp to distinguish the version. Garbage Collection (GC) controlled by TiDB will clear the obsolete data before gc safe point periodically.
 
 TiSpark guarantee transaction by the distributed reading of the same version. Thus, we need to ensure the version is always behind the gc safe point during the running of the Spark job, or you may get the wrong data.
 
