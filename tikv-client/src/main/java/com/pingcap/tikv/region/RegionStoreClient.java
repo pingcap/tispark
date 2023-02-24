@@ -240,6 +240,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     GetResponse resp = callWithRetry(backOffer, TikvGrpc.getKvGetMethod(), factory, handler);
 
     handleGetResponse(resp);
+    checkStartTs(version);
     return resp.getValue();
   }
 
@@ -284,6 +285,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
         callWithRetry(backOffer, TikvGrpc.getKvBatchGetMethod(), request, handler);
 
     try {
+      checkStartTs(version);
       return handleBatchGetResponse(backOffer, resp, version);
     } catch (TiKVException e) {
       if ("locks not resolved, retry".equals(e.getMessage())) {
@@ -354,6 +356,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
               version,
               forWrite);
       ScanResponse resp = callWithRetry(backOffer, TikvGrpc.getKvScanMethod(), request, handler);
+      checkStartTs(version);
       if (isScanSuccess(backOffer, resp)) {
         return doScan(resp);
       }
@@ -678,6 +681,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
             forWrite);
     Coprocessor.Response resp =
         callWithRetry(backOffer, TikvGrpc.getCoprocessorMethod(), reqToSend, handler);
+    checkStartTs(startTs);
     return handleCopResponse(backOffer, resp, ranges, responseQueue, startTs, region);
   }
 
@@ -713,7 +717,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       // we need to invalidate cache when region not find
       if (regionError.hasRegionNotFound()) {
         logger.info("invalidateRange when Re-splitting region task because of region not find.");
-        this.regionManager.invalidateRange(region.getStartKey(),region.getEndKey());
+        this.regionManager.invalidateRange(region.getStartKey(), region.getEndKey());
       }
       // Split ranges
       return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges, storeType);
@@ -811,6 +815,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
             TikvGrpc.getCoprocessorStreamMethod(),
             reqToSend,
             handler);
+    checkStartTs(startTs);
     return doCoprocessor(responseIterator);
   }
 
@@ -1199,6 +1204,16 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     }
     if (resp.hasRegionError()) {
       throw new RegionException(resp.getRegionError());
+    }
+  }
+
+  // checkStartTs will check the start_ts > gc_safe_point to ensure read correctly
+  public void checkStartTs(long startTs) {
+    BackOffer bo = ConcreteBackOffer.newCustomBackOff(BackOffer.PD_INFO_BACKOFF);
+    Long safePoint = pdClient.getGCSafePoint(bo);
+    if (startTs < safePoint) {
+      throw new GrpcException(
+          "start_ts < gc_safe_point. Please ensure the execute time is less than the tidb_gc_life_time https://docs.pingcap.com/tidb/stable/system-variables#tidb_gc_life_time-new-in-v50. Or you may get the unexpected data.");
     }
   }
 

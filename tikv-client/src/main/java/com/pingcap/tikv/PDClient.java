@@ -67,6 +67,7 @@ import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
 import org.tikv.kvproto.PDGrpc.PDStub;
+import org.tikv.kvproto.Pdpb;
 import org.tikv.kvproto.Pdpb.Error;
 import org.tikv.kvproto.Pdpb.ErrorType;
 import org.tikv.kvproto.Pdpb.GetAllStoresRequest;
@@ -298,6 +299,10 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return () -> GetAllStoresRequest.newBuilder().setHeader(header).build();
   }
 
+  private Supplier<Pdpb.GetGCSafePointRequest> buildGetGCSafePointReq() {
+    return () -> Pdpb.GetGCSafePointRequest.newBuilder().setHeader(header).build();
+  }
+
   private <T> PDErrorHandler<GetStoreResponse> buildPDErrorHandler() {
     return new PDErrorHandler<>(
         r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null, this);
@@ -334,6 +339,18 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
                 r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
                 this))
         .getStoresList();
+  }
+
+  @Override
+  public Long getGCSafePoint(BackOffer backOffer) {
+    return callWithRetry(
+            backOffer,
+            PDGrpc.getGetGCSafePointMethod(),
+            buildGetGCSafePointReq(),
+            new PDErrorHandler<>(
+                r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
+                this))
+        .getSafePoint();
   }
 
   @Override
