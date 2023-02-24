@@ -1207,7 +1207,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     }
   }
 
-  // checkStartTs will check the start_ts > gc_safe_point to ensure read correctly
+  // checkStartTs will check the start_ts >= gc_safe_point to ensure read correctly
   public void checkStartTs(long startTs) {
     BackOffer bo = ConcreteBackOffer.newCustomBackOff(BackOffer.PD_INFO_BACKOFF);
     Long safePoint = pdClient.getGCSafePoint(bo);
