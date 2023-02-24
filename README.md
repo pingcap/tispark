@@ -30,7 +30,7 @@ TiKV uses MVCC to control transaction concurrency. When you update the data, the
 
 TiSpark guarantee transaction by the distributed reading of the same version. Thus, we need to ensure the version is always behind the GC safe point during the running of the Spark job, or you may get the wrong data.
 
-You can use TiDB system variables [tidb_gc_life_time](https://docs.pingcap.com/tidb/stable/system-variables#tidb_gc_life_time-new-in-v50) to control the gc safe point. The gc safe point will be less than or equal to ${now-tidb_gc_life_time}.
+You can use TiDB system variables [`tidb_gc_life_time`](https://docs.pingcap.com/tidb/stable/system-variables#tidb_gc_life_time-new-in-v50) to control the GC safe point. The GC safe point will be less than or equal to ${now-tidb_gc_life_time}.
 
 Set `tidb_gc_life_time` bigger than execute time of TiSpark is a good practice. For example, If your job run about 1-2 hours:
 
