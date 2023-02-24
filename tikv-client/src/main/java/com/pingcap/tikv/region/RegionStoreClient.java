@@ -1213,7 +1213,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     Long safePoint = pdClient.getGCSafePoint(bo);
     if (startTs < safePoint) {
       throw new GrpcException(
-          "start_ts < gc_safe_point. Please ensure the execute time is less than the tidb_gc_life_time https://docs.pingcap.com/tidb/stable/system-variables#tidb_gc_life_time-new-in-v50. Or you may get the unexpected data.");
+          "start_ts < gc_safe_point. To avoid this, you can set the tidb_gc_life_time https://docs.pingcap.com/tidb/stable/system-variables#tidb_gc_life_time-new-in-v50 bigger than TiSpark execute time");
     }
   }
 
