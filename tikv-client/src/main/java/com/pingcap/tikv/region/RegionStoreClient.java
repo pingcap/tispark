@@ -1212,8 +1212,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     BackOffer bo = ConcreteBackOffer.newCustomBackOff(BackOffer.PD_INFO_BACKOFF);
     Long safePoint = pdClient.getGCSafePoint(bo);
     if (startTs < safePoint) {
-      throw new GrpcException(
-          "start_ts < gc_safe_point. To avoid this, you can set the tidb_gc_life_time https://docs.pingcap.com/tidb/stable/system-variables#tidb_gc_life_time-new-in-v50 bigger than TiSpark execute time");
+      throw new TiClientInternalException(
+          "You may access obsolete data due to start_ts < gc_safe_point. To avoid this, set the tidb_gc_life_time https://docs.pingcap.com/tidb/stable/system-variables#tidb_gc_life_time-new-in-v50 bigger than TiSpark execute time");
     }
   }
 
