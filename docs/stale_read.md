@@ -12,7 +12,7 @@
 
 TiSpark support stale read with a new configuration `spark.tispark.stale_read`
 - The configurations accept timestamp (ms) which is Long type
-- The configuration better meet this condition `${now} - ${spark.tispark.stale_read} + ${sql execution time}) < ${GC lifetime}`, or you may get unexception data
+- The configuration better meet this condition `${now} - ${spark.tispark.stale_read} + ${sql execution time}) < ${GC lifetime}`. TiSpark will throw an exception once start_ts < gc safe point. See [GC Overview](https://docs.pingcap.com/tidb/dev/garbage-collection-overview#gc-overview) to learn about them. 
 
 ## Limitation
 
