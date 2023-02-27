@@ -35,12 +35,12 @@ case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
 
   def updateStartTs(startTs: Long): Unit = {
     this.synchronized {
-      // check if the the current safePoint is less than startTs
+      // check if the the current safePoint is less than startTs. We can not apply startTs: safePoint < minStartTs < startTs. After apply, we may get minStartTs < safePoint < startTs.
       checkServiceSafePoint(startTs)
       if (startTs < minStartTs) {
-        // set he startTs as minStartTs and apply it
+        // applyServiceSafePoint may throw exception, so we need to test if before let minStartTs = startTs. Consider startTs < safePoint < minStartTs after checkServiceSafePoint.
+        applyServiceSafePoint(startTs)
         minStartTs = startTs
-        checkServiceSafePoint(minStartTs)
       }
     }
   }
@@ -50,6 +50,18 @@ case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
       serviceId,
       ttl,
       minStartTs,
+      ConcreteBackOffer.newCustomBackOff(BackOffer.PD_UPDATE_SAFE_POINT_BACKOFF))
+    if (safePoint > startTs) {
+      throw new TiInternalException(
+        s"Failed to register service GC safe point because the current minimum safe point $safePoint is newer than what we assume $startTs")
+    }
+  }
+
+  def applyServiceSafePoint(startTs: Long): Unit = {
+    val safePoint = tiSession.getPDClient.UpdateServiceGCSafePoint(
+      serviceId,
+      ttl,
+      startTs,
       ConcreteBackOffer.newCustomBackOff(BackOffer.PD_UPDATE_SAFE_POINT_BACKOFF))
     if (safePoint > startTs) {
       throw new TiInternalException(
