@@ -177,7 +177,7 @@ customerDF.write
 .mode("append")
 .save()
 ```
-See [Data Source API User Guide](https://github.com/pingcap/tispark/blob/master/docs/datasource_api_userguide.md) for more details.
+See [Data Source API User Guide](features/datasource_api_userguide.md) for more details.
 
 You can also write with Spark SQL since TiSpark 3.1. See [insert SQL](features/insert_sql_userguide.md) for more detail.
 
