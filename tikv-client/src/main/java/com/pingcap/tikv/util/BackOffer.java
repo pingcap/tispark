@@ -37,7 +37,7 @@ public interface BackOffer {
   int BATCH_COMMIT_BACKOFF = 10 * seconds;
   int PD_INFO_BACKOFF = 5 * seconds;
   int ROW_ID_ALLOCATOR_BACKOFF = 40 * seconds;
-  int PD_UPDATE_SAFE_POINT_BACKOFF = 60 * seconds;
+  int PD_UPDATE_SAFE_POINT_BACKOFF = 20 * seconds;
 
   /**
    * doBackOff sleeps a while base on the BackOffType and records the error message. Will stop until

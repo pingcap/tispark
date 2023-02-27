@@ -52,8 +52,9 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
     } else Option.empty)
   final val tiSession: TiSession = TiSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
-  val defaultTiSparkGCSafePointTTL: Int = 5* 60
-  val serverSavePoint: ServerSavePoint = ServerSavePoint("tispark_" + UUID.randomUUID, defaultTiSparkGCSafePointTTL, tiSession)
+  val defaultTiSparkGCSafePointTTL: Int = 5 * 60
+  val serverSavePoint: ServerSavePoint =
+    ServerSavePoint("tispark_" + UUID.randomUUID, defaultTiSparkGCSafePointTTL, tiSession)
 
   sparkSession.sparkContext.addSparkListener(new SparkListener() {
     override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {
