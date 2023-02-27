@@ -117,26 +117,11 @@ public class TiSession implements AutoCloseable {
     }
   }
 
-<<<<<<< HEAD
-=======
+
   public ChannelFactory getChannelFactory() {
     return this.channelFactory;
   }
-
-  // if NewCollationEnabled is not set in configuration file,
-  // we will set it to true when TiDB version is greater than or equal to v6.0.0.
-  // Otherwise, we will set it to false
-  private void refreshNewCollationEnabled() {
-    if (!conf.getNewCollationEnable().isPresent()) {
-      if (StoreVersion.isTiKVVersionGreatEqualThanVersion(getPDClient(), "6.0.0")) {
-        Collation.setNewCollationEnabled(true);
-      } else {
-        Collation.setNewCollationEnabled(false);
-      }
-    }
-  }
-
->>>>>>> bc02e502a (Support probe tiflash status (#2619))
+  
   public TxnKVClient createTxnClient() {
     return new TxnKVClient(conf, this.getRegionStoreClientBuilder(), this.getPDClient());
   }
