@@ -107,7 +107,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     } else {
       tiContext.tiSession.getSnapshotTimestamp
     }
-    tiContext.serviceSavePoint.updateStartTs(ts.getVersion)
+    tiContext.serviceSafePoint.updateStartTs(ts.getVersion)
 
     if (plan.isStreaming) {
       // We should use a new timestamp for next batch execution.

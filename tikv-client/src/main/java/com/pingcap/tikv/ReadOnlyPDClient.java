@@ -68,5 +68,5 @@ public interface ReadOnlyPDClient {
 
   List<Store> getAllStores(BackOffer backOffer);
 
-  Long UpdateServiceGCSafePoint(String serviceId, long ttl, long savePoint, BackOffer backOffer);
+  Long UpdateServiceGCSafePoint(String serviceId, long ttl, long safePoint, BackOffer backOffer);
 }
