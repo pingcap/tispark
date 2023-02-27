@@ -39,6 +39,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ExecutorCompletionService;
 import org.slf4j.Logger;
@@ -215,9 +216,18 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       try {
         RegionStoreClient client =
             session.getRegionStoreClientBuilder().build(region, store, storeType);
+        // if mpp store is not alive, drop it and generate a new task.
+        if (storeType == TiStoreType.TiFlash && !isMppStoreAlive(store.getAddress())) {
+          logger.debug("Re-splitting region task due to TiFlash is unavailable");
+          remainTasks.addAll(
+              RangeSplitter.newSplitter(client.regionManager)
+                  .splitRangeByRegion(ranges, storeType));
+          continue;
+        }
         client.addResolvedLocks(startTs, resolvedLocks);
         Collection<RangeSplitter.RegionTask> tasks =
             client.coprocess(backOffer, dagRequest, region, ranges, responseQueue, startTs);
+
         if (tasks != null) {
           remainTasks.addAll(tasks);
         }
@@ -267,6 +277,22 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       // TODO: Fix stale error handling in streaming
       // see:https://github.com/pingcap/tikv-client-lib-java/pull/149
       throw new TiClientInternalException("Error Closing Store client.", e);
+    }
+  }
+
+  // See https://github.com/pingcap/tispark/pull/2619 for more details
+  public Boolean isMppStoreAlive(String address) {
+    try {
+      Map<String, Boolean> storeStatusCache = session.getStoreStatusCache();
+      return storeStatusCache.computeIfAbsent(
+          address,
+          key ->
+              RegionStoreClient.isMppAlive(
+                  session
+                      .getChannelFactory()
+                      .getChannel(address, session.getPDClient().getHostMapping())));
+    } catch (Exception e) {
+      throw new TiClientInternalException("Error get MppStore Status.", e);
     }
   }
 }
