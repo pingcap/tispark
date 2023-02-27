@@ -37,6 +37,7 @@ case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
     checkServiceSafePoint(startTs)
     if (startTs < minStartTs) {
       minStartTs = startTs
+      checkServiceSafePoint(minStartTs)
     }
   }
 
@@ -48,7 +49,7 @@ case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
       ConcreteBackOffer.newCustomBackOff(BackOffer.PD_INFO_BACKOFF))
     if (safePoint > startTs) {
       throw new TiInternalException(
-        s"Failed to register service GC safe point because the current minimum safe point $safePoint is newer than what we assume $starTs")
+        s"Failed to register service GC safe point because the current minimum safe point $safePoint is newer than what we assume $startTs")
     }
   }
 
