@@ -33,6 +33,7 @@ case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
     1,
     TimeUnit.MINUTES)
 
+  // TiSpark can only decrease minStartTs now. Because we can not known which transaction is finished, so we can not increase minStartTs.
   def updateStartTs(startTs: Long): Unit = {
     this.synchronized {
       if (startTs >= minStartTs){
