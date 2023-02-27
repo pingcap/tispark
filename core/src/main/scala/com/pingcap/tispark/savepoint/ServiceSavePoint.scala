@@ -33,20 +33,20 @@ case class ServiceSavePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
     1,
     TimeUnit.MINUTES)
 
-  def updateStartTs(starTs: Long): Unit = {
-    checkServiceSafePoint(starTs)
-    if (starTs < minStartTs) {
-      minStartTs = starTs
+  def updateStartTs(startTs: Long): Unit = {
+    checkServiceSafePoint(startTs)
+    if (startTs < minStartTs) {
+      minStartTs = startTs
     }
   }
 
-  def checkServiceSafePoint(starTs: Long): Unit = {
+  def checkServiceSafePoint(startTs: Long): Unit = {
     val savePoint = tiSession.getPDClient.UpdateServiceGCSafePoint(
       serviceId,
       ttl,
       minStartTs,
       ConcreteBackOffer.newCustomBackOff(BackOffer.PD_INFO_BACKOFF))
-    if (savePoint > starTs) {
+    if (savePoint > startTs) {
       throw new TiInternalException(
         s"Failed to register service GC safe point because the current minimum safe point $savePoint is newer than what we assume $starTs")
     }
