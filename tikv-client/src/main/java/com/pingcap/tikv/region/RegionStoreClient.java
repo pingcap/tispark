@@ -52,6 +52,7 @@ import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
+import io.grpc.stub.ClientCalls;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -62,6 +63,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -106,6 +108,7 @@ import org.tikv.kvproto.Kvrpcpb.SplitRegionResponse;
 import org.tikv.kvproto.Kvrpcpb.TxnHeartBeatRequest;
 import org.tikv.kvproto.Kvrpcpb.TxnHeartBeatResponse;
 import org.tikv.kvproto.Metapb.Store;
+import org.tikv.kvproto.Mpp;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import org.tikv.kvproto.TikvGrpc.TikvStub;
@@ -713,7 +716,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       // we need to invalidate cache when region not find
       if (regionError.hasRegionNotFound()) {
         logger.info("invalidateRange when Re-splitting region task because of region not find.");
-        this.regionManager.invalidateRange(region.getStartKey(),region.getEndKey());
+        this.regionManager.invalidateRange(region.getStartKey(), region.getEndKey());
       }
       // Split ranges
       return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges, storeType);
@@ -1199,6 +1202,21 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     }
     if (resp.hasRegionError()) {
       throw new RegionException(resp.getRegionError());
+    }
+  }
+
+  public static boolean isMppAlive(ManagedChannel channel) {
+    TikvGrpc.TikvBlockingStub stub =
+        TikvGrpc.newBlockingStub(channel).withDeadlineAfter(500, TimeUnit.MILLISECONDS);
+    Supplier<Mpp.IsAliveRequest> factory = () -> Mpp.IsAliveRequest.newBuilder().build();
+    try {
+      Mpp.IsAliveResponse resp =
+          ClientCalls.blockingUnaryCall(
+              stub.getChannel(), TikvGrpc.getIsAliveMethod(), stub.getCallOptions(), factory.get());
+      return resp != null && resp.getAvailable();
+    } catch (Exception e) {
+      logger.warn("Call mpp isAlive fail with Exception", e);
+      return false;
     }
   }
 
