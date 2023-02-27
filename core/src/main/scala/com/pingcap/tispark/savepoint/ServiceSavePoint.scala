@@ -21,11 +21,11 @@ case class ServiceSavePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
           minStartTs,
           ConcreteBackOffer.newCustomBackOff(BackOffer.PD_UPDATE_SAFE_POINT_BACKOFF))
         if (savePoint > minStartTs) {
-          // will not happen unless someone delete the TiSpark server safe point in PD compulsively
+          // will not happen unless someone delete the TiSpark service safe point in PD compulsively
           logger.error(
-            s"Failed to register server GC safe point because the current minimum safe point $savePoint is newer than what we assume $minStartTs. Maybe you delete the TiSpark safe point in PD")
+            s"Failed to register service GC safe point because the current minimum safe point $savePoint is newer than what we assume $minStartTs. Maybe you delete the TiSpark safe point in PD")
         } else {
-          logger.info(s"register server GC safe point $minStartTs success.")
+          logger.info(s"register service GC safe point $minStartTs success.")
         }
       }
     },
@@ -48,7 +48,7 @@ case class ServiceSavePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
       ConcreteBackOffer.newCustomBackOff(BackOffer.PD_INFO_BACKOFF))
     if (savePoint > starTs) {
       throw new TiInternalException(
-        s"Failed to register server GC safe point because the current minimum safe point $savePoint is newer than what we assume $starTs")
+        s"Failed to register service GC safe point because the current minimum safe point $savePoint is newer than what we assume $starTs")
     }
   }
 
