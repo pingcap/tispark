@@ -34,10 +34,14 @@ case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
     TimeUnit.MINUTES)
 
   def updateStartTs(startTs: Long): Unit = {
-    checkServiceSafePoint(startTs)
-    if (startTs < minStartTs) {
-      minStartTs = startTs
-      checkServiceSafePoint(minStartTs)
+    this.synchronized {
+      // check if the the current safePoint is less than startTs
+      checkServiceSafePoint(startTs)
+      if (startTs < minStartTs) {
+        // set he startTs as minStartTs and apply it
+        minStartTs = startTs
+        checkServiceSafePoint(minStartTs)
+      }
     }
   }
 
@@ -46,7 +50,7 @@ case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
       serviceId,
       ttl,
       minStartTs,
-      ConcreteBackOffer.newCustomBackOff(BackOffer.PD_INFO_BACKOFF))
+      ConcreteBackOffer.newCustomBackOff(BackOffer.PD_UPDATE_SAFE_POINT_BACKOFF))
     if (safePoint > startTs) {
       throw new TiInternalException(
         s"Failed to register service GC safe point because the current minimum safe point $safePoint is newer than what we assume $startTs")
@@ -54,6 +58,12 @@ case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
   }
 
   def stopRegisterSafePoint(): Unit = {
+    minStartTs = Long.MaxValue
+    tiSession.getPDClient.UpdateServiceGCSafePoint(
+      serviceId,
+      ttl,
+      Long.MaxValue,
+      ConcreteBackOffer.newCustomBackOff(BackOffer.PD_UPDATE_SAFE_POINT_BACKOFF))
     service.shutdownNow()
   }
 }
