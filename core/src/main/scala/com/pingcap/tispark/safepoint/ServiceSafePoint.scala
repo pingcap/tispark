@@ -47,7 +47,7 @@ case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
     }
   }
 
-  def checkServiceSafePoint(startTs: Long): Unit = {
+  private def checkServiceSafePoint(startTs: Long): Unit = {
     val safePoint = tiSession.getPDClient.UpdateServiceGCSafePoint(
       serviceId,
       ttl,
@@ -59,7 +59,7 @@ case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
     }
   }
 
-  def applyServiceSafePoint(startTs: Long): Unit = {
+  private def applyServiceSafePoint(startTs: Long): Unit = {
     val safePoint = tiSession.getPDClient.UpdateServiceGCSafePoint(
       serviceId,
       ttl,
