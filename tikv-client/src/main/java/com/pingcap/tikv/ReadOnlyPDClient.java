@@ -67,4 +67,6 @@ public interface ReadOnlyPDClient {
   Future<Store> getStoreAsync(BackOffer backOffer, long storeId);
 
   List<Store> getAllStores(BackOffer backOffer);
+
+  Long UpdateServiceGCSafePoint(String serverId, long ttl, long savePoint, BackOffer backOffer);
 }

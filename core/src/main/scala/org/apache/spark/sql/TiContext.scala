@@ -21,6 +21,7 @@ import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.listener.CacheInvalidateListener
+import com.pingcap.tispark.savepoint.ServerSavePoint
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkConf
@@ -34,6 +35,8 @@ import org.json4s.jackson.JsonMethods._
 import scalaj.http.Http
 
 import java.lang
+import java.util.UUID
+import java.util.concurrent.{Executors, TimeUnit}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -49,11 +52,14 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
     } else Option.empty)
   final val tiSession: TiSession = TiSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
+  val defaultTiSparkGCSafePointTTL: Int = 5* 60
+  val serverSavePoint: ServerSavePoint = ServerSavePoint("tispark_" + UUID.randomUUID, defaultTiSparkGCSafePointTTL, tiSession)
 
   sparkSession.sparkContext.addSparkListener(new SparkListener() {
     override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {
       if (tiSession != null) {
         try {
+          serverSavePoint.stopRegisterSavePoint()
           tiSession.close()
         } catch {
           case e: Throwable => logWarning("fail to close TiSession!", e)

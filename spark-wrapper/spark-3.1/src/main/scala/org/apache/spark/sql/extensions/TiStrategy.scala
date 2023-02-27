@@ -110,6 +110,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     } else {
       tiContext.tiSession.getSnapshotTimestamp
     }
+    tiContext.serverSavePoint.updateStartTs(ts.getVersion)
+
     if (plan.isStreaming) {
       // We should use a new timestamp for next batch execution.
       // Otherwise Spark Structure Streaming will not see new data in TiDB.

@@ -87,6 +87,7 @@ import org.tikv.kvproto.Pdpb.ScatterRegionResponse;
 import org.tikv.kvproto.Pdpb.Timestamp;
 import org.tikv.kvproto.Pdpb.TsoRequest;
 import org.tikv.kvproto.Pdpb.TsoResponse;
+import org.tikv.kvproto.Pdpb.UpdateServiceGCSafePointRequest;
 
 public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     implements ReadOnlyPDClient {
@@ -298,6 +299,17 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return () -> GetAllStoresRequest.newBuilder().setHeader(header).build();
   }
 
+  private Supplier<UpdateServiceGCSafePointRequest> buildUpdateServiceGCSafePointRequest(
+      ByteString serverId, long ttl, long savePoint) {
+    return () ->
+        UpdateServiceGCSafePointRequest.newBuilder()
+            .setHeader(header)
+            .setSafePoint(savePoint)
+            .setServiceId(serverId)
+            .setTTL(ttl)
+            .build();
+  }
+
   private <T> PDErrorHandler<GetStoreResponse> buildPDErrorHandler() {
     return new PDErrorHandler<>(
         r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null, this);
@@ -334,6 +346,19 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
                 r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
                 this))
         .getStoresList();
+  }
+
+  @Override
+  public Long UpdateServiceGCSafePoint(
+      String serverId, long ttl, long savePoint, BackOffer backOffer) {
+    return callWithRetry(
+            backOffer,
+            PDGrpc.getUpdateServiceGCSafePointMethod(),
+            buildUpdateServiceGCSafePointRequest(ByteString.copyFromUtf8(serverId), ttl, savePoint),
+            new PDErrorHandler<>(
+                r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
+                this))
+        .getMinSafePoint();
   }
 
   @Override
