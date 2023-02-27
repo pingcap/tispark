@@ -186,6 +186,7 @@ class TiBatchWrite(
     val startTimeStamp = tiSession.getTimestamp
     startTs = startTimeStamp.getVersion
     logger.info(s"startTS: $startTs")
+    tiContext.serverSavePoint.updateStartTs(startTs)
 
     // pre calculate
     val shuffledRDD: RDD[(SerializableKey, Array[Byte])] = {
