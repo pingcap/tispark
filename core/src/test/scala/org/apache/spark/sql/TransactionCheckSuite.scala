@@ -6,13 +6,12 @@ import org.scalatest.Matchers.{message, the}
 class TransactionCheckSuite extends BaseTiSparkTest {
   private val table = "transaction_check_test"
 
-  // 2* (gc_life_time+1) = 22 min
-  val intervalExceed: Int = 22 * 60 * 1000
+  val intervalExceed: Int = 40 * 60 * 1000
   // gc_life_time -1 = 9min
   val intervalPass: Int = 9 * 60 * 1000
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
+  override def beforeEach(): Unit = {
+    super.beforeEach()
     tidbStmt.execute(s"drop table if exists $table")
     tidbStmt.execute(s"create table $table (c int)")
   }

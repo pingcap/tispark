@@ -54,6 +54,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
     override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {
       if (tiSession != null) {
         try {
+          println("------------")
           tiSession.close()
         } catch {
           case e: Throwable => logWarning("fail to close TiSession!", e)
