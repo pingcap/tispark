@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory
 
 import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
 
-case class ServerSavePoint(serverId: String, ttl: Long, tiSession: TiSession) {
+case class ServiceSavePoint(serviceId: String, ttl: Long, tiSession: TiSession) {
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)
   private var minStartTs = Long.MaxValue
@@ -16,7 +16,7 @@ case class ServerSavePoint(serverId: String, ttl: Long, tiSession: TiSession) {
     () => {
       if (minStartTs != Long.MaxValue) {
         val savePoint = tiSession.getPDClient.UpdateServiceGCSafePoint(
-          serverId,
+          serviceId,
           ttl,
           minStartTs,
           ConcreteBackOffer.newCustomBackOff(BackOffer.PD_UPDATE_SAFE_POINT_BACKOFF))
@@ -34,15 +34,15 @@ case class ServerSavePoint(serverId: String, ttl: Long, tiSession: TiSession) {
     TimeUnit.MINUTES)
 
   def updateStartTs(starTs: Long): Unit = {
-    checkServerSafePoint(starTs)
+    checkServiceSafePoint(starTs)
     if (starTs < minStartTs) {
       minStartTs = starTs
     }
   }
 
-  def checkServerSafePoint(starTs: Long): Unit = {
+  def checkServiceSafePoint(starTs: Long): Unit = {
     val savePoint = tiSession.getPDClient.UpdateServiceGCSafePoint(
-      serverId,
+      serviceId,
       ttl,
       minStartTs,
       ConcreteBackOffer.newCustomBackOff(BackOffer.PD_INFO_BACKOFF))
