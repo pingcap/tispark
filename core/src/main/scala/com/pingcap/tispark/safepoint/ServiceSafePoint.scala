@@ -35,11 +35,13 @@ case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
 
   def updateStartTs(startTs: Long): Unit = {
     this.synchronized {
-      // check if the the current safePoint is less than startTs. We can not apply startTs: safePoint < minStartTs < startTs. After apply, we may get minStartTs < safePoint < startTs.
-      checkServiceSafePoint(startTs)
-      if (startTs < minStartTs) {
-        // applyServiceSafePoint may throw exception, so we need to test if before let minStartTs = startTs. Consider startTs < safePoint < minStartTs after checkServiceSafePoint.
+      if (startTs >= minStartTs){
+        // minStartTs >= safe point, so startTs must >= safe point. Check it in case some one delete the TiSpark service safe point in PD compulsively.
+        checkServiceSafePoint(startTs)
+      } else {
+        // applyServiceSafePoint may throw exception. Consider startTs < safePoint < minStartTs.
         applyServiceSafePoint(startTs)
+        // let minStartTs = startTs after applyServiceSafePoint success
         minStartTs = startTs
       }
     }
