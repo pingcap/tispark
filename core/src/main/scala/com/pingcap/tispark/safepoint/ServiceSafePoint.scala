@@ -41,9 +41,10 @@ case class ServiceSafePoint(
   // TiSpark can only decrease minStartTs now. Because we can not known which transaction is finished, so we can not increase minStartTs.
   def updateStartTs(startTimeStamp: TiTimestamp): Unit = {
     this.synchronized {
-      if (tiSession.getTimestamp.getPhysical - startTimeStamp.getPhysical >= GCMaxWaitTime * 1000) {
+      val now = tiSession.getTimestamp
+      if (now.getPhysical - startTimeStamp.getPhysical >= GCMaxWaitTime * 1000) {
         throw new TiInternalException(
-          s"Can not Pause GC more than $GCMaxWaitTime s from start_ts: ${startTimeStamp.getVersion}. You can adjust spark.tispark.gc_max_wait_time to increase the gc max wait time")
+          s"Can not pause GC more than spark.tispark.gc_max_wait_time=$GCMaxWaitTime s. start_ts: ${startTimeStamp.getVersion}, now: ${now.getVersion}. You can adjust spark.tispark.gc_max_wait_time to increase the gc max wait time")
       }
       val startTs = startTimeStamp.getVersion
       if (startTs >= minStartTs) {
