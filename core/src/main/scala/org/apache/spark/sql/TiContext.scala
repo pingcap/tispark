@@ -27,7 +27,6 @@ import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd}
-import org.apache.spark.sql.catalyst.catalog._
 import org.json4s.DefaultFormats
 import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
@@ -36,7 +35,6 @@ import scalaj.http.Http
 
 import java.lang
 import java.util.UUID
-import java.util.concurrent.{Executors, TimeUnit}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -52,9 +50,22 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
     } else Option.empty)
   final val tiSession: TiSession = TiSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
-  val defaultTiSparkGCSafePointTTL: Int = 5 * 60
+  // GC
+  val GCMaxWaitTime: Long = if (conf.contains(TiConfigConst.GC_MAX_WAIT_TIME)) {
+    try {
+      conf.get(TiConfigConst.GC_MAX_WAIT_TIME).toLong
+    } catch {
+      case _: Exception => TiConfigConst.DEFAULT_GC_MAX_WAIT_TIME
+    }
+  } else {
+    TiConfigConst.DEFAULT_GC_MAX_WAIT_TIME
+  }
   val serviceSafePoint: ServiceSafePoint =
-    ServiceSafePoint("tispark_" + UUID.randomUUID, defaultTiSparkGCSafePointTTL, tiSession)
+    ServiceSafePoint(
+      "tispark_" + UUID.randomUUID,
+      TiConfigConst.DEFAULT_GC_SAFE_POINT_TTL,
+      GCMaxWaitTime,
+      tiSession)
 
   sparkSession.sparkContext.addSparkListener(new SparkListener() {
     override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {

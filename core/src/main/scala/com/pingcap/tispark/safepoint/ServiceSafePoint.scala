@@ -2,12 +2,17 @@ package com.pingcap.tispark.safepoint
 
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiInternalException
+import com.pingcap.tikv.meta.TiTimestamp
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer}
 import org.slf4j.LoggerFactory
 
 import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
 
-case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) {
+case class ServiceSafePoint(
+    serviceId: String,
+    ttl: Long,
+    GCMaxWaitTime: Long,
+    tiSession: TiSession) {
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)
   private var minStartTs = Long.MaxValue
@@ -34,8 +39,13 @@ case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
     TimeUnit.MINUTES)
 
   // TiSpark can only decrease minStartTs now. Because we can not known which transaction is finished, so we can not increase minStartTs.
-  def updateStartTs(startTs: Long): Unit = {
+  def updateStartTs(startTimeStamp: TiTimestamp): Unit = {
     this.synchronized {
+      if (tiSession.getTimestamp.getPhysical - startTimeStamp.getPhysical >= GCMaxWaitTime * 1000) {
+        throw new TiInternalException(
+          s"Can not Pause GC more than $GCMaxWaitTime s from start_ts: ${startTimeStamp.getVersion}. You can adjust spark.tispark.gc_max_wait_time to increase the gc max wait time")
+      }
+      val startTs = startTimeStamp.getVersion
       if (startTs >= minStartTs) {
         // minStartTs >= safe point, so startTs must >= safe point. Check it in case some one delete the TiSpark service safe point in PD compulsively.
         checkServiceSafePoint(startTs)

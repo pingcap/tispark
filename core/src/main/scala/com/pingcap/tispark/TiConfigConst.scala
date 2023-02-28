@@ -79,4 +79,11 @@ object TiConfigConst {
   val HOST_MAPPING: String = "spark.tispark.host_mapping"
 
   val NEW_COLLATION_ENABLE: String = "spark.tispark.new_collation_enable"
+
+  // GC
+  val GC_MAX_WAIT_TIME: String = "spark.tispark.gc_max_wait_time"
+  val DEFAULT_GC_MAX_WAIT_TIME: Long = 24 * 60 * 60
+  val DEFAULT_GC_SAFE_POINT_TTL: Int = 5 * 60
+
+
 }
