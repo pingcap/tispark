@@ -290,7 +290,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
               RegionStoreClient.isMppAlive(
                   session
                       .getChannelFactory()
-                      .getChannel(address, session.getPDClient().getHostMapping())));
+                      .getChannel(address)));
     } catch (Exception e) {
       throw new TiClientInternalException("Error get MppStore Status.", e);
     }
