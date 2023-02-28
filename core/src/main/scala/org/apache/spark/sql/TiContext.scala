@@ -51,15 +51,15 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   final val tiSession: TiSession = TiSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
   // GC
-  val GCMaxWaitTime: Long = if (conf.contains(TiConfigConst.GC_MAX_WAIT_TIME)) {
+  val GCMaxWaitTime: Long =
     try {
-      conf.get(TiConfigConst.GC_MAX_WAIT_TIME).toLong
+      conf
+        .get(TiConfigConst.GC_MAX_WAIT_TIME, TiConfigConst.DEFAULT_GC_MAX_WAIT_TIME.toString)
+        .toLong
     } catch {
       case _: Exception => TiConfigConst.DEFAULT_GC_MAX_WAIT_TIME
     }
-  } else {
-    TiConfigConst.DEFAULT_GC_MAX_WAIT_TIME
-  }
+
   val serviceSafePoint: ServiceSafePoint =
     ServiceSafePoint(
       "tispark_" + UUID.randomUUID,
