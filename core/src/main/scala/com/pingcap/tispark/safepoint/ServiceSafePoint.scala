@@ -36,7 +36,7 @@ case class ServiceSafePoint(serviceId: String, ttl: Long, tiSession: TiSession) 
   // TiSpark can only decrease minStartTs now. Because we can not known which transaction is finished, so we can not increase minStartTs.
   def updateStartTs(startTs: Long): Unit = {
     this.synchronized {
-      if (startTs >= minStartTs){
+      if (startTs >= minStartTs) {
         // minStartTs >= safe point, so startTs must >= safe point. Check it in case some one delete the TiSpark service safe point in PD compulsively.
         checkServiceSafePoint(startTs)
       } else {
