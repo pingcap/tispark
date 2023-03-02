@@ -226,7 +226,7 @@ public class TiSession implements AutoCloseable {
                 storeStatusCache.replaceAll(
                     (k, v) ->
                         RegionStoreClient.isMppAlive(
-                            channelFactory.getChannel(k, getPDClient().getHostMapping())));
+                            channelFactory.getChannel(k)));
               },
               0,
               5,
