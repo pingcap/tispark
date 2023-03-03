@@ -28,7 +28,8 @@
 - [Features](#features)
   + [Expression Index](#expression-index)
   + [TiFlash](#tiflash)
-  + [Partition Table support](#partition-table-support)
+  + [Read from partition table](#read-from-partition-table)
+  + [Write into partition table](#write-into-partition-table)
   + [Other Features](#other-features)
 - [Statistics information](#statistics-information)
 - [FAQ](#faq)
@@ -377,25 +378,25 @@ TiSpark currently supports retrieving data from table with `Expression Index`, b
 
 TiSpark can read from TiFlash with the configuration `spark.tispark.isolation_read_engines`
 
-### Partition Table support
- 
-**Reading partition table from TiDB**
+### Read from partition table
 
-TiSpark reads the range and hash partition table from TiDB.
+TiSpark supports reads the range, hash and list partition table from TiDB.
 
-Currently, TiSpark doesn't support a MySQL/TiDB partition table syntax `select col_name from table_name partition(partition_name)`, but you can still use `where` condition to filter the partitions.
+TiSpark doesn't support a MySQL/TiDB partition table syntax `select col_name from table_name partition(partition_name)`, but you can still use `where` condition to filter the partitions.
 
-TiSpark decides whether to apply partition pruning according to the partition type and the partition expression associated with the table. Currently, TiSpark partially apply partition pruning on range partition.
+**Partition pruning**
 
-The partition pruning is applied when the partition expression of the range partition is one of the following:
+TiSpark decides whether to apply partition pruning according to the partition type and the partition expression associated with the table. If partition pruning is not applied, TiSpark's reading is equivalent to doing a table scan over all partitions.
+
+TiSpark only supports partition pruning with the following partition expression in **range** partition:
 
 + column expression
 + `YEAR(col)` and its type is datetime/string/date literal that can be parsed as datetime.
 + `TO_DAYS(col)` and its type is datetime/string/date literal that can be parsed as datetime.
 
-If partition pruning is not applied, TiSpark's reading is equivalent to doing a table scan over all partitions.
+TiSpark does not support partition pruning in hash and list partition.
 
-**Write into partition table**
+### Write into partition table
 
 Currently, TiSpark only supports writing into the range and hash partition table under the following conditions:
 + the partition expression is column expression
