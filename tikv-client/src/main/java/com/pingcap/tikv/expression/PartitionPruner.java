@@ -104,7 +104,7 @@ public class PartitionPruner {
     // partExprColRefs.addAll(PredicateUtils.extractColumnRefFromExpression(partExpr));
     for (int i = 0; i < partInfo.getDefs().size(); i++) {
       TiPartitionDef pDef = partInfo.getDefs().get(i);
-      String current = pDef.getLessThan().get(lessThanIdx);
+      String current = wrapValue(pDef.getLessThan().get(lessThanIdx));
       String leftHand;
       if (current.equals("MAXVALUE")) {
         leftHand = "true";
@@ -130,6 +130,17 @@ public class PartitionPruner {
       return columnName;
     } else {
       return String.format("`%s`", columnName);
+    }
+  }
+
+  // warpValue wrap 'string' to "string"
+  private static String wrapValue(String value) {
+    if (value.startsWith("'") && value.endsWith("'")) {
+      return String.format("\"%s\"", value.substring(1, value.length() - 1));
+    } else if (value.startsWith("\"") && value.endsWith("\"")) {
+      return value;
+    } else {
+      return String.format("\"%s\"", value);
     }
   }
 }

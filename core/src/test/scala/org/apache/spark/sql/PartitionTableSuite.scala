@@ -33,6 +33,17 @@ class PartitionTableSuite extends BasePlanTest {
       super.afterAll()
     }
 
+  test("reading from range column partition") {
+    enablePartitionForTiDB()
+    tidbStmt.execute("drop table if exists range_column_test")
+    tidbStmt.execute(
+      "create table range_column_test (id varchar(10)) partition by RANGE COLUMNS(`id`) (PARTITION `p1` VALUES LESS THAN ('CN001'),PARTITION `p2` VALUES LESS THAN ('CN002'))")
+    tidbStmt.execute("insert into `range_column_test` values('CN001')")
+
+    judge("select * from range_column_test where id = 'CN001'")
+    judge("select * from range_column_test where id = 'CN002'")
+  }
+
   test("reading from hash partition") {
     enablePartitionForTiDB()
     tidbStmt.execute("drop table if exists t")
