@@ -114,7 +114,7 @@ public class PartitionPruner {
       if (i == 0) {
         partExprs.add(parser.parseExpression(leftHand));
       } else {
-        String previous = partInfo.getDefs().get(i - 1).getLessThan().get(lessThanIdx);
+        String previous = wrapValue(partInfo.getDefs().get(i - 1).getLessThan().get(lessThanIdx));
         String and =
             String.format("%s >= %s and %s", wrapColumnName(partExprStr), previous, leftHand);
         partExprs.add(parser.parseExpression(and));
@@ -137,10 +137,8 @@ public class PartitionPruner {
   private static String wrapValue(String value) {
     if (value.startsWith("'") && value.endsWith("'")) {
       return String.format("\"%s\"", value.substring(1, value.length() - 1));
-    } else if (value.startsWith("\"") && value.endsWith("\"")) {
-      return value;
     } else {
-      return String.format("\"%s\"", value);
+      return value;
     }
   }
 }
