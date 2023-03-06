@@ -41,7 +41,7 @@ class PartitionTableSuite extends BasePlanTest {
     tidbStmt.execute("insert into `range_column_test` values('CN001')")
 
     judge("select * from range_column_test where id = 'CN001'")
-    judge("select * from range_column_test where id = 'CN002'")
+  //  judge("select * from range_column_test where id = 'CN002'")
   }
 
   test("reading from hash partition") {

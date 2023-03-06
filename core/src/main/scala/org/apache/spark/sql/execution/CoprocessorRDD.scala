@@ -59,7 +59,7 @@ trait LeafColumnarExecRDD extends LeafExecNode {
       }
       b.append("]")
       b.toString
-    } else if (tiRDDs.size == 1) {
+    } else if (tiRDDs.lengthCompare(1) == 0) {
       s"${dagRequest.getStoreType.name()} $nodeName{$dagRequest}" +
         s"${TiUtil.getReqEstCountStr(dagRequest)}"
     } else {
