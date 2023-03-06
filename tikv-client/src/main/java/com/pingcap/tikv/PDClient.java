@@ -349,7 +349,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   }
 
   @Override
-  public Long UpdateServiceGCSafePoint(
+  public Long updateServiceGCSafePoint(
       String serviceId, long ttl, long safePoint, BackOffer backOffer) {
     return callWithRetry(
             backOffer,
