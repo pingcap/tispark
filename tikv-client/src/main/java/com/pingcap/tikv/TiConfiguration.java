@@ -181,6 +181,8 @@ public class TiConfiguration implements Serializable {
   // follower read
   private ReplicaReadPolicy replicaReadPolicy = ReplicaReadPolicy.DEFAULT;
 
+  private boolean enableGrpcForward = false;
+
   private static Long getTimeAsSeconds(String key) {
     return Utils.timeStringAsSec(key);
   }

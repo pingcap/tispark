@@ -90,4 +90,7 @@ object TiConfigConst {
   val REPLICA_READ_ADDRESS_WHITELIST = "spark.tispark.replica_read.address_whitelist"
   val REPLICA_READ_ADDRESS_BLACKLIST = "spark.tispark.replica_read.address_blacklist"
   val REPLICA_READ_ADDRESS_DEFAULT = ""
+
+  // grpc forward
+  val ENABLE_GRPC_FORWARD: String = "spark.tispark.enable_grpc_forward"
 }
