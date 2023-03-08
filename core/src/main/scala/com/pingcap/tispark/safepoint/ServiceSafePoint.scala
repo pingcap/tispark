@@ -103,12 +103,17 @@ case class ServiceSafePoint(
   }
 
   def stopRegisterSafePoint(): Unit = {
-    minStartTs = Long.MaxValue
-    clientSession.getTiKVSession.getPDClient.updateServiceGCSafePoint(
-      serviceId,
-      ttl,
-      Long.MaxValue,
-      ConcreteBackOffer.newCustomBackOff(PD_UPDATE_SAFE_POINT_BACKOFF))
-    service.shutdownNow()
+    try {
+      minStartTs = Long.MaxValue
+      clientSession.getTiKVSession.getPDClient.updateServiceGCSafePoint(
+        serviceId,
+        ttl,
+        Long.MaxValue,
+        ConcreteBackOffer.newCustomBackOff(PD_UPDATE_SAFE_POINT_BACKOFF))
+    } catch {
+      case e: Exception => logger.error("Failed to stop register service GC safe point", e)
+    } finally {
+      service.shutdownNow()
+    }
   }
 }
