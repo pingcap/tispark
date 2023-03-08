@@ -20,7 +20,7 @@ case class ServiceSafePoint(
   service.scheduleAtFixedRate(
     () => {
       if (minStartTs != Long.MaxValue) {
-        val safePoint = tiSession.getPDClient.UpdateServiceGCSafePoint(
+        val safePoint = tiSession.getPDClient.updateServiceGCSafePoint(
           serviceId,
           ttl,
           minStartTs,
@@ -60,7 +60,7 @@ case class ServiceSafePoint(
   }
 
   private def checkServiceSafePoint(startTs: Long): Unit = {
-    val safePoint = tiSession.getPDClient.UpdateServiceGCSafePoint(
+    val safePoint = tiSession.getPDClient.updateServiceGCSafePoint(
       serviceId,
       ttl,
       minStartTs,
@@ -73,7 +73,7 @@ case class ServiceSafePoint(
   }
 
   private def applyServiceSafePoint(startTs: Long): Unit = {
-    val safePoint = tiSession.getPDClient.UpdateServiceGCSafePoint(
+    val safePoint = tiSession.getPDClient.updateServiceGCSafePoint(
       serviceId,
       ttl,
       startTs,
@@ -87,7 +87,7 @@ case class ServiceSafePoint(
 
   def stopRegisterSafePoint(): Unit = {
     minStartTs = Long.MaxValue
-    tiSession.getPDClient.UpdateServiceGCSafePoint(
+    tiSession.getPDClient.updateServiceGCSafePoint(
       serviceId,
       ttl,
       Long.MaxValue,
