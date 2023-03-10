@@ -26,11 +26,7 @@
   + [Log4j Configuration](#log4j-configuration)
   + [Time Zone Configuration](#time-zone-configuration)
 - [Features](#features)
-  + [Expression Index](#expression-index)
-  + [TiFlash](#tiflash)
-  + [Read from partition table](#read-from-partition-table)
-  + [Write into partition table](#write-into-partition-table)
-  + [Other Features](#other-features)
+  + [More Features](#more-features)
 - [Statistics information](#statistics-information)
 - [FAQ](#faq)
 
@@ -368,12 +364,6 @@ Do not use `spark.sql.session.timeZone`.
 | SQL insert                      |               |               |           | ✔              |
 | TLS                             |               |               | ✔         | ✔             |
 | DataFrame auth                  |               |               |             | ✔             |
-
-### Expression Index
-
-`tidb-5.0` supports Expression Index.
-
-TiSpark currently supports retrieving data from table with `Expression Index`, but the `Expression Index` will not be used by the planner of TiSpark.
 
 ### More Features
 - [Push down](features/push_down.md)
