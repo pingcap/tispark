@@ -18,7 +18,7 @@ TiSpark only supports partition pruning with the following partition expression 
 
 TiSpark does not support partition pruning in hash and list partition.
 
-### Write into partition table
+## Write into partition table
 
 Currently, TiSpark only supports writing into the range and hash partition table under the following conditions:
 + the partition expression is column expression
