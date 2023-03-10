@@ -278,6 +278,7 @@ spark.sql("select t1.id,t2.id from spark_catalog.default.t t1 left join tidb_cat
 | `spark.tispark.replica_read.label`             | ""               | Only select TiKV store match specified labels. Format: label_x=value_x,label_y=value_y                                                                                                                                                                                                                                                                                                                                                              |
 | `spark.tispark.replica_read.address_whitelist` | ""               | Only select TiKV store with given ip addresses. Split mutil addresses by `,`                                                                                                                                                                                                                                                                                                                                                                        |
 | `spark.tispark.replica_read.address_blacklist` | ""               | Do not select TiKV store with given ip addresses. Split mutil addresses by `,`                                                                                                                                                                                                                                                                                                                                                                      |
+| `spark.tispark.gc_max_wait_time`               | 86400            | The maximum time in seconds that TiSpark block the GC safe point                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ### TLS Configuration
 
@@ -422,6 +423,7 @@ There are two ways to write into partition table:
 - TiSpark TLS : See TLS Configuration section in this article
 - [TiSpark Telemetry](features/telemetry.md)
 - [TiSpark plan](features/query_execution_plan_in_TiSpark.md)
+- [TiSpark service safe point](features/service_safe_point.md) ]
 
 # Statistics information
 
