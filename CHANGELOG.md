@@ -1,7 +1,7 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
-## [TiSpark 3.2.0] 2022-01-09
+## [TiSpark 3.2.0] 2023-01-09
 
 ### New Features
 
