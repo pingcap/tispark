@@ -223,7 +223,6 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
                 .getRegionStoreClientBuilder()
                 .build(region, store, storeType);
         client.addResolvedLocks(startTs, resolvedLocks);
-        // client.setTimeout(clientSession.getConf().getTimeout(),);
         Collection<RegionTask> tasks =
             client.coprocess(backOffer, dagRequest, ranges, responseQueue, startTs);
         if (tasks != null) {
