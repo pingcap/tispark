@@ -122,14 +122,14 @@ object TiExtensions {
 
   /**
    * check that telemetry is on
-   * default on
+   * default off
    *
    * @param sparkSession
    * @return
    */
   def telemetryEnable(sparkSession: SparkSession): Boolean = {
     sparkSession.sparkContext.conf
-      .get(TELEMETRY_ENABEL, "true")
+      .get(TELEMETRY_ENABEL, "false")
       .toBoolean
   }
 }
