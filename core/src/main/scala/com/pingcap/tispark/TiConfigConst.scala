@@ -90,4 +90,9 @@ object TiConfigConst {
   val REPLICA_READ_ADDRESS_WHITELIST = "spark.tispark.replica_read.address_whitelist"
   val REPLICA_READ_ADDRESS_BLACKLIST = "spark.tispark.replica_read.address_blacklist"
   val REPLICA_READ_ADDRESS_DEFAULT = ""
+
+  // GC
+  val GC_MAX_WAIT_TIME: String = "spark.tispark.gc_max_wait_time"
+  val DEFAULT_GC_MAX_WAIT_TIME: Long = 24 * 60 * 60
+  val DEFAULT_GC_SAFE_POINT_TTL: Int = 5 * 60
 }
