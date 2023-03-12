@@ -93,4 +93,8 @@ object TiConfigConst {
 
   // grpc forward
   val ENABLE_GRPC_FORWARD: String = "spark.tispark.enable_grpc_forward"
+  // GC
+  val GC_MAX_WAIT_TIME: String = "spark.tispark.gc_max_wait_time"
+  val DEFAULT_GC_MAX_WAIT_TIME: Long = 24 * 60 * 60
+  val DEFAULT_GC_SAFE_POINT_TTL: Int = 5 * 60
 }

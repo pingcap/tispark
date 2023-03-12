@@ -26,11 +26,7 @@
   + [Log4j Configuration](#log4j-configuration)
   + [Time Zone Configuration](#time-zone-configuration)
 - [Features](#features)
-  + [Expression Index](#expression-index)
-  + [TiFlash](#tiflash)
-  + [Read from partition table](#read-from-partition-table)
-  + [Write into partition table](#write-into-partition-table)
-  + [Other Features](#other-features)
+  + [More Features](#more-features)
 - [Statistics information](#statistics-information)
 - [FAQ](#faq)
 
@@ -279,6 +275,7 @@ spark.sql("select t1.id,t2.id from spark_catalog.default.t t1 left join tidb_cat
 | `spark.tispark.replica_read.address_whitelist` | ""               | Only select TiKV store with given ip addresses. Split mutil addresses by `,`                                                                                                                                                                                                                                                                                                                                                                        |
 | `spark.tispark.replica_read.address_blacklist` | ""               | Do not select TiKV store with given ip addresses. Split mutil addresses by `,`                                                                                                                                                                                                                                                                                                                                                                      |
 | `spark.tispark.enable_grpc_forward`            | false            | Whether enable grpc forward. Set it to true to enable high available between TiKV.                                                                                                                                                                                                                                                                                                                                                                  |
+| `spark.tispark.gc_max_wait_time`               | 86400            | The maximum time in seconds that TiSpark block the GC safe point                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ### TLS Configuration
 
@@ -369,52 +366,7 @@ Do not use `spark.sql.session.timeZone`.
 | TLS                             |               |               | ✔         | ✔             |
 | DataFrame auth                  |               |               |             | ✔             |
 
-### Expression Index
-
-`tidb-5.0` supports Expression Index.
-
-TiSpark currently supports retrieving data from table with `Expression Index`, but the `Expression Index` will not be used by the planner of TiSpark.
-
-### TiFlash
-
-TiSpark can read from TiFlash with the configuration `spark.tispark.isolation_read_engines`
-
-### Read from partition table
-
-TiSpark supports reads the range, hash and list partition table from TiDB.
-
-TiSpark doesn't support a MySQL/TiDB partition table syntax `select col_name from table_name partition(partition_name)`, but you can still use `where` condition to filter the partitions.
-
-**Partition pruning**
-
-TiSpark decides whether to apply partition pruning according to the partition type and the partition expression associated with the table. If partition pruning is not applied, TiSpark's reading is equivalent to doing a table scan over all partitions.
-
-TiSpark only supports partition pruning with the following partition expression in **range** partition:
-
-+ column expression
-+ `YEAR(col)` and its type is datetime/string/date literal that can be parsed as datetime.
-+ `TO_DAYS(col)` and its type is datetime/string/date literal that can be parsed as datetime.
-
-TiSpark does not support partition pruning in hash and list partition.
-
-### Write into partition table
-
-Currently, TiSpark only supports writing into the range and hash partition table under the following conditions:
-+ the partition expression is column expression
-+ the partition expression is `YEAR($argument)` where the argument is a column and its type is datetime or string literal
-  that can be parsed as datetime.
-
-There are two ways to write into partition table:
-1. Use datasource API to write into partition table which supports replace and append semantics.
-2. Use delete statement with Spark SQL.
-
-> [!NOTE]
-> Because different character sets and collations have different sort orders, the character sets and 
-> collations in use may affect which partition of a table partitioned by RANGE COLUMNS a given row 
-> is stored in when using string columns as partitioning columns.
-> For supported character sets and collations, see [Limitations](../README.md#limitations)
-
-### Other Features
+### More Features
 - [Push down](features/push_down.md)
 - [Delete with TiSpark](features/delete_userguide.md)
 - [Stale read](features/stale_read.md)
@@ -423,6 +375,8 @@ There are two ways to write into partition table:
 - TiSpark TLS : See TLS Configuration section in this article
 - [TiSpark Telemetry](features/telemetry.md)
 - [TiSpark plan](features/query_execution_plan_in_TiSpark.md)
+- [Partition table](features/partition_table.md)
+- [TiSpark service safe point](features/service_safe_point.md)
 
 # Statistics information
 
