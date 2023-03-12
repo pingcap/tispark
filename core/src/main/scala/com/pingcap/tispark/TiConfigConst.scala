@@ -75,10 +75,6 @@ object TiConfigConst {
   val DEFAULT_STALE_READ: String = ""
 
   val TELEMETRY_ENABEL: String = "spark.tispark.telemetry.enable"
-<<<<<<< HEAD
-=======
-
-  val HOST_MAPPING: String = "spark.tispark.host_mapping"
 
   val NEW_COLLATION_ENABLE: String = "spark.tispark.new_collation_enable"
 
@@ -87,5 +83,4 @@ object TiConfigConst {
   val DEFAULT_GC_MAX_WAIT_TIME: Long = 24 * 60 * 60
   val DEFAULT_GC_SAFE_POINT_TTL: Int = 5 * 60
 
->>>>>>> 88a12aa96 (Support service safe point (#2634))
 }
