@@ -70,6 +70,13 @@ public class PartitionPruner {
             return tableInfo.getPartitionInfo().getDefs();
           }
 
+          // prune can not handle \" now.
+          for (int i = 0; i < tableInfo.getPartitionInfo().getDefs().size(); i++) {
+            TiPartitionDef pDef = tableInfo.getPartitionInfo().getDefs().get(i);
+            if (pDef.getLessThan().get(0).contains("\"")) {
+              return tableInfo.getPartitionInfo().getDefs();
+            }
+          }
           RangeColumnPartitionPruner pruner = new RangeColumnPartitionPruner(tableInfo);
           return pruner.prune(filters);
         }
@@ -133,10 +140,32 @@ public class PartitionPruner {
     }
   }
 
-  // warpValue wrap 'string' to "string"
+  /**
+   * Spark SQL will parse string literal without escape, So we need to parse partition definition
+   * without escape too. wrapValue will replace the first '' to "", so that antlr will not regard
+   * the first '' as a part of string literal. wrapValue will also delete the escape character in
+   * string literal. e.g. 'string' -> "string" '''string''' -> "'string'" 'string''' -> "string'"
+   * Can't handle '""'. e.g. '"string"' -> ""string"". parseExpression will parse ""string"" to
+   * empty string, parse '"string"' to 'string'
+   *
+   * @param value
+   * @return
+   */
   private static String wrapValue(String value) {
     if (value.startsWith("'") && value.endsWith("'")) {
-      return String.format("\"%s\"", value.substring(1, value.length() - 1));
+      String newValue = String.format("\"%s\"", value.substring(1, value.length() - 1));
+      StringBuilder valueWithoutEscape = new StringBuilder();
+      for (int i = 0; i < newValue.length(); i++) {
+        if (newValue.charAt(i) != '\'') {
+          valueWithoutEscape.append(newValue.charAt(i));
+        } else {
+          if (i + 1 < newValue.length()) {
+            valueWithoutEscape.append(newValue.charAt(i + 1));
+          }
+          i++;
+        }
+      }
+      return valueWithoutEscape.toString();
     } else {
       return value;
     }
