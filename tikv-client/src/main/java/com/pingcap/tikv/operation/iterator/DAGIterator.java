@@ -23,6 +23,7 @@ import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.ClientSession;
+import com.pingcap.tikv.TiFlashClient;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.operation.SchemaInfer;
 import java.util.ArrayDeque;
@@ -31,6 +32,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ExecutorCompletionService;
 import org.slf4j.Logger;
@@ -43,6 +45,7 @@ import org.tikv.common.region.TiStore;
 import org.tikv.common.region.TiStoreType;
 import org.tikv.common.util.BackOffer;
 import org.tikv.common.util.ConcreteBackOffer;
+import org.tikv.common.util.RangeSplitter;
 import org.tikv.common.util.RangeSplitter.RegionTask;
 import org.tikv.kvproto.Coprocessor;
 
@@ -222,6 +225,15 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
                 .getTiKVSession()
                 .getRegionStoreClientBuilder()
                 .build(region, store, storeType);
+        // if mpp store is not alive, drop it and generate a new task.
+        if (storeType == TiStoreType.TiFlash && !isMppStoreAlive(store.getAddress())) {
+          logger.info("Re-splitting region task due to TiFlash is unavailable");
+          remainTasks.addAll(
+              RangeSplitter.newSplitter(clientSession.getTiKVSession().getRegionManager())
+                  .splitRangeByRegion(ranges, storeType));
+          continue;
+        }
+
         client.addResolvedLocks(startTs, resolvedLocks);
         Collection<RegionTask> tasks =
             client.coprocess(backOffer, dagRequest, ranges, responseQueue, startTs);
@@ -278,6 +290,24 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       // TODO: Fix stale error handling in streaming
       // see:https://github.com/pingcap/tikv-client-lib-java/pull/149
       throw new TiClientInternalException("Error Closing Store client.", e);
+    }
+  }
+
+  // See https://github.com/pingcap/tispark/pull/2619 for more details
+  public Boolean isMppStoreAlive(String address) {
+    try {
+      Map<String, Boolean> storeStatusCache = clientSession.getStoreStatusCache();
+      return storeStatusCache.computeIfAbsent(
+          address,
+          key ->
+              TiFlashClient.isMppAlive(
+                  clientSession
+                      .getTiKVSession()
+                      .getChannelFactory()
+                      .getChannel(
+                          address, clientSession.getTiKVSession().getPDClient().getHostMapping())));
+    } catch (Exception e) {
+      throw new TiClientInternalException("Error get MppStore Status.", e);
     }
   }
 }
