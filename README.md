@@ -72,6 +72,8 @@ see [here](https://github.com/pingcap/tispark/wiki/Feature-Support-Detail) for m
 
 - If `spark.sql.ansi.enabled` is false an overflow of sum(bigint) will not cause an error but “wrap” the result, or you can cast bigint to decimal to avoid the overflow.
 
+- TiSpark supports retrieving data from table with `Expression Index`, but the `Expression Index` will not be used by the planner of TiSpark.
+
 ## Follow us
 
 ### Twitter

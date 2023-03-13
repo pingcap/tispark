@@ -21,6 +21,7 @@ import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark._
 import com.pingcap.tispark.auth.TiAuthorization
 import com.pingcap.tispark.listener.CacheInvalidateListener
+import com.pingcap.tispark.safepoint.ServiceSafePoint
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkConf
@@ -33,6 +34,7 @@ import org.json4s.jackson.JsonMethods._
 import scalaj.http.Http
 
 import java.lang
+import java.util.UUID
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -48,11 +50,28 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
     } else Option.empty)
   final val clientSession = ClientSession.getInstance(tiConf)
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
+  // GC
+  val GCMaxWaitTime: Long =
+    try {
+      conf
+        .get(TiConfigConst.GC_MAX_WAIT_TIME, TiConfigConst.DEFAULT_GC_MAX_WAIT_TIME.toString)
+        .toLong
+    } catch {
+      case _: Exception => TiConfigConst.DEFAULT_GC_MAX_WAIT_TIME
+    }
+
+  val serviceSafePoint: ServiceSafePoint =
+    ServiceSafePoint(
+      "tispark_" + UUID.randomUUID,
+      TiConfigConst.DEFAULT_GC_SAFE_POINT_TTL,
+      GCMaxWaitTime,
+      clientSession)
 
   sparkSession.sparkContext.addSparkListener(new SparkListener() {
     override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {
       if (clientSession != null) {
         try {
+          serviceSafePoint.stopRegisterSafePoint()
           clientSession.close()
         } catch {
           case e: Throwable => logWarning("fail to close ClientSession!", e)

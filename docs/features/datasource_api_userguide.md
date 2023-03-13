@@ -149,10 +149,10 @@ TiDB's version must be **3.0.14 or later**.
 
 ## TiDB Configuration
 
-Please use the following command to increase `GC life time` and make sure that the total time of writing does not exceed the `GC life time`.
+Please use the following command to increase `GC life time` and make sure that the total time of reading/writing does not exceed the `GC life time`.
 
 ```
-update mysql.tidb set VARIABLE_VALUE="6h" where VARIABLE_NAME="tikv_gc_life_time";
+SET GLOBAL tidb_gc_life_time = '6h';
 ```
 
 Make sure that the following TiDB configuration items (`table-lock`) are correctly set if TiDB-3.x is used.
