@@ -79,6 +79,8 @@ public class ConvertUpstreamUtils {
     tikvConf.setJksEnable(conf.isJksEnable());
     // follower read
     tikvConf.setReplicaSelector(conf.getReplicaReadPolicy());
+    // grpc forward
+    tikvConf.setEnableGrpcForward(conf.isEnableGrpcForward());
     return tikvConf;
   }
 
