@@ -251,6 +251,11 @@ object TiUtil {
       TiConfigConst.REPLICA_READ_ADDRESS_BLACKLIST,
       TiConfigConst.REPLICA_READ_ADDRESS_DEFAULT)
     tiConf.setReplicaReadPolicy(ReplicaReadPolicy.create(role, label, whitelist, blacklist))
+
+    if (conf.contains(TiConfigConst.ENABLE_GRPC_FORWARD)) {
+      tiConf.setEnableGrpcForward(conf.get(TiConfigConst.ENABLE_GRPC_FORWARD).toBoolean)
+    }
+    tiConf
   }
 
   private def getIsolationReadEnginesFromString(str: String): List[TiStoreType] = {
