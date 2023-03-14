@@ -47,14 +47,14 @@ public class TiConfiguration implements Serializable {
   // --------------- different ------------------
   // |item          | tispark    | client-java  |
   // --------------------------------------------
-  // |timeout       | 10minutes  | 200ms        |
+  // |timeout       | 3minutes  | 200ms        |
   // |maxFrameSize  | 2Gb        | 512MB        |
   // --------------------------------------------
   private int maxFrameSize = DEF_MAX_FRAME_SIZE;
   private static final int DEF_MAX_FRAME_SIZE = 2147483647; // 2 GB
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
-  private static final int DEF_TIMEOUT = 10;
+  private static final int DEF_TIMEOUT = 3;
   private static final TimeUnit DEF_TIMEOUT_UNIT = TimeUnit.MINUTES;
 
   // --------------   only in tispark -------------
