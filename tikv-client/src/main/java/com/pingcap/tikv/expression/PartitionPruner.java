@@ -142,10 +142,16 @@ public class PartitionPruner {
 
   /**
    * Spark SQL will parse string literal without escape, So we need to parse partition definition
-   * without escape too. wrapValue will replace the first '' to "", so that antlr will not regard
-   * the first '' as a part of string literal. wrapValue will also delete the escape character in
-   * string literal. e.g. 'string' -> "string" '''string''' -> "'string'" 'string''' -> "string'"
-   * Can't handle '""'. e.g. '"string"' -> ""string"". parseExpression will parse ""string"" to
+   * without escape too.
+   *
+   * <p>wrapValue will replace the first '' to "", so that antlr will not regard the first '' as a
+   * part of string literal.
+   *
+   * <p>wrapValue will also delete the escape character in string literal.
+   *
+   * <p>e.g. 'string' -> "string" '''string''' -> "'string'" 'string''' -> "string'"
+   *
+   * <p>Can't handle '""'. e.g. '"string"' -> ""string"". parseExpression will parse ""string"" to
    * empty string, parse '"string"' to 'string'
    *
    * @param value
