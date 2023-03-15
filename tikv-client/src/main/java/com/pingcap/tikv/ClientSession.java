@@ -21,6 +21,10 @@ import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.util.ConvertUpstreamUtils;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import lombok.Getter;
 import org.tikv.common.TiSession;
@@ -38,6 +42,9 @@ public class ClientSession implements AutoCloseable {
   private volatile boolean isClosed = false;
   private volatile TiTimestamp snapshotTimestamp;
   private volatile Catalog snapshotCatalog;
+  // storeStatusCache will be init at @see DAGIterator#isMppStoreAlive
+  private volatile Map<String, Boolean> storeStatusCache;
+  private ScheduledExecutorService storeStatusCacheExecutor;
 
   /**
    * This is used for setting call back function to invalidate cache information
@@ -133,6 +140,30 @@ public class ClientSession implements AutoCloseable {
     }
   }
 
+  public Map<String, Boolean> getStoreStatusCache() {
+    if (storeStatusCache == null) {
+      synchronized (this) {
+        if (storeStatusCache == null) {
+          storeStatusCache = new ConcurrentHashMap<>();
+          storeStatusCacheExecutor = Executors.newScheduledThreadPool(1);
+          storeStatusCacheExecutor.scheduleAtFixedRate(
+              () -> {
+                storeStatusCache.replaceAll(
+                    (k, v) ->
+                        TiFlashClient.isMppAlive(
+                            this.tiKVSession
+                                .getChannelFactory()
+                                .getChannel(k, this.tiKVSession.getPDClient().getHostMapping())));
+              },
+              0,
+              5,
+              TimeUnit.SECONDS);
+        }
+      }
+    }
+    return storeStatusCache;
+  }
+
   @Override
   public void close() throws Exception {
     shutdown();
@@ -146,6 +177,9 @@ public class ClientSession implements AutoCloseable {
       isClosed = true;
       if (snapshotCatalog != null) {
         snapshotCatalog.close();
+      }
+      if (storeStatusCacheExecutor != null) {
+        storeStatusCacheExecutor.shutdownNow();
       }
       synchronized (sessionCachedMap) {
         sessionCachedMap.remove(conf.getPdAddrsString());
