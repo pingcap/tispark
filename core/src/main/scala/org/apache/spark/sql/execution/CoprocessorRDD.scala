@@ -63,6 +63,7 @@ trait LeafColumnarExecRDD extends LeafExecNode {
       s"${dagRequest.getStoreType.name()} $nodeName{$dagRequest}" +
         s"${TiUtil.getReqEstCountStr(dagRequest)}"
     } else {
+      // return empty TiRDD when there is no tiRDDs
       "Empty TiRDD"
     }
 
