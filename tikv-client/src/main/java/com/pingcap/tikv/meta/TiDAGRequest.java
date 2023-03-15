@@ -302,9 +302,6 @@ public class TiDAGRequest implements Serializable {
 
   private void addIndexColsToScanBuilder(
       IndexScan.Builder indexScanBuilder, Map<String, Integer> colOffsetInFieldMap) {
-    if (indexInfo.isUnique()) {
-      indexScanBuilder.setUnique(true);
-    }
     for (TiIndexColumn indexColumn : indexInfo.getIndexColumns()) {
       TiColumnInfo tableInfoColumn = tableInfo.getColumn(indexColumn.getName());
       // already add this col before.
