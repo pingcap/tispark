@@ -226,7 +226,13 @@ public class LockResolverAsyncCommitTest extends LockResolverTest {
     long startTs = session.getTimestamp().getVersion();
     Assert.assertTrue(
         prewriteStringUsingAsyncCommit(
-            primaryKey, primaryKeyValue, startTs, primaryKey, ASYNC_COMMIT_TTL, secondaries));
+            primaryKey,
+            primaryKeyValue,
+            startTs,
+            primaryKey,
+            ASYNC_COMMIT_TTL,
+            secondaries,
+            false));
 
     for (int i = 0; i < secondaryKeyList.size(); i++) {
       if (i == secondarySize - 1) {
@@ -240,7 +246,8 @@ public class LockResolverAsyncCommitTest extends LockResolverTest {
                 startTs,
                 primaryKey,
                 ASYNC_COMMIT_TTL,
-                null));
+                null,
+                false));
       }
     }
 
@@ -279,7 +286,8 @@ public class LockResolverAsyncCommitTest extends LockResolverTest {
               startTs,
               primaryKey,
               ASYNC_COMMIT_TTL,
-              null));
+              null,
+              false));
     }
 
     // skip commitString primary key
@@ -321,6 +329,67 @@ public class LockResolverAsyncCommitTest extends LockResolverTest {
     for (int i = 0; i < secondarySize; i++) {
       assertEquals(pointGet(secondaryKeyList.get(i)), secondaryKeyValueList[i]);
     }
+  }
+
+  @Test
+  public void fallBackTest() {
+    if (!check()) {
+      return;
+    }
+
+    // Case 1: Fallback primary, read primary
+    String primaryKey = genRandomKey(64);
+    List<String> secondaryKeyList = randomSecondaryKeyList();
+    fallback(primaryKey, secondaryKeyList, true, false);
+    assertEquals(pointGet(primaryKey), oldValue);
+    for (int i = 0; i < secondarySize; i++) {
+      assertEquals(pointGet(secondaryKeyList.get(i)), oldValue);
+    }
+
+    // Case 2: Fallback primary, read secondary
+    primaryKey = genRandomKey(64);
+    secondaryKeyList = randomSecondaryKeyList();
+    fallback(primaryKey, secondaryKeyList, true, false);
+    for (int i = 0; i < secondarySize; i++) {
+      assertEquals(pointGet(secondaryKeyList.get(i)), oldValue);
+    }
+    assertEquals(pointGet(primaryKey), oldValue);
+
+    // Case 3: Fallback secondary, read primary
+    primaryKey = genRandomKey(64);
+    secondaryKeyList = randomSecondaryKeyList();
+    fallback(primaryKey, secondaryKeyList, false, true);
+    assertEquals(pointGet(primaryKey), oldValue);
+    for (int i = 0; i < secondarySize; i++) {
+      assertEquals(pointGet(secondaryKeyList.get(i)), oldValue);
+    }
+
+    // Case 4: Fallback secondary, read secondary
+    primaryKey = genRandomKey(64);
+    secondaryKeyList = randomSecondaryKeyList();
+    fallback(primaryKey, secondaryKeyList, false, true);
+    for (int i = 0; i < secondarySize; i++) {
+      assertEquals(pointGet(secondaryKeyList.get(i)), oldValue);
+    }
+    assertEquals(pointGet(primaryKey), oldValue);
+
+    // Case 5: Fallback both, read primary
+    primaryKey = genRandomKey(64);
+    secondaryKeyList = randomSecondaryKeyList();
+    fallback(primaryKey, secondaryKeyList, true, true);
+    assertEquals(pointGet(primaryKey), oldValue);
+    for (int i = 0; i < secondarySize; i++) {
+      assertEquals(pointGet(secondaryKeyList.get(i)), oldValue);
+    }
+
+    // Case 6: Fallback both, read secondary
+    primaryKey = genRandomKey(64);
+    secondaryKeyList = randomSecondaryKeyList();
+    fallback(primaryKey, secondaryKeyList, true, true);
+    for (int i = 0; i < secondarySize; i++) {
+      assertEquals(pointGet(secondaryKeyList.get(i)), oldValue);
+    }
+    assertEquals(pointGet(primaryKey), oldValue);
   }
 
   private boolean check() {
@@ -365,7 +434,13 @@ public class LockResolverAsyncCommitTest extends LockResolverTest {
     // prewriteString <primary key, value1, secondaries>
     Assert.assertTrue(
         prewriteStringUsingAsyncCommit(
-            primaryKey, primaryKeyValue, startTs, primaryKey, ASYNC_COMMIT_TTL, secondaries));
+            primaryKey,
+            primaryKeyValue,
+            startTs,
+            primaryKey,
+            ASYNC_COMMIT_TTL,
+            secondaries,
+            false));
 
     // prewriteString secondaryKeys
     for (int i = 0; i < secondaryKeyList.size(); i++) {
@@ -376,7 +451,42 @@ public class LockResolverAsyncCommitTest extends LockResolverTest {
               startTs,
               primaryKey,
               ASYNC_COMMIT_TTL,
-              null));
+              null,
+              false));
+    }
+  }
+
+  private void fallback(
+      String primaryKey,
+      List<String> secondaryKeyList,
+      boolean fallbackPrimary,
+      boolean fallbackSecondary) {
+    // put
+    putAll(primaryKey, secondaryKeyList);
+    // prewrite primary key
+    long startTs = session.getTimestamp().getVersion();
+    // prewrite secondaryKeys
+    List<ByteString> secondaries =
+        secondaryKeyList.stream().map(ByteString::copyFromUtf8).collect(Collectors.toList());
+    Assert.assertTrue(
+        prewriteStringUsingAsyncCommit(
+            primaryKey,
+            primaryKeyValue,
+            startTs,
+            primaryKey,
+            ASYNC_COMMIT_TTL,
+            secondaries,
+            fallbackPrimary));
+    for (int i = 0; i < secondaryKeyList.size(); i++) {
+      Assert.assertTrue(
+          prewriteStringUsingAsyncCommit(
+              secondaryKeyList.get(i),
+              secondaryKeyValueList[i],
+              startTs,
+              primaryKey,
+              ASYNC_COMMIT_TTL,
+              null,
+              fallbackSecondary));
     }
   }
 }

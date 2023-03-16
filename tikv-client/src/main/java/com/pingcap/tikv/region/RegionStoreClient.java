@@ -421,7 +421,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       long startTs,
       long lockTTL)
       throws TiClientInternalException, KeyException, RegionException {
-    this.prewrite(backOffer, primary, mutations, startTs, lockTTL, false, false, null);
+    this.prewrite(backOffer, primary, mutations, startTs, lockTTL, false, false, null, false);
   }
 
   /**
@@ -437,7 +437,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       long ttl,
       boolean skipConstraintCheck,
       boolean useAsyncCommit,
-      Iterable<ByteString> secondaries)
+      Iterable<ByteString> secondaries,
+      boolean fallbackTest)
       throws TiClientInternalException, KeyException, RegionException {
     boolean forWrite = true;
     while (true) {
@@ -462,6 +463,10 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
 
               if (secondaries != null) {
                 builder.addAllSecondaries(secondaries);
+              }
+              // just for test
+              if (fallbackTest) {
+                builder.setMaxCommitTs(1);
               }
             }
             return builder.build();

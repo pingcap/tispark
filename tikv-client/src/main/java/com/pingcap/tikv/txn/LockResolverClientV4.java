@@ -27,6 +27,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.KeyException;
+import com.pingcap.tikv.exception.NonAsyncCommitLockException;
 import com.pingcap.tikv.exception.RegionException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiKVException;
@@ -131,7 +132,16 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
             cleanTxns.computeIfAbsent(l.getTxnID(), k -> new HashSet<>());
 
         if (status.getPrimaryLock() != null && status.getPrimaryLock().getUseAsyncCommit()) {
-          resolveLockAsync(bo, l, status);
+          try {
+            resolveLockAsync(bo, l, status);
+          } catch (NonAsyncCommitLockException e) {
+            logger.info("fallback because of the non async commit lock");
+            if (l.getLockType() == org.tikv.kvproto.Kvrpcpb.Op.PessimisticLock) {
+              resolvePessimisticLock(bo, l, cleanRegion);
+            } else {
+              resolveLock(bo, l, status, cleanRegion);
+            }
+          }
         } else if (l.getLockType() == org.tikv.kvproto.Kvrpcpb.Op.PessimisticLock) {
           resolvePessimisticLock(bo, l, cleanRegion);
         } else {
@@ -481,6 +491,9 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
       Thread.currentThread().interrupt();
       throw new TiKVException("Current thread interrupted.", e);
     } catch (ExecutionException e) {
+      if (e.getCause() != null && e.getCause() instanceof NonAsyncCommitLockException) {
+        throw (NonAsyncCommitLockException) e.getCause();
+      }
       logger.info("async commit recovery (sending CheckSecondaryLocks) finished with errors", e);
       throw new TiKVException("Execution exception met.", e);
     } catch (Throwable e) {
