@@ -125,50 +125,8 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     Set<Long> pushed = new HashSet<>(locks.size());
 
     for (Lock l : locks) {
-      TxnStatus status = getTxnStatusFromLock(bo, l, callerStartTS);
-
-      if (status.getTtl() == 0) {
-        Set<RegionVerID> cleanRegion =
-            cleanTxns.computeIfAbsent(l.getTxnID(), k -> new HashSet<>());
-
-        if (status.getPrimaryLock() != null && status.getPrimaryLock().getUseAsyncCommit()) {
-          try {
-            resolveLockAsync(bo, l, status);
-          } catch (NonAsyncCommitLockException e) {
-            logger.info("fallback because of the non async commit lock");
-            if (l.getLockType() == org.tikv.kvproto.Kvrpcpb.Op.PessimisticLock) {
-              resolvePessimisticLock(bo, l, cleanRegion);
-            } else {
-              resolveLock(bo, l, status, cleanRegion);
-            }
-          }
-        } else if (l.getLockType() == org.tikv.kvproto.Kvrpcpb.Op.PessimisticLock) {
-          resolvePessimisticLock(bo, l, cleanRegion);
-        } else {
-          resolveLock(bo, l, status, cleanRegion);
-        }
-
-      } else {
-        long msBeforeLockExpired = TsoUtils.untilExpired(l.getTxnID(), status.getTtl());
-        msBeforeTxnExpired.update(msBeforeLockExpired);
-
-        if (forWrite) {
-          // Write conflict detected!
-          // If it's a optimistic conflict and current txn is earlier than the lock owner,
-          // abort current transaction.
-          // This could avoids the deadlock scene of two large transaction.
-          if (l.getLockType() != org.tikv.kvproto.Kvrpcpb.Op.PessimisticLock
-              && l.getTxnID() > callerStartTS) {
-            throw new WriteConflictException(
-                callerStartTS, l.getTxnID(), status.getCommitTS(), l.getKey().toByteArray());
-          }
-        } else {
-          if (status.getAction() != org.tikv.kvproto.Kvrpcpb.Action.MinCommitTSPushed) {
-            pushFail = true;
-          } else {
-            pushed.add(l.getTxnID());
-          }
-        }
+      if (resolve(l, bo, callerStartTS, cleanTxns, msBeforeTxnExpired, pushed, forWrite, false)) {
+        pushFail = true;
       }
     }
 
@@ -177,6 +135,59 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     }
 
     return new ResolveLockResult(msBeforeTxnExpired.value(), pushed);
+  }
+
+  private boolean resolve(
+      Lock l,
+      BackOffer bo,
+      long callerStartTS,
+      Map<Long, Set<RegionVerID>> cleanTxns,
+      TxnExpireTime msBeforeTxnExpired,
+      Set<Long> pushed,
+      boolean forWrite,
+      boolean forceSyncCommit) {
+    TxnStatus status = getTxnStatusFromLock(bo, l, callerStartTS, forceSyncCommit);
+    boolean pushFail = false;
+    if (status.getTtl() == 0) {
+      Set<RegionVerID> cleanRegion = cleanTxns.computeIfAbsent(l.getTxnID(), k -> new HashSet<>());
+
+      if (status.getPrimaryLock() != null && status.getPrimaryLock().getUseAsyncCommit() && !forceSyncCommit){
+        try {
+          resolveLockAsync(bo, l, status);
+        } catch (NonAsyncCommitLockException e) {
+          logger.info("fallback because of the non async commit lock");
+          return resolve(
+              l, bo, callerStartTS, cleanTxns, msBeforeTxnExpired, pushed, forWrite, true);
+        }
+      } else if (l.getLockType() == org.tikv.kvproto.Kvrpcpb.Op.PessimisticLock) {
+        resolvePessimisticLock(bo, l, cleanRegion);
+      } else {
+        resolveLock(bo, l, status, cleanRegion);
+      }
+
+    } else {
+      long msBeforeLockExpired = TsoUtils.untilExpired(l.getTxnID(), status.getTtl());
+      msBeforeTxnExpired.update(msBeforeLockExpired);
+
+      if (forWrite) {
+        // Write conflict detected!
+        // If it's a optimistic conflict and current txn is earlier than the lock owner,
+        // abort current transaction.
+        // This could avoids the deadlock scene of two large transaction.
+        if (l.getLockType() != org.tikv.kvproto.Kvrpcpb.Op.PessimisticLock
+            && l.getTxnID() > callerStartTS) {
+          throw new WriteConflictException(
+              callerStartTS, l.getTxnID(), status.getCommitTS(), l.getKey().toByteArray());
+        }
+      } else {
+        if (status.getAction() != org.tikv.kvproto.Kvrpcpb.Action.MinCommitTSPushed) {
+          pushFail = true;
+        } else {
+          pushed.add(l.getTxnID());
+        }
+      }
+    }
+    return pushFail;
   }
 
   private void resolvePessimisticLock(BackOffer bo, Lock lock, Set<RegionVerID> cleanRegion) {
@@ -235,7 +246,8 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     }
   }
 
-  private TxnStatus getTxnStatusFromLock(BackOffer bo, Lock lock, long callerStartTS) {
+  private TxnStatus getTxnStatusFromLock(
+      BackOffer bo, Lock lock, long callerStartTS, boolean forceSyncCommit) {
     long currentTS;
 
     if (lock.getTtl() == 0) {
@@ -259,7 +271,8 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
             callerStartTS,
             currentTS,
             rollbackIfNotExist,
-            lock);
+            lock,
+            forceSyncCommit);
       } catch (TxnNotFoundException e) {
         // If the error is something other than txnNotFoundErr, throw the error (network
         // unavailable, tikv down, backoff timeout etc) to the caller.
@@ -303,7 +316,8 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
       Long callerStartTS,
       Long currentTS,
       boolean rollbackIfNotExist,
-      Lock lock) {
+      Lock lock,
+      boolean forceSyncCommit) {
     TxnStatus status = getResolved(txnID);
     if (status != null) {
       return status;
@@ -327,6 +341,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
               .setCallerStartTs(callerStartTS)
               .setCurrentTs(currentTS)
               .setRollbackIfNotExist(rollbackIfNotExist)
+              .setForceSyncCommit(forceSyncCommit)
               .build();
         };
 
