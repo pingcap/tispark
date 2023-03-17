@@ -40,7 +40,11 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
   private var jdbcClient: JDBCClient = _
 
   private val scheduler: ScheduledExecutorService =
-    Executors.newScheduledThreadPool(1)
+    Executors.newScheduledThreadPool(1, (r: Runnable) => {
+      val thread = new Thread(r)
+      thread.setDaemon(true)
+      thread
+    })
 
   val globalPrivs: AtomicReference[List[MySQLPriv.Value]] =
     new AtomicReference(List.empty)
