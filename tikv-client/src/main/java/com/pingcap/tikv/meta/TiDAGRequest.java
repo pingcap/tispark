@@ -305,6 +305,9 @@ public class TiDAGRequest implements Serializable {
   private void addIndexColsToScanBuilder(
       IndexScan.Builder indexScanBuilder, Map<String, Integer> colOffsetInFieldMap) {
     for (TiIndexColumn indexColumn : indexInfo.getIndexColumns()) {
+      // We can optimize performance by pass unique into index scan.
+      // Refer to
+      // https://github.com/pingcap/tidb/blob/4ae5be190b0017675deedd9af8b80d8868e03f0e/planner/core/plan_to_pb.go#L271 to see if we can pass unique into index scan.
       TiColumnInfo tableInfoColumn = tableInfo.getColumn(indexColumn.getName());
       // already add this col before.
       ColumnInfo.Builder colBuild = ColumnInfo.newBuilder(tableInfoColumn.toProto(tableInfo));
