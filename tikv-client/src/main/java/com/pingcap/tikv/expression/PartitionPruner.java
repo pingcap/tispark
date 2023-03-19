@@ -70,6 +70,13 @@ public class PartitionPruner {
             return tableInfo.getPartitionInfo().getDefs();
           }
 
+          // prune can not handle \" now.
+          for (int i = 0; i < tableInfo.getPartitionInfo().getDefs().size(); i++) {
+            TiPartitionDef pDef = tableInfo.getPartitionInfo().getDefs().get(i);
+            if (pDef.getLessThan().get(0).contains("\"")) {
+              return tableInfo.getPartitionInfo().getDefs();
+            }
+          }
           RangeColumnPartitionPruner pruner = new RangeColumnPartitionPruner(tableInfo);
           return pruner.prune(filters);
         }
@@ -104,7 +111,7 @@ public class PartitionPruner {
     // partExprColRefs.addAll(PredicateUtils.extractColumnRefFromExpression(partExpr));
     for (int i = 0; i < partInfo.getDefs().size(); i++) {
       TiPartitionDef pDef = partInfo.getDefs().get(i);
-      String current = pDef.getLessThan().get(lessThanIdx);
+      String current = wrapValue(pDef.getLessThan().get(lessThanIdx));
       String leftHand;
       if (current.equals("MAXVALUE")) {
         leftHand = "true";
@@ -114,7 +121,7 @@ public class PartitionPruner {
       if (i == 0) {
         partExprs.add(parser.parseExpression(leftHand));
       } else {
-        String previous = partInfo.getDefs().get(i - 1).getLessThan().get(lessThanIdx);
+        String previous = wrapValue(partInfo.getDefs().get(i - 1).getLessThan().get(lessThanIdx));
         String and =
             String.format("%s >= %s and %s", wrapColumnName(partExprStr), previous, leftHand);
         partExprs.add(parser.parseExpression(and));
@@ -130,6 +137,43 @@ public class PartitionPruner {
       return columnName;
     } else {
       return String.format("`%s`", columnName);
+    }
+  }
+
+  /**
+   * Spark SQL will parse string literal without escape, So we need to parse partition definition
+   * without escape too.
+   *
+   * <p>wrapValue will replace the first '' to "", so that antlr will not regard the first '' as a
+   * part of string literal.
+   *
+   * <p>wrapValue will also delete the escape character in string literal.
+   *
+   * <p>e.g. 'string' -> "string" '''string''' -> "'string'" 'string''' -> "string'"
+   *
+   * <p>Can't handle '""'. e.g. '"string"' -> ""string"". parseExpression will parse ""string"" to
+   * empty string, parse '"string"' to 'string'
+   *
+   * @param value
+   * @return
+   */
+  private static String wrapValue(String value) {
+    if (value.startsWith("'") && value.endsWith("'")) {
+      String newValue = String.format("\"%s\"", value.substring(1, value.length() - 1));
+      StringBuilder valueWithoutEscape = new StringBuilder();
+      for (int i = 0; i < newValue.length(); i++) {
+        if (newValue.charAt(i) != '\'') {
+          valueWithoutEscape.append(newValue.charAt(i));
+        } else {
+          if (i + 1 < newValue.length()) {
+            valueWithoutEscape.append(newValue.charAt(i + 1));
+          }
+          i++;
+        }
+      }
+      return valueWithoutEscape.toString();
+    } else {
+      return value;
     }
   }
 }
