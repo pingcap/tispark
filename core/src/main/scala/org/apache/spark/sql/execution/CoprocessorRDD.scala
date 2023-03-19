@@ -56,9 +56,12 @@ trait LeafColumnarExecRDD extends LeafExecNode {
       }
       b.append("]")
       b.toString
-    } else {
+    } else if (tiRDDs.lengthCompare(1) == 0) {
       s"${dagRequest.getStoreType.name()} $nodeName{$dagRequest}" +
         s"${TiUtil.getReqEstCountStr(dagRequest)}"
+    } else {
+      // return empty TiRDD when there is no tiRDDs
+      "Empty TiRDD"
     }
 
   def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
