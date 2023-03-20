@@ -17,6 +17,7 @@
 package com.pingcap.tikv.predicates;
 
 import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.or;
 import static java.util.Objects.requireNonNull;
 
 import com.pingcap.tikv.expression.ColumnRef;
@@ -45,6 +46,14 @@ public class PredicateUtils {
     if (exprs.size() == 1) return exprs.get(0);
 
     return and(exprs.get(0), mergeCNFExpressions(exprs.subList(1, exprs.size())));
+  }
+
+  public static Expression mergeExpressionsWithOr(List<Expression> exprs) {
+    requireNonNull(exprs, "Expression list is null");
+    if (exprs.size() == 0) return null;
+    if (exprs.size() == 1) return exprs.get(0);
+
+    return or(exprs.get(0), mergeExpressionsWithOr(exprs.subList(1, exprs.size())));
   }
 
   public static Set<ColumnRef> extractColumnRefFromExpression(Expression expr) {

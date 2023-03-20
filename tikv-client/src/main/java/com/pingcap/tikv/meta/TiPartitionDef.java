@@ -30,6 +30,7 @@ public class TiPartitionDef implements Serializable {
   private final long id;
   private final String name;
   private final List<String> lessThan;
+  private final List<List<String>> inValues;
   private final String comment;
 
   @VisibleForTesting
@@ -38,6 +39,7 @@ public class TiPartitionDef implements Serializable {
       @JsonProperty("id") long id,
       @JsonProperty("name") CIStr name,
       @JsonProperty("less_than") List<String> lessThan,
+      @JsonProperty("in_values") List<List<String>> inValues,
       @JsonProperty("comment") String comment) {
     this.id = id;
     this.name = name.getL();
@@ -45,6 +47,11 @@ public class TiPartitionDef implements Serializable {
       this.lessThan = new ArrayList<>();
     } else {
       this.lessThan = ImmutableList.copyOf(lessThan);
+    }
+    if (inValues == null || inValues.isEmpty()) {
+      this.inValues = new ArrayList<>();
+    } else {
+      this.inValues = ImmutableList.copyOf(inValues);
     }
     this.comment = comment;
   }
@@ -59,5 +66,9 @@ public class TiPartitionDef implements Serializable {
 
   public List<String> getLessThan() {
     return lessThan;
+  }
+
+  public List<List<String>> getInValues() {
+    return inValues;
   }
 }

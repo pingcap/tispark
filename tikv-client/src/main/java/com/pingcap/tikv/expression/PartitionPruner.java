@@ -21,6 +21,7 @@ import com.pingcap.tikv.meta.TiPartitionInfo;
 import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.parser.TiParser;
+import com.pingcap.tikv.predicates.PredicateUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -81,6 +82,20 @@ public class PartitionPruner {
           return pruner.prune(filters);
         }
       case ListPartition:
+        if (tableInfo.getPartitionInfo().getColumns().size() == 0) {
+          ListPartitionPruner listPartitionPruner = new ListPartitionPruner(tableInfo);
+          return listPartitionPruner.prune(filters);
+        }
+        // prune can not handle \" now.
+        for (int i = 0; i < tableInfo.getPartitionInfo().getDefs().size(); i++) {
+          TiPartitionDef pDef = tableInfo.getPartitionInfo().getDefs().get(i);
+          if (pDef.getLessThan().get(0).contains("\"")) {
+            return tableInfo.getPartitionInfo().getDefs();
+          }
+        }
+        ListColumnPartitionPruner listColumnPartitionPruner =
+            new ListColumnPartitionPruner(tableInfo);
+        return listColumnPartitionPruner.prune(filters);
       case HashPartition:
         return tableInfo.getPartitionInfo().getDefs();
     }
@@ -175,5 +190,23 @@ public class PartitionPruner {
     } else {
       return value;
     }
+  }
+
+  public static List<Expression> generateListExprs(
+      TiPartitionInfo partInfo, TiParser parser, String partExprStr, int inValuesIdx) {
+    List<Expression> partExprs = new ArrayList<>();
+    for (int i = 0; i < partInfo.getDefs().size(); i++) {
+      // TiPartitionDef pDef = partInfo.getDefs().get(i);
+      List<List<String>> inValues = partInfo.getDefs().get(i).getInValues();
+      List<Expression> expressions = new ArrayList<>();
+      for (int j = 0; j < inValues.size(); j++) {
+        String wrapValue = wrapValue(inValues.get(j).get(inValuesIdx));
+        expressions.add(
+            parser.parseExpression(
+                String.format("%s = %s", wrapColumnName(partExprStr), wrapValue)));
+      }
+      partExprs.add(PredicateUtils.mergeExpressionsWithOr(expressions));
+    }
+    return partExprs;
   }
 }

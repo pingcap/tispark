@@ -147,10 +147,18 @@ public class TiParserTest {
 
   private TiTableInfo createTaleInfoWithParts() {
     List<TiPartitionDef> partDefs = new ArrayList<>();
-    partDefs.add(new TiPartitionDef(1L, CIStr.newCIStr("p0"), ImmutableList.of("5"), ""));
-    partDefs.add(new TiPartitionDef(2L, CIStr.newCIStr("p1"), ImmutableList.of("10"), ""));
-    partDefs.add(new TiPartitionDef(3L, CIStr.newCIStr("p2"), ImmutableList.of("15"), ""));
-    partDefs.add(new TiPartitionDef(4L, CIStr.newCIStr("p3"), ImmutableList.of("MAXVALUE"), ""));
+    partDefs.add(
+        new TiPartitionDef(
+            1L, CIStr.newCIStr("p0"), ImmutableList.of("5"), ImmutableList.of(), ""));
+    partDefs.add(
+        new TiPartitionDef(
+            2L, CIStr.newCIStr("p1"), ImmutableList.of("10"), ImmutableList.of(), ""));
+    partDefs.add(
+        new TiPartitionDef(
+            3L, CIStr.newCIStr("p2"), ImmutableList.of("15"), ImmutableList.of(), ""));
+    partDefs.add(
+        new TiPartitionDef(
+            4L, CIStr.newCIStr("p3"), ImmutableList.of("MAXVALUE"), ImmutableList.of(), ""));
     return new MetaUtils.TableBuilder()
         .name("rcx")
         .addColumn("a", IntegerType.INT, true)
