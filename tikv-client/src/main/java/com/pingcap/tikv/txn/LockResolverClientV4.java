@@ -27,6 +27,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.KeyException;
+import com.pingcap.tikv.exception.NonAsyncCommitLockException;
 import com.pingcap.tikv.exception.RegionException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiKVException;
@@ -124,21 +125,8 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     Set<Long> pushed = new HashSet<>(locks.size());
 
     for (Lock l : locks) {
-      TxnStatus status = getTxnStatusFromLock(bo, l, callerStartTS);
-
-      if (status.getTtl() == 0) {
-        Set<RegionVerID> cleanRegion =
-            cleanTxns.computeIfAbsent(l.getTxnID(), k -> new HashSet<>());
-
-        if (status.getPrimaryLock() != null && status.getPrimaryLock().getUseAsyncCommit()) {
-          resolveLockAsync(bo, l, status);
-        } else if (l.getLockType() == org.tikv.kvproto.Kvrpcpb.Op.PessimisticLock) {
-          resolvePessimisticLock(bo, l, cleanRegion);
-        } else {
-          resolveLock(bo, l, status, cleanRegion);
-        }
-
-      } else {
+      TxnStatus status = resolve(l, bo, callerStartTS, cleanTxns, false);
+      if (status.getTtl() != 0) {
         long msBeforeLockExpired = TsoUtils.untilExpired(l.getTxnID(), status.getTtl());
         msBeforeTxnExpired.update(msBeforeLockExpired);
 
@@ -167,6 +155,36 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     }
 
     return new ResolveLockResult(msBeforeTxnExpired.value(), pushed);
+  }
+
+  private TxnStatus resolve(
+      Lock l,
+      BackOffer bo,
+      long callerStartTS,
+      Map<Long, Set<RegionVerID>> cleanTxns,
+      boolean forceSyncCommit) {
+    TxnStatus status = getTxnStatusFromLock(bo, l, callerStartTS, forceSyncCommit);
+    if (status.getTtl() != 0) {
+      return status;
+    }
+    Set<RegionVerID> cleanRegion = cleanTxns.computeIfAbsent(l.getTxnID(), k -> new HashSet<>());
+
+    if (status.getPrimaryLock() != null
+        && status.getPrimaryLock().getUseAsyncCommit()
+        && !forceSyncCommit) {
+      try {
+        resolveLockAsync(bo, l, status);
+      } catch (NonAsyncCommitLockException e) {
+        logger.info("fallback because of the non async commit lock");
+        return resolve(l, bo, callerStartTS, cleanTxns, true);
+      }
+    } else if (l.getLockType() == org.tikv.kvproto.Kvrpcpb.Op.PessimisticLock) {
+      resolvePessimisticLock(bo, l, cleanRegion);
+    } else {
+      resolveLock(bo, l, status, cleanRegion);
+    }
+
+    return status;
   }
 
   private void resolvePessimisticLock(BackOffer bo, Lock lock, Set<RegionVerID> cleanRegion) {
@@ -225,7 +243,8 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
     }
   }
 
-  private TxnStatus getTxnStatusFromLock(BackOffer bo, Lock lock, long callerStartTS) {
+  private TxnStatus getTxnStatusFromLock(
+      BackOffer bo, Lock lock, long callerStartTS, boolean forceSyncCommit) {
     long currentTS;
 
     if (lock.getTtl() == 0) {
@@ -249,7 +268,8 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
             callerStartTS,
             currentTS,
             rollbackIfNotExist,
-            lock);
+            lock,
+            forceSyncCommit);
       } catch (TxnNotFoundException e) {
         // If the error is something other than txnNotFoundErr, throw the error (network
         // unavailable, tikv down, backoff timeout etc) to the caller.
@@ -293,7 +313,8 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
       Long callerStartTS,
       Long currentTS,
       boolean rollbackIfNotExist,
-      Lock lock) {
+      Lock lock,
+      boolean forceSyncCommit) {
     TxnStatus status = getResolved(txnID);
     if (status != null) {
       return status;
@@ -317,6 +338,7 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
               .setCallerStartTs(callerStartTS)
               .setCurrentTs(currentTS)
               .setRollbackIfNotExist(rollbackIfNotExist)
+              .setForceSyncCommit(forceSyncCommit)
               .build();
         };
 
@@ -481,6 +503,9 @@ public class LockResolverClientV4 extends AbstractRegionStoreClient
       Thread.currentThread().interrupt();
       throw new TiKVException("Current thread interrupted.", e);
     } catch (ExecutionException e) {
+      if (e.getCause() != null && e.getCause() instanceof NonAsyncCommitLockException) {
+        throw (NonAsyncCommitLockException) e.getCause();
+      }
       logger.info("async commit recovery (sending CheckSecondaryLocks) finished with errors", e);
       throw new TiKVException("Execution exception met.", e);
     } catch (Throwable e) {

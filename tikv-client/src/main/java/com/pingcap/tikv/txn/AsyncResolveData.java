@@ -19,6 +19,7 @@
 package com.pingcap.tikv.txn;
 
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.exception.NonAsyncCommitLockException;
 import com.pingcap.tikv.exception.ResolveLockException;
 import java.util.ArrayList;
 import java.util.List;
@@ -113,6 +114,10 @@ public class AsyncResolveData {
               String.format(
                   "unexpected timestamp, expected: %d, found: %d",
                   startTs, lockInfo.getLockVersion()));
+        }
+        if (!lockInfo.getUseAsyncCommit()) {
+          LOG.info("non-async commit lock found in async commit recovery");
+          throw new NonAsyncCommitLockException("non-async commit lock found");
         }
         if (!this.missingLock && lockInfo.getMinCommitTs() > this.commitTs) {
           this.commitTs = lockInfo.getMinCommitTs();

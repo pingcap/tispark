@@ -129,7 +129,8 @@ abstract class LockResolverTest {
       long startTS,
       String primaryKey,
       long ttl,
-      Iterable<ByteString> secondaries) {
+      Iterable<ByteString> secondaries,
+      boolean fallback) {
     Mutation m =
         Mutation.newBuilder()
             .setKey(ByteString.copyFromUtf8(key))
@@ -143,11 +144,12 @@ abstract class LockResolverTest {
         ByteString.copyFromUtf8(primaryKey),
         ttl,
         true,
-        secondaries);
+        secondaries,
+        fallback);
   }
 
   boolean prewriteString(List<Mutation> mutations, long startTS, String primary, long ttl) {
-    return prewrite(mutations, startTS, ByteString.copyFromUtf8(primary), ttl, false, null);
+    return prewrite(mutations, startTS, ByteString.copyFromUtf8(primary), ttl, false, null, false);
   }
 
   boolean prewrite(
@@ -156,7 +158,8 @@ abstract class LockResolverTest {
       ByteString primary,
       long ttl,
       boolean useAsyncCommit,
-      Iterable<ByteString> secondaries) {
+      Iterable<ByteString> secondaries,
+      boolean fallback) {
     if (mutations.size() == 0) return true;
     BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(1000);
 
@@ -173,7 +176,8 @@ abstract class LockResolverTest {
               ttl,
               false,
               useAsyncCommit,
-              secondaries);
+              secondaries,
+              fallback);
           break;
         } catch (RegionException e) {
           backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
