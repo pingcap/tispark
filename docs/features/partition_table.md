@@ -16,7 +16,10 @@ TiSpark only supports partition pruning with the following partition expression 
 + `YEAR(col)` and its type is datetime/string/date literal that can be parsed as datetime.
 + `TO_DAYS(col)` and its type is datetime/string/date literal that can be parsed as datetime.
 
-TiSpark does not support partition pruning in hash and list partition.
+### Limitations
+
+- TiSpark does not support partition pruning in hash and list partition.
+- TiSpark can not apply partition pruning for some special characters in partition definition. For example, Partition definition with `""` can not be pruned. such as `partition p0 values less than ('"string"')`.
 
 ## Write into partition table
 
