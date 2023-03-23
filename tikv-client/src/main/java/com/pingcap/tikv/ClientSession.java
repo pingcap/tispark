@@ -119,7 +119,6 @@ public class ClientSession implements AutoCloseable {
           new Catalog(
               this::createSnapshotWithSnapshotTimestamp, conf.isShowRowId(), conf.getDBPrefix());
     }
-    snapshotCatalog.reloadCache(true);
     return snapshotCatalog;
   }
 

@@ -47,7 +47,6 @@ public class Catalog implements AutoCloseable {
     this.showRowId = showRowId;
     this.dbPrefix = dbPrefix;
     metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()), dbPrefix, false);
-    reloadCache(true);
   }
 
   @Override
@@ -78,7 +77,7 @@ public class Catalog implements AutoCloseable {
 
   public List<TiTableInfo> listTables(TiDBInfo database) {
     Objects.requireNonNull(database, "database is null");
-    reloadCache(true);
+    reloadCache();
     if (showRowId) {
       return metaCache
           .listTables(database)
@@ -148,7 +147,7 @@ public class Catalog implements AutoCloseable {
   public TiTableInfo getTable(TiDBInfo database, String tableName) {
     Objects.requireNonNull(database, "database is null");
     Objects.requireNonNull(tableName, "tableName is null");
-    reloadCache(true);
+    reloadCache();
     TiTableInfo table = metaCache.getTable(database, tableName);
     if (showRowId && table != null) {
       return table.copyTableWithRowId();
