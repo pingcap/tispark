@@ -22,6 +22,17 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("test issue 2649") {
+    val dbTable = "tispark_test.mutil_uniq"
+    tidbStmt.execute(s"drop table if exists $dbTable")
+    tidbStmt.execute(
+      s"CREATE TABLE $dbTable (`a` int(5) NOT NULL,`b` int(5) NOT NULL,UNIQUE KEY `idx_ab` (`a`,`b`))")
+    tidbStmt.execute(s"insert into $dbTable values(0, 0),(1,1)")
+    val df = spark.sql(s"select * from $dbTable where a=1")
+    val row1 = Row(1, 1)
+    checkAnswer(df, Seq(row1))
+  }
+
   //https://github.com/pingcap/tispark/issues/2268
   test("show rowid in commonhandle") {
     spark.sqlContext.setConf(TiConfigConst.SHOW_ROWID, "true")
