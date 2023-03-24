@@ -16,6 +16,8 @@
 
 package com.pingcap.tispark.auth
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
+
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.jdbc.JDBCClient
 import com.pingcap.tispark.auth.TiAuthorization.{
@@ -41,7 +43,7 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
   private var jdbcClient: JDBCClient = _
 
   private val scheduler: ScheduledExecutorService =
-    Executors.newScheduledThreadPool(1)
+    Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder().setDaemon(true).build())
 
   val globalPrivs: AtomicReference[List[MySQLPriv.Value]] =
     new AtomicReference(List.empty)
