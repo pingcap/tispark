@@ -63,6 +63,7 @@ public final class RowIDAllocator implements Serializable {
   private long end;
   private final long autoRandomPartition;
   private final RowIDAllocatorType allocatorType;
+  private final long RowIDAllocatorTTL = 10000;
 
   private static final Logger LOG = LoggerFactory.getLogger(RowIDAllocator.class);
 
@@ -199,7 +200,7 @@ public final class RowIDAllocator implements Serializable {
       return;
     }
     TiSession session = ClientSession.getInstance(conf).getTiKVSession();
-    TwoPhaseCommitter twoPhaseCommitter = new TwoPhaseCommitter(session, timestamp.getVersion());
+    TwoPhaseCommitter twoPhaseCommitter = new TwoPhaseCommitter(session, timestamp.getVersion(),RowIDAllocatorTTL);
     BytePairWrapper primaryPair = iterator.next();
     twoPhaseCommitter.prewritePrimaryKey(
         ConcreteBackOffer.newCustomBackOff(TiConfiguration.PREWRITE_MAX_BACKOFF),
