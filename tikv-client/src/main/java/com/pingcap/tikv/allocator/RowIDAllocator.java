@@ -200,7 +200,8 @@ public final class RowIDAllocator implements Serializable {
       return;
     }
     TiSession session = ClientSession.getInstance(conf).getTiKVSession();
-    TwoPhaseCommitter twoPhaseCommitter = new TwoPhaseCommitter(session, timestamp.getVersion(),RowIDAllocatorTTL);
+    TwoPhaseCommitter twoPhaseCommitter =
+        new TwoPhaseCommitter(session, timestamp.getVersion(), RowIDAllocatorTTL);
     BytePairWrapper primaryPair = iterator.next();
     twoPhaseCommitter.prewritePrimaryKey(
         ConcreteBackOffer.newCustomBackOff(TiConfiguration.PREWRITE_MAX_BACKOFF),
