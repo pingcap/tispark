@@ -49,7 +49,8 @@ public class Catalog implements AutoCloseable {
     this.showRowId = showRowId;
     this.dbPrefix = dbPrefix;
     this.loadTables = loadTables;
-    metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()), dbPrefix, loadTables);
+    metaCache =
+        new CatalogCache(new CatalogTransaction(snapshotProvider.get()), dbPrefix, loadTables);
   }
 
   @Override

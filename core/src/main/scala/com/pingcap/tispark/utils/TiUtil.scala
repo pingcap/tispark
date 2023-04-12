@@ -256,7 +256,8 @@ object TiUtil {
       tiConf.setEnableGrpcForward(conf.get(TiConfigConst.ENABLE_GRPC_FORWARD).toBoolean)
     }
 
-    tiConf.setLoadTables(conf.get(TiConfigConst.LOAD_TABLES, TiConfigConst.DEFAULT_LOAD_TABLES.toString).toBoolean)
+    tiConf.setLoadTables(
+      conf.get(TiConfigConst.LOAD_TABLES, TiConfigConst.DEFAULT_LOAD_TABLES.toString).toBoolean)
     tiConf
   }
 
