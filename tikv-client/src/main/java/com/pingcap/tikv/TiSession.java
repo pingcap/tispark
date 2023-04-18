@@ -117,11 +117,10 @@ public class TiSession implements AutoCloseable {
     }
   }
 
-
   public ChannelFactory getChannelFactory() {
     return this.channelFactory;
   }
-  
+
   public TxnKVClient createTxnClient() {
     return new TxnKVClient(conf, this.getRegionStoreClientBuilder(), this.getPDClient());
   }
@@ -224,9 +223,7 @@ public class TiSession implements AutoCloseable {
           storeStatusCacheExecutor.scheduleAtFixedRate(
               () -> {
                 storeStatusCache.replaceAll(
-                    (k, v) ->
-                        RegionStoreClient.isMppAlive(
-                            channelFactory.getChannel(k)));
+                    (k, v) -> RegionStoreClient.isMppAlive(channelFactory.getChannel(k)));
               },
               0,
               5,
