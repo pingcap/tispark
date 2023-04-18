@@ -286,11 +286,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       Map<String, Boolean> storeStatusCache = session.getStoreStatusCache();
       return storeStatusCache.computeIfAbsent(
           address,
-          key ->
-              RegionStoreClient.isMppAlive(
-                  session
-                      .getChannelFactory()
-                      .getChannel(address)));
+          key -> RegionStoreClient.isMppAlive(session.getChannelFactory().getChannel(address)));
     } catch (Exception e) {
       throw new TiClientInternalException("Error get MppStore Status.", e);
     }

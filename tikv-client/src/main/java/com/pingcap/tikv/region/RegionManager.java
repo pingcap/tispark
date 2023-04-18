@@ -68,7 +68,7 @@ public class RegionManager {
   }
 
   public synchronized void setCacheInvalidateCallback(
-          Function<CacheInvalidateEvent, Void> cacheInvalidateCallback) {
+      Function<CacheInvalidateEvent, Void> cacheInvalidateCallback) {
     this.cacheInvalidateCallback = cacheInvalidateCallback;
   }
 
