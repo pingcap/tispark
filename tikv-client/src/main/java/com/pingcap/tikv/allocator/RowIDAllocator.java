@@ -60,13 +60,8 @@ public final class RowIDAllocator implements Serializable {
   private final TiConfiguration conf;
   private final long step;
   private long end;
-<<<<<<< HEAD
   private TiTimestamp timestamp;
-=======
-  private final long autoRandomPartition;
-  private final RowIDAllocatorType allocatorType;
   private final long RowIDAllocatorTTL = 10000;
->>>>>>> bdb6cb492 (optimize ttl (#2669))
 
   private static final Logger LOG = LoggerFactory.getLogger(RowIDAllocator.class);
 
@@ -147,14 +142,10 @@ public final class RowIDAllocator implements Serializable {
     if (!iterator.hasNext()) {
       return;
     }
-<<<<<<< HEAD
+
     TiSession session = TiSession.getInstance(conf);
-    TwoPhaseCommitter twoPhaseCommitter = new TwoPhaseCommitter(conf, timestamp.getVersion());
-=======
-    TiSession session = ClientSession.getInstance(conf).getTiKVSession();
     TwoPhaseCommitter twoPhaseCommitter =
-        new TwoPhaseCommitter(session, timestamp.getVersion(), RowIDAllocatorTTL);
->>>>>>> bdb6cb492 (optimize ttl (#2669))
+            new TwoPhaseCommitter(conf, timestamp.getVersion(), RowIDAllocatorTTL);
     BytePairWrapper primaryPair = iterator.next();
     twoPhaseCommitter.prewritePrimaryKey(
         ConcreteBackOffer.newCustomBackOff(BackOffer.PREWRITE_MAX_BACKOFF),
