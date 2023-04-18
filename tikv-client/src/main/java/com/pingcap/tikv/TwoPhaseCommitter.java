@@ -82,10 +82,14 @@ public class TwoPhaseCommitter {
   private final ExecutorService executorService;
 
   public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
+    this(conf, startTime, DEFAULT_BATCH_WRITE_LOCK_TTL);
+  }
+
+  public TwoPhaseCommitter(TiConfiguration conf, long startTime, long lockTTL) {
     this.kvClient = TiSession.getInstance(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
-    this.lockTTL = DEFAULT_BATCH_WRITE_LOCK_TTL;
+    this.lockTTL = lockTTL;
     this.retryCommitSecondaryKeys = true;
     this.txnPrewriteBatchSize = TXN_COMMIT_BATCH_SIZE;
     this.txnCommitBatchSize = TXN_COMMIT_BATCH_SIZE;
