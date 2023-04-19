@@ -1,6 +1,6 @@
-spark.tispark.pd.addresses pd:2379
+spark.tispark.pd.addresses 127.0.0.1:2379
 spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
-spark.sql.catalog.tidb_catalog.pd.addresses pd:2379
+spark.sql.catalog.tidb_catalog.pd.addresses 127.0.0.1:2379
 
 spark.tispark.tikv.tls_enable=true
 spark.tispark.tikv.trust_cert_collection=/config/cert/pem/root.pem
