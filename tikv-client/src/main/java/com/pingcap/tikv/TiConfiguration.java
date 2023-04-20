@@ -49,9 +49,11 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_TRUNCATE_AS_WARNING = false;
   private static final int DEF_MAX_FRAME_SIZE = 2147483647; // 2 GB
   private boolean loadTables = true;
-  public  boolean getLoadTables() {
+
+  public boolean getLoadTables() {
     return loadTables;
   }
+
   private static final int DEF_INDEX_SCAN_BATCH_SIZE = 20000;
   private static final int DEF_REGION_SCAN_DOWNGRADE_THRESHOLD = 10000000;
   // if keyRange size per request exceeds this limit, the request might be too large to be accepted
