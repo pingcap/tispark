@@ -44,75 +44,14 @@ public class TiConfiguration implements Serializable {
   private static final DateTimeZone DEF_TIMEZONE = Converter.getLocalTimezone();
   private static final int DEF_TIMEOUT = 3;
   private static final TimeUnit DEF_TIMEOUT_UNIT = TimeUnit.MINUTES;
-<<<<<<< HEAD
   private static final int DEF_SCAN_BATCH_SIZE = 10480;
   private static final boolean DEF_IGNORE_TRUNCATE = true;
   private static final boolean DEF_TRUNCATE_AS_WARNING = false;
   private static final int DEF_MAX_FRAME_SIZE = 2147483647; // 2 GB
-=======
-
-  // --------------   only in tispark -------------
-  public static final int PREWRITE_MAX_BACKOFF = 20 * BackOffer.seconds;
-  public static final int BATCH_COMMIT_BACKOFF = 10 * BackOffer.seconds;
-  public static final int ROW_ID_ALLOCATOR_BACKOFF = 40 * BackOffer.seconds;
-
-  private Boolean newCollationEnabled;
-
-  public void setNewCollationEnable(Boolean flag) {
-    this.newCollationEnabled = flag;
-    Collation.setNewCollationEnabled(flag);
-  }
-
-  public Optional<Boolean> getNewCollationEnable() {
-    return Optional.ofNullable(this.newCollationEnabled);
-  }
-
-  private static final boolean DEF_WRITE_ENABLE = true;
-  private boolean writeEnable = DEF_WRITE_ENABLE;
-
-  private static final List<TiStoreType> DEF_ISOLATION_READ_ENGINES =
-      ImmutableList.of(TiStoreType.TiKV, TiStoreType.TiFlash);
-  private List<TiStoreType> isolationReadEngines = DEF_ISOLATION_READ_ENGINES;
-
-  private static final boolean DEF_WRITE_ALLOW_SPARK_SQL = false;
-  private boolean writeAllowSparkSQL = DEF_WRITE_ALLOW_SPARK_SQL;
-  private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
-  private boolean writeWithoutLockTable = DEF_WRITE_WITHOUT_LOCK_TABLE;
-  private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
-  private int tikvRegionSplitSizeInMB = DEF_TIKV_REGION_SPLIT_SIZE_IN_MB;
-  private static final int DEF_PARTITION_PER_SPLIT = 10;
-  private int partitionPerSplit = DEF_PARTITION_PER_SPLIT;
   private boolean loadTables = true;
-
-  public boolean getLoadTables() {
+  public  boolean getLoadTables() {
     return loadTables;
   }
-  // ----------     same with client-java  ------------
-
-  public String getPdAddrsString() {
-    return listToString(pdAddrs);
-  }
-
-  private List<URI> pdAddrs = new ArrayList<>();
-
-  public static TiConfiguration createDefault(String pdAddrsStr) {
-    Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
-    TiConfiguration conf = new TiConfiguration();
-    conf.pdAddrs = strToURI(pdAddrsStr);
-    return conf;
-  }
-
-  private String networkMappingName = "";
-  private HostMapping hostMapping;
-
-  private static final DateTimeZone DEF_TIMEZONE = Converter.getLocalTimezone();
-
-  public DateTimeZone getLocalTimeZone() {
-    return DEF_TIMEZONE;
-  }
-
-  private int indexScanBatchSize = DEF_INDEX_SCAN_BATCH_SIZE;
->>>>>>> e0c15f66c (Do not reload table schema when update catalog cache (#2667))
   private static final int DEF_INDEX_SCAN_BATCH_SIZE = 20000;
   private static final int DEF_REGION_SCAN_DOWNGRADE_THRESHOLD = 10000000;
   // if keyRange size per request exceeds this limit, the request might be too large to be accepted
