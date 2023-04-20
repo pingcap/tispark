@@ -62,6 +62,9 @@ jobs:
     # If this step fails, then you should remove it and run the build manually (see below)
 #    - name: Autobuild
 #      uses: github/codeql-action/autobuild@v1
+    - name: build
+      run: |
+          mvn clean package -Dmaven.test.skip=true -B
 
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 https://git.io/JvXDl
