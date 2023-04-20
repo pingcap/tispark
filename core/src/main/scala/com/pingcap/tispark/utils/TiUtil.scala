@@ -226,6 +226,37 @@ object TiUtil {
       tiConf.setConnRecycleTimeInSeconds(conf.get(TiConfigConst.TIKV_CONN_RECYCLE_TIME))
     }
 
+<<<<<<< HEAD
+=======
+    if (conf.contains(TiConfigConst.HOST_MAPPING)) {
+      tiConf.setHostMapping(new UriHostMapping(conf.get(TiConfigConst.HOST_MAPPING)))
+    } else {
+      tiConf.setHostMapping(new UriHostMapping(""))
+    }
+
+    if (conf.contains(TiConfigConst.NEW_COLLATION_ENABLE)) {
+      tiConf.setNewCollationEnable(conf.get(TiConfigConst.NEW_COLLATION_ENABLE).toBoolean)
+    }
+
+    // follower read
+    val label =
+      conf.get(TiConfigConst.REPLICA_READ_LABEL, TiConfigConst.REPLICA_READ_LABEL_DEFAULT)
+    val role = conf.get(TiConfigConst.REPLICA_READ, TiConfigConst.REPLICA_READ_DEFAULT)
+    val whitelist = conf.get(
+      TiConfigConst.REPLICA_READ_ADDRESS_WHITELIST,
+      TiConfigConst.REPLICA_READ_ADDRESS_DEFAULT)
+    val blacklist = conf.get(
+      TiConfigConst.REPLICA_READ_ADDRESS_BLACKLIST,
+      TiConfigConst.REPLICA_READ_ADDRESS_DEFAULT)
+    tiConf.setReplicaReadPolicy(ReplicaReadPolicy.create(role, label, whitelist, blacklist))
+
+    if (conf.contains(TiConfigConst.ENABLE_GRPC_FORWARD)) {
+      tiConf.setEnableGrpcForward(conf.get(TiConfigConst.ENABLE_GRPC_FORWARD).toBoolean)
+    }
+
+    tiConf.setLoadTables(
+      conf.get(TiConfigConst.LOAD_TABLES, TiConfigConst.DEFAULT_LOAD_TABLES.toString).toBoolean)
+>>>>>>> e0c15f66c (Do not reload table schema when update catalog cache (#2667))
     tiConf
   }
 
