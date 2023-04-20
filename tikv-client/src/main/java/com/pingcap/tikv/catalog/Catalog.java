@@ -41,13 +41,16 @@ public class Catalog implements AutoCloseable {
   private final Supplier<Snapshot> snapshotProvider;
   private CatalogCache metaCache;
   private static final AtomicLong lastUpdateTime = new AtomicLong(0);
+  private final boolean loadTables;
 
-  public Catalog(Supplier<Snapshot> snapshotProvider, boolean showRowId, String dbPrefix) {
+  public Catalog(
+      Supplier<Snapshot> snapshotProvider, boolean showRowId, String dbPrefix, boolean loadTables) {
     this.snapshotProvider = Objects.requireNonNull(snapshotProvider, "Snapshot Provider is null");
     this.showRowId = showRowId;
     this.dbPrefix = dbPrefix;
-    metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()), dbPrefix, false);
-    reloadCache(true);
+    this.loadTables = loadTables;
+    metaCache =
+        new CatalogCache(new CatalogTransaction(snapshotProvider.get()), dbPrefix, loadTables);
   }
 
   @Override
@@ -67,18 +70,14 @@ public class Catalog implements AutoCloseable {
     }
   }
 
-  private void reloadCache() {
-    reloadCache(false);
-  }
-
   public List<TiDBInfo> listDatabases() {
-    reloadCache();
+    reloadCache(false);
     return metaCache.listDatabases();
   }
 
   public List<TiTableInfo> listTables(TiDBInfo database) {
     Objects.requireNonNull(database, "database is null");
-    reloadCache(true);
+    reloadCache(loadTables);
     if (showRowId) {
       return metaCache
           .listTables(database)
@@ -133,7 +132,7 @@ public class Catalog implements AutoCloseable {
 
   public TiDBInfo getDatabase(String dbName) {
     Objects.requireNonNull(dbName, "dbName is null");
-    reloadCache();
+    reloadCache(false);
     return metaCache.getDatabase(dbName);
   }
 
@@ -148,7 +147,7 @@ public class Catalog implements AutoCloseable {
   public TiTableInfo getTable(TiDBInfo database, String tableName) {
     Objects.requireNonNull(database, "database is null");
     Objects.requireNonNull(tableName, "tableName is null");
-    reloadCache(true);
+    reloadCache(loadTables);
     TiTableInfo table = metaCache.getTable(database, tableName);
     if (showRowId && table != null) {
       return table.copyTableWithRowId();
