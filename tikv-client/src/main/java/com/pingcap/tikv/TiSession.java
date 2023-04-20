@@ -182,7 +182,10 @@ public class TiSession implements AutoCloseable {
     if (snapshotCatalog == null) {
       snapshotCatalog =
           new Catalog(
-              this::createSnapshotWithSnapshotTimestamp, conf.isShowRowId(), conf.getDBPrefix());
+              this::createSnapshotWithSnapshotTimestamp,
+              conf.isShowRowId(),
+              conf.getDBPrefix(),
+              conf.getLoadTables());
     }
     snapshotCatalog.reloadCache(true);
     return snapshotCatalog;
@@ -193,7 +196,12 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (catalog == null) {
-          catalog = new Catalog(this::createSnapshot, conf.isShowRowId(), conf.getDBPrefix());
+          catalog =
+              new Catalog(
+                  this::createSnapshot,
+                  conf.isShowRowId(),
+                  conf.getDBPrefix(),
+                  conf.getLoadTables());
         }
         res = catalog;
       }
