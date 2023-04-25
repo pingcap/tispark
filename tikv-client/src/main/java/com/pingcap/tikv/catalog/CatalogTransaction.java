@@ -19,6 +19,7 @@ package com.pingcap.tikv.catalog;
 import static com.pingcap.tikv.codec.MetaCodec.KEY_DBs;
 
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -51,6 +52,7 @@ public class CatalogTransaction {
 
     logger.debug(String.format("Parse Json %s : %s", cls.getSimpleName(), json.toStringUtf8()));
     ObjectMapper mapper = new ObjectMapper();
+    mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
     try {
       return mapper.readValue(json.toStringUtf8(), cls);
     } catch (JsonParseException | JsonMappingException e) {
