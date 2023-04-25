@@ -226,6 +226,9 @@ object TiUtil {
       tiConf.setConnRecycleTimeInSeconds(conf.get(TiConfigConst.TIKV_CONN_RECYCLE_TIME))
     }
 
+    tiConf.setLoadTables(
+      conf.get(TiConfigConst.LOAD_TABLES, TiConfigConst.DEFAULT_LOAD_TABLES.toString).toBoolean)
+
     tiConf
   }
 

@@ -70,8 +70,8 @@ public class CatalogTest extends PDMockServerTest {
     helper.addDatabase(265, "other");
     helper.setSchemaVersion(667);
 
-    ReflectionWrapper wrapper = new ReflectionWrapper(cat);
-    wrapper.call("reloadCache");
+    ReflectionWrapper wrapper = new ReflectionWrapper(cat, boolean.class);
+    wrapper.call("reloadCache", false);
 
     dbs = cat.listDatabases();
     assertEquals(3, dbs.size());
