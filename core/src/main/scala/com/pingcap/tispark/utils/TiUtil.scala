@@ -237,6 +237,8 @@ object TiUtil {
       tiConf.setNewCollationEnable(conf.get(TiConfigConst.NEW_COLLATION_ENABLE).toBoolean)
     }
 
+    tiConf.setLoadTables(
+      conf.get(TiConfigConst.LOAD_TABLES, TiConfigConst.DEFAULT_LOAD_TABLES.toString).toBoolean)
     tiConf
   }
 

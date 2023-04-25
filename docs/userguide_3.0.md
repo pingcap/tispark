@@ -277,6 +277,7 @@ spark.sql("select t1.id,t2.id from spark_catalog.default.t t1 left join tidb_cat
 | `spark.tispark.replica_read.label`             | ""               | Only select TiKV store match specified labels. Format: label_x=value_x,label_y=value_y                                                                                                                                                                                                                                                                                                                                                            |
 | `spark.tispark.replica_read.address_whitelist` | ""               | Only select TiKV store with given ip addresses. Split mutil addresses by `,`                                                                                                                                                                                                                                                                                                                                                                      |
 | `spark.tispark.replica_read.address_blacklist` | ""               | Do not select TiKV store with given ip addresses. Split mutil addresses by `,`                                                                                                                                                                                                                                                                                                                                                                    |
+| `spark.tispark.load_tables`                     | true             | (experimental) Whether load all tables when we reload catalog cache. Disable it may cause table not find in scenarios where the table changes frequently.                                                                                                                                                                                                                                                                                           |
 
 ### TLS Configuration
 
@@ -385,13 +386,15 @@ TiSpark reads the range and hash partition table from TiDB.
 
 Currently, TiSpark doesn't support a MySQL/TiDB partition table syntax `select col_name from table_name partition(partition_name)`, but you can still use `where` condition to filter the partitions.
 
-TiSpark decides whether to apply partition pruning according to the partition type and the partition expression associated with the table. Currently, TiSpark partially apply partition pruning on range partition.
+TiSpark decides whether to apply partition pruning according to the partition type and the partition expression associated with the table.
+
+Currently, TiSpark partially apply partition pruning on range partition.
 
 The partition pruning is applied when the partition expression of the range partition is one of the following:
 
 + column expression
-+ `YEAR(col)` and its type is datetime/string/date literal that can be parsed as datetime.
-+ `TO_DAYS(col)` and its type is datetime/string/date literal that can be parsed as datetime.
++ `YEAR($argument)` where the argument is a column and its type is datetime or string literal
+  that can be parsed as datetime.
 
 If partition pruning is not applied, TiSpark's reading is equivalent to doing a table scan over all partitions.
 
