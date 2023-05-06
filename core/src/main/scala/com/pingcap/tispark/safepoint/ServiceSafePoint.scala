@@ -18,15 +18,11 @@
 
 package com.pingcap.tispark.safepoint
 
-<<<<<<< HEAD
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.meta.TiTimestamp
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer}
-=======
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import com.pingcap.tikv.ClientSession
->>>>>>> 7aba02692 (Set daemon thread to fix jvm not exit (#2698))
 import org.slf4j.LoggerFactory
 
 import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
