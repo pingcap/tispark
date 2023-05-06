@@ -16,6 +16,7 @@
 
 package com.pingcap.tispark.safepoint
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.pingcap.tikv.ClientSession
 import org.slf4j.LoggerFactory
 import org.tikv.common.exception.TiInternalException
@@ -33,7 +34,8 @@ case class ServiceSafePoint(
   private val PD_UPDATE_SAFE_POINT_BACKOFF: Int = 20 * 1000
   private final val logger = LoggerFactory.getLogger(getClass.getName)
   private var minStartTs = Long.MaxValue
-  val service: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+  val service: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
+    new ThreadFactoryBuilder().setNameFormat("serviceSafePoint-thread-%d").setDaemon(true).build)
   service.scheduleAtFixedRate(
     () => {
       if (minStartTs != Long.MaxValue) {
