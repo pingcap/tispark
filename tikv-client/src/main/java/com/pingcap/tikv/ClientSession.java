@@ -152,10 +152,12 @@ public class ClientSession implements AutoCloseable {
       synchronized (this) {
         if (storeStatusCache == null) {
           storeStatusCache = new ConcurrentHashMap<>();
-          storeStatusCacheExecutor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
-                  .setNameFormat("storeStatus-thread-%d")
-                  .setDaemon(true)
-                  .build());
+          storeStatusCacheExecutor =
+              Executors.newSingleThreadScheduledExecutor(
+                  new ThreadFactoryBuilder()
+                      .setNameFormat("storeStatus-thread-%d")
+                      .setDaemon(true)
+                      .build());
           storeStatusCacheExecutor.scheduleAtFixedRate(
               () -> {
                 storeStatusCache.replaceAll(
