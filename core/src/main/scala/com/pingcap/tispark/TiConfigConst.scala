@@ -97,4 +97,7 @@ object TiConfigConst {
   val GC_MAX_WAIT_TIME: String = "spark.tispark.gc_max_wait_time"
   val DEFAULT_GC_MAX_WAIT_TIME: Long = 24 * 60 * 60
   val DEFAULT_GC_SAFE_POINT_TTL: Int = 5 * 60
+  // cache load
+  val LOAD_TABLES: String = "spark.tispark.load_tables"
+  val DEFAULT_LOAD_TABLES: Boolean = true
 }

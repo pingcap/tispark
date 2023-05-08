@@ -88,6 +88,11 @@ public class TiConfiguration implements Serializable {
   private int tikvRegionSplitSizeInMB = DEF_TIKV_REGION_SPLIT_SIZE_IN_MB;
   private static final int DEF_PARTITION_PER_SPLIT = 10;
   private int partitionPerSplit = DEF_PARTITION_PER_SPLIT;
+  private boolean loadTables = true;
+
+  public boolean getLoadTables() {
+    return loadTables;
+  }
   // ----------     same with client-java  ------------
 
   public String getPdAddrsString() {

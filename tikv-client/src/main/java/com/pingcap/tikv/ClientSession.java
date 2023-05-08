@@ -16,6 +16,7 @@
 
 package com.pingcap.tikv;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.util.ConvertUpstreamUtils;
@@ -62,7 +63,11 @@ public class ClientSession implements AutoCloseable {
       synchronized (this) {
         if (catalog == null) {
           catalog =
-              new Catalog(this::createSnapshot, getConf().isShowRowId(), getConf().getDBPrefix());
+              new Catalog(
+                  this::createSnapshot,
+                  getConf().isShowRowId(),
+                  getConf().getDBPrefix(),
+                  getConf().getLoadTables());
         }
         res = catalog;
       }
@@ -117,9 +122,11 @@ public class ClientSession implements AutoCloseable {
     if (snapshotCatalog == null) {
       snapshotCatalog =
           new Catalog(
-              this::createSnapshotWithSnapshotTimestamp, conf.isShowRowId(), conf.getDBPrefix());
+              this::createSnapshotWithSnapshotTimestamp,
+              conf.isShowRowId(),
+              conf.getDBPrefix(),
+              conf.getLoadTables());
     }
-    snapshotCatalog.reloadCache(true);
     return snapshotCatalog;
   }
 
@@ -145,7 +152,12 @@ public class ClientSession implements AutoCloseable {
       synchronized (this) {
         if (storeStatusCache == null) {
           storeStatusCache = new ConcurrentHashMap<>();
-          storeStatusCacheExecutor = Executors.newScheduledThreadPool(1);
+          storeStatusCacheExecutor =
+              Executors.newSingleThreadScheduledExecutor(
+                  new ThreadFactoryBuilder()
+                      .setNameFormat("storeStatus-thread-%d")
+                      .setDaemon(true)
+                      .build());
           storeStatusCacheExecutor.scheduleAtFixedRate(
               () -> {
                 storeStatusCache.replaceAll(
