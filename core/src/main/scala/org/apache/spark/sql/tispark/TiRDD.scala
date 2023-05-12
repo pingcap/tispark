@@ -29,9 +29,11 @@ import org.tikv.common.exception
 import org.tikv.common.exception.TiInternalException
 import org.tikv.common.util.RangeSplitter.RegionTask
 
+import java.util.Collections
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.reflect.internal.util.Collections
 
 abstract class TiRDD(
     val dagRequest: TiDAGRequest,
@@ -60,6 +62,9 @@ abstract class TiRDD(
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
       with mutable.MultiMap[String, RegionTask]
 
+    Collections.shuffle(keyWithRegionTasks)
+    logInfo("shuffle keyWithRegionTasks success")
+
     var index = 0
     val result = new ListBuffer[TiPartition]
     for (task <- keyWithRegionTasks) {
@@ -69,6 +74,7 @@ abstract class TiRDD(
         result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
         index += 1
         hostTasksMap.remove(task.getHost)
+        logInfo("new partition with host :" + task.getHost + " and index :" + index)
       }
 
     }
