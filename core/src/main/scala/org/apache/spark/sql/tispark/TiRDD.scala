@@ -33,7 +33,6 @@ import java.util.Collections
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.reflect.internal.util.Collections
 
 abstract class TiRDD(
     val dagRequest: TiDAGRequest,
