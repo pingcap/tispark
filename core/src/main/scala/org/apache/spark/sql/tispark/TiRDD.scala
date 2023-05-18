@@ -62,7 +62,8 @@ abstract class TiRDD(
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
       with mutable.MultiMap[String, RegionTask]
 
-    val mutableKeyWithRegionTasks: util.List[RegionTask] = util.Arrays.asList(keyWithRegionTasks.toArray(): _*)
+    val mutableKeyWithRegionTasks: util.List[RegionTask] = new util.ArrayList[RegionTask]()
+    mutableKeyWithRegionTasks.addAll(keyWithRegionTasks)
     Collections.shuffle(mutableKeyWithRegionTasks)
     logInfo("shuffle keyWithRegionTasks success, size is " + mutableKeyWithRegionTasks.size())
 
