@@ -29,6 +29,7 @@ import org.tikv.common.exception
 import org.tikv.common.exception.TiInternalException
 import org.tikv.common.util.RangeSplitter.RegionTask
 
+import java.util
 import java.util.Collections
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -61,12 +62,13 @@ abstract class TiRDD(
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
       with mutable.MultiMap[String, RegionTask]
 
-    Collections.shuffle(keyWithRegionTasks)
-    logInfo("shuffle keyWithRegionTasks success")
+    val mutableKeyWithRegionTasks: util.List[RegionTask] = util.Arrays.asList(keyWithRegionTasks.toArray(): _*)
+    Collections.shuffle(mutableKeyWithRegionTasks)
+    logInfo("shuffle keyWithRegionTasks success, size is " + mutableKeyWithRegionTasks.size())
 
     var index = 0
     val result = new ListBuffer[TiPartition]
-    for (task <- keyWithRegionTasks) {
+    for (task <- mutableKeyWithRegionTasks) {
       hostTasksMap.addBinding(task.getHost, task)
       val tasks = hostTasksMap(task.getHost)
       if (tasks.size >= partitionPerSplit) {
