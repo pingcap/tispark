@@ -61,9 +61,9 @@ public class TiFlashClient
   @Override
   public void close() throws Exception {}
 
-  public static boolean isMppAlive(ManagedChannel channel) {
+  public static boolean isMppAlive(ManagedChannel channel, int timeout) {
     TikvGrpc.TikvBlockingStub stub =
-        TikvGrpc.newBlockingStub(channel).withDeadlineAfter(500, TimeUnit.MILLISECONDS);
+        TikvGrpc.newBlockingStub(channel).withDeadlineAfter(timeout, TimeUnit.MILLISECONDS);
     Supplier<Mpp.IsAliveRequest> factory = () -> Mpp.IsAliveRequest.newBuilder().build();
     try {
       Mpp.IsAliveResponse resp =

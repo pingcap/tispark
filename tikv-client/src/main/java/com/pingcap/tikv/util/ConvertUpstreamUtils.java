@@ -81,6 +81,9 @@ public class ConvertUpstreamUtils {
     tikvConf.setReplicaSelector(conf.getReplicaReadPolicy());
     // grpc forward
     tikvConf.setEnableGrpcForward(conf.isEnableGrpcForward());
+    // health check timeout
+    tikvConf.setGrpcHealthCheckTimeout(conf.getHealthCheckTimeout());
+    tikvConf.setHealthCheckPeriodDuration(conf.getHealthCheckPeriod());
     return tikvConf;
   }
 
