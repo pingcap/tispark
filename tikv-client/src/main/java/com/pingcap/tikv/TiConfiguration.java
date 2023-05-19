@@ -187,6 +187,8 @@ public class TiConfiguration implements Serializable {
   private ReplicaReadPolicy replicaReadPolicy = ReplicaReadPolicy.DEFAULT;
 
   private boolean enableGrpcForward = false;
+  private int healthCheckTimeout;
+  private int healthCheckPeriod;
 
   private static Long getTimeAsSeconds(String key) {
     return Utils.timeStringAsSec(key);
