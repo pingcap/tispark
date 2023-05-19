@@ -262,10 +262,10 @@ object TiUtil {
       conf
         .get(
           TiConfigConst.GRPC_HEALTH_CHECK_TIMEOUT,
-          TiConfigConst.DEFAULT_GRPC_HEALTH_CHECK_TIMEOUT)
+          TiConfiguration.DEFHealthCheckTimeout.toString)
         .toInt)
     tiConf.setHealthCheckPeriod(conf
-      .get(TiConfigConst.GPRC_HEALTH_CHECK_PERIOD, TiConfigConst.DEFAULT_GRPC_HEALTH_CHECK_PERIOD)
+      .get(TiConfigConst.GPRC_HEALTH_CHECK_PERIOD, TiConfiguration.DEFHealthCheckPeriod.toString)
       .toInt)
     tiConf
   }

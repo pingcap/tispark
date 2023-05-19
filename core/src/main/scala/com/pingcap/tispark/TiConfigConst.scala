@@ -102,7 +102,5 @@ object TiConfigConst {
   val DEFAULT_LOAD_TABLES: Boolean = true
   // health check timeout
   val GRPC_HEALTH_CHECK_TIMEOUT = "spark.tispark.grpc.health_check_timeout_in_ms"
-  val DEFAULT_GRPC_HEALTH_CHECK_TIMEOUT = "2000"
   val GPRC_HEALTH_CHECK_PERIOD = "spark.tispark.grpc.health_check_period_in_ms"
-  val DEFAULT_GRPC_HEALTH_CHECK_PERIOD = "3000"
 }
