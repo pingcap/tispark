@@ -258,6 +258,15 @@ object TiUtil {
 
     tiConf.setLoadTables(
       conf.get(TiConfigConst.LOAD_TABLES, TiConfigConst.DEFAULT_LOAD_TABLES.toString).toBoolean)
+    tiConf.setHealthCheckTimeout(
+      conf
+        .get(
+          TiConfigConst.GRPC_HEALTH_CHECK_TIMEOUT,
+          TiConfiguration.DEFHealthCheckTimeout.toString)
+        .toInt)
+    tiConf.setHealthCheckPeriod(conf
+      .get(TiConfigConst.GPRC_HEALTH_CHECK_PERIOD, TiConfiguration.DEFHealthCheckPeriod.toString)
+      .toInt)
     tiConf
   }
 
