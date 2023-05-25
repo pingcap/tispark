@@ -32,6 +32,7 @@ class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") 
       jdbcUpdate(
         s"create table $dbtable(i bigint primary key clustered NOT NULL AUTO_RANDOM($shardBits))")
     } else {
+//      cancel("TiDB version must be greater than 5.0.0")
       if (isEnableAlterPrimaryKey) {
         cancel("TiDB config alter-primary-key must be false")
       }
@@ -74,6 +75,7 @@ class AutoRandomSuite extends BaseBatchWriteTest("test_datasource_auto_random") 
       jdbcUpdate(
         s"create table $dbtable(i bigint primary key clustered NOT NULL AUTO_RANDOM($shardBits))")
     } else {
+      cancel("TiDB version must be greater than 5.0.0")
       if (isEnableAlterPrimaryKey) {
         cancel("TiDB config alter-primary-key must be false")
       }

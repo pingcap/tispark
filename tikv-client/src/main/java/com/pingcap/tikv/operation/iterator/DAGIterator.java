@@ -208,7 +208,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     remainTasks.add(regionTask);
     BackOffer backOffer = ConcreteBackOffer.newCopNextMaxBackOff();
     HashSet<Long> resolvedLocks = new HashSet<>();
-    BackOffer storeUnreachableBackOffer = ConcreteBackOffer.newCustomBackOff(120 * 1000);
+    BackOffer storeUnreachableBackOffer = ConcreteBackOffer.newCustomBackOff(60 * 1000);
 
     // In case of one region task spilt into several others, we ues a queue to properly handle all
     // the remaining tasks.
@@ -224,7 +224,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       try {
         if (store == null || !store.isReachable()) {
           storeUnreachableBackOffer.doBackOffWithMaxSleep(BackOffFunction.BackOffFuncType.BoServerBusy,2000,new TiClientInternalException("retry timeout: store is null or unreachable"));
-          logger.info("TiKV store is null or unreachable, invalid cache and retry");
+          logger.warn("TiKV store is null or unreachable, invalid cache and retry");
           clientSession.getTiKVSession().getRegionManager().invalidateRegion(region);
           remainTasks.addAll(
               RangeSplitter.newSplitter(clientSession.getTiKVSession().getRegionManager())
