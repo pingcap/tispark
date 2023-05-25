@@ -223,7 +223,10 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
 
       try {
         if (store == null || !store.isReachable()) {
-          storeUnreachableBackOffer.doBackOffWithMaxSleep(BackOffFunction.BackOffFuncType.BoServerBusy,2000,new TiClientInternalException("retry timeout: store is null or unreachable"));
+          storeUnreachableBackOffer.doBackOffWithMaxSleep(
+              BackOffFunction.BackOffFuncType.BoServerBusy,
+              2000,
+              new TiClientInternalException("retry timeout: store is null or unreachable"));
           logger.warn("TiKV store is null or unreachable, invalid cache and retry");
           clientSession.getTiKVSession().getRegionManager().invalidateRegion(region);
           remainTasks.addAll(
