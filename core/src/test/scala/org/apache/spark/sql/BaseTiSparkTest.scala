@@ -112,7 +112,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   def beforeAllWithoutLoadData(): Unit = {
     super.beforeAll()
-    setLogLevel("INFO")
+    setLogLevel("WARN")
   }
 
   def setLogLevel(level: String): Unit =

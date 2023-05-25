@@ -1,12 +1,12 @@
 name: alter-primary-key-false-test
 
 on:
-  push:
-    branches:
-      - master
   pull_request:
     branches:
-      - master
+      - release-3.1
+      - release-3.0
+      - release-2.5
+      - release-2.4
 
 jobs:
   test:
