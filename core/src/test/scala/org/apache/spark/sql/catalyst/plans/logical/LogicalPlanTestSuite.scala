@@ -67,7 +67,6 @@ class LogicalPlanTestSuite extends BasePlanTest {
     if (!DAGRequest.contains("Limit")) {
       fail("Limit not push down")
     }
-    Thread.sleep(30 * 1000)
   }
 
   test("fix Residual Filter containing wrong info") {
