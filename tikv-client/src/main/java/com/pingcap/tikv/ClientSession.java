@@ -165,11 +165,12 @@ public class ClientSession implements AutoCloseable {
                         TiFlashClient.isMppAlive(
                             this.tiKVSession
                                 .getChannelFactory()
-                                .getChannel(k, this.tiKVSession.getPDClient().getHostMapping())));
+                                .getChannel(k, this.tiKVSession.getPDClient().getHostMapping()),
+                            conf.getHealthCheckTimeout()));
               },
               0,
-              5,
-              TimeUnit.SECONDS);
+              conf.getHealthCheckPeriod(),
+              TimeUnit.MILLISECONDS);
         }
       }
     }

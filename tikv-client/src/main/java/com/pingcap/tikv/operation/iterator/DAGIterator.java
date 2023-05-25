@@ -226,7 +226,9 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
                 .getRegionStoreClientBuilder()
                 .build(region, store, storeType);
         // if mpp store is not alive, drop it and generate a new task.
-        if (storeType == TiStoreType.TiFlash && !isMppStoreAlive(store.getAddress())) {
+        if (storeType == TiStoreType.TiFlash
+            && !isMppStoreAlive(
+                store.getAddress(), clientSession.getConf().getHealthCheckTimeout())) {
           logger.info("Re-splitting region task due to TiFlash is unavailable");
           remainTasks.addAll(
               RangeSplitter.newSplitter(clientSession.getTiKVSession().getRegionManager())
@@ -294,7 +296,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
   }
 
   // See https://github.com/pingcap/tispark/pull/2619 for more details
-  public Boolean isMppStoreAlive(String address) {
+  public Boolean isMppStoreAlive(String address, int timeout) {
     try {
       Map<String, Boolean> storeStatusCache = clientSession.getStoreStatusCache();
       return storeStatusCache.computeIfAbsent(
@@ -305,7 +307,8 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
                       .getTiKVSession()
                       .getChannelFactory()
                       .getChannel(
-                          address, clientSession.getTiKVSession().getPDClient().getHostMapping())));
+                          address, clientSession.getTiKVSession().getPDClient().getHostMapping()),
+                  timeout));
     } catch (Exception e) {
       throw new TiClientInternalException("Error get MppStore Status.", e);
     }

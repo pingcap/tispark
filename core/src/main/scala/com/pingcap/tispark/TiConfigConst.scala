@@ -100,4 +100,7 @@ object TiConfigConst {
   // cache load
   val LOAD_TABLES: String = "spark.tispark.load_tables"
   val DEFAULT_LOAD_TABLES: Boolean = true
+  // health check timeout
+  val GRPC_HEALTH_CHECK_TIMEOUT = "spark.tispark.grpc.health_check_timeout_in_ms"
+  val GPRC_HEALTH_CHECK_PERIOD = "spark.tispark.grpc.health_check_period_in_ms"
 }
