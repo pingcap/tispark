@@ -12,3 +12,4 @@ class TiDBTableScanBuilder(
     TiDBTableScan(tableRef,schema)
   }
 }
+
