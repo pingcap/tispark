@@ -22,6 +22,7 @@ case class TiDBTableScan(
       }
 
       override def numRows(): OptionalLong = OptionalLong.empty()
+
     }
   }
 }
