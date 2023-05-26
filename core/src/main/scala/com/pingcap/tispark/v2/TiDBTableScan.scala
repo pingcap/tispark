@@ -20,6 +20,7 @@ case class TiDBTableScan(
         val size = tableRef.sizeInBytes
         OptionalLong.of(size)
       }
+
       override def numRows(): OptionalLong = OptionalLong.empty()
     }
   }
