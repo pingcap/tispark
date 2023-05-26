@@ -105,7 +105,7 @@ case class TiDBTable(
   def tableName: String = tableRef.tableName
 
   override def newScanBuilder(options: CaseInsensitiveStringMap): ScanBuilder =
-    () => () => schema
+    new TiDBTableScanBuilder(this.tableRef,this.schema)
 
   override def name(): String = tableRef.quoted
 
