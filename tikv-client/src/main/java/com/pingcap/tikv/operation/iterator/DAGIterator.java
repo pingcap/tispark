@@ -227,11 +227,21 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
               BackOffFunction.BackOffFuncType.BoServerBusy,
               2000,
               new TiClientInternalException("retry timeout: store is null or unreachable"));
-          logger.warn("TiKV store is null or unreachable, invalid cache and retry");
+          if (store == null) {
+            logger.warn("TiKV store is null, invalid cache and retry");
+          } else {
+            logger.warn(
+                "TiKV store " + store.getAddress() + " is unreachable, invalid cache and retry");
+          }
           clientSession.getTiKVSession().getRegionManager().invalidateRegion(region);
-          remainTasks.addAll(
-              RangeSplitter.newSplitter(clientSession.getTiKVSession().getRegionManager())
-                  .splitRangeByRegion(ranges, storeType));
+          try {
+            remainTasks.addAll(
+                RangeSplitter.newSplitter(clientSession.getTiKVSession().getRegionManager())
+                    .splitRangeByRegion(ranges, storeType));
+          } catch (Exception e) {
+            logger.warn("split range by region error, retry with the original task", e);
+            remainTasks.add(task);
+          }
           continue;
         }
 
