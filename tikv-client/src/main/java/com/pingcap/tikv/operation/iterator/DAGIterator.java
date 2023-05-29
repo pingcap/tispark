@@ -239,6 +239,8 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
                 RangeSplitter.newSplitter(clientSession.getTiKVSession().getRegionManager())
                     .splitRangeByRegion(ranges, storeType));
           } catch (Exception e) {
+            // If the pd is switching leader, the region invalid exception will be thrown. In this
+            // case, we can retry with the original task.
             logger.warn("split range by region error, retry with the original task", e);
             remainTasks.add(task);
           }
