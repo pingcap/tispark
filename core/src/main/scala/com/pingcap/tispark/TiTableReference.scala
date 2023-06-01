@@ -19,4 +19,5 @@ package com.pingcap.tispark
 case class TiTableReference(
     databaseName: String,
     tableName: String,
-    var sizeInBytes: Long = Long.MaxValue)
+    var sizeInBytes: Long = Long.MaxValue,
+    var numRows: Long = Long.MaxValue)

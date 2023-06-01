@@ -31,10 +31,14 @@ case class TiDBTableScan(tableRef: TiTableReference, schema: StructType)
   override def estimateStatistics(): Statistics = {
     new Statistics {
       override def sizeInBytes(): OptionalLong = {
-        val size = tableRef.sizeInBytes
-        OptionalLong.of(size)
+        val sizeInBytes = tableRef.sizeInBytes
+        OptionalLong.of(sizeInBytes)
       }
-      override def numRows(): OptionalLong = OptionalLong.empty()
+
+      override def numRows(): OptionalLong = {
+        val numRows = tableRef.numRows
+        OptionalLong.of(numRows)
+      }
     }
   }
 }

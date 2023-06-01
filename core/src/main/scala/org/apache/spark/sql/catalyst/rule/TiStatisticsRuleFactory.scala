@@ -46,7 +46,10 @@ case class TiStatisticsRule(getOrCreateTiContext: SparkSession => TiContext)(
         StatisticsManager.loadStatisticsInfo(tiTable.table)
       }
       val sizeInBytes = StatisticsManager.estimateTableSize(tiTable.table)
+      val numRows = StatisticsManager.estimatedRowCount(tiTable.table)
+
       tiTable.tableRef.sizeInBytes = sizeInBytes
+      tiTable.tableRef.numRows = numRows
       dr
   }
 
