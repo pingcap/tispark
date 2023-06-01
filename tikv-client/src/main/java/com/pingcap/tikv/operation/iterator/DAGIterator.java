@@ -43,6 +43,7 @@ import org.tikv.common.region.RegionStoreClient;
 import org.tikv.common.region.TiRegion;
 import org.tikv.common.region.TiStore;
 import org.tikv.common.region.TiStoreType;
+import org.tikv.common.util.BackOffFunction;
 import org.tikv.common.util.BackOffer;
 import org.tikv.common.util.ConcreteBackOffer;
 import org.tikv.common.util.RangeSplitter;
@@ -206,8 +207,9 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     Queue<SelectResponse> responseQueue = new ArrayDeque<>();
     remainTasks.add(regionTask);
     BackOffer backOffer = ConcreteBackOffer.newCopNextMaxBackOff();
-
     HashSet<Long> resolvedLocks = new HashSet<>();
+    BackOffer storeUnreachableBackOffer = ConcreteBackOffer.newCustomBackOff(60 * 1000);
+
     // In case of one region task spilt into several others, we ues a queue to properly handle all
     // the remaining tasks.
     while (!remainTasks.isEmpty()) {
@@ -220,6 +222,31 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       TiStore store = task.getStore();
 
       try {
+        if (store == null || !store.isReachable()) {
+          storeUnreachableBackOffer.doBackOffWithMaxSleep(
+              BackOffFunction.BackOffFuncType.BoServerBusy,
+              2000,
+              new TiClientInternalException("retry timeout: store is null or unreachable"));
+          if (store == null) {
+            logger.warn("TiKV store is null, invalid cache and retry");
+          } else {
+            logger.warn(
+                "TiKV store " + store.getAddress() + " is unreachable, invalid cache and retry");
+          }
+          clientSession.getTiKVSession().getRegionManager().invalidateRegion(region);
+          try {
+            remainTasks.addAll(
+                RangeSplitter.newSplitter(clientSession.getTiKVSession().getRegionManager())
+                    .splitRangeByRegion(ranges, storeType));
+          } catch (Exception e) {
+            // If the pd is switching leader, the region invalid exception will be thrown. In this
+            // case, we can retry with the original task.
+            logger.warn("split range by region error, retry with the original task", e);
+            remainTasks.add(task);
+          }
+          continue;
+        }
+
         RegionStoreClient client =
             clientSession
                 .getTiKVSession()
