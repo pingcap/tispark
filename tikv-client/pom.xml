@@ -23,8 +23,12 @@
         <grpc.version>1.29.0</grpc.version>
         <powermock.version>1.6.6</powermock.version>
         <jackson.annotations.version>2.12.6</jackson.annotations.version>
+<<<<<<< HEAD
         <jackson.databind.version>2.12.6.1</jackson.databind.version>
         <trove4j.version>3.0.1</trove4j.version>
+=======
+        <jackson.databind.version>2.12.7.1</jackson.databind.version>
+>>>>>>> 1fd6538a9 (delete trove4j (#2732))
         <jetcd.version>0.4.1</jetcd.version>
         <joda-time.version>2.9.9</joda-time.version>
         <joda-convert.version>1.9.2</joda-convert.version>
@@ -66,12 +70,6 @@
             <artifactId>jcl-over-slf4j</artifactId>
             <version>${slf4j.version}</version>
             <scope>provided</scope>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/net.sf.trove4j/trove4j -->
-        <dependency>
-            <groupId>net.sf.trove4j</groupId>
-            <artifactId>trove4j</artifactId>
-            <version>${trove4j.version}</version>
         </dependency>
         <dependency>
             <groupId>com.sangupta</groupId>
