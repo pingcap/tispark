@@ -5,20 +5,47 @@
     <parent>
         <groupId>com.pingcap.tispark</groupId>
         <artifactId>tispark-parent</artifactId>
-        <version>3.1.4</version>
+        <version>3.1.3</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>tispark-core-internal</artifactId>
+    <artifactId>tispark-core-test</artifactId>
     <packaging>jar</packaging>
-    <name>TiSpark Project Core Internal</name>
+    <name>TiSpark Project Core Test</name>
     <url>http://github.copm/pingcap/tispark</url>
 
-    <properties>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <maven.compiler.source>1.8</maven.compiler.source>
-    </properties>
     <dependencies>
+        <dependency>
+            <groupId>com.pingcap.tispark</groupId>
+            <artifactId>tispark-core-internal</artifactId>
+            <version>${project.parent.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.spark</groupId>
+                    <artifactId>spark-core_${scala.binary.version}</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.spark</groupId>
+                    <artifactId>spark-catalyst_${scala.binary.version}</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.spark</groupId>
+                    <artifactId>spark-sql_${scala.binary.version}</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.spark</groupId>
+                    <artifactId>spark-hive_${scala.binary.version}</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.spark</groupId>
+                    <artifactId>spark-hive-thriftserver_${scala.binary.version}</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.spark</groupId>
+                    <artifactId>spark-unsafe_${scala.binary.version}</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <dependency>
             <groupId>com.pingcap.tikv</groupId>
             <artifactId>tikv-client</artifactId>
@@ -54,12 +81,8 @@
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.binary.version}</artifactId>
-            <version>${spark.version.compile}</version>
+            <version>${spark.version.test}</version>
             <exclusions>
-                <exclusion>
-                    <groupId>io.netty</groupId>
-                    <artifactId>netty-all</artifactId>
-                </exclusion>
                 <exclusion>
                     <groupId>org.apache.logging.log4j</groupId>
                     <artifactId>log4j-api</artifactId>
@@ -71,24 +94,19 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-            <version>4.1.75.Final</version>
-        </dependency>
-        <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-catalyst_${scala.binary.version}</artifactId>
-            <version>${spark.version.compile}</version>
+            <version>${spark.version.test}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.binary.version}</artifactId>
-            <version>${spark.version.compile}</version>
+            <version>${spark.version.test}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive_${scala.binary.version}</artifactId>
-            <version>${spark.version.compile}</version>
+            <version>${spark.version.test}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.hadoop</groupId>
@@ -99,22 +117,18 @@
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive-thriftserver_${scala.binary.version}</artifactId>
-            <version>${spark.version.compile}</version>
+            <version>${spark.version.test}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-unsafe_${scala.binary.version}</artifactId>
-            <version>${spark.version.compile}</version>
+            <version>${spark.version.test}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>2.7.2</version>
             <exclusions>
-                <exclusion>
-                    <groupId>io.netty</groupId>
-                    <artifactId>netty-all</artifactId>
-                </exclusion>
                 <exclusion>
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-log4j12</artifactId>
@@ -138,11 +152,6 @@
             <artifactId>mysql-connector-java</artifactId>
             <version>${mysql.connector.version}</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.github.oshi</groupId>
-            <artifactId>oshi-core</artifactId>
-            <version>6.1.6</version>
         </dependency>
     </dependencies>
 
@@ -370,21 +379,10 @@
                                     <pattern>com.google.common</pattern>
                                     <shadedPattern>com.pingcap.com.google.common</shadedPattern>
                                 </relocation>
-                                <relocation>
-                                    <pattern>com.github.oshi</pattern>
-                                    <shadedPattern>com.pingcap.com.github.oshi</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.scalaj</pattern>
-                                    <shadedPattern>com.pingcap.org.scalaj</shadedPattern>
-                                </relocation>
                             </relocations>
                             <artifactSet>
                                 <includes>
                                     <include>com.google.guava:*</include>
-                                    <include>com.github.oshi:*</include>
-                                    <include>net.java.dev.jna:*</include>
-                                    <include>org.scalaj:*</include>
                                 </includes>
                             </artifactSet>
                         </configuration>
