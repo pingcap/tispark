@@ -23,8 +23,8 @@ import org.apache.spark.sql.functions.{col, sum}
 class IssueTestSuite extends BaseTiSparkTest {
 
   test("test tiflash overflow in unsigned bigint") {
-    if (!enableTiFlashTest){
-        cancel("tiflash test not enabled")
+    if (!enableTiFlashTest) {
+      cancel("tiflash test not enabled")
     }
     val dbTable = "tispark_test.tiflash_overflow"
     tidbStmt.execute(s"drop table if exists $dbTable")
