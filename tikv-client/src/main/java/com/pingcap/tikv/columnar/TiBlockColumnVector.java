@@ -18,11 +18,8 @@ package com.pingcap.tikv.columnar;
 
 import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
 
-<<<<<<< HEAD
 import com.pingcap.tikv.ExtendedDateTime;
-=======
 import com.google.common.primitives.UnsignedLong;
->>>>>>> 044630939 (Fix TiFlash overflow (#2740))
 import com.pingcap.tikv.codec.Codec.DateCodec;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.columnar.datatypes.CHType;
