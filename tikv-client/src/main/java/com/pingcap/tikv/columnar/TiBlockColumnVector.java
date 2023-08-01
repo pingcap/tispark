@@ -18,13 +18,18 @@ package com.pingcap.tikv.columnar;
 
 import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
 
+<<<<<<< HEAD
 import com.pingcap.tikv.ExtendedDateTime;
+=======
+import com.google.common.primitives.UnsignedLong;
+>>>>>>> 044630939 (Fix TiFlash overflow (#2740))
 import com.pingcap.tikv.codec.Codec.DateCodec;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.columnar.datatypes.CHType;
 import com.pingcap.tikv.types.AbstractDateTimeType;
 import com.pingcap.tikv.types.BytesType;
 import com.pingcap.tikv.types.DateType;
+import com.pingcap.tikv.types.DecimalType;
 import com.pingcap.tikv.util.MemoryUtil;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
@@ -240,6 +245,10 @@ public class TiBlockColumnVector extends TiColumnVector {
   @Override
   public BigDecimal getDecimal(int rowId, int precision, int scale) {
     long rowIdAddr = (long) rowId * fixedLength + dataAddr;
+    // avoid unsigned long overflow here
+    if (type == DecimalType.BIG_INT_DECIMAL) {
+      return new BigDecimal(UnsignedLong.fromLongBits(this.getLong(rowId)).bigIntegerValue());
+    }
     if (fixedLength == 4) {
       return MemoryUtil.getDecimal32(rowIdAddr, scale);
     } else if (fixedLength == 8) {
