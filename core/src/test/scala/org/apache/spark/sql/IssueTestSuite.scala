@@ -22,8 +22,6 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
-<<<<<<< HEAD
-=======
   test("test tiflash overflow in unsigned bigint") {
     if (!enableTiFlashTest) {
       cancel("tiflash test not enabled")
@@ -62,7 +60,6 @@ class IssueTestSuite extends BaseTiSparkTest {
     checkAnswer(df, Seq(row1))
   }
 
->>>>>>> 044630939 (Fix TiFlash overflow (#2740))
   //https://github.com/pingcap/tispark/issues/2268
   test("show rowid in commonhandle") {
     spark.sqlContext.setConf(TiConfigConst.SHOW_ROWID, "true")
