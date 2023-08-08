@@ -22,6 +22,33 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("test tiflash overflow in unsigned bigint") {
+    if (!enableTiFlashTest) {
+      cancel("tiflash test not enabled")
+    }
+    val dbTable = "tispark_test.tiflash_overflow"
+    tidbStmt.execute(s"drop table if exists $dbTable")
+    tidbStmt.execute(
+      s"CREATE TABLE $dbTable (`a` bigint(20) UNSIGNED NOT NULL,`b` bigint(20) UNSIGNED NOT NULL)")
+    tidbStmt.execute(s"insert into $dbTable values(16717361816800086255, 16717361816800086255)")
+    tidbStmt.execute(s"ALTER TABLE $dbTable SET TIFLASH REPLICA 1")
+
+    Thread.sleep(5 * 1000)
+
+    val prev = spark.conf.getOption(TiConfigConst.ISOLATION_READ_ENGINES)
+    try {
+      spark.conf
+        .set(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIFLASH_STORAGE_ENGINE)
+      val df = spark.sql(s"select * from $dbTable")
+      val row = Row(BigDecimal("16717361816800086255"), BigDecimal("16717361816800086255"))
+      checkAnswer(df, Seq(row))
+    } finally {
+      spark.conf.set(
+        TiConfigConst.ISOLATION_READ_ENGINES,
+        prev.getOrElse(TiConfigConst.DEFAULT_STORAGE_ENGINES))
+    }
+  }
+
   //https://github.com/pingcap/tispark/issues/2268
   test("show rowid in commonhandle") {
     spark.sqlContext.setConf(TiConfigConst.SHOW_ROWID, "true")
