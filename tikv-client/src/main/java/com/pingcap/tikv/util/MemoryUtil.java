@@ -29,7 +29,6 @@ import java.nio.channels.FileChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.shade.com.google.common.primitives.UnsignedLong;
-import sun.misc.Cleaner;
 import sun.misc.Unsafe;
 import sun.nio.ch.DirectBuffer;
 
@@ -173,16 +172,6 @@ public class MemoryUtil {
     unsafe.freeMemory(addr);
   }
 
-  /** Good manner to free a buffer before forget it. */
-  public static void free(ByteBuffer buffer) {
-    if (buffer.isDirect()) {
-      Cleaner cleaner = ((DirectBuffer) buffer).cleaner();
-      if (cleaner != null) {
-        cleaner.clean();
-      }
-    }
-  }
-
   public static void setByte(long address, byte b) {
     unsafe.putByte(address, b);
   }
@@ -300,38 +289,6 @@ public class MemoryUtil {
     return unsafe.getDouble(address);
   }
 
-  public static ByteBuffer getByteBuffer(long address, int length, boolean autoFree) {
-    ByteBuffer instance = getHollowDirectByteBuffer();
-    if (autoFree) {
-      Cleaner cleaner = Cleaner.create(instance, new Deallocator(address));
-      setByteBuffer(instance, address, length, cleaner);
-    } else {
-      setByteBuffer(instance, address, length, null);
-    }
-    instance.order(ByteOrder.nativeOrder());
-    return instance;
-  }
-
-  public static ByteBuffer getHollowDirectByteBuffer() {
-    ByteBuffer instance;
-    try {
-      instance = (ByteBuffer) unsafe.allocateInstance(DIRECT_BYTE_BUFFER_CLASS);
-    } catch (InstantiationException e) {
-      throw new AssertionError(e);
-    }
-    instance.order(ByteOrder.nativeOrder());
-    return instance;
-  }
-
-  public static void setByteBuffer(ByteBuffer instance, long address, int length, Cleaner cleaner) {
-    unsafe.putLong(instance, DIRECT_BYTE_BUFFER_ADDRESS_OFFSET, address);
-    unsafe.putInt(instance, DIRECT_BYTE_BUFFER_CAPACITY_OFFSET, length);
-    unsafe.putInt(instance, DIRECT_BYTE_BUFFER_LIMIT_OFFSET, length);
-    if (cleaner != null) {
-      unsafe.putObject(instance, DIRECT_BYTE_BUFFER_CLEANER, cleaner);
-    }
-  }
-
   public static Object getAttachment(ByteBuffer instance) {
     assert instance.getClass() == DIRECT_BYTE_BUFFER_CLASS;
     return unsafe.getObject(instance, DIRECT_BYTE_BUFFER_ATTACHMENT_OFFSET);
@@ -361,10 +318,6 @@ public class MemoryUtil {
         DIRECT_BYTE_BUFFER_CAPACITY_OFFSET,
         unsafe.getInt(source, DIRECT_BYTE_BUFFER_CAPACITY_OFFSET));
     return hollowBuffer;
-  }
-
-  public static ByteBuffer duplicateDirectByteBuffer(ByteBuffer source) {
-    return duplicateDirectByteBuffer(source, getHollowDirectByteBuffer());
   }
 
   public static long getLongByByte(long address) {

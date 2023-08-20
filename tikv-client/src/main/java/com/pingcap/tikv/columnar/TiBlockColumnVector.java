@@ -101,17 +101,6 @@ public class TiBlockColumnVector extends TiColumnVector {
    */
   @Override
   public void close() {
-    if (dataAddr != 0) {
-      MemoryUtil.free(data);
-    }
-
-    if (offsetsAddr != 0) {
-      MemoryUtil.free(offsets);
-    }
-
-    if (nullMapAddr != 0) {
-      MemoryUtil.free(nullMap);
-    }
     dataAddr = 0;
     offsetsAddr = 0;
     nullMapAddr = 0;
