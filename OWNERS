@@ -1,0 +1,16 @@
+# See the OWNERS docs at https://go.k8s.io/owners
+approvers:
+  - birdstorm
+  - Coderlxl
+  - humengyu2012
+  - ilovesoup
+  - LittleFall
+  - marsishandsome
+  - shiyuhang0
+  - sunxiaoguang
+  - windtalker
+  - xuanyu66
+reviewers:
+  - Daemonxiao
+  - qidi1
+  - zhangyangyu
