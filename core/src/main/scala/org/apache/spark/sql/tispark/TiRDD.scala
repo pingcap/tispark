@@ -32,6 +32,8 @@ import org.tikv.common.util.RangeSplitter.RegionTask
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import java.util
+import java.util.Collections
 
 abstract class TiRDD(
     val dagRequest: TiDAGRequest,

@@ -264,8 +264,13 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
         }
 
         client.addResolvedLocks(startTs, resolvedLocks);
-        logger.info(String.format("start coprocess request to %s with timeout %s and replica %s",task.getHost(),
-                clientSession.getTiKVSession().getConf().getTimeout(), clientSession.getTiKVSession().getConf().getReplicaRead()));
+        logger.info(
+            String.format(
+                "start coprocess request to %s with timeout %s and replica %s, client-java timeout %s",
+                task.getHost(),
+                clientSession.getTiKVSession().getConf().getTimeout(),
+                clientSession.getTiKVSession().getConf().getReplicaRead()),
+                client.getTimeout());
 
         Collection<RegionTask> tasks =
             client.coprocess(backOffer, dagRequest, ranges, responseQueue, startTs);
