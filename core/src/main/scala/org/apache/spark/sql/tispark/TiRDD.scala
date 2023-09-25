@@ -78,6 +78,11 @@ abstract class TiRDD(
         hostTasksMap.remove(task.getHost)
       }
       logInfo("new partition with host :" + task.getHost + " and index :" + index)
+      logInfo("start print the region id in this partition")
+      for (t <- tasks) {
+        logInfo("region id: "+t.getRegion.getId)
+      }
+      logInfo("end print the region id in this partition")
     }
     // add rest
     for (tasks <- hostTasksMap.values) {
