@@ -88,5 +88,5 @@ abstract class TiRDD(
   }
 
   override protected def getPreferredLocations(split: Partition): Seq[String] =
-    split.asInstanceOf[TiPartition].tasks.head.getHost :: Nil
+    Nil
 }
