@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2023 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,15 @@
  * limitations under the License.
  */
 
-package com.pingcap.tispark
+package com.pingcap.tispark.v2
 
-case class TiTableReference(
-    databaseName: String,
-    tableName: String,
-    var sizeInBytes: Long = Long.MaxValue,
-    var numRows: Long = Long.MaxValue)
+import com.pingcap.tispark.TiTableReference
+import org.apache.spark.sql.connector.read.{Scan, ScanBuilder}
+import org.apache.spark.sql.types.StructType
+
+case class TiDBTableScanBuilder(tableRef: TiTableReference, schema: StructType)
+    extends ScanBuilder {
+  override def build(): Scan = {
+    TiDBTableScan(tableRef, schema)
+  }
+}
