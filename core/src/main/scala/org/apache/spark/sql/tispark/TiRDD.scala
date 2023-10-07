@@ -32,8 +32,6 @@ import org.tikv.common.util.RangeSplitter.RegionTask
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import java.util
-import java.util.Collections
 
 abstract class TiRDD(
     val dagRequest: TiDAGRequest,
@@ -62,14 +60,9 @@ abstract class TiRDD(
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
       with mutable.MultiMap[String, RegionTask]
 
-    val mutableKeyWithRegionTasks: util.List[RegionTask] = new util.ArrayList[RegionTask]()
-    mutableKeyWithRegionTasks.addAll(keyWithRegionTasks)
-    Collections.shuffle(mutableKeyWithRegionTasks)
-    logInfo("shuffle keyWithRegionTasks success, size is " + mutableKeyWithRegionTasks.size())
-
     var index = 0
     val result = new ListBuffer[TiPartition]
-    for (task <- mutableKeyWithRegionTasks) {
+    for (task <- keyWithRegionTasks) {
       hostTasksMap.addBinding(task.getHost, task)
       val tasks = hostTasksMap(task.getHost)
       if (tasks.size >= partitionPerSplit) {
@@ -77,12 +70,7 @@ abstract class TiRDD(
         index += 1
         hostTasksMap.remove(task.getHost)
       }
-      logInfo("new partition with host :" + task.getHost + " and index :" + index)
-      logInfo("start print the region id in this partition")
-      for (t <- tasks) {
-        logInfo("region id: "+t.getRegion.getId)
-      }
-      logInfo("end print the region id in this partition")
+
     }
     // add rest
     for (tasks <- hostTasksMap.values) {
