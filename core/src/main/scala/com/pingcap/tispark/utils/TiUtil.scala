@@ -267,6 +267,11 @@ object TiUtil {
     tiConf.setHealthCheckPeriod(conf
       .get(TiConfigConst.GPRC_HEALTH_CHECK_PERIOD, TiConfiguration.DEFHealthCheckPeriod.toString)
       .toInt)
+
+    if (conf.contains(TiConfigConst.PREFERRED_LOCATIONS)) {
+      tiConf.setPreferredLocations(conf.get(TiConfigConst.PREFERRED_LOCATIONS))
+    }
+
     tiConf
   }
 
