@@ -1,4 +1,4 @@
-# TiSpark
+# TiSparktest
 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.pingcap.tispark/tispark-parent/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.pingcap.tispark/tispark-parent)
 [![License](https://img.shields.io/github/license/pingcap/tispark.svg)](https://github.com/pingcap/tispark/blob/master/LICENSE)
