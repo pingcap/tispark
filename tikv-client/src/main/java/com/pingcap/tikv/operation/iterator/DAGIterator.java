@@ -267,9 +267,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
         logger.info(
             String.format(
                 "start coprocess request to %s in region %d with timeout %s",
-                task.getHost(),
-                region.getId(),
-                client.getTimeout()));
+                task.getHost(), region.getId(), client.getTimeout()));
 
         Collection<RegionTask> tasks =
             client.coprocess(backOffer, dagRequest, ranges, responseQueue, startTs);
