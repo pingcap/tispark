@@ -43,6 +43,7 @@ abstract class TiRDD(
     extends RDD[InternalRow](sparkSession.sparkContext, Nil) {
 
   private lazy val partitionPerSplit = tiConf.getPartitionPerSplit
+  private lazy val preferredLocations = tiConf.getPreferredLocations
 
   protected def checkTimezone(): Unit = {
     if (!tiConf.getLocalTimeZone.equals(Converter.getLocalTimezone)) {
@@ -80,6 +81,10 @@ abstract class TiRDD(
     result.toArray
   }
 
-  override protected def getPreferredLocations(split: Partition): Seq[String] =
-    split.asInstanceOf[TiPartition].tasks.head.getHost :: Nil
+  override protected def getPreferredLocations(split: Partition): Seq[String] = {
+    if (preferredLocations.equalsIgnoreCase("host")) {
+      return split.asInstanceOf[TiPartition].tasks.head.getHost :: Nil
+    }
+    Nil
+  }
 }
