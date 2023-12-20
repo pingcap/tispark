@@ -94,6 +94,8 @@ public class TiConfiguration implements Serializable {
 
   private List<TiStoreType> isolationReadEngines = DEF_ISOLATION_READ_ENGINES;
 
+  private String preferredLocations = "";
+
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
     TiConfiguration conf = new TiConfiguration();
@@ -356,5 +358,13 @@ public class TiConfiguration implements Serializable {
 
   public void setKvClientConcurrency(int kvClientConcurrency) {
     this.kvClientConcurrency = kvClientConcurrency;
+  }
+
+  public void setPreferredLocations(String preferredLocations) {
+    this.preferredLocations = preferredLocations;
+  }
+
+  public String getPreferredLocations() {
+    return this.preferredLocations;
   }
 }

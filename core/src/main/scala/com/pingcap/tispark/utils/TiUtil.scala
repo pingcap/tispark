@@ -134,6 +134,10 @@ object TiUtil {
       tiConf.setKvClientConcurrency(conf.get(TiConfigConst.KV_CLIENT_CONCURRENCY).toInt)
     }
 
+    if (conf.contains(TiConfigConst.PREFERRED_LOCATIONS)) {
+      tiConf.setPreferredLocations(conf.get(TiConfigConst.PREFERRED_LOCATIONS))
+    }
+
     tiConf
   }
 
