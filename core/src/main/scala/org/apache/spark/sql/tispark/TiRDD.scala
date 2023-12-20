@@ -67,6 +67,7 @@ abstract class TiRDD(
         result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
         index += 1
         hostTasksMap.remove(task.getHost)
+        logInfo("new partition with host :" + task.getHost + " and index :" + index)
       }
 
     }
