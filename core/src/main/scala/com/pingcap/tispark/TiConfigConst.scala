@@ -55,4 +55,7 @@ object TiConfigConst {
 
   val CHUNK_CODEC_FORMAT: String = "chunk"
   val DEFAULT_CODEC_FORMAT: String = "chblock"
+
+  // preferred locations
+  val PREFERRED_LOCATIONS = "spark.tispark.preferred_locations"
 }
