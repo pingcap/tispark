@@ -28,6 +28,7 @@ import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.operation.SchemaInfer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -267,9 +268,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
         logger.info(
             String.format(
                 "start coprocess request to %s in region %d with timeout %s",
-                task.getHost(),
-                region.getId(),
-                client.getTimeout()));
+                task.getHost(), region.getId(), client.getTimeout()));
 
         Collection<RegionTask> tasks =
             client.coprocess(backOffer, dagRequest, ranges, responseQueue, startTs);
@@ -284,6 +283,19 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
                 + remainTasks.size()
                 + " tasks not executed due to",
             e);
+        String regionSt = Arrays.toString(region.getStartKey().toByteArray());
+        String regionEd = Arrays.toString(region.getEndKey().toByteArray());
+        Long storeId = store == null ? 0 : store.getId();
+        logger.warn(String.format("region task failed. host:%s region:%s, store: %d. region start key: %s, region end key: %s",
+                task.getHost(),region.getId(), storeId,regionSt, regionEd));
+        logger.warn("start to print range");
+        for (Coprocessor.KeyRange range : ranges) {
+          logger.warn(
+                  "Sending DAG request with range "
+                          + Arrays.toString(range.getStart().toByteArray())
+                          + " to "
+                          + Arrays.toString(range.getEnd().toByteArray()));
+        }
         // Rethrow to upper levels
         throw new RegionTaskException("Handle region task failed:", e);
       }
