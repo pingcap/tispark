@@ -19,7 +19,7 @@ package org.apache.spark.sql.tispark
 import com.pingcap.tikv._
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.types.Converter
-import org.tikv.common.util.RangeSplitter
+import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.Partition
 import org.apache.spark.rdd.RDD

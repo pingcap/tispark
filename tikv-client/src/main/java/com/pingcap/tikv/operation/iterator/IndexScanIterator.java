@@ -22,13 +22,13 @@ import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.handle.Handle;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.row.Row;
+import com.pingcap.tikv.util.RangeSplitter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutorCompletionService;
 import org.tikv.common.exception.TiClientInternalException;
-import org.tikv.common.util.RangeSplitter;
 import org.tikv.common.util.RangeSplitter.RegionTask;
 
 public class IndexScanIterator implements Iterator<Row> {

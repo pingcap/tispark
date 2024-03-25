@@ -20,7 +20,7 @@ import com.pingcap.tikv.columnar.{TiChunk, TiColumnarBatchHelper}
 import com.pingcap.tikv.handle.Handle
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.operation.iterator.CoprocessorIterator
-import org.tikv.common.util.RangeSplitter
+import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.{ClientSession, TiConfiguration}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.TiUtil
