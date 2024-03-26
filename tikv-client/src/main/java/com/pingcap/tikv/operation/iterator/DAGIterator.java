@@ -284,28 +284,36 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
                 + remainTasks.size()
                 + " tasks not executed due to",
             e);
-        String regionSt = Arrays.toString(region.getStartKey().toByteArray());
-        String regionEd = Arrays.toString(region.getEndKey().toByteArray());
-        Long storeId = store == null ? 0 : store.getId();
-        logger.warn(
-            String.format(
-                "region task failed. host:%s region:%s, store: %d. region start key: %s, region end key: %s",
-                task.getHost(), region.getId(), storeId, regionSt, regionEd));
-        logger.warn("start to print range");
-        for (Coprocessor.KeyRange range : ranges) {
+
+        // We guess range may exceed bound in corner case. Since it is
+        // hard to find the root cause, we just log it and retry once here.
+        // We use client-java's splitRangeByRegion method to avoid exceed bound issue. It seems this
+        // method can split range correctly.
+        if (e.getMessage().contains("Request range exceeds bound")) {
+          String regionSt = Arrays.toString(region.getStartKey().toByteArray());
+          String regionEd = Arrays.toString(region.getEndKey().toByteArray());
+          Long storeId = store == null ? 0 : store.getId();
           logger.warn(
-              "Sending DAG request with range "
-                  + Arrays.toString(range.getStart().toByteArray())
-                  + " to "
-                  + Arrays.toString(range.getEnd().toByteArray()));
-        }
-        if (retryCount < 1) {
-          retryCount++;
-          logger.info("Re-splitting region task and retry once");
-          remainTasks.addAll(
-              RangeSplitter.newSplitter(clientSession.getTiKVSession().getRegionManager())
-                  .splitRangeByRegion(ranges, storeType));
-          continue;
+              String.format(
+                  "region task failed. host:%s region:%s, store: %d. region start key: %s, region end key: %s",
+                  task.getHost(), region.getId(), storeId, regionSt, regionEd));
+          logger.warn("start to print range");
+          for (Coprocessor.KeyRange range : ranges) {
+            logger.warn(
+                "Sending DAG request with range "
+                    + Arrays.toString(range.getStart().toByteArray())
+                    + " to "
+                    + Arrays.toString(range.getEnd().toByteArray()));
+          }
+          if (retryCount < 1) {
+            retryCount++;
+            remainTasks.addAll(
+                RangeSplitter.newSplitter(clientSession.getTiKVSession().getRegionManager())
+                    .splitRangeByRegion(ranges, storeType));
+            logger.info(
+                "Re-splitting region task and retry once. Task count: " + remainTasks.size());
+            continue;
+          }
         }
         // Rethrow to upper levels
         throw new RegionTaskException("Handle region task failed:", e);
