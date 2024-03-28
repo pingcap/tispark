@@ -28,6 +28,7 @@ import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.operation.SchemaInfer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -212,6 +213,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
 
     // In case of one region task spilt into several others, we ues a queue to properly handle all
     // the remaining tasks.
+    int retryCount = 0;
     while (!remainTasks.isEmpty()) {
       RegionTask task = remainTasks.poll();
       if (task == null) {
@@ -282,6 +284,37 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
                 + remainTasks.size()
                 + " tasks not executed due to",
             e);
+
+        // We guess range may exceed bound in corner case. Since it is
+        // hard to find the root cause, we just log it and retry once here.
+        // We use client-java's splitRangeByRegion method to avoid exceed bound issue. It seems this
+        // method can split range correctly.
+        if (e.getMessage().contains("Request range exceeds bound")) {
+          String regionSt = Arrays.toString(region.getStartKey().toByteArray());
+          String regionEd = Arrays.toString(region.getEndKey().toByteArray());
+          Long storeId = store == null ? 0 : store.getId();
+          logger.warn(
+              String.format(
+                  "region task failed. host:%s region:%s, store: %d. region start key: %s, region end key: %s",
+                  task.getHost(), region.getId(), storeId, regionSt, regionEd));
+          logger.warn("start to print range");
+          for (Coprocessor.KeyRange range : ranges) {
+            logger.warn(
+                "Sending DAG request with range "
+                    + Arrays.toString(range.getStart().toByteArray())
+                    + " to "
+                    + Arrays.toString(range.getEnd().toByteArray()));
+          }
+          if (retryCount < 1) {
+            retryCount++;
+            remainTasks.addAll(
+                RangeSplitter.newSplitter(clientSession.getTiKVSession().getRegionManager())
+                    .splitRangeByRegion(ranges, storeType));
+            logger.info(
+                "Re-splitting region task and retry once. Task count: " + remainTasks.size());
+            continue;
+          }
+        }
         // Rethrow to upper levels
         throw new RegionTaskException("Handle region task failed:", e);
       }
