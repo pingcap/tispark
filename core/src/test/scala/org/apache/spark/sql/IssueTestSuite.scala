@@ -22,6 +22,16 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("test like escape") {
+    val dbTable = "tispark_test.like_escape"
+    tidbStmt.execute(s"drop table if exists $dbTable")
+    tidbStmt.execute(s"CREATE TABLE $dbTable (`name` varchar(64) NOT NULL)")
+    tidbStmt.execute(s"insert into $dbTable values('ab%H')")
+    val df = spark.sql(s"select count(*) from $dbTable where name like '%\\%H%'")
+    assert(df.collect().head.get(0) == 1)
+
+  }
+
   test("test tiflash overflow in unsigned bigint") {
     if (!enableTiFlashTest) {
       cancel("tiflash test not enabled")
