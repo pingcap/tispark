@@ -25,7 +25,7 @@ import org.tikv.common.exception.TiBatchWriteException
 
 class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test") {
 
-  test("Test date type pr 2779") {
+  test("Test date type pr 2780") {
     val dbtable1 = "test.test_date1"
     val dbtable2 = "test.test_date2"
     jdbcUpdate(s"drop table if exists $dbtable1")
