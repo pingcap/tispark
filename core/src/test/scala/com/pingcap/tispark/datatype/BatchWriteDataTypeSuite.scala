@@ -25,6 +25,17 @@ import org.tikv.common.exception.TiBatchWriteException
 
 class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test") {
 
+  test("Test date type pr 2779") {
+    val dbtable1 = "test.test_date1"
+    val dbtable2 = "test.test_date2"
+    jdbcUpdate(s"drop table if exists $dbtable1")
+    jdbcUpdate(s"drop table if exists $dbtable2")
+    jdbcUpdate(s"create table $dbtable1 (dt date)")
+    jdbcUpdate(s"create table $dbtable2 (dt date)")
+    jdbcUpdate(s"insert into $dbtable2 values ('2020-01-01')")
+    spark.sql(s"insert into $dbtable1 select * from $dbtable2").show()
+  }
+
   test("Test Read different types") {
     jdbcUpdate(s"""
                   |create table $dbtable(
