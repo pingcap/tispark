@@ -19,8 +19,9 @@ package com.pingcap.tispark.datatype
 import java.sql.{Date, Timestamp}
 import java.util.Calendar
 import com.pingcap.tispark.datasource.BaseBatchWriteTest
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{AnalysisException, Row}
 import org.apache.spark.sql.types._
+import org.scalatest.Matchers.{be, noException, the}
 import org.tikv.common.exception.TiBatchWriteException
 
 class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test") {
@@ -33,7 +34,9 @@ class BatchWriteDataTypeSuite extends BaseBatchWriteTest("test_data_type", "test
     jdbcUpdate(s"create table $dbtable1 (dt date)")
     jdbcUpdate(s"create table $dbtable2 (dt date)")
     jdbcUpdate(s"insert into $dbtable2 values ('2020-01-01')")
-    spark.sql(s"insert into $dbtable1 select * from $dbtable2").show()
+
+    noException should be thrownBy spark.sql(s"insert into $dbtable1 select * from $dbtable2").show()
+    the[AnalysisException] thrownBy spark.sql(s"insert into $dbtable1 values ('2020-01-01')").show()
   }
 
   test("Test Read different types") {
