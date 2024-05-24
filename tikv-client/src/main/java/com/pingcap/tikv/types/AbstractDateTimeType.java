@@ -25,6 +25,7 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.ExtendedDateTime;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.sql.Timestamp;
+import java.time.Instant;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 import org.tikv.common.exception.ConvertNotSupportException;
@@ -130,6 +131,8 @@ public abstract class AbstractDateTimeType extends DataType {
       result = new java.sql.Timestamp(((java.sql.Date) value).getTime());
     } else if (value instanceof java.sql.Timestamp) {
       result = (java.sql.Timestamp) value;
+    } else if (value instanceof Instant) {
+      result = java.sql.Timestamp.from((Instant) value);
     } else {
       throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
