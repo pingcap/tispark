@@ -2,10 +2,15 @@ spark.tispark.pd.addresses pd:2379
 spark.sql.catalog.tidb_catalog org.apache.spark.sql.catalyst.catalog.TiCatalog
 spark.sql.catalog.tidb_catalog.pd.addresses pd:2379
 
+#spark.tispark.tikv.tls_enable=true
+#spark.tispark.tikv.trust_cert_collection=/config/cert/pem/root.pem
+#spark.tispark.tikv.key_cert_chain=/config/cert/pem/client.pem
+#spark.tispark.tikv.key_file=/config/cert/pem/client-pkcs8.key
+
 spark.tispark.tikv.tls_enable=true
-spark.tispark.tikv.trust_cert_collection=/config/cert/pem/root.pem
-spark.tispark.tikv.key_cert_chain=/config/cert/pem/client.pem
-spark.tispark.tikv.key_file=/config/cert/pem/client-pkcs8.key
+spark.tispark.tikv.trust_cert_collection=ca1.crt
+spark.tispark.tikv.key_cert_chain=pd1.crt
+spark.tispark.tikv.key_file=pd1.pem
 
 #spark.tispark.tikv.jks_enable=true
 #spark.tispark.tikv.jks_key_path=/config/cert/jks/client-keystore
