@@ -8,9 +8,9 @@ spark.sql.catalog.tidb_catalog.pd.addresses pd:2379
 #spark.tispark.tikv.key_file=/config/cert/pem/client-pkcs8.key
 
 spark.tispark.tikv.tls_enable=true
-spark.tispark.tikv.trust_cert_collection=ca1.crt
-spark.tispark.tikv.key_cert_chain=pd1.crt
-spark.tispark.tikv.key_file=pd1.pem
+spark.tispark.tikv.trust_cert_collection=/config/cert/pem/ca1.crt
+spark.tispark.tikv.key_cert_chain=/config/cert/pem/pd1.crt
+spark.tispark.tikv.key_file=/config/cert/pem/pd1.pem
 
 #spark.tispark.tikv.jks_enable=true
 #spark.tispark.tikv.jks_key_path=/config/cert/jks/client-keystore
