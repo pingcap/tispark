@@ -227,7 +227,14 @@ public class TiDAGRequest implements Serializable {
     indexScanBuilder.setTableId(getPhysicalId()).setIndexId(indexInfo.getId());
     if (tableInfo.isCommonHandle()) {
       for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
-        indexScanBuilder.addPrimaryColumnIds(tableInfo.getColumn(col.getName()).getId());
+        long primaryColumnId = tableInfo.getColumn(col.getName()).getId();
+        indexScanBuilder.addPrimaryColumnIds(primaryColumnId);
+        // add primary columns to columns:
+        // https://github.com/pingcap/tidb/blob/ca7ba14da87abd060922b32c893b121c4c3d6373/pkg/executor/builder.go#L569
+        if (!isPrimaryInColumns(indexScanBuilder.getColumnsList(), primaryColumnId)) {
+          TiColumnInfo columnInfo = tableInfo.getColumn(col.getName());
+          indexScanBuilder.addColumns(ColumnInfo.newBuilder(columnInfo.toProto(tableInfo)));
+        }
       }
     }
 
@@ -236,6 +243,16 @@ public class TiDAGRequest implements Serializable {
         dagRequestBuilder, isDoubleRead, outputOffsets, colOffsetInFieldMap);
 
     return buildRequest(dagRequestBuilder, outputOffsets);
+  }
+
+  private boolean isPrimaryInColumns(
+      java.util.List<com.pingcap.tidb.tipb.ColumnInfo> columnsList, long primaryColumnId) {
+    for (com.pingcap.tidb.tipb.ColumnInfo column : columnsList) {
+      if (column.getColumnId() == primaryColumnId) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private void addIndexLookUpIndexRangeScanExecutorCols(

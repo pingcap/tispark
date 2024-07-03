@@ -22,6 +22,14 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("test column mismatch, issue 2750") {
+    val dbTable = "tispark_test.column_mismatch"
+    tidbStmt.execute(s"drop table if exists $dbTable")
+    tidbStmt.execute(
+      s"CREATE TABLE $dbTable (`CI_NO` varchar(64) NOT NULL, `AC_DT` bigint(20) NOT NULL, `SRC_KEY` varchar(100) NOT NULL, PRIMARY KEY (`SRC_KEY`,`CI_NO`,`AC_DT`) /*T![clustered_index] CLUSTERED */, KEY `IDX_FLOW_01` (`CI_NO`,`AC_DT`))")
+    spark.sql(s"select ci_no,ac_dt from $dbTable ").show()
+  }
+
   test("test like escape") {
     val dbTable = "tispark_test.like_escape"
     tidbStmt.execute(s"drop table if exists $dbTable")
