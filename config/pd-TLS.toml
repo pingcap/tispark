@@ -1,6 +1,4 @@
 [security]
-cacert-path = "/config/cert/pem/root.pem"
-cert-path = "/config/cert/pem/pd.pem"
-key-path = "/config/cert/pem/pd.key"
-
-
+cacert-path = "/config/cert/pem/ca1.crt"
+cert-path = "/config/cert/pem/pd1.crt"
+key-path = "/config/cert/pem/pdpkcs8.pem"
