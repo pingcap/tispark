@@ -26,8 +26,9 @@ class IssueTestSuite extends BaseTiSparkTest {
     val dbTable = "tispark_test.column_mismatch"
     tidbStmt.execute(s"drop table if exists $dbTable")
     tidbStmt.execute(
-      s"CREATE TABLE $dbTable (`CI_NO` varchar(64) NOT NULL, `AC_DT` bigint(20) NOT NULL, `SRC_KEY` varchar(100) NOT NULL, PRIMARY KEY (`SRC_KEY`,`CI_NO`,`AC_DT`) /*T![clustered_index] CLUSTERED */, KEY `IDX_FLOW_01` (`CI_NO`,`AC_DT`))")
-    spark.sql(s"select ci_no,ac_dt from $dbTable ").show()
+      s"CREATE TABLE $dbTable (`CI_NO` varchar(64) NOT NULL, `AC_DT` bigint(20) NOT NULL, `YM_DT` bigint(20) NOT NULL,`SYS_TYPE` varchar(20) NOT NULL, PRIMARY KEY (`CI_NO`,`AC_DT`,`YM_DT`,`SYS_TYPE`) /*T![clustered_index] CLUSTERED */, KEY `IDX_FLOW_01` (`CI_NO`,`AC_DT`))")
+    tidbStmt.execute(s"insert into $dbTable values('1',1,1,'1')")
+    spark.sql(s"select ci_no,ac_dt from $dbTable").show()
   }
 
   test("test like escape") {
