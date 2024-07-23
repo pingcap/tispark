@@ -229,9 +229,6 @@ public class TiDAGRequest implements Serializable {
       for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
         TiColumnInfo columnInfo = tableInfo.getColumn(col.getName());
         indexScanBuilder.addPrimaryColumnIds(columnInfo.getId());
-        // add primary columns to columns:
-        // https://github.com/pingcap/tidb/blob/ddcaadbb856f0890e91e4c77991f0d2aa5aa93d0/pkg/planner/core/planbuilder.go#L1515
-        indexScanBuilder.addColumns(ColumnInfo.newBuilder(columnInfo.toProto(tableInfo)));
       }
     }
 
@@ -302,6 +299,16 @@ public class TiDAGRequest implements Serializable {
         throw new DAGRequestException(
             "columns other than primary key and index key exist in fields while index single read: "
                 + columnInfo.getName());
+      }
+    }
+    if (tableInfo.isCommonHandle()) {
+      for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
+        TiColumnInfo columnInfo = tableInfo.getColumn(col.getName());
+        // add primary columns to columns:
+        // https://github.com/pingcap/tidb/blob/ddcaadbb856f0890e91e4c77991f0d2aa5aa93d0/pkg/planner/core/planbuilder.go#L1515
+        if (!isDoubleRead()) {
+          indexScanBuilder.addColumns(ColumnInfo.newBuilder(columnInfo.toProto(tableInfo)));
+        }
       }
     }
   }
