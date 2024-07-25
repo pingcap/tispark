@@ -22,8 +22,6 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
-<<<<<<< HEAD
-=======
   test("test column mismatch, issue 2750") {
     val dbTable = "tispark_test.column_mismatch"
     tidbStmt.execute(s"drop table if exists $dbTable")
@@ -46,7 +44,6 @@ class IssueTestSuite extends BaseTiSparkTest {
 
   }
 
->>>>>>> fb081329b (Fix column mismatch (#2785))
   test("test tiflash overflow in unsigned bigint") {
     if (!enableTiFlashTest) {
       cancel("tiflash test not enabled")
