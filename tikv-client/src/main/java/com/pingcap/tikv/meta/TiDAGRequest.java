@@ -298,6 +298,14 @@ public class TiDAGRequest implements Serializable {
                 + columnInfo.getName());
       }
     }
+    if (tableInfo.isCommonHandle()) {
+      for (TiIndexColumn col : tableInfo.getPrimaryKey().getIndexColumns()) {
+        TiColumnInfo columnInfo = tableInfo.getColumn(col.getName());
+        // add primary columns to columns:
+        // https://github.com/pingcap/tidb/blob/ddcaadbb856f0890e91e4c77991f0d2aa5aa93d0/pkg/planner/core/planbuilder.go#L1515
+        indexScanBuilder.addColumns(ColumnInfo.newBuilder(columnInfo.toProto(tableInfo)));
+      }
+    }
   }
 
   private void addIndexColsToScanBuilder(
