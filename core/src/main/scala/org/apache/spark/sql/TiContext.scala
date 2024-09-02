@@ -65,7 +65,8 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
       "tispark_" + UUID.randomUUID,
       TiConfigConst.DEFAULT_GC_SAFE_POINT_TTL,
       GCMaxWaitTime,
-      tiSession)
+      tiSession,
+      sparkSession)
 
   sparkSession.sparkContext.addSparkListener(new SparkListener() {
     override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {
