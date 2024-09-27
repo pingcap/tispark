@@ -18,6 +18,7 @@ package com.pingcap.tispark.safepoint
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.pingcap.tikv.ClientSession
+import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import org.tikv.common.exception.TiInternalException
 import org.tikv.common.meta.TiTimestamp
@@ -29,7 +30,8 @@ case class ServiceSafePoint(
     serviceId: String,
     ttl: Long,
     GCMaxWaitTime: Long,
-    clientSession: ClientSession) {
+    clientSession: ClientSession,
+    sparkSession: SparkSession) {
 
   private val PD_UPDATE_SAFE_POINT_BACKOFF: Int = 20 * 1000
   private final val logger = LoggerFactory.getLogger(getClass.getName)
@@ -38,6 +40,14 @@ case class ServiceSafePoint(
     new ThreadFactoryBuilder().setNameFormat("serviceSafePoint-thread-%d").setDaemon(true).build)
   service.scheduleAtFixedRate(
     () => {
+      val now = clientSession.getTiKVSession.getTimestamp
+      if (now.getPhysical - TiTimestamp.extractPhysical(minStartTs) >= GCMaxWaitTime * 1000) {
+        val msg =
+          s"Can not pause GC more than spark.tispark.gc_max_wait_time=$GCMaxWaitTime s. start_ts: ${minStartTs}, now: ${now.getVersion}. You can adjust spark.tispark.gc_max_wait_time to increase the gc max wait time."
+        logger.error(msg)
+        sparkSession.stop()
+        throw new TiInternalException(msg)
+      }
       if (minStartTs != Long.MaxValue) {
         val safePoint = clientSession.getTiKVSession.getPDClient.updateServiceGCSafePoint(
           serviceId,
