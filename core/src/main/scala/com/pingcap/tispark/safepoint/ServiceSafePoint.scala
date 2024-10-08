@@ -23,6 +23,7 @@ import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.meta.TiTimestamp
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer}
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 
 import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
@@ -31,7 +32,8 @@ case class ServiceSafePoint(
     serviceId: String,
     ttl: Long,
     GCMaxWaitTime: Long,
-    tiSession: TiSession) {
+    tiSession: TiSession,
+    sparkSession: SparkSession) {
 
   private final val logger = LoggerFactory.getLogger(getClass.getName)
   private var minStartTs = Long.MaxValue
@@ -40,6 +42,14 @@ case class ServiceSafePoint(
   service.scheduleAtFixedRate(
     () => {
       if (minStartTs != Long.MaxValue) {
+        val now = tiSession.getTimestamp
+        if (now.getPhysical - TiTimestamp.extractPhysical(minStartTs) >= GCMaxWaitTime * 1000) {
+          val msg =
+            s"Can not pause GC more than spark.tispark.gc_max_wait_time=$GCMaxWaitTime s. start_ts: ${minStartTs}, now: ${now.getVersion}. You can adjust spark.tispark.gc_max_wait_time to increase the gc max wait time."
+          logger.error(msg)
+          sparkSession.stop()
+          throw new TiInternalException(msg)
+        }
         val safePoint = tiSession.getPDClient.updateServiceGCSafePoint(
           serviceId,
           ttl,
