@@ -121,10 +121,4 @@ public class DateType extends AbstractDateTimeType {
     }
     return new Date(date.toDate().getTime());
   }
-
-  public static void main(String[] args) {
-    java.time.LocalDate localDate = java.time.LocalDate.now();
-    System.out.println(localDate);
-    System.out.println(localDate.toString());
-  }
 }
