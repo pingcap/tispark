@@ -28,8 +28,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     }
     val dbTable = "test.tiflash_not_null"
     tidbStmt.execute(s"drop table if exists $dbTable")
-    tidbStmt.execute(
-      s"CREATE TABLE $dbTable (`a` int NOT NULL)")
+    tidbStmt.execute(s"CREATE TABLE $dbTable (`a` int NOT NULL)")
     tidbStmt.execute(s"ALTER TABLE $dbTable SET TIFLASH REPLICA 1")
 
     Thread.sleep(5 * 1000)
