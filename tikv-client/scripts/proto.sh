@@ -22,7 +22,7 @@ kvproto_hash=4d69c6f95e683dfb5859277563bf896aca06ec34
 
 raft_rs_hash=b9891b673573fad77ebcf9bbe0969cf945841926
 
-tipb_hash=45e60c77588fefe421d0f6f29426a36b5b15171d
+tipb_hash=29e23c62eeace5912f696d1b184b63d5dc3edcce
 
 if [ -d "kvproto" ]; then
 	cd kvproto; git fetch -p; git checkout ${kvproto_hash}; cd ..

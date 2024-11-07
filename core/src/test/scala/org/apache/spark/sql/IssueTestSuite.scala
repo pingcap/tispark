@@ -22,6 +22,30 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("test read tiflash not null error") {
+    if (!enableTiFlashTest) {
+      cancel("tiflash test not enabled")
+    }
+    val dbTable = "test.tiflash_not_null"
+    tidbStmt.execute(s"drop table if exists $dbTable")
+    tidbStmt.execute(
+      s"CREATE TABLE $dbTable (`a` int NOT NULL)")
+    tidbStmt.execute(s"ALTER TABLE $dbTable SET TIFLASH REPLICA 1")
+
+    Thread.sleep(5 * 1000)
+
+    val prev = spark.conf.getOption(TiConfigConst.ISOLATION_READ_ENGINES)
+    try {
+      spark.conf
+        .set(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIFLASH_STORAGE_ENGINE)
+      spark.sql(s"select max(a) from tidb_catalog.$dbTable").show()
+    } finally {
+      spark.conf.set(
+        TiConfigConst.ISOLATION_READ_ENGINES,
+        prev.getOrElse(TiConfigConst.DEFAULT_STORAGE_ENGINES))
+    }
+  }
+
   test("test column mismatch, issue 2750") {
     val dbTable = "tispark_test.column_mismatch"
     tidbStmt.execute(s"drop table if exists $dbTable")

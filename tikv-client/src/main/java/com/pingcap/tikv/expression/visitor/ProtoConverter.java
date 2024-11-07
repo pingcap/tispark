@@ -16,6 +16,7 @@
 
 package com.pingcap.tikv.expression.visitor;
 
+import static com.pingcap.tidb.tipb.AggFunctionMode.Partial1Mode;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableMap;
@@ -350,6 +351,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     }
 
     builder.setFieldType(toPBFieldType(getType(node)));
+    builder.setAggFuncMode(Partial1Mode);
     return builder.build();
   }
 
