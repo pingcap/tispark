@@ -27,6 +27,12 @@ jobs:
           distribution: ${{ matrix.distribution }}
           cache: maven
 
+      - name: set up docker compose
+        uses: KengoTODA/actions-setup-docker-compose@v1
+        with:
+          version: '2.14.2' # the full version of `docker-compose` command
+
+
       - name: add host and copy properties
         run: |
           echo -e "127.0.0.1   pd \n127.0.0.1   tikv" | sudo tee -a /etc/hosts
