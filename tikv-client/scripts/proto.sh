@@ -18,7 +18,7 @@ CURRENT_DIR=`pwd`
 TISPARK_HOME="$(cd "`dirname "$0"`"/../..; pwd)"
 cd $TISPARK_HOME/tikv-client
 
-tipb_hash=07c1d4cf43236a98d6299afbe864b628b52c0eae
+tipb_hash=29e23c62eeace5912f696d1b184b63d5dc3edcce
 
 if [ -d "tipb" ]; then
 	cd tipb; git fetch -p; git checkout ${tipb_hash}; cd ..
