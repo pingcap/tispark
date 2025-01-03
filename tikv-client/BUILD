@@ -27,7 +27,7 @@ filegroup(
     name = "protos",
     srcs = glob([
          "kvproto/proto/*.proto",
-	      "kvproto/_vendor/src/github.com/gogo/protobuf/gogoproto/*.proto",
+	      "kvproto/_vendor/src/github.com/gogo/protobuf/tree/master/gogoproto/*.proto",
 	      "tipb/proto/*.proto",
     ]),
 )
