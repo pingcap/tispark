@@ -191,6 +191,7 @@ case class TiAuthorization private (parameters: Map[String, String], tiConf: TiC
   def visible(db: String, table: String): Boolean = {
     // Account who has ShowDBPriv is able to see all databases and tables regardless of revokes.
     if (globalPrivs.get().contains(MySQLPriv.AllPriv) || globalPrivs
+        .get().contains(MySQLPriv.SelectPriv) || globalPrivs
         .get()
         .contains(MySQLPriv.ShowDBPriv)) {
       return true
