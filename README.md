@@ -7,6 +7,7 @@ TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV/TiFla
 
 The figure below show the architecture of TiSpark.
 
+
 ![architecture](./docs/architecture.png)
 
 + TiSpark integrates well with the Spark Catalyst Engine. It provides precise control of computing, which allows Spark to read data from TiKV efficiently. It also supports index seek, which significantly improves the performance of the point query execution.
