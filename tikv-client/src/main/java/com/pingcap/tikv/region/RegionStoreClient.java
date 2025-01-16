@@ -708,7 +708,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       // we need to invalidate cache when region not find
       if (regionError.hasRegionNotFound()) {
         logger.info("invalidateRange when Re-splitting region task because of region not find.");
-        this.regionManager.invalidateRange(region.getStartKey(),region.getEndKey());
+        this.regionManager.invalidateRange(region.getStartKey(), region.getEndKey());
       }
       // Split ranges
       return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges, storeType);
