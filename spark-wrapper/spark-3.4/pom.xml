@@ -9,13 +9,13 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>spark-wrapper-spark-3.3_${scala.version.release}</artifactId>
+  <artifactId>spark-wrapper-spark-3.4_${scala.version.release}</artifactId>
   <packaging>jar</packaging>
-  <name>TiSpark Project Spark Wrapper Spark-3.3</name>
+  <name>TiSpark Project Spark Wrapper Spark-3.4</name>
   <url>http://github.copm/pingcap/tispark</url>
 
   <properties>
-    <spark.version.wrapper>${spark3_3.version}</spark.version.wrapper>
+    <spark.version.wrapper>${spark3_4.version}</spark.version.wrapper>
   </properties>
 
   <dependencies>

@@ -22,7 +22,7 @@ import org.tikv.common.exception.TiInternalException
 object TiSparkInfo {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
-  val SUPPORTED_SPARK_VERSION: List[String] = "3.0" :: "3.1" :: "3.2" :: "3.3" :: Nil
+  val SUPPORTED_SPARK_VERSION: List[String] = "3.0" :: "3.1" :: "3.2" :: "3.3" :: "3.4" :: Nil
 
   val SPARK_VERSION: String = org.apache.spark.SPARK_VERSION
 
