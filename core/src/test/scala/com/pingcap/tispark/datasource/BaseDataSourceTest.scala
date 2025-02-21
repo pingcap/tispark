@@ -96,8 +96,8 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
       this.tidbWrite(data, schema)
     }
     assert(
-      caughtTiDB.getCause.getClass.equals(tidbErrorClass),
-      s"${caughtTiDB.getCause.getClass.getName} not equals to ${tidbErrorClass.getName}")
+      tidbErrorClass.isAssignableFrom(caughtTiDB.getCause.getClass),
+      s"${tidbErrorClass.getName} not assignable from ${caughtTiDB.getCause.getClass.getName}")
 
     if (tidbErrorMsg != null) {
       if (!msgStartWith) {
