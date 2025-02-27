@@ -89,15 +89,15 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
       this.jdbcWrite(data, schema)
     }
     assert(
-      caughtJDBC.getCause.getClass.equals(jdbcErrorClass),
-      s"${caughtJDBC.getCause.getClass.getName} not equals to ${jdbcErrorClass.getName}")
+      jdbcErrorClass.isAssignableFrom(caughtJDBC.getCause.getClass),
+      s"${jdbcErrorClass.getName} not assignable from ${caughtJDBC.getCause.getClass.getName}")
 
     val caughtTiDB = intercept[SparkException] {
       this.tidbWrite(data, schema)
     }
     assert(
-      caughtTiDB.getCause.getClass.equals(tidbErrorClass),
-      s"${caughtTiDB.getCause.getClass.getName} not equals to ${tidbErrorClass.getName}")
+      tidbErrorClass.isAssignableFrom(caughtTiDB.getCause.getClass),
+      s"${tidbErrorClass.getName} not assignable from ${caughtTiDB.getCause.getClass.getName}")
 
     if (tidbErrorMsg != null) {
       if (!msgStartWith) {

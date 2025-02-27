@@ -107,7 +107,15 @@ case class SpecialSum(child: Expression, retType: DataType, initVal: Any)
   override def dataType: DataType = resultType
 
   override def checkInputDataTypes(): TypeCheckResult =
-    TypeUtils.checkForNumericExpr(child.dataType, "function sum")
+    checkForNumericExpr(child.dataType, "function sum")
+
+  def checkForNumericExpr(dt: DataType, caller: String): TypeCheckResult = {
+    if (dt.isInstanceOf[NumericType] || dt == NullType) {
+      TypeCheckResult.TypeCheckSuccess
+    } else {
+      TypeCheckResult.TypeCheckFailure(s"$caller requires numeric types, not ${dt.catalogString}")
+    }
+  }
 
   /**
    *  The implement is same as the [[org.apache.spark.sql.catalyst.expressions.aggregate.Sum]]

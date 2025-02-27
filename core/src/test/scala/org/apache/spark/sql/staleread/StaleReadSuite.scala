@@ -93,7 +93,10 @@ class StaleReadSuite extends BaseTiSparkTest {
     val caught = intercept[org.apache.spark.sql.AnalysisException] {
       spark.sql(s"select count(*) from $table").collect()
     }
-    caught.getMessage() should include("Table or view not found")
+    assert(
+      caught.getMessage().contains("Table or view not found") ||
+        // For spark 3.4
+        caught.getMessage().contains(s"The table or view `$table` cannot be found"))
 
     spark.conf.set(TiConfigConst.STALE_READ, t1)
     assert(1 == spark.sql(s"select * from $table").schema.fields.length)
