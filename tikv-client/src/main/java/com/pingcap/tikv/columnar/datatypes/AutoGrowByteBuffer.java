@@ -51,10 +51,6 @@ public class AutoGrowByteBuffer {
           MemoryUtil.getAddress(buf), MemoryUtil.getAddress(newBuf), buf.position());
       newBuf.position(buf.position());
 
-      if (buf != initBuf) {
-        MemoryUtil.free(buf);
-      }
-
       buf = newBuf;
     }
   }
