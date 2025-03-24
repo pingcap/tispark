@@ -58,4 +58,8 @@ object TiConfigConst {
 
   // preferred locations
   val PREFERRED_LOCATIONS = "spark.tispark.preferred_locations"
+
+  // cache load
+  val LOAD_TABLES: String = "spark.tispark.load_tables"
+  val DEFAULT_LOAD_TABLES: Boolean = true
 }

@@ -138,6 +138,9 @@ object TiUtil {
       tiConf.setPreferredLocations(conf.get(TiConfigConst.PREFERRED_LOCATIONS))
     }
 
+    tiConf.setLoadTables(
+      conf.get(TiConfigConst.LOAD_TABLES, TiConfigConst.DEFAULT_LOAD_TABLES.toString).toBoolean)
+
     tiConf
   }
 

@@ -138,7 +138,7 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (catalog == null) {
-          catalog = new Catalog(this::createSnapshot, conf.ifShowRowId(), conf.getDBPrefix());
+          catalog = new Catalog(this::createSnapshot, conf.ifShowRowId(), conf.getDBPrefix(), conf.getLoadTables());
         }
         res = catalog;
       }
