@@ -33,7 +33,7 @@ import scala.collection.JavaConversions._
  */
 class CacheInvalidateAccumulator
     extends AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]] {
-  private final val eventSet: util.Set[CacheInvalidateEvent] =
+  private final lazy val eventSet: util.Set[CacheInvalidateEvent] =
     new util.HashSet[CacheInvalidateEvent]
 
   override def isZero: Boolean = eventSet.isEmpty
