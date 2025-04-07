@@ -37,7 +37,7 @@ class CacheInvalidateAccumulator
     new util.HashSet[CacheInvalidateEvent]
 
   override def isZero: Boolean = {
-    // eventSet maybe null and we does not find the root case, just judge here.
+    // eventSet maybe null and we does not find the root case.
     if eventSet == null {
       eventSet = new util.HashSet[CacheInvalidateEvent]
     }
