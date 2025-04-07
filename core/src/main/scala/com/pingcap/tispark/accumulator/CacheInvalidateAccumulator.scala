@@ -36,7 +36,7 @@ class CacheInvalidateAccumulator
   private final val eventSet: util.Set[CacheInvalidateEvent] =
     new util.HashSet[CacheInvalidateEvent]
 
-  override def isZero: Boolean = eventSet.isEmpty
+  override def isZero: Boolean = eventSet == null || eventSet.isEmpty
 
   override def reset(): Unit = eventSet.clear()
 
