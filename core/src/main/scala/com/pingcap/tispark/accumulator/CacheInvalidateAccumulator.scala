@@ -33,10 +33,16 @@ import scala.collection.JavaConversions._
  */
 class CacheInvalidateAccumulator
     extends AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]] {
-  private final val eventSet: util.Set[CacheInvalidateEvent] =
+  private final var eventSet: util.Set[CacheInvalidateEvent] =
     new util.HashSet[CacheInvalidateEvent]
 
-  override def isZero: Boolean = eventSet == null || eventSet.isEmpty
+  override def isZero: Boolean = {
+    // eventSet maybe null and we does not find the root case, just judge here.
+    if eventSet == null {
+      eventSet = new util.HashSet[CacheInvalidateEvent]
+    }
+    eventSet.isEmpty
+  }
 
   override def reset(): Unit = eventSet.clear()
 
