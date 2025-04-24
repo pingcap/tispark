@@ -19,20 +19,15 @@ package com.pingcap.tispark.listener
 
 import com.pingcap.tikv.event.CacheInvalidateEvent
 import com.pingcap.tikv.region.RegionManager
-import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
-import com.pingcap.tispark.handler.CacheInvalidateEventHandler
 import org.apache.spark.SparkContext
 import org.slf4j.LoggerFactory
 
 class CacheInvalidateListener()
     extends Serializable
     with java.util.function.Function[CacheInvalidateEvent, Void] {
-  final val CACHE_ACCUMULATOR_NAME = "CacheInvalidateAccumulator"
-  final val CACHE_INVALIDATE_ACCUMULATOR = new CacheInvalidateAccumulator
 
   override def apply(t: CacheInvalidateEvent): Void = {
     // this operation shall be executed in executor nodes
-    CACHE_INVALIDATE_ACCUMULATOR.add(t)
     null
   }
 }
@@ -71,12 +66,5 @@ object CacheInvalidateListener {
   def init(
       sc: SparkContext,
       regionManager: RegionManager,
-      manager: CacheInvalidateListener): Unit =
-    if (sc != null && regionManager != null) {
-      sc.register(manager.CACHE_INVALIDATE_ACCUMULATOR, manager.CACHE_ACCUMULATOR_NAME)
-      sc.addSparkListener(
-        new PDCacheInvalidateListener(
-          manager.CACHE_INVALIDATE_ACCUMULATOR,
-          CacheInvalidateEventHandler(regionManager)))
-    }
+      manager: CacheInvalidateListener): Unit = {}
 }
