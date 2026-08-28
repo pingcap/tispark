@@ -7,6 +7,13 @@
 
     <includeBaseDirectory>false</includeBaseDirectory>
 
+    <files>
+        <file>
+            <source>${project.basedir}/src/main/assembly/ThirdPartyNotices.txt</source>
+            <outputDirectory>.</outputDirectory>
+        </file>
+    </files>
+
     <dependencySets>
         <dependencySet>
             <includes>
