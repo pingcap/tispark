@@ -1,15 +1,16 @@
 # See the OWNERS docs at https://go.k8s.io/owners
 approvers:
-  # - bigdata-maintainers
+  - birdstorm
+  - Coderlxl
   - humengyu2012
-  - marsishandsome
-  - sunxiaoguang
-  # - bigdata-committers
   - ilovesoup
+  - LittleFall
+  - marsishandsome
   - shiyuhang0
+  - sunxiaoguang
   - windtalker
   - xuanyu66
 reviewers:
-  # - bigdata-reviewers
   - Daemonxiao
+  - qidi1
   - zhangyangyu

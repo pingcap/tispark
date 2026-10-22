@@ -192,6 +192,7 @@ public class TiConfiguration implements Serializable {
   public static final int DEFHealthCheckPeriod = 3000;
   private int healthCheckTimeout = DEFHealthCheckTimeout;
   private int healthCheckPeriod = DEFHealthCheckPeriod;
+  private String preferredLocations = "";
 
   private static Long getTimeAsSeconds(String key) {
     return Utils.timeStringAsSec(key);

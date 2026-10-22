@@ -99,7 +99,10 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
     exception should not have message(
       s"DELETE command denied to user `$user`@% for table default.`$hive_table`")
     val errorMessage = exception.getMessage
-    assert(errorMessage.contains(s"DELETE is only supported with v2 tables."))
+    assert(
+      errorMessage.contains(s"DELETE is only supported with v2 tables.") ||
+        // For Spark 3.4, which is fixed in 3.5
+        errorMessage.contains("[INTERNAL_ERROR] Unexpected table relation: HiveTableRelation"))
 
     spark.sql(s"DROP TABLE IF EXISTS `$hive_table`")
   }
@@ -156,7 +159,10 @@ class TiAuthIntegrationSuite extends SharedSQLContext {
       spark.sql(s"select * from $table")
     }
     // validateCatalog has been set namespace with "use tidb_catalog.$dbPrefix$dummyDatabase" in beforeAll() method
-    assert(caught.getMessage.contains(s"Table or view not found: $table"))
+    assert(
+      caught.getMessage.contains(s"Table or view not found: $table") ||
+        // For Spark 3.4
+        caught.getMessage.contains(s"The table or view `$table` cannot be found"))
   }
 
   test(f"Show databases without privilege should not contains db") {

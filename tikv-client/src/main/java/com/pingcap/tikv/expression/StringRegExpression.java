@@ -86,10 +86,8 @@ public class StringRegExpression extends Expression {
 
   @Override
   public List<Expression> getChildren() {
-    // For LIKE statement, an extra ESCAPE parameter is required as the third parameter for
-    // ScalarFunc.
-    // However in Spark ESCAPE is not supported so we simply set this value to zero.
-    return ImmutableList.of(left, reg, Constant.create(0, IntegerType.BIGINT));
+    // LIKE statement use '\' as escape character because Spark use it as escape character too.
+    return ImmutableList.of(left, reg, Constant.create(92, IntegerType.BIGINT));
   }
 
   @Override

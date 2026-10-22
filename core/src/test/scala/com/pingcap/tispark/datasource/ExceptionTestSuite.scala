@@ -33,7 +33,9 @@ class ExceptionTestSuite extends BaseBatchWriteTest("test_datasource_exception_t
       tidbWrite(List(row1, row2), schema)
     }
     assert(
-      caught.getMessage.contains(s"Table or view '$table' not found in database '$database'"))
+      caught.getMessage.contains(s"Table or view '$table' not found in database '$database'") ||
+        // For Spark 3.4
+        caught.getMessage.contains(s"The table or view `$database`.`$table` cannot be found"))
   }
 
   test("Test column does not exist") {

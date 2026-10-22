@@ -22,6 +22,55 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  test("test column mismatch, issue 2750") {
+    val dbTable = "tispark_test.column_mismatch"
+    tidbStmt.execute(s"drop table if exists $dbTable")
+    tidbStmt.execute(
+      s"CREATE TABLE $dbTable (`CI_NO` varchar(64) NOT NULL, `AC_DT` bigint(20) NOT NULL, `YM_DT` bigint(20) NOT NULL,`SYS_TYPE` varchar(20) NOT NULL, PRIMARY KEY (`CI_NO`,`AC_DT`,`YM_DT`,`SYS_TYPE`) /*T![clustered_index] CLUSTERED */, KEY `IDX_FLOW_01` (`CI_NO`,`AC_DT`))")
+    tidbStmt.execute(s"insert into $dbTable values('1',1,1,'1')")
+    spark.sql(s"select ci_no,ac_dt from $dbTable").explain()
+    spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "true")
+    spark.sql(s"select * from $dbTable").show()
+    spark.sqlContext.setConf(TiConfigConst.USE_INDEX_SCAN_FIRST, "false")
+  }
+
+  test("test like escape") {
+    val dbTable = "tispark_test.like_escape"
+    tidbStmt.execute(s"drop table if exists $dbTable")
+    tidbStmt.execute(s"CREATE TABLE $dbTable (`name` varchar(64) NOT NULL)")
+    tidbStmt.execute(s"insert into $dbTable values('ab%H')")
+    val df = spark.sql(s"select count(*) from $dbTable where name like '%\\%H%'")
+    assert(df.collect().head.get(0) == 1)
+
+  }
+
+  test("test tiflash overflow in unsigned bigint") {
+    if (!enableTiFlashTest) {
+      cancel("tiflash test not enabled")
+    }
+    val dbTable = "tispark_test.tiflash_overflow"
+    tidbStmt.execute(s"drop table if exists $dbTable")
+    tidbStmt.execute(
+      s"CREATE TABLE $dbTable (`a` bigint(20) UNSIGNED NOT NULL,`b` bigint(20) UNSIGNED NOT NULL)")
+    tidbStmt.execute(s"insert into $dbTable values(16717361816800086255, 16717361816800086255)")
+    tidbStmt.execute(s"ALTER TABLE $dbTable SET TIFLASH REPLICA 1")
+
+    Thread.sleep(5 * 1000)
+
+    val prev = spark.conf.getOption(TiConfigConst.ISOLATION_READ_ENGINES)
+    try {
+      spark.conf
+        .set(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIFLASH_STORAGE_ENGINE)
+      val df = spark.sql(s"select * from $dbTable")
+      val row = Row(BigDecimal("16717361816800086255"), BigDecimal("16717361816800086255"))
+      checkAnswer(df, Seq(row))
+    } finally {
+      spark.conf.set(
+        TiConfigConst.ISOLATION_READ_ENGINES,
+        prev.getOrElse(TiConfigConst.DEFAULT_STORAGE_ENGINES))
+    }
+  }
+
   test("test issue 2649") {
     val dbTable = "tispark_test.mutil_uniq"
     tidbStmt.execute(s"drop table if exists $dbTable")

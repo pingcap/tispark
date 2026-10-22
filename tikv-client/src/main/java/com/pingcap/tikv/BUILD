@@ -24,7 +24,6 @@ java_library(
         "@org_slf4j_jcl_over_slf4j//jar",
         "@org_slf4j_jul_to_slf4j//jar",
         "@log4j_log4j//jar",
-        "@net_sf_trove4j_trove4j//jar",
     ],
 )
 

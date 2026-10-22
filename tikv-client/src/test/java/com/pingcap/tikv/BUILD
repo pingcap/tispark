@@ -17,7 +17,6 @@ junit_suite_test(
 
         "@org_pubref_rules_protobuf//java:grpc_compiletime_deps",
         "@org_pubref_rules_protobuf//java:netty_runtime_deps",
-        "@net_sf_trove4j_trove4j//jar",
         "@junit_junit//jar",
         "@joda_time//jar",
     ],

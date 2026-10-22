@@ -83,11 +83,6 @@ maven_jar(
     artifact = "org.powermock:powermock-api-support:1.6.6",
 )
 
-maven_jar(
-   name = "net_sf_trove4j_trove4j",
-   artifact = "net.sf.trove4j:trove4j:3.0.1",
-)
-
 git_repository(
   name = "org_pubref_rules_protobuf",
   remote = "https://github.com/pubref/rules_protobuf",
